@@ -8,6 +8,7 @@ RUN yum update -y \
     nano \
     mod_ssl \
     mod_wsgi \
+    tzdata \
     initscripts \
     svn \
     vimdiff
