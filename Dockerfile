@@ -72,6 +72,10 @@ RUN chmod 755 generated-confs/{migstateclean,migerrors} \
 
 WORKDIR $MIG_ROOT
 
+## Create CA
+#RUN openssl genrsa ca.key 2048 \
+#    && openssl req -in ca.key -out ca.cert
+
 # Setup SSL
 # https://www.digitalocean.com/community/tutorials/how-to-create-an-ssl-certificate-on-apache-for-centos-7
 RUN openssl req -newkey rsa:2048 -nodes \
