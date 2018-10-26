@@ -73,10 +73,15 @@ RUN chmod 755 generated-confs/{migstateclean,migerrors} \
 WORKDIR $MIG_ROOT
 
 # Setup SSL
+# https://www.digitalocean.com/community/tutorials/how-to-create-an-ssl-certificate-on-apache-for-centos-7
 RUN openssl req -newkey rsa:2048 -nodes \
-    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=server" \
+    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=localhost" \
     -x509 -days 365 -keyout server.key -out server.crt \
     && openssl x509 -in server.crt -out server.pem -outform PEM
+
+# Setup Root CA
+# https://medium.freecodecamp.org/how-to-get-https-working-on-your-local-development-environment-in-5-minutes-7af615770eec
+RUN openssl genrsa
 
 RUN cp server.crt $MIG_ROOT/certs/ \
     && cp server.key $MIG_ROOT/certs/ \
@@ -98,6 +103,8 @@ ENTRYPOINT ["/tini", "--"]
 ADD run_migrid.sh $MIG_ROOT/
 RUN chown $USER:$USER $MIG_ROOT/run_migrid.sh \
     && chmod +x $MIG_ROOT/run_migrid.sh
+
+RUN chmod 700 $MIG_ROOT
 
 USER root
 
