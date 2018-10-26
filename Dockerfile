@@ -71,6 +71,10 @@ RUN chmod 755 generated-confs/{migstateclean,migerrors} \
 
 WORKDIR $MIG_ROOT
 
+## Create CA
+#RUN openssl genrsa ca.key 2048 \
+#    && openssl req -in ca.key -out ca.cert
+
 # Setup SSL
 RUN openssl req -newkey rsa:2048 -nodes \
     -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=server" \

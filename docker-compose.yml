@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  docker-migrid:
+    image: nielsbohr/migrid:latest
+    environment:
+      TZ: Europe/Copenhagen
+    volumes:
+      - type volume:
+        src: certs
+        target: /home/mig/certs
