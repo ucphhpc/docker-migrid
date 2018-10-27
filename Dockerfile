@@ -41,6 +41,8 @@ RUN ./generateconfs.py \
     --apache_lock=/var/lock/subsys/httpd \
     --apache_log=/var/log/httpd \
     --distro=centos \
+    --mig_state=/home/mig/state \
+    --listen_clause=#Listen \
     --enable_events=False
 
 RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
@@ -66,31 +68,38 @@ RUN cp generated-confs/apache2.conf $WEB_DIR/ \
     && cp generated-confs/MiG-jupyter-def.conf $WEB_DIR/ \
     && cp generated-confs/envvars $WEB_DIR/
 
-# state clean services
+# State clean services
 RUN chmod 755 generated-confs/{migstateclean,migerrors} \
     && cp generated-confs/{migstateclean,migerrors} /etc/cron.daily/
 
 WORKDIR $MIG_ROOT
 
-## Create CA
-#RUN openssl genrsa ca.key 2048 \
-#    && openssl req -in ca.key -out ca.cert
+# Create CA
+# https://gist.github.com/Soarez/9688998
+RUN openssl genrsa -des3 -passout pass:qwerty -out ca.key 2048 \
+    && openssl rsa -passin pass:qwerty -in ca.key -out ca.key \
+    && openssl req -x509 -new -key ca.key \
+    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=localhost" -out ca.crt \
+    && openssl req -x509 -new -nodes -key ca.key -sha256 -days 1024 \
+    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=localhost" -out ca.pem
 
-# Setup SSL
-# https://www.digitalocean.com/community/tutorials/how-to-create-an-ssl-certificate-on-apache-for-centos-7
-RUN openssl req -newkey rsa:2048 -nodes \
+# Server key/ca
+# https://gist.github.com/Soarez/9688998
+RUN openssl genrsa -out server.key 2048 \
+    && openssl req -new -key server.key -out server.csr \
     -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=localhost" \
-    -x509 -days 365 -keyout server.key -out server.crt \
-    && openssl x509 -in server.crt -out server.pem -outform PEM
+    && openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
 
-# Setup Root CA
-# https://medium.freecodecamp.org/how-to-get-https-working-on-your-local-development-environment-in-5-minutes-7af615770eec
-RUN openssl genrsa
+# Setup CRL
+RUN touch /etc/pki/CA/index.txt \
+    && echo '00' > /etc/pki/CA/crlnumber \
+    && openssl ca -gencrl -keyfile ca.key -cert ca.pem -out crl.pem
 
-RUN cp server.crt $MIG_ROOT/certs/ \
-    && cp server.key $MIG_ROOT/certs/ \
-    && cp server.pem $MIG_ROOT/certs/cacert.pem \
-    && cp server.pem $MIG_ROOT/certs/crl.pem
+# Prepare fo rmig
+RUN mv server.crt $MIG_ROOT/certs/ \
+    && mv server.key $MIG_ROOT/certs/ \
+    && mv crl.pem $MIG_ROOT/certs/ \
+    && mv ca.pem $MIG_ROOT/certs/cacert.pem
 
 # Prepare default conf.d
 RUN mv $WEB_DIR/conf.d/autoindex.conf $WEB_DIR/conf.d/autoindex.conf.centos \

@@ -1,11 +1,17 @@
-version: '3'
+version: '3.2'
 
 services:
   docker-migrid:
-    image: nielsbohr/migrid:latest
+    image: nielsbohr/migrid:edge
+    ports:
+      - "80:80"
     environment:
       TZ: Europe/Copenhagen
     volumes:
-      - type volume:
-        src: certs
+      - type: volume
+        source: certs
         target: /home/mig/certs
+    command: bash
+
+volumes:
+  certs:
