@@ -3,15 +3,15 @@ version: '3.2'
 services:
   docker-migrid:
     image: nielsbohr/migrid:edge
-    ports:
-      - "80:80"
     environment:
       TZ: Europe/Copenhagen
     volumes:
       - type: volume
         source: certs
         target: /home/mig/certs
-    command: bash
+    env_file:
+      - httpd.env
+    command: httpd -D FOREGROUND
 
 volumes:
   certs:

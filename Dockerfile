@@ -19,7 +19,7 @@ RUN useradd -ms /bin/bash $USER
 
 # MIG environment
 ENV MIG_ROOT=/home/$USER
-ENV VERSION=3986
+ENV VERSION=4010
 
 # Clone into $USER home
 WORKDIR $MIG_ROOT
@@ -43,7 +43,16 @@ RUN ./generateconfs.py \
     --distro=centos \
     --mig_state=/home/mig/state \
     --listen_clause=#Listen \
-    --enable_events=False
+    --enable_events=False \
+    --base_fqdn=localhost \
+    --public_fqdn=localhost \
+    --mig_cert_fqdn=cert.localhost \
+    --ext_cert_fqdn=ext.localhost \
+    --mig_oid_fqdn= \
+    --ext_oid_fqdn= \
+    --sid_fqdn=sid.localhost \
+    --io_fqdn=io.localhost \
+    --landing_page=/wsgi-bin/fileman.py
 
 RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/static-skin.css $MIG_ROOT/mig/images/ \
