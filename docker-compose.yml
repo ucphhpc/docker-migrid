@@ -1,10 +1,28 @@
 version: '3.2'
 
 services:
-  docker-migrid:
-    image: nielsbohr/migrid:edge
+  devdns:
+    # Provides local dns resolv via
+    # https://github.com/ruudud/devdns
+    # by default it provides the (.test) local dev domain
+    image: ruudud/devdns
+    container_name: internal-devdns
+    ports: ["53:53/udp"]
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
     environment:
       TZ: Europe/Copenhagen
+      HOSTMACHINE_IP: 192.168.99.100
+      # A records for any external device, expose vm ip
+      EXTRA_HOSTS: "migrid.test=192.168.99.100 devdns.test=192.168.99.100"
+      NAMING: full
+
+  internal-migrid:
+    image: nielsbohr/migrid:edge
+    container_name: internal-migrid
+    environment:
+      TZ: Europe/Copenhagen
+    ports: ["80:80/tcp"]
     volumes:
       - type: volume
         source: certs
