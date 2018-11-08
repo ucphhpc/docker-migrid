@@ -8,13 +8,17 @@ services:
     image: ruudud/devdns
     container_name: internal-devdns
     ports: ["53:53/udp"]
+    networks:
+      default:
+        ipv4_address: '172.240.255.254'
     volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       TZ: Europe/Copenhagen
       HOSTMACHINE_IP: 192.168.99.100
       # A records for any external device, expose vm ip
-      EXTRA_HOSTS: "migrid.test=192.168.99.100 devdns.test=192.168.99.100"
+      EXTRA_HOSTS: "devdns.test=192.168.99.100 migrid.test=192.168.99.100
+      www.migrid.test=172.240.255.253 oid.migrid.test=172.240.255.253"
       NAMING: full
 
   internal-migrid:
@@ -22,7 +26,13 @@ services:
     container_name: internal-migrid
     environment:
       TZ: Europe/Copenhagen
-    ports: ["80:80/tcp"]
+    ports: ["80:80/tcp", "443:443/tcp"]
+    dns: '172.240.255.254'
+    networks:
+      default:
+        ipv4_address: '172.240.255.253'
+    depends_on:
+      - devdns
     volumes:
       - type: volume
         source: certs
@@ -33,3 +43,10 @@ services:
 
 volumes:
   certs:
+
+networks:
+  default:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.240.0.0/16
