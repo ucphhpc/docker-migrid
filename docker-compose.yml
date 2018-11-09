@@ -18,7 +18,7 @@ services:
       HOSTMACHINE_IP: 192.168.99.100
       # A records for any external device, expose vm ip
       EXTRA_HOSTS: "devdns.test=192.168.99.100 migrid.test=192.168.99.100
-      www.migrid.test=172.240.255.253 oid.migrid.test=172.240.255.253"
+      migrid.localhost=172.240.255.253"
       NAMING: full
 
   internal-migrid:
