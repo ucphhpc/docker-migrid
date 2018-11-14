@@ -1,15 +1,27 @@
 version: '3.2'
 
 services:
-  devdns:
+  external-devdns:
+    image: ruudud/devdns
+    container_name: external-devdns
+    ports: ["53:53/udp"]
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      TZ: Europe/Copenhagen
+      HOSTMACHINE_IP: 192.168.99.100
+      # A records for any external device, expose vm ip
+      EXTRA_HOSTS: "devdns.test=192.168.99.100 migrid.test=192.168.99.100"
+      NAMING: full
+
+  internal-devdns:
     # Provides local dns resolv via
     # https://github.com/ruudud/devdns
     # by default it provides the (.test) local dev domain
     image: ruudud/devdns
     container_name: internal-devdns
-    ports: ["53:53/udp"]
     networks:
-      default:
+      internal:
         ipv4_address: '172.240.255.254'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -17,8 +29,8 @@ services:
       TZ: Europe/Copenhagen
       HOSTMACHINE_IP: 192.168.99.100
       # A records for any external device, expose vm ip
-      EXTRA_HOSTS: "devdns.test=192.168.99.100 migrid.test=192.168.99.100
-      migrid.localhost=172.240.255.253"
+      EXTRA_HOSTS: "migrid.test=172.240.255.253"
+#      migrid.localhost=172.240.255.253"
       NAMING: full
 
   internal-migrid:
@@ -29,24 +41,31 @@ services:
     ports: ["80:80/tcp", "443:443/tcp"]
     dns: '172.240.255.254'
     networks:
-      default:
+      internal:
         ipv4_address: '172.240.255.253'
     depends_on:
-      - devdns
+      - external-devdns
+      - internal-devdns
     volumes:
       - type: volume
         source: certs
         target: /home/mig/certs
     env_file:
       - httpd.env
-    command: httpd -D FOREGROUND
-
-volumes:
-  certs:
+    command: /app/start.sh
 
 networks:
-  default:
+  internal:
     ipam:
       driver: default
       config:
         - subnet: 172.240.0.0/16
+
+volumes:
+  certs:
+    # Bind current path certs dir
+    # Used to extract migrid generated /home/mig/certs files
+    driver_opts:
+      type: none
+      device: $PWD/certs
+      o: bind

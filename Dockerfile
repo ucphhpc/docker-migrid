@@ -24,10 +24,9 @@ RUN yum install -y mod_auth_openid
 ENV USER=mig
 RUN useradd -ms /bin/bash $USER
 
-# MIG environment
+# MiG environment
 ENV MIG_ROOT=/home/$USER
-ENV DOMAIN=migrid.localhost
-ENV DOMAIN_ALIAS=migrid.test
+ENV DOMAIN=migrid.test
 ENV WEB_DIR=/etc/httpd
 ENV CERT_DIR=$WEB_DIR/MiG-certificates
 
@@ -91,24 +90,24 @@ USER $USER
 
 RUN mkdir -p MiG-certificates \
     && cd MiG-certificates \
+    && ln -s $CERT_DIR/MiG/*.$DOMAIN/cacert.pem cacert.pem \
     && ln -s $CERT_DIR/MiG MiG \
     && ln -s $CERT_DIR/combined.pem combined.pem \
     && ln -s $CERT_DIR/combined.pub combined.pub \
     && ln -s $CERT_DIR/dhparams.pem dhparams.pem
 
-ENV VERSION=4010
 # Install and configure MiG
+ENV VERSION=4010
 RUN svn checkout -r $VERSION https://svn.code.sf.net/p/migrid/code/trunk .
 
-WORKDIR $MIG_ROOT/mig/install
-
-# Python OpenID
+# Prepare OpenID
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
     && python get-pip.py --user
 
 ENV PATH=$PATH:/home/$USER/.local/bin
-
 RUN pip install --user https://github.com/openid/python-openid/archive/master.zip
+
+WORKDIR $MIG_ROOT/mig/install
 
 RUN ./generateconfs.py \
     --source=. \
@@ -135,6 +134,7 @@ RUN ./generateconfs.py \
     --ext_oid_port= \
     --sid_fqdn= \
     --sid_port= \
+    --io_fqdn=io.$DOMAIN \
     --user=mig \
     --group=mig \
     --hg_path=/usr/bin/hg \
@@ -144,7 +144,7 @@ RUN ./generateconfs.py \
     --enable_openid=True \
     --enable_wsgi=True \
     --serveralias_clause=#ServerAlias \
-    --mig_oid_provider=https://oid.$DOMAIN_ALIAS/openid/ \
+    --mig_oid_provider=https://oid.$DOMAIN/openid/ \
     --signup_methods="migoid" \
     --login_methods="migoid" \
     --mig_certs=/etc/httpd/MiG-certificates \
@@ -153,11 +153,14 @@ RUN ./generateconfs.py \
     --landing_page=/wsgi-bin/fileman.py \
     --skin=idmc-basic
 
-# Replace index.html redirects to development domain RUN
-
 RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/static-skin.css $MIG_ROOT/mig/images/ \
     && cp generated-confs/index.html $MIG_ROOT/state/user_home/
+
+# Prepare oiddiscover for httpd
+RUN cd $MIG_ROOT/mig \
+    && python shared/httpsclient.py | grep -A 80 "xml version" \
+    > $MIG_ROOT/state/wwwpublic/oiddiscover.xml
 
 USER root
 
@@ -179,12 +182,18 @@ RUN cp generated-confs/apache2.conf $WEB_DIR/ \
     && cp generated-confs/envvars $WEB_DIR/
 
 # Front page
-RUN ln -s /home/$USER/state/wwwpublic/index-idmc.dk.html /home/$USER/state/wwwpublic/index.html \
-    && chown -R $USER:$USER /home/$USER/state/wwwpublic/index.html
+RUN ln -s $MIG_ROOT/state/wwwpublic/index-idmc.dk.html $MIG_ROOT/state/wwwpublic/index.html \
+    && chown -R $USER:$USER $MIG_ROOT/state/wwwpublic/index.html
+
+# Replace index.html redirects to development domain RUN
+RUN sed -i -e "s/idmc.dk/$DOMAIN/g" $MIG_ROOT/state/wwwpublic/index.html
 
 # State clean services
 RUN chmod 755 generated-confs/{migstateclean,migerrors} \
     && cp generated-confs/{migstateclean,migerrors} /etc/cron.daily/
+
+# Init scripts
+RUN cp generated-confs/migrid-init.d-rh /etc/init.d/migrid
 
 WORKDIR $MIG_ROOT
 
@@ -200,15 +209,14 @@ ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 ENTRYPOINT ["/tini", "--"]
 
-ADD run_migrid.sh $MIG_ROOT/
-RUN chown $USER:$USER $MIG_ROOT/run_migrid.sh \
-    && chmod +x $MIG_ROOT/run_migrid.sh
-
-RUN chmod 700 $MIG_ROOT
+ADD start.sh /app/start.sh
+ADD httpd.env /app/httpd.env
+RUN chown $USER:$USER /app/start.sh \
+    && chmod +x /app/start.sh
 
 USER root
+WORKDIR /app
 
 EXPOSE 80 443
-WORKDIR $MIG_ROOT
 
-CMD ["/home/mig/run_migrid.sh"]
+CMD ["bash", "/app/start.sh"]
