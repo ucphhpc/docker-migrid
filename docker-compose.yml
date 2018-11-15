@@ -50,6 +50,9 @@ services:
       - type: volume
         source: certs
         target: /home/mig/certs
+      - type: volume
+        source: httpd
+        target: /etc/httpd/conf.d
     env_file:
       - httpd.env
     command: /app/start.sh
@@ -68,4 +71,16 @@ volumes:
     driver_opts:
       type: none
       device: $PWD/certs
+      o: bind
+  httpd:
+    # Volume used for httpd config
+    driver_opts:
+      type: none
+      device: $PWD/httpd
+      o: bind
+  mig-conf:
+    # Volume used to contain the migrid configuration
+    driver_opts:
+      type: none
+      device: $PWD/mig-conf
       o: bind

@@ -45,15 +45,15 @@ RUN openssl dhparam 2048 -out $CERT_DIR/dhparams.pem
 RUN openssl genrsa -des3 -passout pass:qwerty -out ca.key 2048 \
     && openssl rsa -passin pass:qwerty -in ca.key -out ca.key \
     && openssl req -x509 -new -key ca.key \
-    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=ext.${DOMAIN}" -out ca.crt \
+    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=oid.${DOMAIN}" -out ca.crt \
     && openssl req -x509 -new -nodes -key ca.key -sha256 -days 1024 \
-    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=ext.${DOMAIN}" -out ca.pem
+    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=oid.${DOMAIN}" -out ca.pem
 
 # Server key/ca
 # https://gist.github.com/Soarez/9688998
 RUN openssl genrsa -out server.key 2048 \
     && openssl req -new -key server.key -out server.csr \
-    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=ext.${DOMAIN}" \
+    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=oid.${DOMAIN}" \
     && openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
 
 # CRL
@@ -147,6 +147,8 @@ RUN ./generateconfs.py \
     --mig_oid_provider=https://oid.$DOMAIN/openid/ \
     --signup_methods="migoid" \
     --login_methods="migoid" \
+    --alias_field='email' \
+    --daemon_show_address=io.$DOMAIN \
     --mig_certs=/etc/httpd/MiG-certificates \
     --dhparams_path=~/certs/dhparams.pem \
     --daemon_keycert=~/certs/combined.pem \
@@ -202,6 +204,15 @@ RUN mv $WEB_DIR/conf.d/autoindex.conf $WEB_DIR/conf.d/autoindex.conf.centos \
     && mv $WEB_DIR/conf.d/ssl.conf $WEB_DIR/conf.d/ssl.conf.centos \
     && mv $WEB_DIR/conf.d/userdir.conf $WEB_DIR/conf.d/userdir.conf.centos \
     && mv $WEB_DIR/conf.d/welcome.conf $WEB_DIR/conf.d/welcome.conf.centos
+
+RUN yum install -y \
+    net-tools \
+    telnet \
+    ca-certificates
+
+RUN update-ca-trust force-enable \
+    && cp $CERT_DIR/combined.pem /etc/pki/ca-trust/source/anchors/ \
+    && update-ca-trust extract
 
 # Reap defuncted/orphaned processes
 ENV TINI_VERSION v0.18.0
