@@ -108,4 +108,5 @@ venv.bak/
 # Migrid mount volume directories
 certs/
 httpd/
-
+mig/
+state/

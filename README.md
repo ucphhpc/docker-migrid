@@ -1,2 +1,0 @@
-# docker-migrid
-Dockerized migrid

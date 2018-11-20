@@ -1,86 +1,88 @@
-version: '3.2'
+version: '3.7'
 
 services:
-  external-devdns:
+  devdns:
     image: ruudud/devdns
-    container_name: external-devdns
+    container_name: devdns
     ports: ["53:53/udp"]
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       TZ: Europe/Copenhagen
-      HOSTMACHINE_IP: 192.168.99.100
-      # A records for any external device, expose vm ip
-      EXTRA_HOSTS: "devdns.test=192.168.99.100 migrid.test=192.168.99.100"
-      NAMING: full
-
-  internal-devdns:
-    # Provides local dns resolv via
-    # https://github.com/ruudud/devdns
-    # by default it provides the (.test) local dev domain
-    image: ruudud/devdns
-    container_name: internal-devdns
-    networks:
-      internal:
-        ipv4_address: '172.240.255.254'
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    environment:
-      TZ: Europe/Copenhagen
-      HOSTMACHINE_IP: 192.168.99.100
-      # A records for any external device, expose vm ip
-      EXTRA_HOSTS: "migrid.test=172.240.255.253"
-#      migrid.localhost=172.240.255.253"
-      NAMING: full
+      EXTRA_HOSTS: "migrid.test=127.0.0.1"
 
   internal-migrid:
     image: nielsbohr/migrid:edge
     container_name: internal-migrid
     environment:
       TZ: Europe/Copenhagen
-    ports: ["80:80/tcp", "443:443/tcp"]
-    dns: '172.240.255.254'
-    networks:
-      internal:
-        ipv4_address: '172.240.255.253'
     depends_on:
-      - external-devdns
-      - internal-devdns
+      - devdns
+    networks:
+      default:
+        aliases:
+          - migrid.test
+          - www.migrid.test
+          - oid.migrid.test
+          - sid.migrid.test
     volumes:
       - type: volume
-        source: certs
-        target: /home/mig/certs
-      - type: volume
         source: httpd
-        target: /etc/httpd/conf.d
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
     env_file:
-      - httpd.env
-    command: /app/start.sh
+      - migrid-httpd.env
+    command: /app/docker-entry.sh -u dev@dev.dk -p Password!
 
-networks:
-  internal:
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.240.0.0/16
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    depends_on:
+      - internal-migrid
+    ports:
+    - "80:80"
+    - "443:443"
+    volumes:
+    - /var/run/docker.sock:/tmp/docker.sock:ro
+    - ./nginx-proxy.conf:/etc/nginx/conf.d/migrid.conf
+    - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/oid.migrid.test.crt
+    - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/sid.migrid.test.crt
+    - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/oid.migrid.test.key
+    - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/sid.migrid.test.key
 
 volumes:
   certs:
-    # Bind current path certs dir
-    # Used to extract migrid generated /home/mig/certs files
     driver_opts:
+      # Volume for generated certificates (provided by internal-migrid)
       type: none
       device: $PWD/certs
       o: bind
+
   httpd:
-    # Volume used for httpd config
+    # Volume used for httpd config (provided by internal-migrid)
     driver_opts:
       type: none
       device: $PWD/httpd
       o: bind
-  mig-conf:
-    # Volume used to contain the migrid configuration
+
+  mig:
+    # Volume used to contain the migrid configuration (provided by internal-migrid)
     driver_opts:
       type: none
-      device: $PWD/mig-conf
+      device: $PWD/mig
       o: bind
+
+  state:
+      # Volume used to contain the migrid state (provided by internal-migrid)
+      driver_opts:
+        type: none
+        device: $PWD/state
+        o: bind

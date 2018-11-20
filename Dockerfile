@@ -1,7 +1,6 @@
 FROM centos:latest
 
 RUN yum update -y \
-    && yum upgrade -y \
     && yum install -y \
     httpd \
     openssh \
@@ -15,7 +14,10 @@ RUN yum update -y \
     tzdata \
     initscripts \
     svn \
-    vimdiff
+    vimdiff \
+    net-tools \
+    telnet \
+    ca-certificates
 
 # Apache OpenID (provided by epel)
 RUN yum install -y mod_auth_openid
@@ -97,7 +99,7 @@ RUN mkdir -p MiG-certificates \
     && ln -s $CERT_DIR/dhparams.pem dhparams.pem
 
 # Install and configure MiG
-ENV VERSION=4010
+ENV VERSION=4030
 RUN svn checkout -r $VERSION https://svn.code.sf.net/p/migrid/code/trunk .
 
 # Prepare OpenID
@@ -132,8 +134,8 @@ RUN ./generateconfs.py \
     --mig_oid_port=443 \
     --ext_oid_fqdn= \
     --ext_oid_port= \
-    --sid_fqdn= \
-    --sid_port= \
+    --sid_fqdn=sid.$DOMAIN \
+    --sid_port=444 \
     --io_fqdn=io.$DOMAIN \
     --user=mig \
     --group=mig \
@@ -183,12 +185,19 @@ RUN cp generated-confs/apache2.conf $WEB_DIR/ \
     && cp generated-confs/MiG-jupyter-def.conf $WEB_DIR/ \
     && cp generated-confs/envvars $WEB_DIR/
 
+# Disable certificate check for OID
+RUN sed -i '/\/server.ca.pem/ a SSLProxyCheckPeerName off' $WEB_DIR/conf.d/MiG.conf \
+    && sed -i '/SSLProxyCheckPeerName off/ a SSLProxyCheckPeerCN off' \
+    $WEB_DIR/conf.d/MiG.conf
+
 # Front page
 RUN ln -s $MIG_ROOT/state/wwwpublic/index-idmc.dk.html $MIG_ROOT/state/wwwpublic/index.html \
     && chown -R $USER:$USER $MIG_ROOT/state/wwwpublic/index.html
 
 # Replace index.html redirects to development domain RUN
-RUN sed -i -e "s/idmc.dk/$DOMAIN/g" $MIG_ROOT/state/wwwpublic/index.html
+# Default non KU login to oid.$DOMAIN instead of ext.$DOMAIN
+RUN sed -i -e "s/idmc.dk/$DOMAIN/g" $MIG_ROOT/state/wwwpublic/index.html \
+    && sed -i -e "s/ext.$DOMAIN/oid.$DOMAIN/g" $MIG_ROOT/state/wwwpublic/index.html
 
 # State clean services
 RUN chmod 755 generated-confs/{migstateclean,migerrors} \
@@ -205,11 +214,7 @@ RUN mv $WEB_DIR/conf.d/autoindex.conf $WEB_DIR/conf.d/autoindex.conf.centos \
     && mv $WEB_DIR/conf.d/userdir.conf $WEB_DIR/conf.d/userdir.conf.centos \
     && mv $WEB_DIR/conf.d/welcome.conf $WEB_DIR/conf.d/welcome.conf.centos
 
-RUN yum install -y \
-    net-tools \
-    telnet \
-    ca-certificates
-
+# Add generated certificate to trust store
 RUN update-ca-trust force-enable \
     && cp $CERT_DIR/combined.pem /etc/pki/ca-trust/source/anchors/ \
     && update-ca-trust extract
@@ -220,14 +225,14 @@ ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 ENTRYPOINT ["/tini", "--"]
 
-ADD start.sh /app/start.sh
-ADD httpd.env /app/httpd.env
-RUN chown $USER:$USER /app/start.sh \
-    && chmod +x /app/start.sh
+ADD docker-entry.sh /app/docker-entry.sh
+ADD migrid-httpd.env /app/migrid-httpd.env
+RUN chown $USER:$USER /app/docker-entry.sh \
+    && chmod +x /app/docker-entry.sh
 
 USER root
 WORKDIR /app
 
-EXPOSE 80 443
+EXPOSE 80 443 444
 
-CMD ["bash", "/app/start.sh"]
+CMD ["bash", "/app/docker-entry.sh"]

@@ -3,8 +3,24 @@
 # Launches the MiG web interface and the underlying services
 # Continuously checks for whether the services are still alive
 
+
+while getopts u:p: option
+do
+case "${option}" in
+u) USERNAME=${OPTARG};;
+p) PASSWORD=${OPTARG};;
+esac
+done
+
+# Create a default account (Use service owner account)
+if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
+    # createuser.py Usage:
+    ## [OPTIONS] [FULL_NAME ORGANIZATION STATE COUNTRY EMAIL COMMENT PASSWORD]
+    su - $USER -c "$MIG_ROOT/mig/server/createuser.py -f -r dev_user org dk dk $USERNAME foobar $PASSWORD"
+fi
+
 # Load required httpd environment vars
-source httpd.env
+source migrid-httpd.env
 
 /usr/sbin/httpd -k start
 status=$?
