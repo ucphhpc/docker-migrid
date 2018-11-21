@@ -15,8 +15,9 @@ done
 # Create a default account (Use service owner account)
 if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
     # createuser.py Usage:
-    ## [OPTIONS] [FULL_NAME ORGANIZATION STATE COUNTRY EMAIL COMMENT PASSWORD]
-    su - $USER -c "$MIG_ROOT/mig/server/createuser.py -f -r dev_user org dk dk $USERNAME foobar $PASSWORD"
+    # [OPTIONS] [FULL_NAME ORGANIZATION STATE COUNTRY EMAIL COMMENT PASSWORD]
+    su - $USER -c "$MIG_ROOT/mig/server/createuser.py dev_user org dk dk $USER foo $PASSWORD"
+    chown $USER:$USER $MIG_ROOT/mig/server/MiG-users.db
 fi
 
 # Load required httpd environment vars
