@@ -30,7 +30,7 @@ A live version of this can be seen at `IDMC <https://idmc.dk>`_.
 
 
 Lastly the ``nginx-proxy`` service ensures forwarding of port 80/443 requests
-to the designated ``migrid`` virtualhost.
+to the designated ``migrid`` httpd virtualhost.
 
 ---------------
 Getting Started
