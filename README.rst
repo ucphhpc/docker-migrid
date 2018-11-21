@@ -1,6 +1,6 @@
-==========
-docker-MiG
-==========
+=============
+docker-migrid
+=============
 
 A containerized version of the middelware `Minimum Intrusion Grid (MiG) <https://sourceforge.net/projects/migrid/>`_ system.
 
@@ -11,23 +11,22 @@ Introduction
 To start with, general documentation about the MiG
 can be found at the `Wiki <https://sourceforge.net/p/migrid/wiki/WelcomePage/>`_.
 
-This repo provides a standard setup of this system in a dockerized environment
+This repo provides a standard setup of this system in a containerized environment
 with the intent of making local development easier.
 
-To begin with, the repo provides a container stack of 3 services.
-Namely ``devdns``, ``migrid``, ``nginx-proxy``.
+The repo provides a container stack of 3 docker services.
+Namely ``devdns``, ``migrid``, ``nginx-proxy`` as defined in the ``docker-compose.yml`` file.
 
-Where ``devdns`` provides a DNS server that has a predefined A record
+``devdns`` provides a local DNS server that has a predefined A record
 that specifies that the URL ``migrid.test`` can be found on the host
 itself, i.e. localhost.
 
-``migrid`` contains the actual Migrid server setup,
+``migrid`` provides the actual MiG server setup,
 for now it runs the httpd and grid_openid.py service to provide the general
 data management portal and local openid authentication. By default the service is
 configured to use the basic IDMC html skin which is
 tailored towards managing imaging data.
 A live version of this can be seen at `IDMC <https://idmc.dk>`_.
-
 
 Lastly the ``nginx-proxy`` service ensures forwarding of port 80/443 requests
 to the designated ``migrid`` httpd virtualhost.
