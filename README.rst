@@ -1,14 +1,14 @@
-=============
-docker-migrid
-=============
+==========
+docker-MiG
+==========
 
-A containerized version of the middelware `Migrid <https://sourceforge.net/projects/mig-idl/>`_ system.
+A containerized version of the middelware `Minimum Intrusion Grid (MiG) <https://sourceforge.net/projects/migrid/>`_ system.
 
 ------------
 Introduction
 ------------
 
-To start with, general documentation about the Migrid Middleware System
+To start with, general documentation about the MiG
 can be found at the `Wiki <https://sourceforge.net/p/migrid/wiki/WelcomePage/>`_.
 
 This repo provides a standard setup of this system in a dockerized environment
