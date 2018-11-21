@@ -14,7 +14,7 @@ can be found at the `Wiki <https://sourceforge.net/p/migrid/wiki/WelcomePage/>`_
 This repo provides a standard setup of this system in a containerized environment
 with the intent of making local development easier.
 
-The repo provides a container stack of 3 docker services.
+It does this by implementing a container stack of 3 docker services.
 Namely ``devdns``, ``migrid``, ``nginx-proxy`` as defined in the ``docker-compose.yml`` file.
 
 ``devdns`` provides a local DNS server that has a predefined A record
