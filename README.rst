@@ -2,7 +2,7 @@
 docker-migrid
 =============
 
-A Dockerized version of the middelware `Migrid <https://sourceforge.net/projects/mig-idl/>`_ system.
+A containerized version of the middelware `Migrid <https://sourceforge.net/projects/mig-idl/>`_ system.
 
 ------------
 Introduction
