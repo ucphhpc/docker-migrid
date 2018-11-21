@@ -89,7 +89,7 @@ This should make the ``migrid`` service available at the ``migrid.test`` URL.
 In addition the entry file also supports the creation of a development user
 on the migrid system via the ``-u`` (username) and ``-p`` (password) flags.
 By default the ``docker-compose.yml`` provides a default ``dev@dev.dk`` user by
-executing the docker-entry.sh as::
+executing the docker-entry.sh as (from ``docker-compose.yml)::
 
     command: /app/docker-entry.sh -u dev@dev.dk -p Password!
 
