@@ -26,7 +26,7 @@ for now it runs the httpd and grid_openid.py service to provide the general
 data management portal and local openid authentication. By default the service is
 configured to use the basic IDMC html skin which is
 tailored towards managing imaging data.
-A live version of this can be seen at `IDMC <http://idmc.dk>`_.
+A live version of this can be seen at `IDMC <http://www.idmc.dk>`_.
 
 Lastly the ``nginx-proxy`` service ensures forwarding of port 80/443 requests
 to the designated ``migrid`` httpd virtualhost.
@@ -35,7 +35,7 @@ to the designated ``migrid`` httpd virtualhost.
 Getting Started
 ---------------
 
-To begin with the migrid docker image should be build::
+To begin with the migrid docker image should be built::
 
     make build
 
