@@ -35,7 +35,7 @@ to the designated ``migrid`` httpd virtualhost.
 Getting Started
 ---------------
 
-To begin with the migrid docker image should be built::
+To begin with the migrid docker image should be built with::
 
     make build
 
