@@ -40,7 +40,7 @@ To begin with the migrid docker image should be build::
     make build
 
 
-This will create 4 directories in the root path of the repo, namely::
+Beyond creating the image, the build target will also create 4 directories in the root path of the repo, namely::
 
     certs
     httpd
@@ -49,10 +49,9 @@ This will create 4 directories in the root path of the repo, namely::
 
 These directories are used by the ``migrid`` service as volume mount sources
 for the current configuration/state files of the services.
-In addition the build target will build the migrid image from the root ``Dockerfile``.
 
 Futhermore, to make the DNS resolution work properly for discovering ``migrid.test``
-as a local service. The host device should be configured so that it queries the
+as a local URL. The host device should be configured so that it queries the
 localhost ``devdns`` service before any external nameserver.
 E.g. on a OSX system either through dnsmasq::
 
