@@ -1,5 +1,9 @@
 FROM centos:latest
 
+# Centos image default yum configs prevent docs installation
+# https://superuser.com/questions/784451/centos-on-docker-how-to-install-doc-files
+RUN sed -i '/nodocs/d' /etc/yum.conf
+
 RUN yum update -y \
     && yum install -y \
     httpd \
@@ -18,7 +22,9 @@ RUN yum update -y \
     vimdiff \
     net-tools \
     telnet \
-    ca-certificates
+    ca-certificates \
+    mercurial \
+    python-dev
 
 # Apache OpenID (provided by epel)
 RUN yum install -y mod_auth_openid
