@@ -40,7 +40,7 @@ services:
         target: /home/mig/state
     env_file:
       - migrid-httpd.env
-    command: /app/docker-entry.sh -u dev@dev.dk -p Passw0rd!
+    command: /app/docker-entry.sh -u dev@dev.dk -p Passw0rd123
 
   nginx-proxy:
     image: jwilder/nginx-proxy

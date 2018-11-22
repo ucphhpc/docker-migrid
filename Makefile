@@ -2,7 +2,7 @@ OWNER=nielsbohr
 IMAGE=migrid
 TAG=edge
 
-all: clean build push
+all: clean build
 
 build:
 	mkdir -p ./certs
