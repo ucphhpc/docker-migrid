@@ -31,7 +31,9 @@ if [ $status -ne 0 ]; then
     exit $status
 fi
 
-/etc/init.d/migrid start openid
+# Start every service for now
+# TODO make individual checks
+/etc/init.d/migrid start
 ps aux | grep openid | grep -q -v grep
 status=$?
 if [ $status -ne 0 ]; then

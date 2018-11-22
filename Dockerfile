@@ -110,6 +110,24 @@ RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
 ENV PATH=$PATH:/home/$USER/.local/bin
 RUN pip install --user https://github.com/openid/python-openid/archive/master.zip
 
+# Modules required by grid_events.py
+RUN pip install --user \
+    watchdog \
+    scandir
+
+# Modules required by grid_sftp.py
+RUN pip install --user \
+    paramiko
+
+# Modules required by grid_webdavs
+RUN pip install --user \
+    wsgidav \
+    CherryPy
+
+# Modules required by grid_ftps
+RUN pip install --user \
+    pyftpdlib
+
 WORKDIR $MIG_ROOT/mig/install
 
 RUN ./generateconfs.py \
@@ -123,7 +141,9 @@ RUN ./generateconfs.py \
     --distro=centos \
     --mig_state=/home/mig/state \
     --listen_clause=#Listen \
-    --enable_events=False \
+    --enable_events=True \
+    --enable_crontab=True \
+    --enable_imnotify=True \
     --base_fqdn=$DOMAIN \
     --public_fqdn=www.$DOMAIN \
     --public_port=80 \
