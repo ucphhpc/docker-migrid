@@ -90,7 +90,7 @@ on the migrid system via the ``-u`` (username) and ``-p`` (password) flags.
 By default the ``docker-compose.yml`` provides a default ``dev@dev.dk`` user by
 executing the docker-entry.sh as (from ``docker-compose.yml``)::
 
-    command: /app/docker-entry.sh -u dev@dev.dk -p Password!
+    command: /app/docker-entry.sh -u dev@dev.dk -p Passw0rd123
 
 Note! This must be changed if ever deployed on a production system.
 
