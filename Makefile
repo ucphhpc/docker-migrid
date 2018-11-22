@@ -4,7 +4,6 @@ TAG=edge
 
 all: clean build push
 
-
 build:
 	mkdir -p ./certs
 	mkdir -p ./httpd
