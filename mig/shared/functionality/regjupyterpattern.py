@@ -29,6 +29,13 @@
 
 """
 Register a jupyter notebook containing workflow patterns as a vGrid workflow.
+Will check that the notebook is correctly formatted, i.e. it contains the
+minimal required number of fields, including cells, metadata and nbformat.
+In addition the cells must contain a 'source' key
+
+The result is a saved json formatted file which contains the format:
+
+TODO finish description
 """
 import os
 import json
@@ -109,7 +116,7 @@ def main(client_id, user_arguments_dict):
     logger.info("Formatted %s " % formatted)
     json_nb = None
     try:
-        json_nb = json.loads(formatted)
+        json_nb = json.loads(formatted, encoding='utf-8')
     except Exception, err:
         logger.error("Failed to json load %s for %s uploaded by %s" %
                      (err, user_arguments_dict[upload_name], client_id))
@@ -198,9 +205,9 @@ def main(client_id, user_arguments_dict):
                            ' Registering jupyter notebook'})
 
     pattern_file = {
-        'name': user_arguments_dict[upload_name],
-        'language': lang,
-        'cells': cells
+        "name": user_arguments_dict[upload_name],
+        "language": lang,
+        "cells": cells
     }
 
     # Prepare json for writing.
@@ -240,7 +247,7 @@ def main(client_id, user_arguments_dict):
     wrote = False
     try:
         with open(pat_file_path, 'w') as j_file:
-            j_file.write(str(pattern_file))
+            json.dump(pattern_file, j_file)
         logger.info("Created a new pattern notebook at: %s " %
                     pat_file_path)
         wrote = True
@@ -252,6 +259,7 @@ def main(client_id, user_arguments_dict):
                                        ' to disk, '
                                        'please try re-uploading the notebook'})
     if not wrote:
+        # Ensure that the failed write does not stick around
         try:
             os.remove(pat_file_path)
         except Exception, err:
