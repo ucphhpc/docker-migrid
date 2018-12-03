@@ -89,6 +89,7 @@ def main(client_id, user_arguments_dict):
 
     # Validate that the notebook is there
     upload_key = 'jupyter-notebook'
+    upload_name = 'jupyter-notebookfilename'
     if upload_key not in user_arguments_dict:
         output_objects.append({'object_type': 'error_text',
                                'text': 'No jupyter notebook was provided'})
@@ -105,20 +106,23 @@ def main(client_id, user_arguments_dict):
     # Remove trailing commas
     # TODO, ask jonas about standard way of sanitizing input on migrid
     formatted = user_arguments_dict[upload_key][0]
-
-    # TODO, Load as binary, save as json
     logger.info("Formatted %s " % formatted)
     json_nb = None
     try:
         json_nb = json.loads(formatted)
     except Exception, err:
-        logger.error("Failed to json load %s " % err)
+        logger.error("Failed to json load %s for %s uploaded by %s" %
+                     (err, user_arguments_dict[upload_name], client_id))
 
-    logger.info("Json loaded %s " % json_nb)
-    logger.info("Json type %s" % type(json_nb))
+    if json_nb is None:
+        output_objects.append({'object_type': 'error_ext',
+                               'text': 'Failed to parse the uploaded '
+                                       'notebook'})
+        return (output_objects, returnvalues.CLIENT_ERROR)
 
     # Validate that the notebook has the minimum amount of content,
     # with the correct types
+    # TODO check for cell_type, code
     req_keys = [('cells', list), ('metadata', dict), ('nbformat', int)]
     incorrect_keys = {'missing': [], 'invalid': []}
     for key in req_keys:
@@ -127,16 +131,11 @@ def main(client_id, user_arguments_dict):
         if key[0] in json_nb and not isinstance(json_nb[key[0]], key[1]):
             incorrect_keys['invalid'].append(key[0])
 
-    logger.info("After keys check")
-
     if incorrect_keys['missing']:
         output_keys = ' '.join(incorrect_keys['missing'])
         output_objects.append({'object_type': 'error_text',
                                'text': 'Missing required fields in Notebook: '
                                        '%s' % output_keys})
-        return (output_objects, returnvalues.CLIENT_ERROR)
-
-    logger.info("After missing return")
 
     if incorrect_keys['invalid']:
         output_keys = ' '.join(incorrect_keys['invalid'])
@@ -146,10 +145,11 @@ def main(client_id, user_arguments_dict):
                                'text': 'The notebook had invalid fields: %s '
                                        ' requires that %s' %
                                        (output_keys, correct_types)})
+
+    if incorrect_keys['missing'] or incorrect_keys['invalid']:
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     logger.info("After invalid return")
-
     # Detect which kernel to use (what language is used)
     # As specified at
     # https://nbformat.readthedocs.io/en/latest
@@ -163,12 +163,11 @@ def main(client_id, user_arguments_dict):
                                        'the notebook has a defined language'})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
-    lang = json_nb['metadata']['language_info']['name']
-
+    lang = str(json_nb['metadata']['language_info']['name'])
     logger.info("After language_info check")
 
     # TODO, make configuration.valid_python_langauges
-    valid_languages = ['ipython']
+    valid_languages = ['python']
     if lang not in valid_languages:
         output_objects.append({'object_type': 'error_text',
                                'text': 'The provided notebook language %s'
@@ -177,19 +176,38 @@ def main(client_id, user_arguments_dict):
                                        (lang, ' '.join(valid_languages))})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
-    logger.info("After valid_language return")
+    # Extract code cells with code
+    cells = []
+    for cell in json_nb['cells']:
+        if 'cell_type' in cell and cell['cell_type'] == 'code' \
+                and 'source' in cell and cell['source']:
+            n_cell = {
+                'source': cell['source'],
+                'metadata': cell['metadata']
+            }
+            cells.append(n_cell)
 
-    # Extract code cells
-    # cells with type (code)
+    if not cells:
+        output_objects.append({'object_type': 'error_text',
+                               'text': 'No non-empty code cells was '
+                                       'found in %s' %
+                                       user_arguments_dict[upload_name]})
+        return (output_objects, returnvalues.CLIENT_ERROR)
 
     output_objects.append({'object_type': 'header', 'text':
                            ' Registering jupyter notebook'})
 
+    pattern_file = {
+        'name': user_arguments_dict[upload_name],
+        'language': lang,
+        'cells': cells
+    }
+
+    # Prepare json for writing.
     # TODO, make configuration.jupyter_patterns
     # The name of the directory to be used in both the users home
     # and the global state/jupyter_pattern_files directory which contains
     # symlinks to the former
-    logger.info("Check paths exists")
 
     jup_dir_name = 'jupyter_patterns'
     jup_dir_path = os.path.join('/home/mig/state', jup_dir_name, client_dir)
@@ -216,12 +234,13 @@ def main(client_id, user_arguments_dict):
                                        're-uploading the notebook'})
         return (output_objects, returnvalues.SYSTEM_ERROR)
 
-    logger.info("Writing content %s type: %s" % (json_nb, type(json_nb)))
+    logger.info("Writing content %s type: %s" % (pattern_file,
+                                                 type(pattern_file)))
     # Save the pattern notebook
     wrote = False
     try:
         with open(pat_file_path, 'w') as j_file:
-            j_file.write(str(json_nb))
+            j_file.write(str(pattern_file))
         logger.info("Created a new pattern notebook at: %s " %
                     pat_file_path)
         wrote = True
@@ -240,5 +259,8 @@ def main(client_id, user_arguments_dict):
                          " err: %s " % (pat_file_path, err))
         return (output_objects, returnvalues.SYSTEM_ERROR)
 
-
+    output_objects.append({'object_type': 'text',
+                           'text': 'Successfully registered the notebook %s '
+                                   'as a pattern' %
+                                   user_arguments_dict[upload_name]})
     return (output_objects, returnvalues.OK)
