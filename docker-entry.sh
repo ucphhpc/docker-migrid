@@ -12,6 +12,11 @@ p) PASSWORD=${OPTARG};;
 esac
 done
 
+if [ "$USER" != "" ]; then
+    echo "The USER env variable has not been set"
+    exit 1
+fi
+
 # Create a default account (Use service owner account)
 if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
     # createuser.py Usage:
@@ -19,9 +24,6 @@ if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
     su - $USER -c "$MIG_ROOT/mig/server/createuser.py -r devuser org dk dk $USERNAME foo $PASSWORD"
     # Ensure permissions
     chown $USER:$USER $MIG_ROOT/mig/server/MiG-users.db
-    chown $USER:$USER -R $MIG_ROOT/state/user_cache
-    chown $USER:$USER -R $MIG_ROOT/state/user_home
-    chown $USER:$USER -R $MIG_ROOT/state/user_settings
     chmod 644 $MIG_ROOT/mig/server/MiG-users.db
 fi
 

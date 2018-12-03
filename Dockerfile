@@ -30,7 +30,7 @@ RUN yum update -y \
 RUN yum install -y mod_auth_openid
 
 # Setup user
-ARG USER=mig
+ENV USER=mig
 RUN useradd -ms /bin/bash $USER
 
 ARG DOMAIN=migrid.test
