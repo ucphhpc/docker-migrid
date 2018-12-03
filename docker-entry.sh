@@ -12,7 +12,7 @@ p) PASSWORD=${OPTARG};;
 esac
 done
 
-if [ "$USER" != "" ]; then
+if [ "$USER" == "" ]; then
     echo "The USER env variable has not been set"
     exit 1
 fi
