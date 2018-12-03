@@ -30,12 +30,12 @@ RUN yum update -y \
 RUN yum install -y mod_auth_openid
 
 # Setup user
-ENV USER=mig
+ARG USER=mig
 RUN useradd -ms /bin/bash $USER
 
+ARG DOMAIN=migrid.test
 # MiG environment
 ENV MIG_ROOT=/home/$USER
-ENV DOMAIN=migrid.test
 ENV WEB_DIR=/etc/httpd
 ENV CERT_DIR=$WEB_DIR/MiG-certificates
 
@@ -106,8 +106,8 @@ RUN mkdir -p MiG-certificates \
     && ln -s $CERT_DIR/dhparams.pem dhparams.pem
 
 # Install and configure MiG
-ENV VERSION=4032
-RUN svn checkout -r $VERSION https://svn.code.sf.net/p/migrid/code/trunk .
+ARG MIG_CHECKOUT=4032
+RUN svn checkout -r $MIG_CHECKOUT https://svn.code.sf.net/p/migrid/code/trunk .
 
 # Prepare OpenID
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
@@ -248,7 +248,7 @@ RUN update-ca-trust force-enable \
     && update-ca-trust extract
 
 # Reap defuncted/orphaned processes
-ENV TINI_VERSION v0.18.0
+ARG TINI_VERSION=v0.18.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 ENTRYPOINT ["/tini", "--"]
@@ -261,6 +261,6 @@ RUN chown $USER:$USER /app/docker-entry.sh \
 USER root
 WORKDIR /app
 
-EXPOSE 80 443 444
+EXPOSE 80 443
 
 CMD ["bash", "/app/docker-entry.sh"]
