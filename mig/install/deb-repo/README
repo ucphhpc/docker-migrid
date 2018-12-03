@@ -1,0 +1,35 @@
+= Deb packages for Ubuntu and Debian =
+We distribute deb packages with the latest MiG user scripts to make life
+easier for users.
+
+The packages should be *locally* built but signed with the official MiG
+software signing key from mig@dk-cert.migrid.org:.gnupg/ .
+The corresponding passphrase is included in the MiG-developers VGrid owners SCM.
+Please note that we generated a new 4096 bit RSA key in 2018 because the old
+1024 bit one was no longer deemed strong enough by current APT installations.
+Thus any old references to the mig@www.migrid.org should be replaced by
+the new key ID mig@migrid.org.
+
+Signing is achieved by mounting the mig user home on the build host during build:
+[prepare ssh login as mig at dk-cert.migrid.org]
+mkdir -p  ~/mnt/mig@dk-cert.migrid.org
+sshfs mig@dk-cert.migrid.org: ~/mnt/mig@dk-cert.migrid.org  -o uid=$(id -u) -o gid=$(id -g)
+[add deb-src https://dk-sid.migrid.org/public/deb stable main to your APT sources]
+sudo apt-get update
+mkdir -p  ~/build
+cd ~/build
+apt-get source mig-user-scripts
+cd mig-user-scripts-VERSION
+EMAIL="Minimum intrusion Grid <mig@migrid.org>" dch -i
+[edit changelog and save - possibly cd to new dir if it mentions rename]
+[make your changes]
+GNUPGHOME=~/mnt/mig@dk-cert.migrid.org/.gnupg dpkg-buildpackage -rfakeroot
+[copy package files to ~/mnt/mig@dk-cert.migrid.org/state/wwwpublic/deb/pool/main/]
+
+Finally login as mig on dk.migrid.org and run the updaterep.sh script from
+~mig/state/wwwpublic/deb/ .
+
+On clients add the package repo line
+deb https://dk-sid.migrid.org/public/deb stable main
+to your APT sources.
+

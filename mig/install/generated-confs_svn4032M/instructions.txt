@@ -1,0 +1,97 @@
+Configurations for MiG and Apache were generated in
+generated-confs_svn4032M/ and symlinked to generated-confs .
+For a default setup you will probably want to copy the MiG daemon conf to the
+server code directory:
+cp generated-confs_svn4032M/MiGserver.conf /home/mig/mig/server/
+the static skin stylesheet to the styling directory:
+cp generated-confs/static-skin.css /home/mig/mig/images/
+and the default landing page to the user_home directory:
+cp generated-confs/index.html /home/mig/state/user_home/
+
+If you are running apache 2.x on Debian/Ubuntu you can use the sites-available
+and sites-enabled structure with:
+sudo cp generated-confs/MiG.conf /etc/httpd/sites-available/
+sudo a2ensite MiG
+
+On other distro and apache combinations you will likely want to rely on the
+automatic inclusion of configurations in the conf.d directory instead:
+sudo cp generated-confs/MiG.conf /etc/httpd/conf.d/
+and on Redhat based systems possibly mimic Debian with
+sudo cp generated-confs/mimic-deb.conf /etc/httpd/conf/httpd.conf
+sudo cp generated-confs/envvars /etc/sysconfig/httpd
+sudo cp generated-confs/apache2.service /lib/systemd/system/httpd.service
+
+You may also want to consider copying the generated apache2.conf,
+httpd.conf, ports.conf and envvars to /etc/httpd/:
+sudo cp generated-confs/apache2.conf /etc/httpd/
+sudo cp generated-confs/httpd.conf /etc/httpd/
+sudo cp generated-confs/ports.conf /etc/httpd/
+sudo cp generated-confs/MiG-jupyter.conf /etc/httpd/
+sudo cp generated-confs/MiG-jupyter-def.conf /etc/httpd/
+sudo cp generated-confs/envvars /etc/httpd/
+
+and if Trac is enabled, the generated trac.ini to /home/mig/mig/server/:
+cp generated-confs/trac.ini /home/mig/mig/server/
+
+On a Debian/Ubuntu MiG developer server the dedicated apache init script is
+added with:
+sudo cp generated-confs/apache-mig /etc/init.d/apache-mig
+
+Please reload or restart your apache daemons afterwards to catch the
+configuration changes.
+
+If you enabled the MiG sftp subsystem for OpenSSH, you should setup PAM+NSS
+as described in the mig/pam-mig and mig/libnss-mig READMEs and copy the
+generated sshd_config-MiG-sftp-subsys to /etc/ssh/ for a parallel service:
+sudo cp generated-confs/sshd_config-MiG-sftp-subsys /etc/ssh/
+sudo chown 0:0 /etc/ssh/sshd_config-MiG-sftp-subsys
+We also recommend the moduli tuning to at least 2000 as mentioned on:
+https://stribika.github.io/2015/01/04/secure-secure-shell.html
+After making sure it fits your site you can start the openssh service with:
+sudo /usr/sbin/sshd -f /etc/ssh/sshd_config-MiG-sftp-subsys
+
+The migrid-init.d-rh contains a standard SysV init style helper script to
+launch all MiG daemons. It was written for RHEL/CentOS but may work
+on other platforms, too.
+You can install it with:
+sudo cp generated-confs/migrid-init.d-rh /etc/init.d/migrid
+
+The migrid-init.d-deb contains a standard SysV init style helper script to
+launch all MiG daemons. It was written for Debian/Ubuntu but may work
+on other platforms, too.
+You can install it with:
+sudo cp generated-confs/migrid-init.d-deb /etc/init.d/migrid
+
+The logrotate-mig contains a logrotate configuration to automatically
+rotate and compress log files for all MiG daemons.
+You can install it with:
+sudo cp generated-confs/logrotate-migrid /etc/logrotate.d/migrid
+
+The MiG-daemons-filter.conf and sshd-pw-crack-filter.conf contain Fail2Ban
+filters and MiG-daemons-jail.conf contains a matching Fail2Ban jail
+configuration to automatically lock out clients after a number of consecutive
+password errors to prevent brute-force scans for all MiG network daemons.
+You can install them with:
+sudo cp generated-confs/MiG-daemons-filter.conf \
+        /etc/fail2ban/filter.d/MiG-daemons.conf
+sudo cp generated-confs/MiG-daemons-pw-crack-filter.conf \
+        /etc/fail2ban/filter.d/MiG-daemons-pw-crack.conf
+sudo cp generated-confs/sshd-pw-crack-filter.conf \
+        /etc/fail2ban/filter.d/sshd-pw-crack.conf
+sudo cp generated-confs/MiG-daemons-jail.conf \
+        /etc/fail2ban/jails.local
+After making sure they fit your site you can start the fail2ban service with:
+sudo service fail2ban restart
+
+The migstateclean and migerrors files are cron scripts to automatically
+clean up state files and grep for important errors in all MiG log files.
+You can install them with:
+chmod 755 generated-confs/{migstateclean,migerrors}
+sudo cp generated-confs/{migstateclean,migerrors} /etc/cron.daily/
+
+The migcheckssl file is cron scripts that automatically checks for 
+LetsEncrypt certificate renewal. 
+You can install it with:
+chmod 700 generated-confs/migcheckssl
+sudo cp generated-confs/migcheckssl /etc/cron.daily
+

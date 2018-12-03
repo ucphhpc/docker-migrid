@@ -1,0 +1,100 @@
+/*
+
+#
+# --- BEGIN_HEADER ---
+#
+# managers - style overrides for multiple pages
+# Copyright (C) 2003-2015  The MiG Project lead by Brian Vinter
+#
+# This file is part of MiG.
+#
+# MiG is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# MiG is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+#
+# -- END_HEADER ---
+#
+
+*/
+
+/* Hide the sorting element in the table body only - thead has divs, too */
+#fm_filelisting tbody tr.odd:hover, #jm_jobmanager tbody tr.odd:hover {
+  background-color: #ffdd4d;
+}
+#fm_filelisting tbody tr.even:hover, #jm_jobmanager tbody tr.even:hover {
+  background-color: #ffdd7f;
+}
+#jm_jobmanager tbody tr.odd.ui-selected {
+  background-color: #ffdd4d;
+}
+#jm_jobmanager tbody tr.even.ui-selected {
+  background-color: #ffdd7f;
+}
+
+.fm_path_breadcrumbs a:hover {
+  color: #369;
+}
+
+
+#fm_preview_histogram_min_max_slider .noUi-connect {
+  background: #3399FF;
+} 
+.fm_toolbar ul li a:hover {
+  background-color: #369;
+  color: white;
+}
+.fm_toolbar ul li a.selected {
+  background-color: #147;
+  color: white;
+}
+
+
+UL.jqueryFileTree div:hover {
+  background-color: #ffdd7f;
+}
+
+/* Core Styles */
+UL.jqueryFileList A:hover {
+  background: #BDF;
+}
+
+/* Keep default table sorter headers and only skin highlighted column */
+.tablesorter-header { 
+  /* background-color: #369; */
+} 
+
+.tablesorter-headerAsc, .tablesorter-headerDesc { 
+  background-color: #3399FF; 
+}
+
+/* use similar colors in tabs as in navmenu */
+/*
+.vm-tabs li.ui-state-default { 
+  background: #6699bb;
+  color: white;
+}
+*/
+.vm-tabs li.ui-tabs-selected { 
+  background: #114477;
+  color: white;
+}
+.vm-tabs li.ui-state-hover a:hover { 
+  background: #336699;
+  color: white;
+}
+
+
+/* color highlighted entry to match skin */
+.context-menu-item.hover {
+    background-color: #39F;
+}
