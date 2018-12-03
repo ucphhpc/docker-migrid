@@ -107,12 +107,8 @@ venv.bak/
 
 # Migrid mount volume directories
 certs/
+httpd/
 state/
-
-
-# Don't store httpd certificates
-httpd/MiG-certificates/MiG/
-httpd/MiG-certificates/
 
 # Dont store current config and db
 mig/server/MiGserver.conf
