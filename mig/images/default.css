@@ -348,6 +348,9 @@ table th.icon {
 .navmenu ul li.jupyter a {
   background-image: url('/images/icons/jupyter.png')
 }
+.navmenu ul li.workflowpatterns a {
+  background-image: url('/images/icons/workflowpatterns.png')
+}
 .navmenu ul li.runtimeenvs a {
   background-image: url('/images/icons/database.png');
 }

@@ -70,6 +70,10 @@ menu_items['seafile'] = {'class': 'seafile', 'url': '/seafile/',
 menu_items['jupyter'] = {'class': 'jupyter', 'url': 'jupyter.py',
                          'title': 'Jupyter',
                          'hover': 'Access the associated Jupyter service'}
+menu_items['workflowpatterns'] = {'class': 'workflowpatterns',
+                                  'url': 'workflowpatterns.py',
+                                  'title': 'Workflow Patterns',
+                                  'hover': 'Registered Workflow Patterns'}
 
 menu_items['shell'] = {'class': 'shell', 'url': 'shell.py', 'title': 'Shell',
                        'hover': 'A command line interface, based on javascript and xmlrpc'}

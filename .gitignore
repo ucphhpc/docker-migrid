@@ -111,10 +111,7 @@ httpd/
 state/
 
 # Dont store current config and db
-mig/server/MiGserver.conf
 mig/server/MiG-users.db
 
 # Dont store job queue
 mig/server/server.stdin
-
-mig/install/generated-confs*

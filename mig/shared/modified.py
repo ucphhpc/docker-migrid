@@ -116,6 +116,10 @@ def check_res_modified(configuration):
     """Check for modified re and return list of such IDs"""
     return check_entities_modified(configuration, 'runtimeenvs')
 
+def check_workflow_p_modified(configuration):
+    """Check for modified workflow patterns and return a list of such IDs"""
+    return check_entities_modified(configuration, 'workflowpatterns')
+
 def reset_entities_modified(configuration, kind):
     """Reset all modified entity marks of given kind"""
     modified_path = os.path.join(configuration.mig_system_files,
@@ -145,6 +149,10 @@ def reset_vgrids_modified(configuration):
 def reset_res_modified(configuration):
     """Reset res modified marks"""
     return reset_entities_modified(configuration, 'runtimeenvs')
+
+def reset_workflow_p_modified(configuraiton):
+    """Reset workflow patterns modified marks"""
+    return reset_entities_modified(configuraiton, 'workflowpatterns')
 
 if __name__ == "__main__":
     import sys

@@ -67,7 +67,7 @@ def main(client_id, user_arguments_dict):
     # validate_args = dict([(key, user_arguments_dict.get(key, val)) for \
     #                       (key, val) in defaults.items()])
 
-    logger.info("User args: %s" % (user_arguments_dict))
+    logger.info("User args: %s" % user_arguments_dict)
     # Allow csrf_field from upload
     validate_args[csrf_field] = user_arguments_dict.get(csrf_field,
                                                         ['AllowMe'])
@@ -104,11 +104,12 @@ def main(client_id, user_arguments_dict):
 
     if not isinstance(user_arguments_dict[upload_key], list) and \
             len(user_arguments_dict[upload_key]) == 1:
-        output_objects.append({'object_type': 'error_ext',
+        output_objects.append({'object_type': 'error_text',
                                'text': 'Only a single notebook can be uploaded'
                                        'at a time'})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
+    # TODO check correct format of upload, .ipynb
     # Parse file format as json string
     # Remove trailing commas
     # TODO, ask jonas about standard way of sanitizing input on migrid
@@ -122,7 +123,7 @@ def main(client_id, user_arguments_dict):
                      (err, user_arguments_dict[upload_name], client_id))
 
     if json_nb is None:
-        output_objects.append({'object_type': 'error_ext',
+        output_objects.append({'object_type': 'error_text',
                                'text': 'Failed to parse the uploaded '
                                        'notebook'})
         return (output_objects, returnvalues.CLIENT_ERROR)
@@ -173,7 +174,7 @@ def main(client_id, user_arguments_dict):
     lang = str(json_nb['metadata']['language_info']['name'])
     logger.info("After language_info check")
 
-    # TODO, make configuration.valid_python_langauges
+    # TODO, make configuration.valid_jupyter_pattern_langauges
     valid_languages = ['python']
     if lang not in valid_languages:
         output_objects.append({'object_type': 'error_text',
@@ -211,16 +212,17 @@ def main(client_id, user_arguments_dict):
     }
 
     # Prepare json for writing.
-    # TODO, make configuration.jupyter_patterns
     # The name of the directory to be used in both the users home
-    # and the global state/jupyter_pattern_files directory which contains
-    # symlinks to the former
+    # and the global state/workflow_patterns_home directory
+    workflow_pat_home = os.path.join(configuration.workflow_patterns_home,
+                                     client_dir)
 
-    jup_dir_name = 'jupyter_patterns'
-    jup_dir_path = os.path.join('/home/mig/state', jup_dir_name, client_dir)
+    if not os.path.exists(workflow_pat_home):
+        try:
+            os.makedirs(workflow_pat_home)
+        except Exception, err:
+            logger.error("")
 
-    if not os.path.exists(jup_dir_path):
-        os.makedirs(jup_dir_path)
 
     logger.info("regjupyterpattern as User: %s args %s:" %
                 (client_id, user_arguments_dict))
@@ -229,7 +231,7 @@ def main(client_id, user_arguments_dict):
     unique_jup_name = generate_random_ascii(2 * session_id_bytes,
                                             charset='0123456789abcdef')
 
-    pat_file_path = os.path.join(jup_dir_path, unique_jup_name + '.json')
+    pat_file_path = os.path.join(workflow_pat_home, unique_jup_name + '.json')
     if os.path.exists(pat_file_path):
         logger.error("Error while registering a new jupyter pattern file: %s "
                      "a conflict in unique filenames was encountered" %

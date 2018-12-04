@@ -106,6 +106,7 @@ def fix_missing(config_file, verbose=True):
         'events_home': '~/state/events_home/',
         'twofactor_home': '~/state/twofactor_home/',
         'gdp_home': '~/state/gdp_home/',
+        'workflow_patterns_home': '~/state/workflow_patterns_home',
         'site_vgrid_links': 'files web tracker workflows monitor',
         'site_vgrid_creators': 'distinguished_name:.*',
         'site_vgrid_label': 'VGrid',
@@ -299,6 +300,7 @@ class Configuration:
     events_home = ''
     twofactor_home = ''
     gdp_home = ''
+    workflow_patterns_home = ''
     seafile_mount = ''
     openid_store = ''
     paraview_home = ''
@@ -697,6 +699,9 @@ location.""" % self.config_file
             self.vm_home = config.get('GLOBAL', 'vm_home')
         if config.has_option('GLOBAL', 'gdp_home'):
             self.gdp_home = config.get('GLOBAL', 'gdp_home')
+        if config.has_option('GLOBAL', 'workflow_patterns_home'):
+            self.workflow_patterns_home = config.get('GLOBAL',
+                                                     'workflow_patterns_home')
         if config.has_option('GLOBAL', 'freeze_home'):
             self.freeze_home = config.get('GLOBAL', 'freeze_home')
         if config.has_option('GLOBAL', 'sharelink_home'):
@@ -1310,7 +1315,8 @@ location.""" % self.config_file
                                        'jobs', 'vgrids', 'resources',
                                        'downloads', 'runtimeenvs', 'people',
                                        'settings', 'crontab', 'vmachines',
-                                       'shell', 'docs', 'logout']
+                                       'shell', 'docs', 'workflowpatterns',
+                                       'logout']
         if config.has_option('SITE', 'user_menu'):
             req = config.get('SITE', 'user_menu').split()
             self.site_user_menu = [i for i in req if menu_items.has_key(i)]
