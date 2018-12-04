@@ -138,7 +138,6 @@ def main(client_id, user_arguments_dict):
     # All non-file fields must be validated
     validate_args = dict([(key, user_arguments_dict.get(key, val)) for \
                          (key, val) in defaults.items()])
-
     # IMPORTANT: we must explicitly inlude CSRF token
     validate_args[csrf_field] = user_arguments_dict.get(csrf_field, ['AllowMe'])
 
