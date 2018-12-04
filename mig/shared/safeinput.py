@@ -1413,6 +1413,7 @@ def validated_input(
                                            type_checks, value_checks)
 
     # Fall back to defaults when allowed and reject if required and unset
+
     for (key, val) in defaults.items():
         if REJECT_UNSET != val:
             if not accepted.has_key(key):
@@ -1420,6 +1421,7 @@ def validated_input(
         else:
             if not accepted.has_key(key) and not rejected.has_key(key):
                 rejected[key] = (key, ['is required but missing', ''])
+
     return (accepted, rejected)
 
 
