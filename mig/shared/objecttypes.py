@@ -115,6 +115,11 @@ runtimeenvironment = {
                       'environment')],
     'optional': [],
     }
+# TODO, implement required keys
+workflowpattern = {
+    'object_type': 'workflowpattern',
+    'required': []
+}
 frozenfile = {'object_type': 'frozenfile', 'required': ['name', 'size',
               'checksum', 'timestamp'], 'optional': []}
 frozenarchive = {
@@ -220,6 +225,9 @@ dir_listings = {'object_type': 'dir_listings',
 runtimeenvironments = {'object_type': 'runtimeenvironments',
                        'required_list': [('runtimeenvironments',
                        'runtimeenvironment')]}
+workflowpatterns = {'object_type': 'workflowpatterns',
+                    'required_list': [('workflowpatterns',
+                                       'workflowpattern')]}
 frozenarchives = {'object_type': 'frozenarchives',
                   'required_list': [('frozenarchives', 'frozenarchive'
                   )]}
@@ -386,6 +394,8 @@ valid_types_list = [
     file_output,
     runtimeenvironment,
     runtimeenvironments,
+    workflowpattern,
+    workflowpatterns,
     frozenfile,
     frozenarchive,
     frozenarchives,

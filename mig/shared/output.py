@@ -1367,6 +1367,21 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
             lines.append('<tr><td>Resources</td><td>%s</td></tr>'
                           % ', '.join(provider_links))
             lines.append('</table>')
+
+        elif i['object_type'] == 'workflowpatterns':
+            workflowpatterns = i['workflowpatterns']
+            lines.append('''
+<table class="workflowpatterns columnsort" id="workflowpatterns">
+<thead class="title">
+    <tr>
+        <th>ID</th>
+        <th>Made by</th>
+        <th>Made from</th>
+    </tr>    
+</thead>
+<tbody>
+</tbody>
+</table>''')
         elif i['object_type'] == 'frozenarchives':
             frozenarchives = i['frozenarchives']
             lines.append('''
