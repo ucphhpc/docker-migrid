@@ -188,7 +188,6 @@ RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/static-skin.css $MIG_ROOT/mig/images/ \
     && cp generated-confs/index.html $MIG_ROOT/state/user_home/
 
-
 # Prepare oiddiscover for httpd
 RUN cd $MIG_ROOT/mig \
     && python shared/httpsclient.py | grep -A 80 "xml version" \
