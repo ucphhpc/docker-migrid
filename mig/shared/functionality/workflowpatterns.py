@@ -90,7 +90,6 @@ def main(client_id, user_arguments_dict):
 
     output_objects.append({'object_type': 'sectionheader',
                            'text': 'Registered Workflow Patterns'})
-    logger.info("Configuration %s" % configuration)
 
     workflow_patterns = []
     pattern_map = get_workflow_p_map(configuration)

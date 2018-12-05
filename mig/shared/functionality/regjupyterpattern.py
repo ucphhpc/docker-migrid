@@ -37,16 +37,15 @@ The result is a saved json formatted file which contains the format:
 
 TODO finish description
 """
-import os
 import json
 
 import shared.returnvalues as returnvalues
 from shared.base import client_id_dir
-from shared.defaults import csrf_field, session_id_bytes
+from shared.defaults import csrf_field
 from shared.init import initialize_main_variables
 from shared.handlers import safe_handler, get_csrf_limit
 from shared.functional import validate_input_and_cert
-from shared.pwhash import generate_random_ascii
+from shared.workflows import create_workflow_pattern
 
 
 def signature():
@@ -205,68 +204,16 @@ def main(client_id, user_arguments_dict):
     output_objects.append({'object_type': 'header', 'text':
                            ' Registering jupyter notebook'})
 
-    pattern_file = {
+    pattern = {
         "name": user_arguments_dict[upload_name],
         "language": lang,
         "cells": cells
     }
 
-    # Prepare json for writing.
-    # The name of the directory to be used in both the users home
-    # and the global state/workflow_patterns_home directory
-    workflow_pat_home = os.path.join(configuration.workflow_patterns_home,
-                                     client_dir)
-
-    if not os.path.exists(workflow_pat_home):
-        try:
-            os.makedirs(workflow_pat_home)
-        except Exception, err:
-            logger.error("")
-
-
-    logger.info("regjupyterpattern as User: %s args %s:" %
-                (client_id, user_arguments_dict))
-
-    # Create unique_filename (session_id)
-    unique_jup_name = generate_random_ascii(2 * session_id_bytes,
-                                            charset='0123456789abcdef')
-
-    pat_file_path = os.path.join(workflow_pat_home, unique_jup_name + '.json')
-    if os.path.exists(pat_file_path):
-        logger.error("Error while registering a new jupyter pattern file: %s "
-                     "a conflict in unique filenames was encountered" %
-                     pat_file_path)
+    created, msg = create_workflow_pattern(client_id, pattern, configuration)
+    if not created:
         output_objects.append({'object_type': 'error_text',
-                               'text': 'The generated filename for your '
-                                       'pattern notebook encountered a naming'
-                                       'conflict, please try '
-                                       're-uploading the notebook'})
-        return (output_objects, returnvalues.SYSTEM_ERROR)
-
-    logger.info("Writing content %s type: %s" % (pattern_file,
-                                                 type(pattern_file)))
-    # Save the pattern notebook
-    wrote = False
-    try:
-        with open(pat_file_path, 'w') as j_file:
-            json.dump(pattern_file, j_file)
-        logger.info("Created a new pattern notebook at: %s " %
-                    pat_file_path)
-        wrote = True
-    except Exception, err:
-        logger.error("Failed to write the jupyter pattern file: %s to disk "
-                     " err: %s" % (pat_file_path, err))
-        output_objects.append({'object_type': 'error_text',
-                               'text': 'Failed to write the pattern notebook'
-                                       ' to disk, '
-                                       'please try re-uploading the notebook'})
-    if not wrote:
-        # Ensure that the failed write does not stick around
-        try:
-            os.remove(pat_file_path)
-        except Exception, err:
-            logger.error("Failed to remove the failed jupyter pattern file %s"
-                         " err: %s " % (pat_file_path, err))
+                               'text': msg})
         return (output_objects, returnvalues.SYSTEM_ERROR)
 
     output_objects.append({'object_type': 'text',
