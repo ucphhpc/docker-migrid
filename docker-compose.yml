@@ -9,7 +9,6 @@ services:
     - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       TZ: Europe/Copenhagen
-      EXTRA_HOSTS: "migrid.test=127.0.0.1"
 
   migrid:
     image: nielsbohr/migrid:edge
@@ -21,7 +20,7 @@ services:
     networks:
       default:
         aliases:
-          - migrid.test
+          - io.migrid.test
           - www.migrid.test
           - oid.migrid.test
           - sid.migrid.test
