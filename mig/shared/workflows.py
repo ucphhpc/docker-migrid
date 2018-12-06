@@ -33,14 +33,13 @@ import json
 import fcntl
 
 from shared.base import client_id_dir
-from shared.serial import load, dump
-from shared.defaults import session_id_bytes
+from shared.serial import dump
+from shared.map import load_system_map
 from shared.modified import check_workflow_p_modified, \
     reset_workflow_p_modified, mark_workflow_p_modified
-from shared.pwhash import generate_random_ascii
 
 WRITE_LOCK = 'write.lock'
-WORKFLOW_PATTERNS, MODTIME = ['__workflowpatterns__', '__modtime__']
+WORKFLOW_PATTERNS, MODTIME, CONF = ['__workflowpatterns__', '__modtime__', '__conf__']
 
 MAP_CACHE_SECONDS = 60
 
@@ -49,35 +48,7 @@ last_refresh = {WORKFLOW_PATTERNS: 0}
 last_map = {WORKFLOW_PATTERNS: {}}
 
 
-def load_system_map(configuration, kind, do_lock):
-    """Load map of given entities and their configuration. Uses a pickled
-    dictionary for efficiency. The do_lock option is used to enable and
-    disable locking during load.
-    Entity IDs are stored in their raw (non-anonymized form).
-    Returns tuple with map and time stamp of last map modification.
-    Please note that time stamp is explicitly set to start of last update
-    to make sure any concurrent updates get caught in next run.
-    """
-    map_path = os.path.join(configuration.mig_system_files, "%s.map" % kind)
-    lock_path = os.path.join(configuration.mig_system_files, "%s.lock" % kind)
-    if do_lock:
-        lock_handle = open(lock_path, 'a')
-        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
-    try:
-        configuration.logger.info("before %s map load" % kind)
-        entity_map = load(map_path)
-        configuration.logger.info("after %s map load" % kind)
-        map_stamp = os.path.getmtime(map_path)
-    except IOError:
-        configuration.logger.warn("No %s map to load" % kind)
-        entity_map = {}
-        map_stamp = -1
-    if do_lock:
-        lock_handle.close()
-    return (entity_map, map_stamp)
-
-
-def load_workflow_p_map(configuration, do_lock=True):
+def load_wp_map(configuration, do_lock=True):
     """Load map of workflow patterns. Uses a pickled
     dictionary for efficiency. Optional do_lock option is used to enable and
     disable locking during load.
@@ -85,7 +56,7 @@ def load_workflow_p_map(configuration, do_lock=True):
     return load_system_map(configuration, 'workflowpatterns', do_lock)
 
 
-def refresh_workflow_p_map(configuration):
+def refresh_wp_map(configuration):
     """Refresh map of workflow patterns. Uses a pickled dictionary for
     efficiency. Only update map for workflow patterns that appeared or
     disappeared after last map save.
@@ -98,10 +69,10 @@ def refresh_workflow_p_map(configuration):
     lock_path = map_path.replace('.map', '.lock')
     lock_handle = open(lock_path, 'a')
     fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
-    workflow_p_map, map_stamp = load_workflow_p_map(configuration,
+    workflow_p_map, map_stamp = load_wp_map(configuration,
                                                     do_lock=False)
     # Find all workflow patterns
-    (load_status, all_wps) = list_workflow_patterns(configuration)
+    (load_status, all_wps) = list_wps(configuration)
     if not load_status:
         configuration.logger.error("failed to load workflow patterns list: %s" % all_wps)
         return workflow_p_map
@@ -111,7 +82,12 @@ def refresh_workflow_p_map(configuration):
 
         # init first time
         workflow_p_map[wp] = workflow_p_map.get(wp, {})
-        if wp_mtime >= map_stamp:
+
+        if not workflow_p_map[wp].has_key(CONF) or wp_mtime >= map_stamp:
+            wp_conf = get_wp_conf(wp, configuration)
+            if not wp_conf:
+                wp_conf = {}
+            workflow_p_map[wp][CONF] = {}
             workflow_p_map[wp][MODTIME] = map_stamp
             dirty.append([wp])
 
@@ -134,7 +110,7 @@ def refresh_workflow_p_map(configuration):
     return workflow_p_map
 
 
-def get_workflow_p_map(configuration):
+def get_wp_map(configuration):
     """Returns the current map of workflow patterns and
     their configurations. Caches the map for load prevention with
     repeated calls within short time span.
@@ -147,18 +123,18 @@ def get_workflow_p_map(configuration):
         configuration.logger.info("refreshing workflow patterns map (%s)"
                                   % modified_patterns)
         map_stamp = time.time()
-        workflow_p_map = refresh_workflow_p_map(configuration)
+        workflow_p_map = refresh_wp_map(configuration)
         reset_workflow_p_modified(configuration)
     else:
         configuration.logger.debug("No changes - not refreshing")
-        workflow_p_map, map_stamp = load_workflow_p_map(configuration)
+        workflow_p_map, map_stamp = load_wp_map(configuration)
     last_map[WORKFLOW_PATTERNS] = workflow_p_map
     last_refresh[WORKFLOW_PATTERNS] = map_stamp
     last_load[WORKFLOW_PATTERNS] = map_stamp
     return workflow_p_map
 
 
-def list_workflow_patterns(configuration):
+def list_wps(configuration):
     """Returns a list of tuples, containing the path to the individual
     workflow patterns and the actual workflow pattern: (path,wp)
     """
@@ -203,38 +179,47 @@ def list_workflow_patterns(configuration):
     return (True, workflows)
 
 
+def get_wp_conf(wp, configuration):
+    """Return workflow pattern configuration"""
+    conf = {}
+
+
+    return conf
+
+
+
 # TODO, implement (ensure to mark map modified)
-def delete_workflow_pattern(pattern, configuration):
+def delete_workflow_pattern(wp, configuration):
     pass
 
-def create_workflow_pattern(client_id, pattern, configuration):
+
+def create_workflow_pattern(client_id, wp, configuration):
     # Prepare json for writing.
     # The name of the directory to be used in both the users home
     # and the global state/workflow_patterns_home directory
     client_dir = client_id_dir(client_id)
     logger = configuration.logger
-    logger.info('%s is creating a workflow pattern from %s' % (client_id, pattern['name']))
+    logger.info('%s is creating a workflow pattern from %s' % (client_id, wp['name']))
 
     # TODO, move check typing to here (name, language, cells)
 
-    workflow_pat_home = os.path.join(configuration.workflow_patterns_home,
+    wp_home = os.path.join(configuration.workflow_patterns_home,
                                      client_dir)
-    if not os.path.exists(workflow_pat_home):
+    if not os.path.exists(wp_home):
         try:
-            os.makedirs(workflow_pat_home)
+            os.makedirs(wp_home)
         except Exception, err:
             logger.error("couldn't create workflow pattern directory %s %s" %
-                         (workflow_pat_home, err))
+                         (wp_home, err))
             msg = "Couldn't create the required dependencies for your workflow pattern"
             return (False, msg)
 
-    # Create unique_filename (session_id)
-    unique_jup_name = generate_random_ascii(2 * session_id_bytes,
-                                            charset='0123456789abcdef')
+    # Use unique id as filename as well
+    wp_filename = wp['id']
 
-    pat_file_path = os.path.join(workflow_pat_home, unique_jup_name + '.json')
-    if os.path.exists(pat_file_path):
-        logger.error('workflow pattern unique filename conflict: %s ' % pat_file_path)
+    wp_file_path = os.path.join(wp_home, wp_filename + '.json')
+    if os.path.exists(wp_file_path):
+        logger.error('workflow pattern unique filename conflict: %s ' % wp_file_path)
         msg = 'A workflow pattern conflict was encountered, please try an resubmit the pattern'
         return (False, msg)
 
@@ -242,26 +227,25 @@ def create_workflow_pattern(client_id, pattern, configuration):
     wrote = False
     msg = ''
     try:
-        with open(pat_file_path, 'w') as j_file:
-            json.dump(pattern, j_file)
+        with open(wp_file_path, 'w') as j_file:
+            json.dump(wp, j_file)
         # Mark as modified
-        mark_workflow_p_modified(configuration, pattern['name'])
+        mark_workflow_p_modified(configuration, wp['name'])
         wrote = True
     except Exception, err:
-        logger.error("fa: %s to disk "
-                     " err: %s" % (pat_file_path, err))
+        logger.error("fa: %s to disk err: %s" % (wp_file_path, err))
         msg = 'Failed to save your workflow pattern, please try and resubmit it'
 
     if not wrote:
         # Ensure that the failed write does not stick around
         try:
-            os.remove(pat_file_path)
+            os.remove(wp_file_path)
         except Exception, err:
             logger.error('failed to remove the dangling worklow pattern %s %s' %
-                         (pat_file_path, err))
+                         (wp_file_path, err))
             msg += '\n Failed to cleanup after a failed workflow creation'
         return (False, msg)
 
     logger.info('%s created a new pattern workflow at: %s ' %
-                (client_id, pat_file_path))
+                (client_id, wp_file_path))
     return (True, '')

@@ -40,7 +40,8 @@ TODO finish description
 import json
 
 import shared.returnvalues as returnvalues
-from shared.defaults import csrf_field
+from shared.defaults import csrf_field, wp_id_length, wp_id_charset
+from shared.pwhash import generate_random_ascii
 from shared.init import initialize_main_variables
 from shared.handlers import safe_handler, get_csrf_limit
 from shared.functional import validate_input_and_cert
@@ -199,7 +200,12 @@ def main(client_id, user_arguments_dict):
     output_objects.append({'object_type': 'header', 'text':
                            ' Registering jupyter notebook'})
 
+    # Unique workflow pattern id
+    wp_id = generate_random_ascii(wp_id_length, charset=wp_id_charset)
+
     pattern = {
+        "id": wp_id,
+        "owner": client_id,
         "name": user_arguments_dict[upload_name],
         "language": lang,
         "cells": cells

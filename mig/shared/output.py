@@ -1382,6 +1382,11 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
 <tbody>
 </tbody>
 </table>''')
+            for single_wp in workflowpatterns:
+                lines.append('''
+<tr>
+<td>%s</td><td>%s</td><td>%s</td>
+</tr>''' % (single_wp['id'], single_wp['owner'], single_wp['name']))
         elif i['object_type'] == 'frozenarchives':
             frozenarchives = i['frozenarchives']
             lines.append('''
