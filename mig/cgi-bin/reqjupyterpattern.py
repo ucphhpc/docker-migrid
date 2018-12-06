@@ -29,7 +29,7 @@ import cgi
 import cgitb
 cgitb.enable()
 
-from shared.functionality.regjupyterpattern import main
+from shared.functionality.reqjupyterpattern import main
 from shared.cgiscriptstub import run_cgi_script
 
 run_cgi_script(main)

@@ -40,7 +40,6 @@ TODO finish description
 import json
 
 import shared.returnvalues as returnvalues
-from shared.base import client_id_dir
 from shared.defaults import csrf_field
 from shared.init import initialize_main_variables
 from shared.handlers import safe_handler, get_csrf_limit
@@ -53,20 +52,18 @@ def signature():
 
 
 def handle_form_input(file, user_arguments_dict, configuration):
-    """ Retrieve the jupyter notebook file"""
+    """Retrieve the jupyter notebook file"""
     pass
 
 
 def main(client_id, user_arguments_dict):
     (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(client_id, op_header=False)
-    client_dir = client_id_dir(client_id)
     defaults = signature()[1]
     validate_args = {}
     # validate_args = dict([(key, user_arguments_dict.get(key, val)) for \
     #                       (key, val) in defaults.items()])
 
-    logger.info("User args: %s" % user_arguments_dict)
     # Allow csrf_field from upload
     validate_args[csrf_field] = user_arguments_dict.get(csrf_field,
                                                         ['AllowMe'])
@@ -75,14 +72,14 @@ def main(client_id, user_arguments_dict):
         validate_args,
         defaults,
         output_objects,
-        client_id,
+    client_id,
         configuration,
         allow_rejects=False,
     )
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
 
-    logger.info("regjupyterpattern as User: %s accepted %s" %
+    logger.info("reqjupyterpattern as User: %s accepted %s" %
                 (client_id, accepted))
 
     if not safe_handler(configuration, 'post', op_name, client_id,
@@ -94,8 +91,7 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     # Validate that the notebook is there
-    upload_key = 'jupyter-notebook'
-    upload_name = 'jupyter-notebookfilename'
+    upload_key, upload_name = 'jupyter-notebook', 'jupyter-notebookfilename'
     if upload_key not in user_arguments_dict:
         output_objects.append({'object_type': 'error_text',
                                'text': 'No jupyter notebook was provided'})
@@ -113,7 +109,6 @@ def main(client_id, user_arguments_dict):
     # Remove trailing commas
     # TODO, ask jonas about standard way of sanitizing input on migrid
     formatted = user_arguments_dict[upload_key][0]
-    logger.info("Formatted %s " % formatted)
     json_nb = None
     try:
         json_nb = json.loads(formatted, encoding='utf-8')
