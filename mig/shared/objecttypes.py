@@ -115,11 +115,11 @@ runtimeenvironment = {
                       'environment')],
     'optional': [],
     }
-# TODO, implement required keys
 workflowpattern = {
     'object_type': 'workflowpattern',
-    'required': []
-}
+    'required': ['id', 'owner', 'name'],
+    'optional': [],
+    }
 frozenfile = {'object_type': 'frozenfile', 'required': ['name', 'size',
               'checksum', 'timestamp'], 'optional': []}
 frozenarchive = {

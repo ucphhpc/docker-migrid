@@ -30,7 +30,7 @@
 import shared.returnvalues as returnvalues
 from shared.init import initialize_main_variables, find_entry
 from shared.functional import validate_input_and_cert
-from shared.workflows import get_workflow_p_map
+from shared.workflows import get_wp_map, CONF
 
 operations = ['show']
 
@@ -92,11 +92,19 @@ def main(client_id, user_arguments_dict):
                            'text': 'Registered Workflow Patterns'})
 
     workflow_patterns = []
-    workflow_pattern_map = get_workflow_p_map(configuration)
+    workflow_pattern_map = get_wp_map(configuration)
     logger.info("Found workflow patterns map: %s" % workflow_pattern_map)
-    for wp_filename, wp_content in workflow_pattern_map.items():
-        # TODO generate list of patterns for output
-        pass
+    # TODO generate list of patterns for output
+    for wp_file, wp_content in workflow_pattern_map.items():
+        if CONF in wp_content and wp_content[CONF]:
+            ui_wp = {'object_type': 'workflowpattern'}
+            if 'id' in wp_content[CONF]:
+                ui_wp['id'] = str(wp_content[CONF]['id'])
+            if 'owner' in wp_content[CONF]:
+                ui_wp['owner'] = str(wp_content[CONF]['owner'])
+            if 'name' in wp_content[CONF]:
+                ui_wp['name'] = str(wp_content[CONF]['name'])
+            workflow_patterns.append(ui_wp)
 
     output_objects.append({'object_type': 'workflowpatterns',
                            'workflowpatterns': workflow_patterns})

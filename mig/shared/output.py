@@ -1371,7 +1371,7 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
         elif i['object_type'] == 'workflowpatterns':
             workflowpatterns = i['workflowpatterns']
             lines.append('''
-<table class="workflowpatterns columnsort" id="workflowpatterns">
+<table class="workflowpatns columnsort" id="workflowpatntable">
 <thead class="title">
     <tr>
         <th>ID</th>
@@ -1380,13 +1380,16 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
     </tr>    
 </thead>
 <tbody>
-</tbody>
-</table>''')
+''')
             for single_wp in workflowpatterns:
                 lines.append('''
 <tr>
 <td>%s</td><td>%s</td><td>%s</td>
-</tr>''' % (single_wp['id'], single_wp['owner'], single_wp['name']))
+</tr>''' % (single_wp.get('id', ''), single_wp.get('owner', ''),
+            single_wp.get('name', '')))
+            lines.append('''
+</tbody>
+</table>''')
         elif i['object_type'] == 'frozenarchives':
             frozenarchives = i['frozenarchives']
             lines.append('''
