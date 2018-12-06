@@ -259,3 +259,8 @@ def create_workflow_pattern(client_id, wp, configuration):
 # id, owner, name
 def build_wp_object(configuration, wp_dict):
     pass
+
+
+# TODO, Register a workflow from a pattern json file
+def register_workflow_from_pattern(client_id, wp, configuration):
+    pass
