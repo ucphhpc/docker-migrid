@@ -56,14 +56,11 @@ as a local URL. The host device should be configured so that it queries the
 localhost ``devdns`` service before any external nameserver.
 E.g. on a OSX system either through dnsmasq::
 
-    brew install dnsmasq
-    nano /usr/local/etc/dnsmasq.conf
     # append to end of dnsmasq.conf
     address=/.test/127.0.0.1
 
 or resolv.conf::
 
-    nano /etc/resolv.conf
     # prepend before other nameservers
     nameserver 127.0.0.1
 
