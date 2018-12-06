@@ -39,7 +39,8 @@ from shared.modified import check_workflow_p_modified, \
     reset_workflow_p_modified, mark_workflow_p_modified
 
 WRITE_LOCK = 'write.lock'
-WORKFLOW_PATTERNS, MODTIME, CONF = ['__workflowpatterns__', '__modtime__', '__conf__']
+WORKFLOW_PATTERNS, MODTIME, CONF = ['__workflowpatterns__', '__modtime__',
+                                    '__conf__']
 
 MAP_CACHE_SECONDS = 60
 
@@ -70,11 +71,12 @@ def refresh_wp_map(configuration):
     lock_handle = open(lock_path, 'a')
     fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
     workflow_p_map, map_stamp = load_wp_map(configuration,
-                                                    do_lock=False)
+                                            do_lock=False)
     # Find all workflow patterns
     (load_status, all_wps) = list_wps(configuration)
     if not load_status:
-        configuration.logger.error("failed to load workflow patterns list: %s" % all_wps)
+        configuration.logger.error("failed to load workflow patterns list: %s"
+                                   % all_wps)
         return workflow_p_map
 
     for wp_path, wp in all_wps:
@@ -82,8 +84,7 @@ def refresh_wp_map(configuration):
 
         # init first time
         workflow_p_map[wp] = workflow_p_map.get(wp, {})
-
-        if not workflow_p_map[wp].has_key(CONF) or wp_mtime >= map_stamp:
+        if CONF not in workflow_p_map[wp] or wp_mtime >= map_stamp:
             wp_conf = get_wp_conf(wp, configuration)
             if not wp_conf:
                 wp_conf = {}
@@ -104,7 +105,8 @@ def refresh_wp_map(configuration):
             dump(workflow_p_map, map_path)
             os.utime(map_path, (start_time, start_time))
         except Exception, err:
-            configuration.logger.error("could not save workflow patterns map, or  %s" % err)
+            configuration.logger.error("could not save workflow patterns map, "
+                                       "or %s" % err)
     last_refresh[WORKFLOW_PATTERNS] = start_time
     lock_handle.close()
     return workflow_p_map
@@ -143,7 +145,7 @@ def list_wps(configuration):
         try:
             os.makedirs(configuration.workflow_patterns_home)
         except Exception, err:
-            configuration.logger.error("workflows.py: not able to create "
+            configuration.logger.error("not able to create "
                                        "directory %s: %s" %
                                        (configuration.workflow_patterns_home,
                                         err))
@@ -182,10 +184,7 @@ def list_wps(configuration):
 def get_wp_conf(wp, configuration):
     """Return workflow pattern configuration"""
     conf = {}
-
-
     return conf
-
 
 
 # TODO, implement (ensure to mark map modified)
@@ -199,19 +198,21 @@ def create_workflow_pattern(client_id, wp, configuration):
     # and the global state/workflow_patterns_home directory
     client_dir = client_id_dir(client_id)
     logger = configuration.logger
-    logger.info('%s is creating a workflow pattern from %s' % (client_id, wp['name']))
+    logger.info('%s is creating a workflow pattern from %s' % (client_id,
+                                                               wp['name']))
 
     # TODO, move check typing to here (name, language, cells)
 
     wp_home = os.path.join(configuration.workflow_patterns_home,
-                                     client_dir)
+                           client_dir)
     if not os.path.exists(wp_home):
         try:
             os.makedirs(wp_home)
         except Exception, err:
             logger.error("couldn't create workflow pattern directory %s %s" %
                          (wp_home, err))
-            msg = "Couldn't create the required dependencies for your workflow pattern"
+            msg = "Couldn't create the required dependencies for " \
+                  "your workflow pattern"
             return (False, msg)
 
     # Use unique id as filename as well
@@ -219,8 +220,10 @@ def create_workflow_pattern(client_id, wp, configuration):
 
     wp_file_path = os.path.join(wp_home, wp_filename + '.json')
     if os.path.exists(wp_file_path):
-        logger.error('workflow pattern unique filename conflict: %s ' % wp_file_path)
-        msg = 'A workflow pattern conflict was encountered, please try an resubmit the pattern'
+        logger.error('workflow pattern unique filename conflict: %s '
+                     % wp_file_path)
+        msg = 'A workflow pattern conflict was encountered, ' \
+              'please try an resubmit the pattern'
         return (False, msg)
 
     # Save the pattern

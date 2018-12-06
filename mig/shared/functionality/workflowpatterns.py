@@ -95,7 +95,8 @@ def main(client_id, user_arguments_dict):
     workflow_pattern_map = get_workflow_p_map(configuration)
     logger.info("Found workflow patterns map: %s" % workflow_pattern_map)
     for wp_filename, wp_content in workflow_pattern_map.items():
-
+        # TODO generate list of patterns for output
+        pass
 
     output_objects.append({'object_type': 'workflowpatterns',
                            'workflowpatterns': workflow_patterns})
