@@ -100,13 +100,10 @@ def refresh_workflow_p_map(configuration):
     fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
     workflow_p_map, map_stamp = load_workflow_p_map(configuration,
                                                     do_lock=False)
-    configuration.logger.info("After lock workflows")
     # Find all workflow patterns
     (load_status, all_wps) = list_workflow_patterns(configuration)
-    configuration.logger.info("After list workflow patterns")
     if not load_status:
-        configuration.logger.error("failed to load workflow patterns list: %s"
-                                   % all_wps)
+        configuration.logger.error("failed to load workflow patterns list: %s" % all_wps)
         return workflow_p_map
 
     for wp_path, wp in all_wps:
@@ -129,10 +126,9 @@ def refresh_workflow_p_map(configuration):
     if dirty:
         try:
             dump(workflow_p_map, map_path)
-            os.utime(workflow_p_map, (start_time, start_time))
+            os.utime(map_path, (start_time, start_time))
         except Exception, err:
-            configuration.logger.error("Could not save workflow patterns map"
-                                       " %s" % err)
+            configuration.logger.error("could not save workflow patterns map, or  %s" % err)
     last_refresh[WORKFLOW_PATTERNS] = start_time
     lock_handle.close()
     return workflow_p_map
@@ -166,7 +162,6 @@ def list_workflow_patterns(configuration):
     """Returns a list of tuples, containing the path to the individual
     workflow patterns and the actual workflow pattern: (path,wp)
     """
-    
     workflows = []
     if not os.path.exists(configuration.workflow_patterns_home):
         try:
@@ -195,7 +190,6 @@ def list_workflow_patterns(configuration):
         except Exception, err:
             configuration.logger.error(
                 "Failed to retrieve content inside %s %s" % (client_path, err))
-
         for entry in dir_content:
             # Skip dot files/dirs and the write lock
             if entry.startswith('.') or entry == WRITE_LOCK:
@@ -213,15 +207,13 @@ def list_workflow_patterns(configuration):
 def delete_workflow_pattern(pattern, configuration):
     pass
 
-
 def create_workflow_pattern(client_id, pattern, configuration):
     # Prepare json for writing.
     # The name of the directory to be used in both the users home
     # and the global state/workflow_patterns_home directory
     client_dir = client_id_dir(client_id)
     logger = configuration.logger
-    logger.info("%s is creating a workflow pattern %s" %
-                (client_id, pattern))
+    logger.info('%s is creating a workflow pattern from %s' % (client_id, pattern['name']))
 
     # TODO, move check typing to here (name, language, cells)
 
@@ -231,7 +223,10 @@ def create_workflow_pattern(client_id, pattern, configuration):
         try:
             os.makedirs(workflow_pat_home)
         except Exception, err:
-            logger.error("")
+            logger.error("couldn't create workflow pattern directory %s %s" %
+                         (workflow_pat_home, err))
+            msg = "Couldn't create the required dependencies for your workflow pattern"
+            return (False, msg)
 
     # Create unique_filename (session_id)
     unique_jup_name = generate_random_ascii(2 * session_id_bytes,
@@ -239,38 +234,34 @@ def create_workflow_pattern(client_id, pattern, configuration):
 
     pat_file_path = os.path.join(workflow_pat_home, unique_jup_name + '.json')
     if os.path.exists(pat_file_path):
-        logger.error("Error while registering a new jupyter pattern file: %s "
-                     "a conflict in unique filenames was encountered" %
-                     pat_file_path)
-        msg = 'The generated filename for your pattern notebook encountered ' \
-              'a naming conflict, please try re-uploading the notebook'
+        logger.error('workflow pattern unique filename conflict: %s ' % pat_file_path)
+        msg = 'A workflow pattern conflict was encountered, please try an resubmit the pattern'
         return (False, msg)
 
-    logger.info("Writing content %s type: %s" % (pattern, type(pattern)))
     # Save the pattern
     wrote = False
+    msg = ''
     try:
         with open(pat_file_path, 'w') as j_file:
             json.dump(pattern, j_file)
-        logger.info("Created a new pattern notebook at: %s " %
-                    pat_file_path)
-        wrote = True
         # Mark as modified
         mark_workflow_p_modified(configuration, pattern['name'])
+        wrote = True
     except Exception, err:
-        logger.error("Failed to write the jupyter pattern file: %s to disk "
+        logger.error("fa: %s to disk "
                      " err: %s" % (pat_file_path, err))
-        msg = 'Failed to write the pattern notebook to disk, please ' \
-              'try re-uploading the notebook'
-        return (False, msg)
+        msg = 'Failed to save your workflow pattern, please try and resubmit it'
 
     if not wrote:
         # Ensure that the failed write does not stick around
         try:
             os.remove(pat_file_path)
         except Exception, err:
-            logger.error("Failed to remove the failed jupyter pattern file %s"
-                         " err: %s " % (pat_file_path, err))
-        return (False, 'Failed to cleanup after a failed creation')
+            logger.error('failed to remove the dangling worklow pattern %s %s' %
+                         (pat_file_path, err))
+            msg += '\n Failed to cleanup after a failed workflow creation'
+        return (False, msg)
 
+    logger.info('%s created a new pattern workflow at: %s ' %
+                (client_id, pat_file_path))
     return (True, '')

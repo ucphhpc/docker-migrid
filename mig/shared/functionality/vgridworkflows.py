@@ -391,7 +391,7 @@ in reaction to file system events.</p>
                                'text': 'Register with Jupyter Notebook'})
 
         form_method = 'post'
-        target_op = 'regjupyterpattern'
+        target_op = 'reqjupyterpattern'
         csrf_limit = get_csrf_limit(configuration)
 
         csrf_token = make_csrf_token(configuration, form_method,
