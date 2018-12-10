@@ -200,18 +200,25 @@ def main(client_id, user_arguments_dict):
     output_objects.append({'object_type': 'header', 'text':
                            ' Registering jupyter notebook'})
 
+    # Generate checksum of pattern instead as an id
     # Unique workflow pattern id
     wp_id = generate_random_ascii(wp_id_length, charset=wp_id_charset)
 
-    pattern = {
-        "id": wp_id,
-        "owner": client_id,
-        "name": user_arguments_dict[upload_name],
-        "language": lang,
-        "cells": cells
+    pattern_notebook = {
+        'notebook': {
+            'cells': cells,
+            'language': lang
+        }
+        'owner': client_id,
+        'name': user_arguments_dict[upload_name],
+        'recipes': [],
+        'input': [],
+        'output': [],
+        'type_filter': [],
+        'variables': {}
     }
 
-    created, msg = create_workflow_pattern(client_id, pattern, configuration)
+    created, msg = create_workflow_pattern(client_id, pattern_notebook, configuration)
     if not created:
         output_objects.append({'object_type': 'error_text',
                                'text': msg})

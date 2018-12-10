@@ -28,9 +28,11 @@
 """Manage all the available workflow patterns"""
 
 import shared.returnvalues as returnvalues
+from shared.base import extract_field
 from shared.init import initialize_main_variables, find_entry
 from shared.functional import validate_input_and_cert
-from shared.workflows import get_wp_map, CONF
+from shared.workflows import get_wp_map, build_wp_object, CONF
+
 
 operations = ['show']
 
@@ -94,18 +96,19 @@ def main(client_id, user_arguments_dict):
     workflow_patterns = []
     workflow_pattern_map = get_wp_map(configuration)
     logger.info("Found workflow patterns map: %s" % workflow_pattern_map)
-    # TODO generate list of patterns for output
-    # TODO switch to build patterns object from workflows.py
     for wp_file, wp_content in workflow_pattern_map.items():
-        if CONF in wp_content and wp_content[CONF]:
-            ui_wp = {'object_type': 'workflowpattern'}
-            if 'id' in wp_content[CONF]:
-                ui_wp['id'] = str(wp_content[CONF]['id'])
-            if 'owner' in wp_content[CONF]:
-                ui_wp['owner'] = str(wp_content[CONF]['owner'])
-            if 'name' in wp_content[CONF]:
-                ui_wp['name'] = str(wp_content[CONF]['name'])
-            workflow_patterns.append(ui_wp)
+        if CONF in wp_content:
+            wp_dict = wp_content[CONF]
+            wp_obj = build_wp_object(configuration, wp_dict)
+            wp_obj = {
+                'object_type': str(wp_obj['object_type']),
+                'id': str(wp_obj['id']),
+                'owner': str(extract_field(wp_obj['owner'], 'email')),
+                'name': str(wp_obj['name'])
+            }
+            logger.info("build wp_obj: %s" % wp_obj)
+            if wp_obj:
+                workflow_patterns.append(wp_obj)
 
     output_objects.append({'object_type': 'workflowpatterns',
                            'workflowpatterns': workflow_patterns})
