@@ -16,16 +16,16 @@ clean:
 	rm -rf ./httpd
 	rm -rf ./mig
 	rm -rf ./state
-	if [ "$$(docker volume ls -q -f 'name=docker-migrid*')" != "" ]; then\
-		docker volume rm -f $$(docker volume ls -q -f 'name=docker-migrid*');\
+	if [ "$$(docker volume ls -q -f 'name=mig_implementation*')" != "" ]; then\
+		docker volume rm -f $$(docker volume ls -q -f 'name=mig_implementation*');\
 	fi
 
 reset:
 	rm -rf ./certs
 	rm -rf ./httpd
 	rm -rf ./state
-	if [ "$$(docker volume ls -q -f 'name=docker-migrid*')" != "" ]; then\
-		docker volume rm -f $$(docker volume ls -q -f 'name=docker-migrid*');\
+	if [ "$$(docker volume ls -q -f 'name=mig_implementation*')" != "" ]; then\
+		docker volume rm -f $$(docker volume ls -q -f 'name=mig_implementation*');\
 	fi
 
 push:

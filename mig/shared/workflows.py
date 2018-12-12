@@ -233,9 +233,11 @@ def create_workflow_pattern(client_id, wp, configuration):
     # TODO, move check typing to here (name, language, cells)
     # Based on the source, generate checksum as the id
 
+    _logger.info("wp %s" % wp)
+
     checksum = sha256()
     code = ''
-    for c in wp['cells']:
+    for c in wp['notebook']['cells']:
         if 'source' in c:
             code = code.join(c['source'])
     
@@ -310,4 +312,55 @@ def build_wp_object(configuration, wp_dict):
 # TODO, Register a workflow from a pattern json file
 def register_workflow_from_pattern(client_id, wp, configuration):
     
+    pass
+
+
+
+
+def task_identification_from_pattern(client_id, workflow_pattern, configuration):
+    # TODO finish this
+    """identifies if a task can be created, following the creation or
+    editing of a pattern . This pattern is read in as the object
+    workflow_pattern and is expected in the format."""
+
+    # work out recipe directory
+    client_dir = client_id_dir(client_id)
+    recipe_path = os.path.join(configuration.workflow_recipes_home, client_dir)
+
+    # Setup logger
+    _logger = configuration.logger
+    _logger.info('%s is identifying any possible tasks from pattern creation '
+                 '%s' % (client_id, workflow_pattern['name']))
+
+    # Currently multiple recipes are crudely chained together. This will need
+    # to be altered once we move into other languages than python.
+    complete_recipe = ''
+    got_all_recipes = False
+    # Check if defined recipes exist already within system
+    for pattern_recipe in workflow_pattern['recipes']:
+        got_this_recipe = False
+        # TODO this will almost certainly need altered once recipes have been
+        #  implemented
+        # This assumes that recipes are saved as their name.
+        for recipe in os.listdir(recipe_path):
+            if pattern_recipe == recipe:
+                try:
+                    complete_recipe =
+                    got_this_recipe = True
+                except Exception, err:
+                    _logger.error('')
+
+
+    # Check to see if there are any pre-existing data files to process
+    # Generate Tasks if possible
+    pass
+
+
+def task_identification_from_recipe(workflow_recipe, configuration):
+    # TODO make nice comment
+    pass
+
+
+def task_identification_from_data(configuration):
+    # TODO make nice comment
     pass

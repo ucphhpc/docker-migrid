@@ -205,10 +205,11 @@ def main(client_id, user_arguments_dict):
     wp_id = generate_random_ascii(wp_id_length, charset=wp_id_charset)
 
     pattern_notebook = {
+        'id': wp_id,
         'notebook': {
             'cells': cells,
             'language': lang
-        }
+        },
         'owner': client_id,
         'name': user_arguments_dict[upload_name],
         'recipes': [],
@@ -218,7 +219,8 @@ def main(client_id, user_arguments_dict):
         'variables': {}
     }
 
-    created, msg = create_workflow_pattern(client_id, pattern_notebook, configuration)
+    created, msg = create_workflow_pattern(client_id, pattern_notebook,
+                                           configuration)
     if not created:
         output_objects.append({'object_type': 'error_text',
                                'text': msg})

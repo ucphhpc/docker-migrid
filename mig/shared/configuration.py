@@ -107,6 +107,7 @@ def fix_missing(config_file, verbose=True):
         'twofactor_home': '~/state/twofactor_home/',
         'gdp_home': '~/state/gdp_home/',
         'workflow_patterns_home': '~/state/workflow_patterns_home',
+        'workflow_recipes_home': '~/state/workflow_recipes_home',
         'site_vgrid_links': 'files web tracker workflows monitor',
         'site_vgrid_creators': 'distinguished_name:.*',
         'site_vgrid_label': 'VGrid',
