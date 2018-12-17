@@ -56,10 +56,49 @@ def handle_form_input(file, user_arguments_dict, configuration):
     """Retrieve the jupyter notebook file"""
     pass
 
+def get_recipes_parameters_from_nb(json_nb):
+    """Returns a dict of cells that contain recipes and parameters from the ipynb notebook.
+    This is based on whether the cell dictionary has a key with
+    the follwing format:
+         'metadata': {'tags': ['recipe']}
+    or
+        'metadata': {'tags': ['parameters']}
+    This is based on ipynb cell tagging.
+    e.g. https://github.com/jupyterlab/jupyterlab-celltags"""
+
+    rp_cells = {'recipes': [], 'parameters': {}}
+    if 'cells' in json_nb and isinstance(json_nb['cells']):
+        for cell in json_nb['cells']:
+            if 'metadata' in cell and isinstance(cell['metadata'], dict):
+                tags = cell['metadata'].get('tags')
+                for tag in tags:
+                    if tag == 'recipe':
+                        rp_cells['recipes'].append(cell)
+                    if tag == 'parameters':
+                        # Extract variable declarations
+                        rp_cells['parameters'].update(get_declarations_dict(cell['source']))
+    return rp_cells
+
+
+def get_declarations_dict(code):
+    """Returns a dictionary with the variable declartions in the list
+    Expects that code is a list of strings"""
+    declarations = {}
+    for line in code:
+        if isinstance(line, str):
+            line = line.replace(" ", "")
+            lines = line.split("=")
+            if len(lines) == 2:
+                declarations.update({lines[0]: lines[1]})
+            else:
+                # TODO error report that either none or multiple = where present
+                pass
+    return declarations
+
 
 def main(client_id, user_arguments_dict):
     (configuration, logger, output_objects, op_name) = \
-        initialize_main_variables(client_id, op_header=False)
+            initialize_main_variables(client_id, op_header=False)
     defaults = signature()[1]
     validate_args = {}
     # validate_args = dict([(key, user_arguments_dict.get(key, val)) for \
@@ -126,6 +165,7 @@ def main(client_id, user_arguments_dict):
     # Validate that the notebook has the minimum amount of content,
     # with the correct types
     # TODO check for cell_type, code
+    # TODO check for 'source' in each cell
     req_keys = [('cells', list), ('metadata', dict), ('nbformat', int)]
     incorrect_keys = {'missing': [], 'invalid': []}
     for key in req_keys:
@@ -178,23 +218,14 @@ def main(client_id, user_arguments_dict):
                                        ' of the following once: %s' %
                                        (lang, ' '.join(valid_languages))})
         return (output_objects, returnvalues.CLIENT_ERROR)
-
-    # Extract code cells with code
-    cells = []
-    for cell in json_nb['cells']:
-        if 'cell_type' in cell and cell['cell_type'] == 'code' \
-                and 'source' in cell and cell['source']:
-            n_cell = {
-                'source': cell['source'],
-                'metadata': cell['metadata']
-            }
-            cells.append(n_cell)
-
-    if not cells:
+    
+    # Extract recipe and parameter cells from notebook
+    recipes_n_parameters = get_recipes_parameters_from_nb(json_nb)
+    if not recipes_n_parameters['recipes']:
         output_objects.append({'object_type': 'error_text',
-                               'text': 'No non-empty code cells was '
-                                       'found in %s' %
-                                       user_arguments_dict[upload_name]})
+                        'text': 'No recipe cells were found '
+                                'found in %s' %
+                                user_arguments_dict[upload_name]})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     output_objects.append({'object_type': 'header', 'text':
@@ -206,16 +237,15 @@ def main(client_id, user_arguments_dict):
 
     pattern_notebook = {
         'notebook': {
-            'cells': cells,
             'language': lang
-        }
+        },
         'owner': client_id,
         'name': user_arguments_dict[upload_name],
-        'recipes': [],
+        'recipes': recipes_n_parameters['recipes'],
         'input': [],
         'output': [],
         'type_filter': [],
-        'variables': {}
+        'variables': recipes_n_parameters['parameters']
     }
 
     created, msg = create_workflow_pattern(client_id, pattern_notebook, configuration)
