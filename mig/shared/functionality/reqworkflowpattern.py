@@ -36,6 +36,7 @@ TODO finish description
 import json
 
 import shared.returnvalues as returnvalues
+from shared.base import valid_dir_input
 from shared.defaults import csrf_field, wp_id_length, wp_id_charset
 from shared.pwhash import generate_random_ascii
 from shared.init import initialize_main_variables
@@ -44,22 +45,103 @@ from shared.functional import validate_input_and_cert
 from shared.workflows import create_workflow_pattern
 from shared.safeinput import REJECT_UNSET, VALID_SAFE_PATH_CHARACTERS
 
-
 def signature():
     """Signaure of the main function"""
 
     defaults = {
-        'input': [''],
-        'output': [''],
-        'type-filter': [''],
-        'recipes': ['']
+        'input': REJECT_UNSET,
+        'output': REJECT_UNSET,
+        'type-filter': REJECT_UNSET,
+        'recipes': [''],
+        'recipesfilename': ['']
     }
     return ['registerpattern', defaults]
 
 
-def handle_form_input(file, user_arguments_dict, configuration):
+def handle_form_input(configuration, file, user_arguments_dict):
     """Retrieve the recipe file"""
     pass
+
+def get_uploaded_recipes(configuration, user_arguments_dict, upload_key, upload_names):
+    """"""
+    # TODO, find out which type of recipe it is
+    _logger = configuration.logger
+    json_recipes = []
+    recipes = user_arguments_dict[upload_key]
+    for recipe in recipes:
+        json_recipe = None
+        try:
+            json_recipe = json.loads(recipe, encoding='utf-8')
+            if json_recipe:
+                json_recipe['name'] = upload_names
+                json_recipes.append(json_recipe)
+        except Exception, err:
+            _logger.error("Failed to json load: %s from: %s " %
+                        (err, user_arguments_dict[recipe_key]))
+            return []
+    return json_recipes
+    
+def valid_recipes(configuration, recipes):
+        # Validate that the recipe has the minimum amount of content,
+    # with the correct types
+    # TODO check for cell_type, code
+    # TODO check for 'source' in each cell
+
+    req_keys = [('cells', list), ('metadata', dict), ('nbformat', int)]
+    incorrect_keys = {'missing': [], 'invalid': []}
+
+    for recipe in recipes:
+        for key in req_keys:
+            if key[0] not in recipe:
+                incorrect_keys['missing'].append(key[0])
+            if key[0] in recipe and not isinstance(recipe[key[0]], key[1]):
+                incorrect_keys['invalid'].append(key[0])
+
+        if incorrect_keys['missing']:
+            output_keys = ' '.join(incorrect_keys['missing'])
+            output_objects.append({'object_type': 'error_text',
+                                'text': 'Missing required fields in Recipe: '
+                                        '%s' % output_keys})
+
+    if incorrect_keys['invalid']:
+        output_keys = ' '.join(incorrect_keys['invalid'])
+        correct_types = '\n'.join([' is a '.join(key) for key in req_keys
+                                  if key[0] in incorrect_keys['invalid']])
+        output_objects.append({'object_type': 'error_text',
+                               'text': 'The recipe had invalid fields: %s '
+                                       ' requires that %s' %
+                                       (output_keys, correct_types)})
+
+    if incorrect_keys['missing'] or incorrect_keys['invalid']:
+        return (output_objects, returnvalues.CLIENT_ERROR)
+
+    # Detect which kernel to use (what language is used)
+    # As specified at
+    # https://nbformat.readthedocs.io/en/latest
+    # /format_description.html?highlight=language_info
+    # language_info['name'] tells which language is used in the recipe
+    if 'language_info' not in json_nb['metadata'] or 'name' not in \
+            json_nb['metadata']['language_info']:
+        output_objects.append({'object_type': 'error_text',
+                               'text': 'The recipe\'s language is not '
+                                       'specified. Please ensure that '
+                                       'the recipe has a defined language'})
+        return (output_objects, returnvalues.CLIENT_ERROR)
+
+    lang = str(json_nb['metadata']['language_info']['name'])
+    logger.info("After language_info check")
+
+    # TODO, make configuration.valid_recipe_langauges
+    valid_languages = ['python']
+    if lang not in valid_languages:
+        output_objects.append({'object_type': 'error_text',
+                               'text': 'The provided recipe language %s'
+                                       ' is not available. Please use one'
+                                       ' of the following once: %s' %
+                                       (lang, ' '.join(valid_languages))})
+        return (output_objects, returnvalues.CLIENT_ERROR)
+
+    return False
 
 
 def get_tags_from_cell(cell):
@@ -69,7 +151,7 @@ def get_tags_from_cell(cell):
             return cell['metadata']['tags']
     return None
 
-def get_recipes_parameters_from_nb(configuration, json_nb):
+def get_recipes_parameters(configuration, json_nb):
     """Returns a dict of cells that contain recipes and parameters from the ipynb notebook.
     This is based on whether the cell dictionary has a key with
     the follwing format:
@@ -113,8 +195,14 @@ def main(client_id, user_arguments_dict):
     defaults = signature()[1]
 
     # TODO, add the signature keys to guess_type in safeinput.py
-    #  Validate user_arguments_dict: input, ouput, type-filter, recipes, recipesfilename
-    validate_args = {}
+    #  Validate user_arguments_dict: input, ouput, type-filter, 
+    #  recipes, recipesfilename
+    validate_args = {
+        'input': [''],
+        'output': [''],
+        'type-filter': [''],
+        csrf_field: ['AllowMe'],
+    }
     validate_args[csrf_field] = user_arguments_dict.get(csrf_field, ['AllowMe'])
     (validate_status, accepted) = validate_input_and_cert(
         validate_args,
@@ -126,9 +214,28 @@ def main(client_id, user_arguments_dict):
     )
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
-
     logger.debug("reqworkflowpattern as User: %s accepted %s" %
                 (client_id, accepted))
+
+    # Extract inputs, output and type-filter
+    inputs_name, output_name, type_filter_name = 'input', 'output', 'type-filter'
+    upload_key, upload_name = 'recipes', 'recipesfilename'
+
+    inputs = user_arguments_dict[inputs_name]
+    output = user_arguments_dict[output_name]
+    type_filter = user_arguments_dict[type_filter_name]
+    recipe_name = user_arguments_dict[upload_name]
+
+    paths = inputs + output
+    for path in paths:
+        if not valid_dir_input(configuration.user_home, path):
+            logger.warning(
+                "possible illegal directory traversal attempt pattern_dirs '%s'"
+                % path)
+            output_objects.append({'object_type': 'error_text', 'text'
+                                : 'The path given: "%s" is illgally formatted'
+                                % path})
+            return (output_objects, returnvalues.CLIENT_ERROR)
 
     if not safe_handler(configuration, 'post', op_name, client_id,
                         get_csrf_limit(configuration), accepted):
@@ -138,130 +245,49 @@ def main(client_id, user_arguments_dict):
              })
         return (output_objects, returnvalues.CLIENT_ERROR)
 
-    # Extract inputs, output and type-filter
-    inputs_name, output_name, type_filter_name = 'input', 'output', 'type-filter' 
-
-    # Validate that the recipe is there
-    upload_key, upload_name = 'recipes', 'recipesfilename'
-    if upload_key not in user_arguments_dict:
-        output_objects.append({'object_type': 'error_text',
-                               'text': 'No recipe was provided'})
-        return (output_objects, returnvalues.CLIENT_ERROR)
-
-    if not isinstance(user_arguments_dict[upload_key], list) and \
-            len(user_arguments_dict[upload_key]) == 1:
-        output_objects.append({'object_type': 'error_text',
-                               'text': 'Only a single recipe can be uploaded'
-                                       'at a time'})
-        return (output_objects, returnvalues.CLIENT_ERROR)
-
-    # TODO check correct format of upload, .ipynb
-    # Parse file format as json string
-    # Remove trailing commas
-    # TODO, ask jonas about standard way of sanitizing input on migrid
-    formatted = user_arguments_dict[upload_key][0]
-    json_nb = None
-    try:
-        json_nb = json.loads(formatted, encoding='utf-8')
-    except Exception, err:
-        logger.error("Failed to json load: %s from: %s uploaded by: %s" %
-                     (err, user_arguments_dict[upload_name], client_id))
-
-    if json_nb is None:
+    # Optional recipes
+    recipes_n_parameters = {}
+    recipes = get_uploaded_recipes(configuration, user_arguments_dict, upload_key, upload_name)
+    if recipes and valid_recipes(configuration, recipes):
+        # Extract recipe and parameter cells from recipe
+        recipes_n_parameters = get_recipes_parameters(configuration, recipes)
+        if not recipes_n_parameters['recipes']:
+            output_objects.append({'object_type': 'error_text',
+                            'text': 'No recipe cells were found '
+                                    'found in %s' %
+                                    user_arguments_dict[upload_name]})
+            return (output_objects, returnvalues.CLIENT_ERROR)
+    elif not recipes:
         output_objects.append({'object_type': 'error_text',
                                'text': 'Failed to parse the uploaded '
                                        'recipe'})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
-    # Validate that the notebook has the minimum amount of content,
-    # with the correct types
-    # TODO check for cell_type, code
-    # TODO check for 'source' in each cell
-    req_keys = [('cells', list), ('metadata', dict), ('nbformat', int)]
-    incorrect_keys = {'missing': [], 'invalid': []}
-    for key in req_keys:
-        if key[0] not in json_nb:
-            incorrect_keys['missing'].append(key[0])
-        if key[0] in json_nb and not isinstance(json_nb[key[0]], key[1]):
-            incorrect_keys['invalid'].append(key[0])
-
-    if incorrect_keys['missing']:
-        output_keys = ' '.join(incorrect_keys['missing'])
-        output_objects.append({'object_type': 'error_text',
-                               'text': 'Missing required fields in Notebook: '
-                                       '%s' % output_keys})
-
-    if incorrect_keys['invalid']:
-        output_keys = ' '.join(incorrect_keys['invalid'])
-        correct_types = '\n'.join([' is a '.join(key) for key in req_keys
-                                  if key[0] in incorrect_keys['invalid']])
-        output_objects.append({'object_type': 'error_text',
-                               'text': 'The notebook had invalid fields: %s '
-                                       ' requires that %s' %
-                                       (output_keys, correct_types)})
-
-    if incorrect_keys['missing'] or incorrect_keys['invalid']:
-        return (output_objects, returnvalues.CLIENT_ERROR)
-
-    # Detect which kernel to use (what language is used)
-    # As specified at
-    # https://nbformat.readthedocs.io/en/latest
-    # /format_description.html?highlight=language_info
-    # language_info['name'] tells which language is used in the notebook
-    if 'language_info' not in json_nb['metadata'] or 'name' not in \
-            json_nb['metadata']['language_info']:
-        output_objects.append({'object_type': 'error_text',
-                               'text': 'The notebooks language is not '
-                                       'specified. Please ensure that '
-                                       'the notebook has a defined language'})
-        return (output_objects, returnvalues.CLIENT_ERROR)
-
-    lang = str(json_nb['metadata']['language_info']['name'])
-    logger.info("After language_info check")
-
-    # TODO, make configuration.valid_recipe_langauges
-    valid_languages = ['python']
-    if lang not in valid_languages:
-        output_objects.append({'object_type': 'error_text',
-                               'text': 'The provided notebook language %s'
-                                       ' is not available. Please use one'
-                                       ' of the following once: %s' %
-                                       (lang, ' '.join(valid_languages))})
-        return (output_objects, returnvalues.CLIENT_ERROR)
-    
-    # Extract recipe and parameter cells from notebook
-    recipes_n_parameters = get_recipes_parameters_from_nb(configuration, json_nb)
-    if not recipes_n_parameters['recipes']:
-        output_objects.append({'object_type': 'error_text',
-                        'text': 'No recipe cells were found '
-                                'found in %s' %
-                                user_arguments_dict[upload_name]})
-        return (output_objects, returnvalues.CLIENT_ERROR)
-
     output_objects.append({'object_type': 'header', 'text':
                            ' Registering Pattern'})
 
-    pattern_notebook = {
-        'notebook': {
-            'language': lang
-        },
+    pattern = {
         'owner': client_id,
-        'name': user_arguments_dict[upload_name],
-        'recipes': recipes_n_parameters['recipes'],
-        'inputs': user_arguments_dict[inputs_name],
-        'output': user_arguments_dict[output_name],
-        'type_filter': user_arguments_dict[type_filter_name],
-        'variables': recipes_n_parameters['parameters']
+        'inputs': inputs,
+        'output': output,
+        'type_filter': type_filter,
     }
+    # Add optional recipes
+    if recipes and recipes_n_parameters:
+        pattern.update({
+            'recipes': recipes_n_parameters['recipes'],
+            'variables': recipes_n_parameters['parameters']
+        })
 
-    created, msg = create_workflow_pattern(client_id, pattern_notebook, configuration)
+    created, msg = create_workflow_pattern(client_id, pattern, configuration)
     if not created:
         output_objects.append({'object_type': 'error_text',
                                'text': msg})
         return (output_objects, returnvalues.SYSTEM_ERROR)
 
     output_objects.append({'object_type': 'text',
-                           'text': 'Successfully registered the notebook %s '
-                                   'as a pattern' %
-                                   user_arguments_dict[upload_name]})
+                           'text': 'Successfully registered the pattern'})
+
+    # TODO if recipes exists (Attach to pattern)
+    
     return (output_objects, returnvalues.OK)

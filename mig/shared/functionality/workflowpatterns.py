@@ -100,11 +100,12 @@ def main(client_id, user_arguments_dict):
         if CONF in wp_content:
             wp_dict = wp_content[CONF]
             wp_obj = build_wp_object(configuration, wp_dict)
+            # TODO dont' type cast
+            #  add what inputs/outputs are monitored
             wp_obj = {
                 'object_type': str(wp_obj['object_type']),
-                'id': str(wp_obj['id']),
+                'name': str(wp_obj['name']),
                 'owner': str(extract_field(wp_obj['owner'], 'email')),
-                'name': str(wp_obj['name'])
             }
             logger.info("build wp_obj: %s" % wp_obj)
             if wp_obj:
