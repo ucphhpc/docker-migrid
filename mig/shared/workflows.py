@@ -37,6 +37,8 @@ from shared.base import client_id_dir
 from shared.map import load_system_map
 from shared.modified import check_workflow_p_modified, \
     reset_workflow_p_modified, mark_workflow_p_modified
+from shared.pwhash import generate_random_ascii
+from shared.defaults import wp_id_charset, wp_id_length
 from shared.serial import dump
 
 WRITE_LOCK = 'write.lock'
@@ -204,11 +206,9 @@ def create_workflow_pattern(client_id, wp, configuration):
     wp = {
         'name': 'string-name'
         'owner': 'string-owner',
-        'recipes:' [],
         'input': [],
         'output': [],
         'type_filter': [],
-        'variables': {}
         }
 
     The 'name' and 'owner' keys are required to be non-empty strings
@@ -231,20 +231,7 @@ def create_workflow_pattern(client_id, wp, configuration):
     _logger.info('%s is creating a workflow pattern from %s' % (client_id,
                                                                 wp['name']))
     # TODO, move check typing to here (name, language, cells)
-    # Based on the source, generate checksum as the id
-
-    checksum = sha256()
-    code = ''
-    for c in wp['cells']:
-        if 'source' in c:
-            code = code.join(c['source'])
     
-    if code:
-        _logger.info("source: %s type: %s" % (code, type(code)))
-        checksum.update(bytes(code))
-
-    _logger.info("Code %s ", code)
-
     wp_home = os.path.join(configuration.workflow_patterns_home,
                            client_dir)
     if not os.path.exists(wp_home):
@@ -258,6 +245,7 @@ def create_workflow_pattern(client_id, wp, configuration):
             return (False, msg)
 
     # Use unique id as filename as well
+    wp['id'] = generate_random_ascii(wp_id_length, charset=wp_id_charset)
     wp_file_path = os.path.join(wp_home, wp['id'] + '.json')
     if os.path.exists(wp_file_path):
         _logger.error('workflow pattern unique filename conflict: %s '
@@ -271,7 +259,7 @@ def create_workflow_pattern(client_id, wp, configuration):
     msg = ''
     try:
         with open(wp_file_path, 'w') as j_file:
-            json.dump(wp, j_file)
+            json.dump(wp, j_file, indent=0)
         # Mark as modified
         mark_workflow_p_modified(configuration, wp['name'])
         wrote = True

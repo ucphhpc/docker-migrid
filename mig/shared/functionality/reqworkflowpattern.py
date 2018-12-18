@@ -28,12 +28,8 @@
 
 
 """
-Register a jupyter notebook containing workflow patterns as a vGrid workflow.
-Will check that the notebook is correctly formatted, i.e. it contains the
-minimal required number of fields, including cells, metadata and nbformat.
-In addition the cells must contain a 'source' key
-
-The result is a saved json formatted file which contains the format:
+Register a workflow pattern and attach
+optional uploaded recipes to the pattern.
 
 TODO finish description
 """
@@ -46,17 +42,34 @@ from shared.init import initialize_main_variables
 from shared.handlers import safe_handler, get_csrf_limit
 from shared.functional import validate_input_and_cert
 from shared.workflows import create_workflow_pattern
+from shared.safeinput import REJECT_UNSET, VALID_SAFE_PATH_CHARACTERS
 
 
 def signature():
-    return ['', {}]
+    """Signaure of the main function"""
+
+    defaults = {
+        'input': [''],
+        'output': [''],
+        'type-filter': [''],
+        'recipes': ['']
+    }
+    return ['registerpattern', defaults]
 
 
 def handle_form_input(file, user_arguments_dict, configuration):
     """Retrieve the jupyter notebook file"""
     pass
 
-def get_recipes_parameters_from_nb(json_nb):
+
+def get_tags_from_cell(cell):
+    """Returns a list of tags from a notebook cell"""
+    if 'metadata' in cell and isinstance(cell['metadata'], dict):
+        if 'tags' in cell['metadata'] and isinstance(cell['metadata']['tags'], list):
+            return cell['metadata']['tags']
+    return None
+
+def get_recipes_parameters_from_nb(configuration, json_nb):
     """Returns a dict of cells that contain recipes and parameters from the ipynb notebook.
     This is based on whether the cell dictionary has a key with
     the follwing format:
@@ -67,59 +80,52 @@ def get_recipes_parameters_from_nb(json_nb):
     e.g. https://github.com/jupyterlab/jupyterlab-celltags"""
 
     rp_cells = {'recipes': [], 'parameters': {}}
-    if 'cells' in json_nb and isinstance(json_nb['cells']):
+    if 'cells' in json_nb and isinstance(json_nb['cells'], list):
         for cell in json_nb['cells']:
-            if 'metadata' in cell and isinstance(cell['metadata'], dict):
-                tags = cell['metadata'].get('tags')
-                for tag in tags:
-                    if tag == 'recipe':
-                        rp_cells['recipes'].append(cell)
-                    if tag == 'parameters':
-                        # Extract variable declarations
-                        rp_cells['parameters'].update(get_declarations_dict(cell['source']))
+            tags = get_tags_from_cell(cell)
+            if tags:
+                _ = [rp_cells['recipes'].append(cell['source']) if t == 'recipe'
+                else rp_cells['parameters'].update(get_declarations_dict(configuration,cell['source']))
+                if t == 'parameters' else None for t in tags]
     return rp_cells
 
 
-def get_declarations_dict(code):
+def get_declarations_dict(configuration, code):
     """Returns a dictionary with the variable declartions in the list
     Expects that code is a list of strings"""
     declarations = {}
+    _logger = configuration.logger
     for line in code:
-        if isinstance(line, str):
+        if isinstance(line, unicode) or isinstance(line, str):
             line = line.replace(" ", "")
             lines = line.split("=")
             if len(lines) == 2:
                 declarations.update({lines[0]: lines[1]})
             else:
-                # TODO error report that either none or multiple = where present
-                pass
+                _logger.error('get_declarations_dict, either none or '
+                'more than a single assignments in line: %s' % line)
     return declarations
 
 
 def main(client_id, user_arguments_dict):
     (configuration, logger, output_objects, op_name) = \
             initialize_main_variables(client_id, op_header=False)
+    logger.info("User args %s" % user_arguments_dict)
     defaults = signature()[1]
-    validate_args = {}
-    # validate_args = dict([(key, user_arguments_dict.get(key, val)) for \
-    #                       (key, val) in defaults.items()])
-
+    # TODO, validate valid input/ouput paths and type-filter extension
     # Allow csrf_field from upload
-    validate_args[csrf_field] = user_arguments_dict.get(csrf_field,
-                                                        ['AllowMe'])
-
     (validate_status, accepted) = validate_input_and_cert(
-        validate_args,
+        user_arguments_dict,
         defaults,
         output_objects,
-    client_id,
+        client_id,
         configuration,
         allow_rejects=False,
     )
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
 
-    logger.info("reqjupyterpattern as User: %s accepted %s" %
+    logger.info("reqworkflowpattern as User: %s accepted %s" %
                 (client_id, accepted))
 
     if not safe_handler(configuration, 'post', op_name, client_id,
@@ -130,17 +136,17 @@ def main(client_id, user_arguments_dict):
              })
         return (output_objects, returnvalues.CLIENT_ERROR)
 
-    # Validate that the notebook is there
-    upload_key, upload_name = 'jupyter-notebook', 'jupyter-notebookfilename'
+    # Validate that the recipe is there
+    upload_key, upload_name = 'recipe-files', 'pattern-recipesfilename'
     if upload_key not in user_arguments_dict:
         output_objects.append({'object_type': 'error_text',
-                               'text': 'No jupyter notebook was provided'})
+                               'text': 'No recipe was provided'})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     if not isinstance(user_arguments_dict[upload_key], list) and \
             len(user_arguments_dict[upload_key]) == 1:
         output_objects.append({'object_type': 'error_text',
-                               'text': 'Only a single notebook can be uploaded'
+                               'text': 'Only a single recipe can be uploaded'
                                        'at a time'})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
@@ -220,7 +226,7 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.CLIENT_ERROR)
     
     # Extract recipe and parameter cells from notebook
-    recipes_n_parameters = get_recipes_parameters_from_nb(json_nb)
+    recipes_n_parameters = get_recipes_parameters_from_nb(configuration, json_nb)
     if not recipes_n_parameters['recipes']:
         output_objects.append({'object_type': 'error_text',
                         'text': 'No recipe cells were found '
@@ -231,10 +237,6 @@ def main(client_id, user_arguments_dict):
     output_objects.append({'object_type': 'header', 'text':
                            ' Registering jupyter notebook'})
 
-    # Generate checksum of pattern instead as an id
-    # Unique workflow pattern id
-    wp_id = generate_random_ascii(wp_id_length, charset=wp_id_charset)
-
     pattern_notebook = {
         'notebook': {
             'language': lang
@@ -242,8 +244,8 @@ def main(client_id, user_arguments_dict):
         'owner': client_id,
         'name': user_arguments_dict[upload_name],
         'recipes': recipes_n_parameters['recipes'],
-        'input': [],
-        'output': [],
+        'inputs': [],
+        'output': '',
         'type_filter': [],
         'variables': recipes_n_parameters['parameters']
     }
