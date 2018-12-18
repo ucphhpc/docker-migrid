@@ -58,7 +58,7 @@ def signature():
 
 
 def handle_form_input(file, user_arguments_dict, configuration):
-    """Retrieve the jupyter notebook file"""
+    """Retrieve the recipe file"""
     pass
 
 
@@ -110,12 +110,14 @@ def get_declarations_dict(configuration, code):
 def main(client_id, user_arguments_dict):
     (configuration, logger, output_objects, op_name) = \
             initialize_main_variables(client_id, op_header=False)
-    logger.info("User args %s" % user_arguments_dict)
     defaults = signature()[1]
-    # TODO, validate valid input/ouput paths and type-filter extension
-    # Allow csrf_field from upload
+
+    # TODO, add the signature keys to guess_type in safeinput.py
+    #  Validate user_arguments_dict: input, ouput, type-filter, recipes, recipesfilename
+    validate_args = {}
+    validate_args[csrf_field] = user_arguments_dict.get(csrf_field, ['AllowMe'])
     (validate_status, accepted) = validate_input_and_cert(
-        user_arguments_dict,
+        validate_args,
         defaults,
         output_objects,
         client_id,
@@ -125,7 +127,7 @@ def main(client_id, user_arguments_dict):
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
 
-    logger.info("reqworkflowpattern as User: %s accepted %s" %
+    logger.debug("reqworkflowpattern as User: %s accepted %s" %
                 (client_id, accepted))
 
     if not safe_handler(configuration, 'post', op_name, client_id,
@@ -136,8 +138,11 @@ def main(client_id, user_arguments_dict):
              })
         return (output_objects, returnvalues.CLIENT_ERROR)
 
+    # Extract inputs, output and type-filter
+    inputs_name, output_name, type_filter_name = 'input', 'output', 'type-filter' 
+
     # Validate that the recipe is there
-    upload_key, upload_name = 'recipe-files', 'pattern-recipesfilename'
+    upload_key, upload_name = 'recipes', 'recipesfilename'
     if upload_key not in user_arguments_dict:
         output_objects.append({'object_type': 'error_text',
                                'text': 'No recipe was provided'})
@@ -159,13 +164,13 @@ def main(client_id, user_arguments_dict):
     try:
         json_nb = json.loads(formatted, encoding='utf-8')
     except Exception, err:
-        logger.error("Failed to json load %s for %s uploaded by %s" %
+        logger.error("Failed to json load: %s from: %s uploaded by: %s" %
                      (err, user_arguments_dict[upload_name], client_id))
 
     if json_nb is None:
         output_objects.append({'object_type': 'error_text',
                                'text': 'Failed to parse the uploaded '
-                                       'notebook'})
+                                       'recipe'})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     # Validate that the notebook has the minimum amount of content,
@@ -198,7 +203,6 @@ def main(client_id, user_arguments_dict):
     if incorrect_keys['missing'] or incorrect_keys['invalid']:
         return (output_objects, returnvalues.CLIENT_ERROR)
 
-    logger.info("After invalid return")
     # Detect which kernel to use (what language is used)
     # As specified at
     # https://nbformat.readthedocs.io/en/latest
@@ -215,7 +219,7 @@ def main(client_id, user_arguments_dict):
     lang = str(json_nb['metadata']['language_info']['name'])
     logger.info("After language_info check")
 
-    # TODO, make configuration.valid_jupyter_pattern_langauges
+    # TODO, make configuration.valid_recipe_langauges
     valid_languages = ['python']
     if lang not in valid_languages:
         output_objects.append({'object_type': 'error_text',
@@ -235,7 +239,7 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     output_objects.append({'object_type': 'header', 'text':
-                           ' Registering jupyter notebook'})
+                           ' Registering Pattern'})
 
     pattern_notebook = {
         'notebook': {
@@ -244,9 +248,9 @@ def main(client_id, user_arguments_dict):
         'owner': client_id,
         'name': user_arguments_dict[upload_name],
         'recipes': recipes_n_parameters['recipes'],
-        'inputs': [],
-        'output': '',
-        'type_filter': [],
+        'inputs': user_arguments_dict[inputs_name],
+        'output': user_arguments_dict[output_name],
+        'type_filter': user_arguments_dict[type_filter_name],
         'variables': recipes_n_parameters['parameters']
     }
 
