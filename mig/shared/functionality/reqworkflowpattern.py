@@ -62,7 +62,7 @@ def handle_form_input(configuration, file, user_arguments_dict):
     """Retrieve the recipe file"""
     pass
 
-def get_uploaded_recipes(configuration, user_arguments_dict, upload_key, upload_names):
+def get_uploaded_recipes(configuration, user_arguments_dict, upload_key):
     """"""
     # TODO, find out which type of recipe it is
     _logger = configuration.logger
@@ -73,11 +73,10 @@ def get_uploaded_recipes(configuration, user_arguments_dict, upload_key, upload_
         try:
             json_recipe = json.loads(recipe, encoding='utf-8')
             if json_recipe:
-                json_recipe['name'] = upload_names
                 json_recipes.append(json_recipe)
-        except Exception, err:
+        except Exception as err:
             _logger.error("Failed to json load: %s from: %s " %
-                        (err, user_arguments_dict[recipe_key]))
+                        (err, user_arguments_dict[upload_key]))
             return []
     return json_recipes
     
@@ -214,8 +213,9 @@ def main(client_id, user_arguments_dict):
     )
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
-    logger.debug("reqworkflowpattern as User: %s accepted %s" %
-                (client_id, accepted))
+    # TODO switch to acceped
+    logger.info("reqworkflowpattern as User: %s accepted %s" %
+                (client_id, user_arguments_dict))
 
     # Extract inputs, output and type-filter
     inputs_name, output_name, type_filter_name = 'input', 'output', 'type-filter'
@@ -247,7 +247,7 @@ def main(client_id, user_arguments_dict):
 
     # Optional recipes
     recipes_n_parameters = {}
-    recipes = get_uploaded_recipes(configuration, user_arguments_dict, upload_key, upload_name)
+    recipes = get_uploaded_recipes(configuration, user_arguments_dict, upload_key)
     if recipes and valid_recipes(configuration, recipes):
         # Extract recipe and parameter cells from recipe
         recipes_n_parameters = get_recipes_parameters(configuration, recipes)
