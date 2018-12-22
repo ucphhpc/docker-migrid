@@ -3,8 +3,8 @@
 #
 # --- BEGIN_HEADER ---
 #
-# textarea - [insert a few words of module description on this line]
-# Copyright (C) 2003-2009  The MiG Project lead by Brian Vinter
+# reqoidaction - Handle user input from certificate request
+# Copyright (C) 2003-2017  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -25,11 +25,13 @@
 # -- END_HEADER ---
 #
 
+"""Front end to handle input from request workflowpattern"""
+
 import cgi
 import cgitb
 cgitb.enable()
 
 from shared.functionality.reqworkflowpattern import main
-from shared.cgiscriptstub import run_cgi_script
+from shared.cgiscriptstub import run_cgi_script_possibly_with_cert
 
-run_cgi_script(main)
+run_cgi_script_possibly_with_cert(main)

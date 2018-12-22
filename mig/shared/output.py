@@ -1374,19 +1374,23 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
 <table class="workflowpatns columnsort" id="workflowpatntable">
 <thead class="title">
     <tr>
-        <th>ID</th>
+        <th>Name</th>
         <th>Made by</th>
-        <th>Made from</th>
-    </tr>    
+        <th>Monitored Inputs</th>
+        <th>Output</th>
+        <th>Actions</th>
+    </tr>
 </thead>
 <tbody>
 ''')
             for single_wp in workflowpatterns:
                 lines.append('''
 <tr>
-<td>%s</td><td>%s</td><td>%s</td>
-</tr>''' % (single_wp.get('id', ''), single_wp.get('owner', ''),
-            single_wp.get('name', '')))
+<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>
+</tr>''' % (html_link(single_wp.get('namelink', 'NA')),
+            single_wp.get('owner', 'NA'), single_wp.get('inputs', 'NA'),
+            single_wp.get('output', 'NA'),
+            single_wp.get('actions', 'NA')))
             lines.append('''
 </tbody>
 </table>''')
