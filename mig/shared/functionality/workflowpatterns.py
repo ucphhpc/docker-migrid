@@ -30,6 +30,10 @@
 import shared.returnvalues as returnvalues
 from shared.base import extract_field
 from shared.init import initialize_main_variables, find_entry
+from shared.html import themed_styles, man_base_html, confirm_js, jquery_ui_js, \
+    html_post_helper
+from shared.handlers import get_csrf_limit, csrf_field
+from shared.pwhash import make_csrf_token
 from shared.functional import validate_input_and_cert
 from shared.workflows import get_wp_with, CONF
 
@@ -63,29 +67,37 @@ def main(client_id, user_arguments_dict):
     operation = accepted['operation'][-1]
     logger.info("%s %s being for %s" % (op_name, operation, client_id))
 
-    if operation == 'show':
-        wp_name = ''
-        wp = get_wp_with(configuration, client_id=client_id, name=wp_name)
-        if wp:
-            fill_helpers = {'name': wp['name'],
-                            'owner': wp['owner'],
-                            'type_filter': wp['type_filter'],
-                            'inputs': wp['inputs'],
-                            'output': wp['output']}
-            output_objects.append({'object_type': 'header',
-                                   'text': 'Workflow Pattern %(name)s'
-                                   % fill_helpers})
-            output_objects.append({'object_type': 'text',
-                                   'text': 'Information about pattern X'})
-            output_objects.append({'object_type': 'text',
-                                   'text': 'Name: %(name)s <br/> '
-                                   'Owner: %(owner)s <br/> '
-                                   'Inputs: %(inputs)s <br/> '
-                                   'Output: %(output)s <br/> '
-                                   'Type-filter: %(type_filter)s <br/>'
-                                   % fill_helpers})
-            return (output_objects, returnvalues.OK)
-        logger.info("could not find a workflow pattern with %s name" % wp_name)
+    # Setup style and js (need confirm dialog)
+    title_entry['style'] = themed_styles(configuration)
+    (add_import, add_init, add_ready) = confirm_js(configuration)
+    title_entry['javascript'] = jquery_ui_js(configuration, add_import,
+                                             add_init, add_ready)
+    output_objects.append({'object_type': 'html_form',
+                           'text': man_base_html(configuration)})
+
+    # if operation == 'show':
+    #     wp_name = ''
+    #     wp = get_wp_with(configuration, client_id=client_id, name=wp_name)
+    #     if wp:
+    #         fill_helpers = {'name': wp['name'],
+    #                         'owner': wp['owner'],
+    #                         'type_filter': wp['type_filter'],
+    #                         'inputs': wp['inputs'],
+    #                         'output': wp['output']}
+    #         output_objects.append({'object_type': 'header',
+    #                                'text': 'Workflow Pattern %(name)s'
+    #                                % fill_helpers})
+    #         output_objects.append({'object_type': 'text',
+    #                                'text': 'Information about pattern X'})
+    #         output_objects.append({'object_type': 'text',
+    #                                'text': 'Name: %(name)s <br/> '
+    #                                'Owner: %(owner)s <br/> '
+    #                                'Inputs: %(inputs)s <br/> '
+    #                                'Output: %(output)s <br/> '
+    #                                'Type-filter: %(type_filter)s <br/>'
+    #                                % fill_helpers})
+    #         return (output_objects, returnvalues.OK)
+    # logger.info("could not find a workflow pattern with %s name" % wp_name)
 
     # default to list
     output_objects.append({'object_type': 'header',
@@ -109,8 +121,22 @@ def main(client_id, user_arguments_dict):
     output_objects.append({'object_type': 'sectionheader',
                            'text': 'Registered Workflow Patterns'})
 
+    # Post token
+    csrf_limit = get_csrf_limit(configuration)
+    form_method = 'post'
+    target_op = 'rmworkflowpattern'
+    csrf_token = make_csrf_token(configuration, form_method, target_op,
+                                 client_id, csrf_limit)
+    helper = html_post_helper(target_op, '%s.py' % target_op,
+                              {'wp_name': '__DYNAMIC__',
+                               csrf_field: csrf_token})
+
     workflow_patterns = []
     wps = get_wp_with(configuration, first=False, client_id=client_id)
+    if wps:
+        output_objects.append({'object_type': 'html_form',
+                               'text': helper})
+
     for wp in wps:
         # TODO dont' type cast
         #  add recipes and variables
@@ -132,6 +158,14 @@ def main(client_id, user_arguments_dict):
                           'title': 'Show Workflow Pattern',
                           'text': '%s' % wp['name']}
         # TODO add link to delete pattern
+        wp['delwplink'] = {'object_type': 'link',
+                           'destination': "javascript: confirmDialog("
+                           "%s, '%s', %s, %s);"
+                           % (target_op, "Really remove workflow"
+                              "pattern %s ?" % wp['name'], 'undefined',
+                              {'wp_name': wp['name']}),
+                           'class': 'removelink iconspace', 'title':
+                           'Remove workflow pattern %s' % wp['name'], 'text': ''}
         if wp:
             workflow_patterns.append(wp)
 

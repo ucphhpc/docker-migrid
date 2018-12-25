@@ -39,6 +39,7 @@ from shared.modified import check_workflow_p_modified, \
 from shared.pwhash import generate_random_ascii
 from shared.defaults import wp_id_charset, wp_id_length
 from shared.serial import dump
+from shared.fileio import delete_file
 
 WRITE_LOCK = 'write.lock'
 WORKFLOW_PATTERNS, MODTIME, CONF = ['__workflowpatterns__', '__modtime__',
@@ -56,7 +57,7 @@ def __load_wp_map(configuration, do_lock=True):
     disable locking during load.
     """
     _logger = configuration.logger
-    # _logger.debug("WP: load_wp_map")
+    _logger.debug("WP: __load_wp_map")
     return load_system_map(configuration, 'workflowpatterns', do_lock)
 
 
@@ -67,7 +68,7 @@ def __refresh_wp_map(configuration):
     NOTE: Save start time so that any concurrent updates get caught next time
     """
     _logger = configuration.logger
-    # _logger.debug("WP: regresh_wp_map")
+    _logger.debug("WP: __refresh_wp_map")
 
     start_time = time.time()
     dirty = []
@@ -120,7 +121,7 @@ def __list_path_wps(configuration):
     workflow patterns and the actual workflow pattern: (path,wp)
     """
     _logger = configuration.logger
-    # _logger.debug("WP: list_wps")
+    _logger.debug("WP: __list_path_wps")
 
     wp_home = configuration.workflow_patterns_home
     workflows = []
@@ -154,8 +155,8 @@ def __list_path_wps(configuration):
 def __query_map_for(configuration, client_id=None, **kwargs):
     """"""
     _logger = configuration.logger
-    _logger.debug("WP: query_map, user: %s, kwargs: %s" % (client_id,
-                                                           kwargs))
+    _logger.debug("WP: query_map, client_id: %s, kwargs: %s" % (client_id,
+                                                                kwargs))
     wp_map = get_wp_map(configuration)
     if client_id:
         wp_map = {k: v for k, v in wp_map.items()
@@ -181,8 +182,8 @@ def __query_map_for(configuration, client_id=None, **kwargs):
 def __query_map_for_first(configuration, client_id=None, **kwargs):
     """"""
     _logger = configuration.logger
-    _logger.debug("WP: query_map_first, user: %s, kwargs: %s" % (client_id,
-                                                                 kwargs))
+    _logger.debug("WP: query_map_first, client_id: %s, kwargs: %s"
+                  % (client_id, kwargs))
     wp_map = get_wp_map(configuration)
     if client_id:
         wp_map = {k: v for k, v in wp_map.items()
@@ -207,13 +208,14 @@ def __query_map_for_first(configuration, client_id=None, **kwargs):
 def __build_wp_object(configuration, **kwargs):
     """Build a workflow pattern object based on keyword arguments."""
     _logger = configuration.logger
-    _logger.debug("WP: build_wp_object with kwargs: %s" % kwargs)
+    _logger.debug("WP: __build_wp_object, kwargs: %s" % kwargs)
     if not isinstance(kwargs, dict):
         _logger.warning("WP: type provided was not a dict %s " % type(kwargs))
         return None
 
     wp_obj = {
         'object_type': 'workflowpattern',
+        'persistence_id': kwargs.get('persistence_id', ''),
         'name': kwargs.get('name', ''),
         'owner': kwargs.get('owner', ''),
         'type_filter': kwargs.get('type_filter', ''),
@@ -229,7 +231,7 @@ def get_wp_map(configuration):
     repeated calls within short time span.
     """
     _logger = configuration.logger
-    # _logger.debug("WP: get_wp_map")
+    _logger.debug("WP: get_wp_map")
 
     if last_load[WORKFLOW_PATTERNS] + MAP_CACHE_SECONDS > time.time():
         _logger.debug('WP: using map')
@@ -253,7 +255,7 @@ def get_wp_map(configuration):
 def get_wp_conf(configuration, wp_path):
     """Returns a dictionary containing the workflow pattern configuration"""
     _logger = configuration.logger
-    # _logger.debug("WP: get_wp_conf")
+    _logger.debug("WP: get_wp_conf, wp_path: %s" % wp_path)
 
     try:
         with open(wp_path, 'r') as _wp_path:
@@ -268,7 +270,8 @@ def get_wp_conf(configuration, wp_path):
 def get_wp_with(configuration, first=True, client_id=None, **kwargs):
     """Returns a clients workflow pattern with a field_name"""
     _logger = configuration.logger
-    # _logger.debug("WP: get_client_wp_with")
+    _logger.debug("WP: get_wp_with, client_id: %s, kwargs: %s"
+                  % (client_id, kwargs))
     if not isinstance(kwargs, dict):
         _logger.error('WP: wrong format supplied for %s', type(kwargs))
         return None
@@ -280,10 +283,36 @@ def get_wp_with(configuration, first=True, client_id=None, **kwargs):
 
 
 # TODO, implement (ensure to mark map modified)
-def delete_workflow_pattern(configuration, wp):
+def delete_workflow_pattern(configuration, client_id, name):
+    """ Delete a workflow pattern """
     _logger = configuration.logger
-    # _logger.debug("WP: delete_workflow_pattern")
-    pass
+    _logger.debug("WP: delete_workflow_pattern, client_id: %s, name: %s"
+                  % (client_id, name))
+    if not client_id:
+        msg = "A workflow pattern removal dependency was missing"
+        _logger.error("WP: delete_workflow, cliend_id was not set %s" % client_id)
+        return (False, msg)
+    if not name:
+        msg = "A workflow pattern removal dependency was missing"
+        _logger.error("WP: delete_workflow, name was not set %s" % name)
+        return (False, msg)
+
+    client_dir = client_id_dir(client_id)
+    wp = get_wp_with(configuration, client_id=client_id, name=name)
+    persistence_id = wp['persistence_id']
+
+    wp_path = os.path.join(configuration.workflow_patterns_home, client_dir,
+                           persistence_id)
+    if not os.path.exists(wp_path):
+        msg = "The '%s' workflow pattern dosen't appear to exist" % name
+        _logger.error("WP: can't delete %s it dosen't exist" % wp_path)
+        return (False, msg)
+
+    if not delete_file(wp_path, configuration.logger):
+        msg = "Could not delete the '%s' workflow pattern"
+        return (False, msg)
+    mark_workflow_p_modified(configuration, persistence_id)
+    return (True, '')
 
 
 def create_workflow_pattern(configuration, client_id, wp):
@@ -315,8 +344,23 @@ def create_workflow_pattern(configuration, client_id, wp):
     # The name of the directory to be used in both the users home
     # and the global state/workflow_patterns_home directory
     _logger = configuration.logger
-    _logger.info("WP: create_workflow_pattern, user: %s, wp: %s"
-                 % (client_id, wp))
+    _logger.debug("WP: create_workflow_pattern, client_id: %s, wp: %s"
+                  % (client_id, wp))
+
+    if not client_id:
+        msg = "A workflow pattern create dependency was missing"
+        _logger.error("WP: create_workflow, cliend_id was not set %s" % client_id)
+        return (False, msg)
+
+    if not wp:
+        msg = "A workflow pattern create dependency was missing"
+        _logger.error("WP: create_workflow, wp was not set %s" % wp)
+        return (False, msg)
+
+    if not isinstance(wp, dict):
+        msg = "A workflow pattern create dependency was incorrectly formatted"
+        _logger.error("WP: create_workflow, wp had an incorrect type %s" % wp)
+        return (False, msg)
 
     client_dir = client_id_dir(client_id)
     if 'name' not in wp:
@@ -344,8 +388,8 @@ def create_workflow_pattern(configuration, client_id, wp):
                   "your workflow pattern"
             return (False, msg)
 
-    file_name = generate_random_ascii(wp_id_length, charset=wp_id_charset)
-    wp_file_path = os.path.join(wp_home, file_name + '.json')
+    persistence_id = generate_random_ascii(wp_id_length, charset=wp_id_charset)
+    wp_file_path = os.path.join(wp_home, persistence_id)
     if os.path.exists(wp_file_path):
         _logger.error('WP: unique filename conflict: %s '
                       % wp_file_path)
@@ -353,6 +397,7 @@ def create_workflow_pattern(configuration, client_id, wp):
         'please try an resubmit the pattern'
         return (False, msg)
 
+    wp['persistence_id'] = persistence_id
     # Save the pattern
     wrote = False
     msg = ''
@@ -360,7 +405,7 @@ def create_workflow_pattern(configuration, client_id, wp):
         with open(wp_file_path, 'w') as j_file:
             json.dump(wp, j_file, indent=0)
         # Mark as modified
-        mark_workflow_p_modified(configuration, wp['name'])
+        mark_workflow_p_modified(configuration, wp['persistence_id'])
         wrote = True
     except Exception, err:
         _logger.error('WP: failed to write %s to disk %s' % (

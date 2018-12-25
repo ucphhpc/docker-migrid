@@ -1390,7 +1390,7 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
 </tr>''' % (html_link(single_wp.get('namelink', 'NA')),
             single_wp.get('owner', 'NA'), single_wp.get('inputs', 'NA'),
             single_wp.get('output', 'NA'),
-            single_wp.get('actions', 'NA')))
+            html_link(single_wp.get('delwplink', ''))))
             lines.append('''
 </tbody>
 </table>''')
