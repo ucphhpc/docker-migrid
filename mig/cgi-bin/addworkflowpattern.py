@@ -25,13 +25,13 @@
 # -- END_HEADER ---
 #
 
-"""Front end to handle input from request workflowpattern"""
+"""Front end to handle input from add workflowpattern"""
 
 import cgi
 import cgitb
 cgitb.enable()
 
-from shared.functionality.reqworkflowpattern import main
+from shared.functionality.addworkflowpattern import main
 from shared.cgiscriptstub import run_cgi_script_possibly_with_cert
 
 run_cgi_script_possibly_with_cert(main)

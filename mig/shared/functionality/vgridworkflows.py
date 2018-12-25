@@ -391,7 +391,7 @@ in reaction to file system events.</p>
                                'text': 'Register Workflow Pattern and Recipes'})
 
         form_method = 'post'
-        target_op = 'reqworkflowpattern'
+        target_op = 'addworkflowpattern'
         csrf_limit = get_csrf_limit(configuration)
 
         csrf_token = make_csrf_token(configuration, form_method,

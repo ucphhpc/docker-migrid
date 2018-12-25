@@ -208,7 +208,7 @@ def main(client_id, user_arguments_dict):
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
     # TODO switch to acceped
-    logger.debug("reqworkflowpattern as User: %s accepted %s" %
+    logger.debug("addworkflowpattern as User: %s accepted %s" %
                  (client_id, user_arguments_dict))
 
     # Extract inputs, output and type-filter
@@ -302,7 +302,8 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.SYSTEM_ERROR)
 
     output_objects.append({'object_type': 'text',
-                           'text': 'Successfully registered the pattern'})
+                           'text': "Successfully registered the '%s' pattern"
+                           % pattern_name})
 
     # TODO if recipes exists (Attach to pattern)
     return (output_objects, returnvalues.OK)
