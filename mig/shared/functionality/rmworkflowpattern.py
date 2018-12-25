@@ -66,7 +66,13 @@ def main(client_id, user_arguments_dict, environ=None):
     success, msg = delete_workflow_pattern(configuration, client_id, wp_name)
     if not success:
         output_objects.append({'object_type': 'error_text',
-                              'text': msg})
+                               'text': msg})
         return (output_objects, returnvalues.SYSTEM_ERROR)
 
+    output_objects.append({'object_type': 'text',
+                           'text': "The workflow pattern '%s' has been "
+                           "successfully removed." % wp_name})
+    output_objects.append({'object_type': 'link',
+                           'destination': 'workflowpatterns.py',
+                           'text': "Back to the overview."})
     return (output_objects, returnvalues.OK)

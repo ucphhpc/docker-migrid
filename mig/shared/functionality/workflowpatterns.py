@@ -38,12 +38,13 @@ from shared.functional import validate_input_and_cert
 from shared.workflows import get_wp_with, CONF
 
 
-operations = ['list']
+list_operations = ['list']
+allowed_operations = list_operations
 
 
 def signature():
     """Signature of the main function"""
-    defaults = {'operation': operations}
+    defaults = {'operation': allowed_operations}
     return ['workflowpatterns', defaults]
 
 
@@ -67,6 +68,12 @@ def main(client_id, user_arguments_dict):
     operation = accepted['operation'][-1]
     logger.info("%s %s being for %s" % (op_name, operation, client_id))
 
+    if operation not in allowed_operations:
+        output_objects.append({'object_type': 'error_text', 'text':
+                               '''Operation must be one of %s.''' %
+                               ', '.join(allowed_operations)})
+        return (output_objects, returnvalues.OK)
+
     # Setup style and js (need confirm dialog)
     title_entry['style'] = themed_styles(configuration)
     (add_import, add_init, add_ready) = confirm_js(configuration)
@@ -74,30 +81,6 @@ def main(client_id, user_arguments_dict):
                                              add_init, add_ready)
     output_objects.append({'object_type': 'html_form',
                            'text': man_base_html(configuration)})
-
-    # if operation == 'show':
-    #     wp_name = ''
-    #     wp = get_wp_with(configuration, client_id=client_id, name=wp_name)
-    #     if wp:
-    #         fill_helpers = {'name': wp['name'],
-    #                         'owner': wp['owner'],
-    #                         'type_filter': wp['type_filter'],
-    #                         'inputs': wp['inputs'],
-    #                         'output': wp['output']}
-    #         output_objects.append({'object_type': 'header',
-    #                                'text': 'Workflow Pattern %(name)s'
-    #                                % fill_helpers})
-    #         output_objects.append({'object_type': 'text',
-    #                                'text': 'Information about pattern X'})
-    #         output_objects.append({'object_type': 'text',
-    #                                'text': 'Name: %(name)s <br/> '
-    #                                'Owner: %(owner)s <br/> '
-    #                                'Inputs: %(inputs)s <br/> '
-    #                                'Output: %(output)s <br/> '
-    #                                'Type-filter: %(type_filter)s <br/>'
-    #                                % fill_helpers})
-    #         return (output_objects, returnvalues.OK)
-    # logger.info("could not find a workflow pattern with %s name" % wp_name)
 
     # default to list
     output_objects.append({'object_type': 'header',
@@ -133,6 +116,7 @@ def main(client_id, user_arguments_dict):
 
     workflow_patterns = []
     wps = get_wp_with(configuration, first=False, client_id=client_id)
+    logger.debug("Found wps: %s" % wps)
     if wps:
         output_objects.append({'object_type': 'html_form',
                                'text': helper})

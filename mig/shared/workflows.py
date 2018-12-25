@@ -232,10 +232,10 @@ def get_wp_map(configuration):
     """
     _logger = configuration.logger
     _logger.debug("WP: get_wp_map")
-
-    if last_load[WORKFLOW_PATTERNS] + MAP_CACHE_SECONDS > time.time():
-        _logger.debug('WP: using map')
-        return last_map[WORKFLOW_PATTERNS]
+    # TODO, if deletion has happend don't use cache 
+    # if last_load[WORKFLOW_PATTERNS] + MAP_CACHE_SECONDS > time.time():
+    #    _logger.debug('WP: using map')
+    #    return last_map[WORKFLOW_PATTERNS]
     modified_patterns, _ = check_workflow_p_modified(configuration)
     if modified_patterns:
         _logger.info('WP: refreshing map (%s)'
@@ -284,7 +284,7 @@ def get_wp_with(configuration, first=True, client_id=None, **kwargs):
 
 # TODO, implement (ensure to mark map modified)
 def delete_workflow_pattern(configuration, client_id, name):
-    """ Delete a workflow pattern """
+    """Delete a workflow pattern"""
     _logger = configuration.logger
     _logger.debug("WP: delete_workflow_pattern, client_id: %s, name: %s"
                   % (client_id, name))
@@ -317,7 +317,6 @@ def delete_workflow_pattern(configuration, client_id, name):
 
 def create_workflow_pattern(configuration, client_id, wp):
     """ Creates a workflow patterns based on the passed wp object.
-    Expects that the wp paramater is in a dictionary structure.
     Requires the following keys and structure:
 
     wp = {
@@ -362,6 +361,8 @@ def create_workflow_pattern(configuration, client_id, wp):
         _logger.error("WP: create_workflow, wp had an incorrect type %s" % wp)
         return (False, msg)
 
+    # TODO, wp content check
+
     client_dir = client_id_dir(client_id)
     if 'name' not in wp:
         wp['name'] = generate_random_ascii(wp_id_length, charset=wp_id_charset)
@@ -375,7 +376,6 @@ def create_workflow_pattern(configuration, client_id, wp):
                   % wp['name']
             return (False, msg)
 
-    # TODO, move check typing to here
     wp_home = os.path.join(configuration.workflow_patterns_home,
                            client_dir)
     if not os.path.exists(wp_home):
