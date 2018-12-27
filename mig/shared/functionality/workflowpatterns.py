@@ -130,8 +130,12 @@ def main(client_id, user_arguments_dict):
                 wp['owner'] = email
 
         # Prepare for display, cast to string
-        wp = {k: str(', '.join(v)) if isinstance(v, list) else str(v)
-              for k, v in wp.items()}
+        wp = {
+            'object_type': wp['object_type'],
+            'name': wp['name'],
+            'inputs': '\n '.join(wp['inputs']),
+            'output': wp['output']
+        }
 
         logger.debug("Workflow patterns wp %s" % wp)
         # Prepare name link

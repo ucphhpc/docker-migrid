@@ -445,12 +445,12 @@ in reaction to file system events.</p>
         output_objects.append({'object_type': 'html_form', 'text': """
         <form enctype='multipart/form-data' method='%(form_method)s'
             action='%(target_op)s.py'>
-            Input: <input type='text' name='input' /></br>
-            Output: <input type='text' name='output' /></br>
-            Type-Filter: <input type='text' name='type-filter' /></br>
+            Input: <input type='text' name='wp_inputs' /></br>
+            Output: <input type='text' name='wp_output' /></br>
+            Type-Filter: <input type='text' name='wp_type_filters' /></br>
             <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
             Optional Recipe(s): <input type='file' name='recipes' multiple /></br>
-            Optional Name: <input type='text' name='name' /></br>
+            Optional Name: <input type='text' name='wp_name' /></br>
             <input type='submit' value='Register Pattern'/>
         </form>
         """ % fill_helpers})

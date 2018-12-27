@@ -50,32 +50,27 @@ def signature():
     """Signaure of the main function"""
 
     defaults = {
-        'input': REJECT_UNSET,
-        'output': REJECT_UNSET,
-        'type-filter': REJECT_UNSET,
+        'wp_name': [''],
+        'wp_inputs': REJECT_UNSET,
+        'wp_output': REJECT_UNSET,
+        'wp_type_filters': REJECT_UNSET,
         'recipes': [''],
         'recipesfilename': ['']
     }
     return ['registerpattern', defaults]
 
 
-def get_recipes_from_upload(configuration, user_arguments_dict, upload_key):
+def get_recipe_from_upload(configuration, upload):
     """"""
     # TODO, find out which type of recipe it is
     _logger = configuration.logger
-    json_recipes = []
-    recipes = user_arguments_dict[upload_key]
-    for recipe in recipes:
-        json_recipe = None
-        try:
-            json_recipe = json.loads(recipe, encoding='utf-8')
-            if json_recipe:
-                json_recipes.append(json_recipe)
-        except Exception as err:
-            _logger.error("Failed to json load: %s from: %s " %
-                          (err, user_arguments_dict[upload_key]))
-            return []
-    return json_recipes
+    try:
+        json_recipe = json.loads(upload)
+        return json_recipe
+    except Exception as err:
+        _logger.error("Failed to json load: %s from: %s " %
+                      (err, upload))
+    return None
 
 
 def valid_recipe(configuration, recipe):
@@ -185,20 +180,14 @@ def main(client_id, user_arguments_dict):
     (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(client_id, op_header=False)
     defaults = signature()[1]
+    # TODO, ask Jonas about recipe content validation
+    #  skipping validation on recipe uploads for now
+    upload_key = 'recipes'
+    uploads = user_arguments_dict[upload_key]
+    del user_arguments_dict[upload_key]
 
-    # TODO, add the signature keys to guess_type in safeinput.py
-    #  Validate user_arguments_dict: input, ouput, type-filter,
-    #  recipes, recipesfilename
-    validate_args = {
-        'input': [''],
-        'output': [''],
-        'type-filter': [''],
-        csrf_field: ['AllowMe'],
-    }
-    validate_args[csrf_field] = user_arguments_dict.get(csrf_field,
-                                                        ['AllowMe'])
     (validate_status, accepted) = validate_input_and_cert(
-        validate_args,
+        user_arguments_dict,
         defaults,
         output_objects,
         client_id,
@@ -207,22 +196,21 @@ def main(client_id, user_arguments_dict):
     )
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
-    # TODO switch to acceped
-    logger.debug("addworkflowpattern as User: %s accepted %s" %
-                 (client_id, user_arguments_dict))
+    logger.debug("addworkflowpattern, cliend_id: %s accepted %s" %
+                 (client_id, accepted))
 
+    upload_name = 'recipesfilename'
     # Extract inputs, output and type-filter
-    pattern_name, inputs_name, output_name, type_filter_name = 'name', 'input', \
-        'output', 'type-filter'
-    upload_key, upload_name = 'recipes', 'recipesfilename'
+    pattern_name, inputs_name, output_name, type_filter_name = 'wp_name', \
+        'wp_inputs', 'wp_output', 'wp_type_filters'
 
-    inputs = user_arguments_dict[inputs_name]
-    output = user_arguments_dict[output_name]
-    type_filter = user_arguments_dict[type_filter_name]
-    recipe_name = user_arguments_dict[upload_name]
-    pattern_name = user_arguments_dict[pattern_name][0]
+    inputs = accepted[inputs_name]
+    output = accepted[output_name][-1]
+    type_filter = accepted[type_filter_name]
+    recipe_name = accepted[upload_name][-1]
+    pattern_name = accepted[pattern_name][-1]
 
-    paths = inputs + output
+    paths = inputs + [output]
     for path in paths:
         if not valid_dir_input(configuration.user_home, path):
             logger.warning(
@@ -243,8 +231,12 @@ def main(client_id, user_arguments_dict):
 
     # Optional recipes
     recipes_n_parameters = []
-    recipes = get_recipes_from_upload(configuration,
-                                      user_arguments_dict, upload_key)
+    recipes = []
+    # Check upload files for recipes
+    for f_upload in uploads:
+        recipe = get_recipe_from_upload(configuration, f_upload)
+        if recipe:
+            recipes.append(recipe)
     if recipes:
         for recipe in recipes:
             valid, msgs = valid_recipe(configuration, recipe)
@@ -256,7 +248,7 @@ def main(client_id, user_arguments_dict):
                     output_objects.append({'object_type': 'error_text',
                                            'text': 'No recipe cells were '
                                            'found in %s' %
-                                           user_arguments_dict[upload_name]})
+                                           accepted[upload_name]})
                     return (output_objects, returnvalues.CLIENT_ERROR)
                 recipes_n_parameters.append(recipe_n_parameters)
             else:
@@ -264,11 +256,6 @@ def main(client_id, user_arguments_dict):
                     output_objects.append({'object_type': 'error_text',
                                            'text': msg})
                     return (output_objects, returnvalues.CLIENT_ERROR)
-    elif not recipes:
-        output_objects.append({'object_type': 'error_text',
-                               'text': 'Failed to readin the uploaded '
-                                       'recipe %s' % recipe_name})
-        return (output_objects, returnvalues.CLIENT_ERROR)
 
     output_objects.append({'object_type': 'header', 'text':
                            ' Registering Pattern'})
@@ -302,8 +289,10 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.SYSTEM_ERROR)
 
     output_objects.append({'object_type': 'text',
-                           'text': "Successfully registered the '%s' pattern"
-                           % pattern_name})
+                           'text': "Successfully registered the pattern"})
+    output_objects.append({'object_type': 'link',
+                           'destination': 'vgridman.py',
+                           'text': 'Back to the vgrid overview'})
 
     # TODO if recipes exists (Attach to pattern)
     return (output_objects, returnvalues.OK)

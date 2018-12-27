@@ -117,8 +117,8 @@ runtimeenvironment = {
     }
 workflowpattern = {
     'object_type': 'workflowpattern',
-    'required': ['name', 'owner', 'inputs', 'output'],
-    'optional': ['type-filter', 'recipes', 'variables'],
+    #'required': [],
+    #'optional': ['name', 'inputs', 'output', 'type_filter', 'recipes', 'variables'],
     }
 frozenfile = {'object_type': 'frozenfile', 'required': ['name', 'size',
               'checksum', 'timestamp'], 'optional': []}

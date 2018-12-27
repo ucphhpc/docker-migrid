@@ -1370,12 +1370,12 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
 
         elif i['object_type'] == 'workflowpatterns':
             workflowpatterns = i['workflowpatterns']
+            lines.append('<div class="workflowpatterns">')
             lines.append('''
 <table class="workflowpatns columnsort" id="workflowpatntable">
 <thead class="title">
     <tr>
         <th>Name</th>
-        <th>Made by</th>
         <th>Monitored Inputs</th>
         <th>Output</th>
         <th>Actions</th>
@@ -1386,14 +1386,32 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
             for single_wp in workflowpatterns:
                 lines.append('''
 <tr>
-<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>
-</tr>''' % (html_link(single_wp.get('namelink', 'NA')),
-            single_wp.get('owner', 'NA'), single_wp.get('inputs', 'NA'),
-            single_wp.get('output', 'NA'),
+<td>%s</td><td>%s</td><td>%s</td><td>%s</td>
+</tr>''' % (html_link(single_wp.get('namelink', '')),
+            single_wp.get('inputs', ''),
+            single_wp.get('output', ''),
             html_link(single_wp.get('delwplink', ''))))
             lines.append('''
 </tbody>
 </table>''')
+            lines.append('</div>')
+        elif i['object_type'] == 'workflowpattern':
+            wp = i['workflowpattern']
+            inputs, recipes = wp.get('inputs', []), wp.get('recipes', [])
+            lines.append('''
+<div class="workflowpattern">
+    <h3>Pattern: %(name)s</h3>
+    <h3>Inputs</h3>
+    <h4>%(inputs)s</h4>
+    <h3>Output</h3>
+    <h4>%(output)s</h4>
+    <h3>Type-Filters</h3>
+    <h4>%(type_filter)s</h4>
+    <h3>Parameters</h3>
+    <h4>%(variables)s</h4>
+    <h3>Recipes</h3>
+    <h4>%(recipes)s</h4>
+</div>''' % wp)
         elif i['object_type'] == 'frozenarchives':
             frozenarchives = i['frozenarchives']
             lines.append('''

@@ -32,7 +32,7 @@ import json
 import os
 import time
 
-from shared.base import client_id_dir
+from shared.base import client_id_dir, force_utf8_rec
 from shared.map import load_system_map
 from shared.modified import check_workflow_p_modified, \
     reset_workflow_p_modified, mark_workflow_p_modified
@@ -49,6 +49,81 @@ MAP_CACHE_SECONDS = 60
 last_load = {WORKFLOW_PATTERNS: 0}
 last_refresh = {WORKFLOW_PATTERNS: 0}
 last_map = {WORKFLOW_PATTERNS: {}}
+
+valid_wp = {'persistence_id': str,
+            'owner': str,
+            'name': str,
+            'inputs': list,
+            'output': str,
+            'type_filter': list,
+            'recipes': list,
+            'variables': dict}
+
+
+def __correct_wp(configuration, wp):
+    """Validates that the workflow pattern object is correctly formatted"""
+    _logger = configuration.logger
+    contact_msg = "Please contact support so that we can help resolve this issue"
+
+    if not wp:
+        msg = "A workflow pattern was not provided, " + contact_msg
+        _logger.error("WP: __correct_wp, wp was not set %s" % wp)
+        return (False, msg)
+
+    if not isinstance(wp, dict):
+        msg = "The workflow pattern was incorrectly formatted, " + contact_msg
+        _logger.error("WP: __correct_wp, wp had an incorrect type %s" % wp)
+        return (False, msg)
+
+    msg = "The workflow pattern had an incorrect structure, " + contact_msg
+    for k, v in wp.items():
+        if k not in valid_wp:
+            _logger.error("WP: __correct_wp, wp had an incorrect key %s, "
+                          "allowed are %s" % (k, valid_wp.keys()))
+            return (False, msg)
+        if not isinstance(v, valid_wp[k]):
+            _logger.error("WP: __correct_wp, wp had an incorrect value type %s, "
+                          "on key %s, valid is %s"
+                          % (type(v), k, valid_wp[k]))
+            return (False, msg)
+    return (True, '')
+
+
+# TODO, validate inputs paths
+#  For now that they are paths inside the vgrid
+def __valid_inputs(inputs):
+    pass
+
+
+# TODO, validate the output path
+#  For now that it is a path inside the vgrid
+def __valid_output(output):
+    pass
+
+
+def __load_wp(configuration, wp_path):
+    """Load the workflow pattern from the specified path"""
+    _logger = configuration.logger
+    _logger.debug("WP: load_wp, wp_path: %s" % wp_path)
+
+    if not os.path.exists(wp_path):
+        _logger.error("WP: %s does not exist" % wp_path)
+        return {}
+
+    try:
+        wp = None
+        with open(wp_path, 'r') as _wp_path:
+            wp = json.load(_wp_path)
+    except Exception, err:
+        configuration.logger.error('WP: could not open workflow pattern %s %s' %
+                                   (wp_path, err))
+    if wp and isinstance(wp, dict):
+        # Ensure string type
+        wp = force_utf8_rec(wp)
+        correct, _ = __correct_wp(configuration, wp)
+        if correct:
+            return wp
+    return {}
 
 
 def __load_wp_map(configuration, do_lock=True):
@@ -91,8 +166,8 @@ def __refresh_wp_map(configuration):
         # init first time
         workflow_p_map[wp_file] = workflow_p_map.get(wp_file, {})
         if CONF not in workflow_p_map[wp_file] or wp_mtime >= map_stamp:
-            wp_conf = get_wp_conf(configuration, os.path.join(wp_dir, wp_file))
-            workflow_p_map[wp_file][CONF] = wp_conf
+            wp = __load_wp(configuration, os.path.join(wp_dir, wp_file))
+            workflow_p_map[wp_file][CONF] = wp
             workflow_p_map[wp_file][MODTIME] = map_stamp
             dirty.append([wp_file])
 
@@ -209,18 +284,22 @@ def __build_wp_object(configuration, **kwargs):
     """Build a workflow pattern object based on keyword arguments."""
     _logger = configuration.logger
     _logger.debug("WP: __build_wp_object, kwargs: %s" % kwargs)
-    if not isinstance(kwargs, dict):
-        _logger.warning("WP: type provided was not a dict %s " % type(kwargs))
+    correct, _ = __correct_wp(configuration, kwargs)
+    if not correct:
         return None
 
     wp_obj = {
         'object_type': 'workflowpattern',
-        'persistence_id': kwargs.get('persistence_id', ''),
-        'name': kwargs.get('name', ''),
-        'owner': kwargs.get('owner', ''),
-        'type_filter': kwargs.get('type_filter', ''),
-        'inputs': kwargs.get('inputs', ''),
-        'output': kwargs.get('output', '')
+        'persistence_id': kwargs.get('persistence_id',
+                                     valid_wp['persistence_id']()),
+        'owner': kwargs.get('owner', valid_wp['owner']()),
+        'name': kwargs.get('name', valid_wp['name']()),
+        'inputs': kwargs.get('inputs', valid_wp['inputs']()),
+        'output': kwargs.get('output', valid_wp['output']()),
+        'type_filter': kwargs.get('type_filter',
+                                  valid_wp['type_filter']()),
+        'recipes': kwargs.get('recipes', valid_wp['recipes']()),
+        'variables': kwargs.get('variables', valid_wp['variables']())
     }
     return wp_obj
 
@@ -232,7 +311,7 @@ def get_wp_map(configuration):
     """
     _logger = configuration.logger
     _logger.debug("WP: get_wp_map")
-    # TODO, if deletion has happend don't use cache 
+    # TODO, if deletion has happend don't use cache
     # if last_load[WORKFLOW_PATTERNS] + MAP_CACHE_SECONDS > time.time():
     #    _logger.debug('WP: using map')
     #    return last_map[WORKFLOW_PATTERNS]
@@ -252,21 +331,6 @@ def get_wp_map(configuration):
     return workflow_p_map
 
 
-def get_wp_conf(configuration, wp_path):
-    """Returns a dictionary containing the workflow pattern configuration"""
-    _logger = configuration.logger
-    _logger.debug("WP: get_wp_conf, wp_path: %s" % wp_path)
-
-    try:
-        with open(wp_path, 'r') as _wp_path:
-            wp_conf = json.load(_wp_path)
-            return wp_conf
-    except Exception, err:
-        configuration.logger.error('WP: could not open workflow pattern %s %s' %
-                                   (wp_path, err))
-    return {}
-
-
 def get_wp_with(configuration, first=True, client_id=None, **kwargs):
     """Returns a clients workflow pattern with a field_name"""
     _logger = configuration.logger
@@ -282,7 +346,6 @@ def get_wp_with(configuration, first=True, client_id=None, **kwargs):
     return wp
 
 
-# TODO, implement (ensure to mark map modified)
 def delete_workflow_pattern(configuration, client_id, name):
     """Delete a workflow pattern"""
     _logger = configuration.logger
@@ -322,8 +385,8 @@ def create_workflow_pattern(configuration, client_id, wp):
     wp = {
         'name': 'pattern-name'
         'owner': 'string-owner',
-        'input': [],
-        'output': [],
+        'inputs': [],
+        'output': '',
         'type_filter': [],
     }
 
@@ -351,18 +414,11 @@ def create_workflow_pattern(configuration, client_id, wp):
         _logger.error("WP: create_workflow, cliend_id was not set %s" % client_id)
         return (False, msg)
 
-    if not wp:
-        msg = "A workflow pattern create dependency was missing"
-        _logger.error("WP: create_workflow, wp was not set %s" % wp)
-        return (False, msg)
+    correct, msg = __correct_wp(configuration, wp)
+    if not correct:
+        return (correct, msg)
 
-    if not isinstance(wp, dict):
-        msg = "A workflow pattern create dependency was incorrectly formatted"
-        _logger.error("WP: create_workflow, wp had an incorrect type %s" % wp)
-        return (False, msg)
-
-    # TODO, wp content check
-
+    # TODO check for create required keys
     client_dir = client_id_dir(client_id)
     if 'name' not in wp:
         wp['name'] = generate_random_ascii(wp_id_length, charset=wp_id_charset)
@@ -428,6 +484,6 @@ def create_workflow_pattern(configuration, client_id, wp):
     return (True, '')
 
 
-# TODO, Register a workflow from a pattern json file
-def register_workflow_from_pattern(configuration, client_id, wp):
+def update_workflow_pattern(configuration, client_id, name):
+    """Update a workflow pattern"""
     pass

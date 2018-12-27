@@ -1367,6 +1367,17 @@ def guess_type(name):
         for key in ('gdp_workzone_id', ):
             __type_map[key] = valid_gdp_workzone_id
 
+        # Workflow Pattern
+
+        for key in ('wp_name'):
+            __type_map[key] = lambda x: valid_alphanumeric(x, max_length=32)
+
+        for key in ('wp_inputs', ):
+            __type_map[key] = valid_path_patterns
+
+        for key in ('wp_output', 'wp_type_filters', 'recipesfilename'):
+            __type_map[key] = valid_path_pattern
+
     # Return type checker from __type_map with fall back to alphanumeric
 
     return __type_map.get(name.lower().strip(), valid_alphanumeric)

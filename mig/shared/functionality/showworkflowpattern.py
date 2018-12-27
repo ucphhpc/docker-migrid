@@ -29,7 +29,7 @@
 import os
 import shared.returnvalues as returnvalues
 
-from shared.base import valid_dir_input
+from shared.base import valid_dir_input, force_utf8_rec
 from shared.functional import validate_input_and_cert, REJECT_UNSET
 from shared.html import themed_styles
 from shared.init import initialize_main_variables, find_entry
@@ -77,6 +77,7 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     wp = get_wp_with(configuration, client_id=client_id, name=wp_name)
+
     if not wp:
         logger.warning("could not load workflow pattern with name %s" % wp_name)
         output_objects.append({'object_type': 'error_text',
@@ -85,13 +86,21 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     # Prepare for display
-    wp = {k: str(', '.join(v)) if isinstance(v, list) else str(v)
-          for k, v in wp.items()}
+    display_wp = {
+        'name': wp['name'],
+        'inputs': wp['inputs'],
+        'output': wp['output'],
+        'type_filter': wp['type_filter'],
+        'recipes': wp['recipes'],
+        'variables': wp['variables']
+    }
+    display_wp = force_utf8_rec(display_wp)
 
     title_entry['style'] = themed_styles(configuration)
     output_objects.append({'object_type': 'header',
-                           'text': 'Show workflow pattern details'})
-
-    output_objects.append(wp)
+                           'text': "Show '%s' details" % wp['name']})
+    logger.info("showworkflowpattern wp: %s" % display_wp)
+    output_objects.append({'object_type': 'workflowpattern',
+                           'workflowpattern': display_wp})
     logger.info("show workflowpattern end as '%s'" % client_id)
     return (output_objects, returnvalues.OK)
