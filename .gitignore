@@ -110,3 +110,5 @@ certs/
 httpd/
 mig/
 state/
+
+.vscode/
