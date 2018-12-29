@@ -2,8 +2,6 @@ OWNER=nielsbohr
 IMAGE=migrid
 TAG=edge
 
-all: clean build
-
 build:
 	mkdir -p ./certs
 	mkdir -p ./httpd
@@ -21,3 +19,5 @@ clean:
 	fi
 push:
 	docker push ${OWNER}/${IMAGE}:${TAG}
+
+all: clean build
