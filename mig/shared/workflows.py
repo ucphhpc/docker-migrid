@@ -484,6 +484,13 @@ def create_workflow_pattern(configuration, client_id, wp):
     return (True, '')
 
 
+# TODO, implement
 def update_workflow_pattern(configuration, client_id, name):
     """Update a workflow pattern"""
     pass
+
+
+def create_workflow_recipe(configuration, recipe):
+    """Create a workflow recipe"""
+    pass
+

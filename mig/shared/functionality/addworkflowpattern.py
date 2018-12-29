@@ -248,7 +248,7 @@ def main(client_id, user_arguments_dict):
                     output_objects.append({'object_type': 'error_text',
                                            'text': 'No recipe cells were '
                                            'found in %s' %
-                                           accepted[upload_name]})
+                                           recipe_name})
                     return (output_objects, returnvalues.CLIENT_ERROR)
                 recipes_n_parameters.append(recipe_n_parameters)
             else:
