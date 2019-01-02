@@ -37,7 +37,7 @@ Getting Started
 
 To begin with the migrid docker image should be built with::
 
-    make build
+    make
 
 
 Beyond creating the image, the build target will also
