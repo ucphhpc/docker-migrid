@@ -66,6 +66,7 @@ def signature():
 def main(client_id, user_arguments_dict):
     """Main function used by front end"""
 
+
     (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(client_id, op_header=False)
     client_dir = client_id_dir(client_id)
@@ -202,6 +203,26 @@ sub-%(vgrid_label)s and try again''' % {'rule_id': rule_id,
                 {'object_type': 'error_text', 'text':
                  "found invalid change value %s" % change})
             return (output_objects, returnvalues.CLIENT_ERROR)
+
+        test_string = "A test string"
+        user_arguments_dict_string = str(user_arguments_dict)
+        # TODO DELETE ME
+        # New trigger with missing path
+        output_objects.append(
+            {'object_type': 'error_text', 'text': '''Test message from patch'''})
+        output_objects.append(
+            {'object_type': 'error_text',
+             'text': '''Second message from patch'''})
+        output_objects.append(
+            {'object_type': 'error_text',
+             'text': test_string})
+        output_objects.append(
+            {'object_type': 'error_text',
+             'text': client_id})
+        output_objects.append(
+            {'object_type': 'error_text',
+             'text': user_arguments_dict_string})
+        return (output_objects, returnvalues.CLIENT_ERROR)
 
     # Check if we should load saved trigger for rank change or update
 

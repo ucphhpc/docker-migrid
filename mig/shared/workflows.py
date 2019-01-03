@@ -31,13 +31,21 @@ import fcntl
 import json
 import os
 import time
+import tempfile
+
 from hashlib import sha256
 
 from shared.base import client_id_dir
+from shared.defaults import any_state, keyword_auto
+from shared.events import get_path_expand_map
+from shared.functional import REJECT_UNSET
 from shared.map import load_system_map
 from shared.modified import check_workflow_p_modified, \
     reset_workflow_p_modified, mark_workflow_p_modified
 from shared.serial import dump
+from shared.functionality.addvgridtrigger import main as add_vgrid_trigger_main
+
+from shared.job import fill_mrsl_template, new_job
 
 WRITE_LOCK = 'write.lock'
 WORKFLOW_PATTERNS, MODTIME, CONF = ['__workflowpatterns__', '__modtime__',
@@ -309,15 +317,7 @@ def build_wp_object(configuration, wp_dict):
     return wp_obj
 
 
-# TODO, Register a workflow from a pattern json file
-def register_workflow_from_pattern(client_id, wp, configuration):
-    
-    pass
-
-
-
-
-def task_identification_from_pattern(client_id, workflow_pattern, configuration):
+def rule_identification_from_pattern(client_id, workflow_pattern, configuration):
     # TODO finish this
     """identifies if a task can be created, following the creation or
     editing of a pattern . This pattern is read in as the object
@@ -325,9 +325,9 @@ def task_identification_from_pattern(client_id, workflow_pattern, configuration)
 
     # work out recipe directory
     client_dir = client_id_dir(client_id)
-    recipe_path = os.path.join(configuration.workflow_recipes_home, client_dir)
+    recipe_dir_path = os.path.join(configuration.workflow_recipes_home, client_dir)
 
-    # Setup logger
+    # setup logger
     _logger = configuration.logger
     _logger.info('%s is identifying any possible tasks from pattern creation '
                  '%s' % (client_id, workflow_pattern['name']))
@@ -335,32 +335,160 @@ def task_identification_from_pattern(client_id, workflow_pattern, configuration)
     # Currently multiple recipes are crudely chained together. This will need
     # to be altered once we move into other languages than python.
     complete_recipe = ''
-    got_all_recipes = False
+    got_all_recipes = True
     # Check if defined recipes exist already within system
     for pattern_recipe in workflow_pattern['recipes']:
         got_this_recipe = False
         # TODO this will almost certainly need altered once recipes have been
         #  implemented
         # This assumes that recipes are saved as their name.
-        for recipe in os.listdir(recipe_path):
+        for recipe in os.listdir(recipe_dir_path):
             if pattern_recipe == recipe:
                 try:
-                    complete_recipe =
+                    recipe_path = os.path.join(recipe_dir_path, recipe)
+                    with open(recipe_path) as input_file:
+                        for line in input_file:
+                            complete_recipe += line
                     got_this_recipe = True
-                except Exception, err:
+                except Exception:
                     _logger.error('')
+        if not got_this_recipe:
+            got_all_recipes = False
+
+    # if all recipes are present then check for data files
+    if got_all_recipes and complete_recipe != '':
+        pass
+        # Generate rule from pattern and recipe
+
+        # this doesn't seem true.
+        # TODO work this out according to grid_events lines 1574 to 1581
+        rule_dir_path = client_dir
+
+        user_arguments_dict = {
+#            '_csrf':['14e3ec5513c0080d14519445ed73c2f598bb43762e02519e06845e78cc820530'],
+            'vgrid_name': REJECT_UNSET,
+            'rule_id': [keyword_auto],
+            'path': [''],
+            'changes': [any_state],
+            'action': [keyword_auto],
+            'arguments': [''],
+            'rate_limit': [''],
+            'settle_time': [''],
+            'match_files': ['True'],
+            'match_dirs': ['False'],
+            'match_recursive': ['False'],
+            'rank': [''],
+        }
+        add_vgrid_trigger_main(client_id, user_arguments_dict)
+
+        # initial_data = []
+        # for input_dir in workflow_pattern['input']:
+        #     full_input_path = os.path.join(client_dir, input_dir)
+        #     for root, dirs, files in os.walk(full_input_path, topdown=False):
+        #         for name in files:
+        #             initial_data.append(os.path.join(root, name))
+        # for data in initial_data:
+        #     # start setting up to create new jobs
+        #     mrsl_fd = tempfile.NamedTemporaryFile(delete=False)
+        #     mrsl_path = mrsl_fd.name
+        #
+        #     base_dir = os.path.join(configuration.vgrid_files_home)
+        #     rel_src = data[len(base_dir):].lstrip(os.sep)
+        #
+        #     expand_map = get_path_expand_map(rel_src, rule, state)
+        #     mrsl_fd.truncate(0)
+        #
+        #     if not fill_mrsl_template(
+        #             job_template,
+        #             mrsl_fd,
+        #             rel_src,
+        #             state,
+        #             rule,
+        #             expand_map,
+        #             configuration,
+        #     ):
+        #         raise Exception('fill template failed')
+        #     # get a job id
+        #     (success, msg, jobid) = new_job(
+        #         mrsl_path,
+        #         client_id,
+        #         configuration,
+        #         False,
+        #         returnjobid=True)
+        #     if success:
+        #         self.__add_trigger_job_ent(configuration,
+        #                                    event, rule, jobid)
+        #
+        #         logger.info('(%s) submitted job for %s: %s'
+        #                     % (pid, target_path, msg))
+        #         self.__workflow_info(configuration,
+        #                              rule['vgrid_name'],
+        #                              'submitted job for %s: %s' %
+        #                              (rel_src, msg))
+        #     else:
+        #         raise Exception(msg)
+        #
+        # # Generate Tasks if possible
+        # for data in initial_data:
+        #     pass
+
+    # if we didn't find all the required recipes
+    else:
+        _logger.info("Did not find all the necessary recipes for pattern " + workflow_pattern['name'])
 
 
-    # Check to see if there are any pre-existing data files to process
-    # Generate Tasks if possible
-    pass
+def rule_identification_from_recipe(client_id, workflow_recipe, configuration):
+    # TODO finish this
+    """identifies if a task can be created, following the creation or
+    editing of a recipe . This pattern is read in as the object
+    workflow_recipe and is expected in the format."""
 
+    # work out pattern directory
+    client_dir = client_id_dir(client_id)
+    pattern_dir_path = os.path.join(configuration.workflow_patterns_home,
+                                   client_dir)
+    recipe_dir_path = os.path.join(configuration.workflow_recipes_home,
+                                   client_dir)
 
-def task_identification_from_recipe(workflow_recipe, configuration):
-    # TODO make nice comment
-    pass
+    # setup logger
+    _logger = configuration.logger
+    _logger.info('%s is identifying any possible tasks from recipe creation '
+                 '%s' % (client_id, workflow_recipe['name']))
 
+    matching_patterns = []
+    # Check if patterns exist already within system that need this recipe
+    for pattern_file in os.listdir(pattern_dir_path):
+        # convert stored pattern into object
+        try:
+            with open(pattern_file, 'r') as raw_pattern:
+                pattern = json.load(raw_pattern)
+                if workflow_recipe['name'] in pattern['recipes']:
+                    matching_patterns.append(pattern)
+        except Exception, err:
+            _logger.error('failed to parse pattern file ' + pattern_file)
 
-def task_identification_from_data(configuration):
-    # TODO make nice comment
-    pass
+    # now check all matching patterns have all their recipes
+    for pattern in matching_patterns:
+        complete_recipe = ''
+        got_all_recipes = True
+        # TODO this will almost certainly need altered once recipes have been
+        #  implemented
+        # This assumes that recipes are saved as their name.
+        for recipe in os.listdir(recipe_dir_path):
+            got_this_recipe = False
+            if recipe in pattern['recipes']:
+                try:
+                    recipe_path = os.path.join(recipe_dir_path, recipe)
+                    with open(recipe_path) as input_file:
+                        for line in input_file:
+                            complete_recipe += line
+                    got_this_recipe = True
+                except Exception:
+                    _logger.error('')
+            if not got_this_recipe:
+                got_all_recipes = False
+
+        # if all recipes are present then we can update rules
+        if got_all_recipes and complete_recipe != '':
+            pass
+            # Generate rule from pattern and recipe

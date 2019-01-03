@@ -597,9 +597,8 @@ class MiGRuleEventHandler(PatternMatchingEventHandler):
             # leave rules for parent and sub-vgrids
 
             for target_path in all_rules.keys():
-                all_rules[target_path] = [i for i in
-                                          all_rules[target_path] if i['vgrid_name']
-                                          != vgrid_name]
+                all_rules[target_path] = [i for i in all_rules[target_path]
+                                          if i['vgrid_name'] != vgrid_name]
                 remain_rules = [i for i in all_rules[target_path]
                                 if i['vgrid_name'] != vgrid_name]
                 if remain_rules:
@@ -759,8 +758,7 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
             trigger_job_dict['event']['dest_path'] = dest_path
             trigger_job_dict['event']['time_stamp'] = event.time_stamp
             trigger_job_dict['event']['event_type'] = event.event_type
-            trigger_job_dict['event']['is_directory'] = \
-                event.is_directory
+            trigger_job_dict['event']['is_directory'] = event.is_directory
 
             # logger.debug('(%s) trigger_job_dict: %s' % (pid,
             #             trigger_job_dict))
