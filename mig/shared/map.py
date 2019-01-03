@@ -26,10 +26,11 @@ from shared.serial import load
 
 
 def load_system_map(configuration, kind, do_lock):
-    """Load map of given kind and their configuration from the mig_system_files directory.
+    """Load map of given kind and their configuration from the
+    mig_system_files directory.
     Here the kind maps to what the mapfile is named.
-    Uses a pickled dictionary for efficiency. The do_lock option is used to enable and
-    disable locking during load.
+    Uses a pickled dictionary for efficiency.
+    The do_lock option is used to enable and disable locking during load.
     Returns tuple with map and time stamp of last map modification.
     Please note that time stamp is explicitly set to start of last update
     to make sure any concurrent updates get caught in next run.

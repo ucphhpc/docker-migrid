@@ -89,8 +89,8 @@ session_id_bytes = 32
 session_id_length = session_id_bytes * 2
 session_id_charset = digits + 'abcdef'
 
-# Workflow pattern ID, is a 64 character random string
-wp_id_bytes = 32
+# Workflow pattern ID, is a 24 character random string
+wp_id_bytes = 12
 wp_id_length = wp_id_bytes * 2
 wp_id_charset = digits + 'abcdef'
 

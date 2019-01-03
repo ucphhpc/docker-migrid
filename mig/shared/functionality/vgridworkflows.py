@@ -134,12 +134,12 @@ def main(client_id, user_arguments_dict):
     if not vgrid_is_owner_or_member(vgrid_name, client_id,
                                     configuration):
         output_objects.append({'object_type': 'error_text',
-                              'text': '''You must be an owner or member of %s vgrid to
+                               'text': '''You must be an owner or member of %s vgrid to
 access the workflows.'''
                                % vgrid_name})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
-    if not operation in allowed_operations:
+    if operation not in allowed_operations:
         output_objects.append({'object_type': 'error_text', 'text':
                                '''Operation must be one of %s.''' %
                                ', '.join(allowed_operations)})
@@ -202,7 +202,7 @@ access the workflows.'''
                 and makedirs_rec(trigger_job_final_dir, logger):
             abs_vgrid_dir = '%s/' \
                 % os.path.abspath(os.path.join(configuration.vgrid_files_home,
-                                  vgrid_name))
+                                               vgrid_name))
             for filename in os.listdir(trigger_job_pending_dir):
                 trigger_job_filepath = \
                     os.path.join(trigger_job_pending_dir, filename)
@@ -330,7 +330,7 @@ your disposal:<br/>
 <ul>
 <li><a href="#manage-tab">Manage Triggers</a></li>
 <li><a href="#jobs-tab">Active Trigger Jobs</a></li>
-<li><a href="#jupyter-tab">Setup Jupyter Patterns</a></li>
+<li><a href="#jupyter-tab">Register Patterns</a></li>
 </ul>
 '''})
         # Display existing triggers and form to add new ones
@@ -340,7 +340,7 @@ your disposal:<br/>
 '''})
 
         output_objects.append({'object_type': 'sectionheader',
-                              'text': 'Manage Triggers'})
+                               'text': 'Manage Triggers'})
         output_objects.extend(oobjs)
         output_objects.append(
             {'object_type': 'html_form', 'text': helper_html})
@@ -366,32 +366,32 @@ in reaction to file system events.</p>
     <div id="jobs-tab">
     '''})
         output_objects.append({'object_type': 'sectionheader',
-                              'text': 'Active Trigger Jobs'})
+                               'text': 'Active Trigger Jobs'})
         output_objects.append(
             {'object_type': 'table_pager', 'entry_name': 'job',
              'default_entries': default_pager_entries})
 
         output_objects.append({'object_type': 'trigger_job_list', 'trigger_jobs':
-                           trigger_jobs})
+                               trigger_jobs})
 
         output_objects.append({'object_type': 'sectionheader',
                                'text': 'Trigger Log'})
 
         output_objects.append({'object_type': 'trigger_log', 'log_content':
-            log_content})
+                               log_content})
 
         output_objects.append({'object_type': 'html_form', 'text':  '''</div>'''})
 
-        # Register workflow with jupyter
+        # Register workflow pattern and optional recipes
         output_objects.append({'object_type': 'html_form', 'text': '''
         <div id="jupyter-tab">
         '''})
 
         output_objects.append({'object_type': 'sectionheader',
-                               'text': 'Register with Jupyter Notebook'})
+                               'text': 'Register Workflow Pattern and Recipes'})
 
         form_method = 'post'
-        target_op = 'reqjupyterpattern'
+        target_op = 'addworkflowpattern'
         csrf_limit = get_csrf_limit(configuration)
 
         csrf_token = make_csrf_token(configuration, form_method,
@@ -404,25 +404,54 @@ in reaction to file system events.</p>
                         'csrf_field': csrf_field, 'csrf_limit': csrf_limit,
                         'csrf_token': csrf_token, 'dest_dir': '.' + os.sep}
 
-        # Place jupyter notebook definition in user-home/.jupyter-worksflows.
+        # Place the patterns and recipes seperately
 
         output_objects.append({'object_type': 'html_form', 'text': """
         <p>
-        On this page you can upload jupyter notebooks which must contain cells with 
-         'Pattern' definitions that specifies the input, output paths of that 
-         particular definition, in addition to this the pattern must also specify
-         the Recipe, i.e. the computation that should happen when a pattern match is found
-         . For instance if a file with a particular extension such as '.txt' is 
-         uploaded, the data in this should be analyzed with Recipe x and the result
-         of this should be outputtet at y.
+        On this page you can register a Workflow Pattern
+         and subsequent attached Recipes.
+        The Pattern requires 3 things i.e: </br> </br>
+            - <b>input</b> </br>
+            - <b>output</b> </br>
+            - <b>type-filter</b> </br>
+        </br>
+        Optional </br></br>
+            - <b>recipes</b> </br>
+        </br>
+        The <b>input</b> defines the system path from
+         which the workflow should monitor </br>
+        for incoming events that should trigger the
+         execution of an attached Recipe. </br>
+        It is possible to define multiple inputs. </br>
+        </br>
+        The <b>output</b> defines the system path from
+         which the workflow should save </br>
+        the file outputs generated by the attached Recipes. </br>
+        </br>
+        The <b>type-filter</b> defines the type of files
+         in the defined <b>input</b> that should trigger </br>
+        the execution on a particular Recipe. Valid recipe
+         file definitions includes: </br> </br>
+            - <b>jupyter notebook (ipynb)</b> </br>
+
+        </br>
+        The <b>recipes</b> defines the program/source code
+         that should be executed on the triggering </br>
+        of a valid event. The recipes can be define in a
+         Jupyter Notebook as shown here .... </br>
+        or by .... </br>
         </p>"""})
 
         output_objects.append({'object_type': 'html_form', 'text': """
         <form enctype='multipart/form-data' method='%(form_method)s'
             action='%(target_op)s.py'>
+            Input: <input type='text' name='wp_inputs' /></br>
+            Output: <input type='text' name='wp_output' /></br>
+            Type-Filter: <input type='text' name='wp_type_filters' /></br>
             <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
-            <input name='jupyter-notebook' type='file'/>
-            <input type='submit' value='Register Pattern Notebook' name=/>
+            Optional Recipe(s): <input type='file' name='recipes' multiple /></br>
+            Optional Name: <input type='text' name='wp_name' /></br>
+            <input type='submit' value='Register Pattern'/>
         </form>
         """ % fill_helpers})
 
@@ -440,7 +469,5 @@ in reaction to file system events.</p>
     #
     # title_entry['javascript'] = jquery_ui_js(configuration, add_import,
     #                                          add_init, add_ready)
-
-
 
     return (output_objects, returnvalues.OK)
