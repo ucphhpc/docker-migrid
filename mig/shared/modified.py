@@ -83,6 +83,12 @@ def mark_workflow_p_modified(configuration, workflow_pattern_name):
     return mark_entity_modified(configuration, 'workflowpatterns',
                                 workflow_pattern_name)
 
+def mark_workflow_r_modified(configuration, workflow_recipe_name):
+    """Mark workflow recipe modified to signal e.g.
+    workflow_r_map refresh before next use"""
+    return mark_entity_modified(configuration, 'workflowrecipes',
+                                workflow_recipe_name)
+
 def check_entities_modified(configuration, kind):
     """Check and return any name of given kind that are marked as modified
     along with a time stamp for the latest modification"""

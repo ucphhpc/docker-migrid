@@ -330,7 +330,8 @@ your disposal:<br/>
 <ul>
 <li><a href="#manage-tab">Manage Triggers</a></li>
 <li><a href="#jobs-tab">Active Trigger Jobs</a></li>
-<li><a href="#jupyter-tab">Register Patterns</a></li>
+<li><a href="#jupyter-tab-pattern">Register Patterns</a></li>
+<li><a href="#jupyter-tab-recipe">Register Recipes</a></li>
 </ul>
 '''})
         # Display existing triggers and form to add new ones
@@ -384,7 +385,7 @@ in reaction to file system events.</p>
 
         # Register workflow pattern and optional recipes
         output_objects.append({'object_type': 'html_form', 'text': '''
-        <div id="jupyter-tab">
+        <div id="jupyter-tab-pattern">
         '''})
 
         output_objects.append({'object_type': 'sectionheader',
@@ -458,6 +459,63 @@ in reaction to file system events.</p>
         output_objects.append({'object_type': 'html_form', 'text': '''
          </div>
          '''})
+
+        # Register workflow recipes and optional recipes
+        output_objects.append({'object_type': 'html_form', 'text': '''
+            <div id="jupyter-tab-recipe">
+            '''})
+
+        output_objects.append({'object_type': 'sectionheader',
+                               'text': 'Register Workflow Recipes'})
+
+        form_method = 'post'
+        target_op = 'addworkflowrecipes'
+        csrf_limit = get_csrf_limit(configuration)
+
+        csrf_token = make_csrf_token(configuration, form_method,
+                                     target_op, client_id, csrf_limit)
+
+        (add_import, add_init, add_ready) = fancy_upload_js(configuration,
+                                                            csrf_token=csrf_token)
+
+        fill_helpers = {'form_method': form_method, 'target_op': target_op,
+                        'csrf_field': csrf_field, 'csrf_limit': csrf_limit,
+                        'csrf_token': csrf_token, 'dest_dir': '.' + os.sep}
+
+        output_objects.append({'object_type': 'html_form', 'text': """
+            <p>
+            On this page you can register a Workflow Recipe.
+            The Recipe requires only 1 thing, a <b>recipe</b> definition. 
+            Currently this should always be in Python. A recipe <b>name</b> 
+            may also be defined.
+            </br> 
+            </br> 
+            The <b>recipe</b> defines the processing that is run in the event 
+            of a trigger being fired. This could may accept inputs from a 
+            pattern, such as <b>input_file</b> defining the input data file and 
+            <b>output_file</b> which defines the output data file. In addition
+            the pattern may define its own variables that are passed on to an 
+            individual instance of a recipe when it is used to generate a job.
+            </br>
+            </br> 
+            The <b>name</b> is the unique identifier used to identify a recipe 
+            within a pattern. It can be set by a user or be automatically 
+            generated.
+            </p>"""})
+
+        output_objects.append({'object_type': 'html_form', 'text': """
+            <form enctype='multipart/form-data' method='%(form_method)s'
+                action='%(target_op)s.py'>
+                <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
+                Recipe(s): <input type='file' name='recipes' multiple /></br>
+                Optional Name: <input type='text' name='wr_name' /></br>
+                <input type='submit' value='Register Recipe'/>
+            </form>
+            """ % fill_helpers})
+
+        output_objects.append({'object_type': 'html_form', 'text': '''
+             </div>
+             '''})
 
     if operation in show_operations:
         output_objects.append({'object_type': 'html_form', 'text':  '''</div>'''})

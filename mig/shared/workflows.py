@@ -20,7 +20,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
+# USA.
 #
 # -- END_HEADER ---
 #
@@ -43,9 +44,11 @@ from shared.functional import REJECT_UNSET
 from shared.base import client_id_dir, force_utf8_rec
 from shared.map import load_system_map
 from shared.modified import check_workflow_p_modified, \
-    reset_workflow_p_modified, mark_workflow_p_modified
+    reset_workflow_p_modified, mark_workflow_p_modified, \
+    mark_workflow_r_modified
 from shared.pwhash import generate_random_ascii
-from shared.defaults import wp_id_charset, wp_id_length
+from shared.defaults import wp_id_charset, wp_id_length, wr_id_charset, \
+    wr_id_length
 from shared.serial import dump
 from shared.functionality.addvgridtrigger import main as add_vgrid_trigger_main
 
@@ -71,10 +74,17 @@ valid_wp = {'persistence_id': str,
             'variables': dict}
 
 
+valid_wr = {'persistence_id': str,
+            'owner': str,
+            'name': str,
+            'recipe': str}
+
+
 def __correct_wp(configuration, wp):
     """Validates that the workflow pattern object is correctly formatted"""
     _logger = configuration.logger
-    contact_msg = "Please contact support so that we can help resolve this issue"
+    contact_msg = "Please contact support so that we can help resolve this " \
+                  "issue"
 
     if not wp:
         msg = "A workflow pattern was not provided, " + contact_msg
@@ -93,9 +103,39 @@ def __correct_wp(configuration, wp):
                           "allowed are %s" % (k, valid_wp.keys()))
             return (False, msg)
         if not isinstance(v, valid_wp[k]):
-            _logger.error("WP: __correct_wp, wp had an incorrect value type %s, "
-                          "on key %s, valid is %s"
+            _logger.error("WP: __correct_wp, wp had an incorrect value type "
+                          "%s, on key %s, valid is %s"
                           % (type(v), k, valid_wp[k]))
+            return (False, msg)
+    return (True, '')
+
+
+def __correct_wr(configuration, wr):
+    """Validates that the workflow recipe object is correctly formatted"""
+    _logger = configuration.logger
+    contact_msg = "Please contact support so that we can help resolve this " \
+                  "issue"
+
+    if not wr:
+        msg = "A workflow recipe was not provided, " + contact_msg
+        _logger.error("WR: __correct_wr, wr was not set %s" % wr)
+        return (False, msg)
+
+    if not isinstance(wr, dict):
+        msg = "The workflow recipe was incorrectly formatted, " + contact_msg
+        _logger.error("WR: __correct_wr, wr had an incorrect type %s" % wr)
+        return (False, msg)
+
+    msg = "The workflow pattern had an incorrect structure, " + contact_msg
+    for k, v in wr.items():
+        if k not in valid_wr:
+            _logger.error("WR: __correct_wr, wr had an incorrect key %s, "
+                          "allowed are %s" % (k, valid_wr.keys()))
+            return (False, msg)
+        if not isinstance(v, valid_wr[k]):
+            _logger.error("WP: __correct_wr, wr had an incorrect value type "
+                          "%s, on key %s, valid is %s"
+                          % (type(v), k, valid_wr[k]))
             return (False, msg)
     return (True, '')
 
@@ -126,8 +166,8 @@ def __load_wp(configuration, wp_path):
         with open(wp_path, 'r') as _wp_path:
             wp = json.load(_wp_path)
     except Exception, err:
-        configuration.logger.error('WP: could not open workflow pattern %s %s' %
-                                   (wp_path, err))
+        configuration.logger.error('WP: could not open workflow pattern %s %s'
+                                   %(wp_path, err))
     if wp and isinstance(wp, dict):
         # Ensure string type
         wp = force_utf8_rec(wp)
@@ -315,6 +355,25 @@ def __build_wp_object(configuration, **kwargs):
     return wp_obj
 
 
+def __build_wr_object(configuration, **kwargs):
+    """Build a workflow recipe object based on keyword arguments."""
+    _logger = configuration.logger
+    _logger.debug("WR: __build_wr_object, kwargs: %s" % kwargs)
+    correct, _ = __correct_wr(configuration, kwargs)
+    if not correct:
+        return None
+
+    wr_obj = {
+        'object_type': 'workflowrecipe',
+        'persistence_id': kwargs.get('persistence_id',
+                                     valid_wp['persistence_id']()),
+        'owner': kwargs.get('owner', valid_wp['owner']()),
+        'name': kwargs.get('name', valid_wp['name']()),
+        'recipe': kwargs.get('recipe', valid_wp['recipe']())
+    }
+    return wr_obj
+
+
 def get_wp_map(configuration):
     """Returns the current map of workflow patterns and
     their configurations. Caches the map for load prevention with
@@ -357,6 +416,21 @@ def get_wp_with(configuration, first=True, client_id=None, **kwargs):
     return wp
 
 
+def get_wr_with(configuration, first=True, client_id=None, **kwargs):
+    """Returns a clients workflow recipe with a field_name"""
+    _logger = configuration.logger
+    _logger.debug("WR: get_wr_with, client_id: %s, kwargs: %s"
+                  % (client_id, kwargs))
+    if not isinstance(kwargs, dict):
+        _logger.error('WR: wrong format supplied for %s', type(kwargs))
+        return None
+    if first:
+        wr = __query_map_for_first(configuration, client_id, **kwargs)
+    else:
+        wr = __query_map_for(configuration, client_id, **kwargs)
+    return wr
+
+
 def delete_workflow_pattern(configuration, client_id, name):
     """Delete a workflow pattern"""
     _logger = configuration.logger
@@ -364,7 +438,8 @@ def delete_workflow_pattern(configuration, client_id, name):
                   % (client_id, name))
     if not client_id:
         msg = "A workflow pattern removal dependency was missing"
-        _logger.error("WP: delete_workflow, cliend_id was not set %s" % client_id)
+        _logger.error("WP: delete_workflow, cliend_id was not set %s" %
+                      client_id)
         return (False, msg)
     if not name:
         msg = "A workflow pattern removal dependency was missing"
@@ -386,6 +461,39 @@ def delete_workflow_pattern(configuration, client_id, name):
         msg = "Could not delete the '%s' workflow pattern"
         return (False, msg)
     mark_workflow_p_modified(configuration, persistence_id)
+    return (True, '')
+
+
+def delete_workflow_recipe(configuration, client_id, name):
+    """Delete a workflow recipe"""
+    _logger = configuration.logger
+    _logger.debug("WR: delete_workflow_recipe, client_id: %s, name: %s"
+                  % (client_id, name))
+    if not client_id:
+        msg = "A workflow recipe removal dependency was missing"
+        _logger.error("WR: delete_recipe, cliend_id was not set %s" %
+                      client_id)
+        return (False, msg)
+    if not name:
+        msg = "A workflow recipe removal dependency was missing"
+        _logger.error("WR: delete_recipe, name was not set %s" % name)
+        return (False, msg)
+
+    client_dir = client_id_dir(client_id)
+    wr = get_wp_with(configuration, client_id=client_id, name=name)
+    persistence_id = wr['persistence_id']
+
+    wr_path = os.path.join(configuration.workflow_recipes_home, client_dir,
+                           persistence_id)
+    if not os.path.exists(wr_path):
+        msg = "The '%s' workflow recipe dosen't appear to exist" % name
+        _logger.error("WR: can't delete %s it dosen't exist" % wr_path)
+        return (False, msg)
+
+    if not delete_file(wr_path, configuration.logger):
+        msg = "Could not delete the '%s' workflow recipe"
+        return (False, msg)
+    mark_workflow_r_modified(configuration, persistence_id)
     return (True, '')
 
 
@@ -422,7 +530,8 @@ def create_workflow_pattern(configuration, client_id, wp):
 
     if not client_id:
         msg = "A workflow pattern create dependency was missing"
-        _logger.error("WP: create_workflow, cliend_id was not set %s" % client_id)
+        _logger.error("WP: create_workflow, cliend_id was not set %s" %
+                      client_id)
         return (False, msg)
 
     correct, msg = __correct_wp(configuration, wp)
@@ -502,12 +611,110 @@ def update_workflow_pattern(configuration, client_id, name):
 
 
 # TODO, implement
-def create_workflow_recipe(configuration, recipe):
-    """Create a workflow recipe"""
+def create_workflow_recipe(configuration, client_id, wr):
+    """Creates a workflow recipe based on the passed wr object.
+        Requires the following keys and structure:
+
+        wr = {
+            'name': 'pattern-name'
+            'owner': 'string-owner',
+            'recipe': 'recipe-as-string'
+        }
+
+        The 'owner' key is required to be non-empty string.
+        If a 'name' is not provided a random one will be generated.
+
+        Result is that a JSON object of the dictionary structure will be saved
+        to the configuration.mig_system_files/client_dir/generated_id.json
+    """
+
+    # Prepare json for writing.
+    # The name of the directory to be used in both the users home
+    # and the global state/workflow_patterns_home directory
+    _logger = configuration.logger
+    _logger.debug("WR: create_workflow_recipe, client_id: %s, wr: %s"
+                  % (client_id, wr))
+
+    if not client_id:
+        msg = "A workflow recipe creation dependency was missing"
+        _logger.error(
+            "WR: creating_recipe, client_id was not set %s" % client_id)
+        return (False, msg)
+
+    correct, msg = __correct_wr(configuration, wr)
+    if not correct:
+        return (correct, msg)
+
+    # TODO check for create required keys
+    client_dir = client_id_dir(client_id)
+    if 'name' not in wr:
+        wr['name'] = generate_random_ascii(wr_id_length, charset=wr_id_charset)
+    else:
+        wr_exists = get_wr_with(configuration, client_id=client_id,
+                                name=wr['name'])
+        if wr_exists:
+            _logger.error("WR: a wr with name: %s already exists: %s"
+                          % (wr['name'], client_id))
+            msg = 'You already have a workflow recipe with the name %s' \
+                  % wr['name']
+            return (False, msg)
+
+    wr_home = os.path.join(configuration.workflow_recipes_home,
+                           client_dir)
+    if not os.path.exists(wr_home):
+        try:
+            os.makedirs(wr_home)
+        except Exception, err:
+            _logger.error("WR: couldn't create directory %s %s" %
+                          (wr_home, err))
+            msg = "Couldn't create the required dependencies for " \
+                  "your workflow recipe"
+            return (False, msg)
+
+    persistence_id = generate_random_ascii(wr_id_length, charset=wr_id_charset)
+    wr_file_path = os.path.join(wr_home, persistence_id)
+    if os.path.exists(wr_file_path):
+        _logger.error('WR: unique filename conflict: %s '
+                      % wr_file_path)
+        msg = 'A workflow recipe conflict was encountered, '
+        'please try and resubmit the recipe'
+        return (False, msg)
+
+    wr['persistence_id'] = persistence_id
+    # Save the recipe
+    wrote = False
+    msg = ''
+    try:
+        with open(wr_file_path, 'w') as j_file:
+            json.dump(wr, j_file, indent=0)
+        # Mark as modified
+        mark_workflow_r_modified(configuration, wr['persistence_id'])
+        wrote = True
+    except Exception, err:
+        _logger.error('WR: failed to write %s to disk %s' % (
+            wr_file_path, err))
+        msg = 'Failed to save your workflow recipe, '
+        'please try and resubmit it'
+
+    if not wrote:
+        # Ensure that the failed write does not stick around
+        try:
+            os.remove(wr_file_path)
+        except Exception, err:
+            _logger.error('WR: failed to remove the dangling wr: %s %s'
+                          % (wr_file_path, err))
+            msg += '\n Failed to cleanup after a failed workflow creation'
+        return (False, msg)
+
+    _logger.info('WR: %s created at: %s ' %
+                 (client_id, wr_file_path))
+    return (True, '')
+
     pass
 
 
-def rule_identification_from_pattern(client_id, workflow_pattern, configuration):
+def rule_identification_from_pattern(client_id, workflow_pattern,
+                                     configuration):
     # TODO finish this
     """identifies if a task can be created, following the creation or
     editing of a pattern . This pattern is read in as the object
@@ -515,7 +722,8 @@ def rule_identification_from_pattern(client_id, workflow_pattern, configuration)
 
     # work out recipe directory
     client_dir = client_id_dir(client_id)
-    recipe_dir_path = os.path.join(configuration.workflow_recipes_home, client_dir)
+    recipe_dir_path = os.path.join(configuration.workflow_recipes_home,
+                                   client_dir)
 
     # setup logger
     _logger = configuration.logger
@@ -555,7 +763,8 @@ def rule_identification_from_pattern(client_id, workflow_pattern, configuration)
         rule_dir_path = client_dir
 
         user_arguments_dict = {
-#            '_csrf':['14e3ec5513c0080d14519445ed73c2f598bb43762e02519e06845e78cc820530'],
+#            '_csrf':['14e3ec5513c0080d14519445ed73c2f598bb43762e02519e0684'
+#                     '5e78cc820530'],
             'vgrid_name': REJECT_UNSET,
             'rule_id': [keyword_auto],
             'path': [''],
@@ -624,7 +833,8 @@ def rule_identification_from_pattern(client_id, workflow_pattern, configuration)
 
     # if we didn't find all the required recipes
     else:
-        _logger.info("Did not find all the necessary recipes for pattern " + workflow_pattern['name'])
+        _logger.info("Did not find all the necessary recipes for pattern " +
+                     workflow_pattern['name'])
 
 
 def rule_identification_from_recipe(client_id, workflow_recipe, configuration):
