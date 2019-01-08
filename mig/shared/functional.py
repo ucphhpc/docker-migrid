@@ -91,8 +91,10 @@ def validate_input(
     defaults['_'] = ['AllowMe']
     if prefilter_map:
         prefilter_input(user_arguments_dict, prefilter_map)
+
     (accepted, rejected) = validated_input(user_arguments_dict,
             defaults)
+
     warn_on_rejects(rejected, output_objects)
     if rejected.keys() and not allow_rejects:
         output_objects.append(

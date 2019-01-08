@@ -83,7 +83,7 @@ valid_wr = {'persistence_id': str,
 def __correct_wp(configuration, wp):
     """Validates that the workflow pattern object is correctly formatted"""
     _logger = configuration.logger
-    contact_msg = "Please contact support so that we can help resolve this " \
+    contact_msg = "please contact support so that we can help resolve this " \
                   "issue"
 
     if not wp:
@@ -530,7 +530,7 @@ def create_workflow_pattern(configuration, client_id, wp):
 
     if not client_id:
         msg = "A workflow pattern create dependency was missing"
-        _logger.error("WP: create_workflow, cliend_id was not set %s" %
+        _logger.error("WP: create_workflow, client_id was not set %s" %
                       client_id)
         return (False, msg)
 
@@ -566,6 +566,7 @@ def create_workflow_pattern(configuration, client_id, wp):
 
     persistence_id = generate_random_ascii(wp_id_length, charset=wp_id_charset)
     wp_file_path = os.path.join(wp_home, persistence_id)
+
     if os.path.exists(wp_file_path):
         _logger.error('WP: unique filename conflict: %s '
                       % wp_file_path)
@@ -580,6 +581,7 @@ def create_workflow_pattern(configuration, client_id, wp):
     try:
         with open(wp_file_path, 'w') as j_file:
             json.dump(wp, j_file, indent=0)
+
         # Mark as modified
         mark_workflow_p_modified(configuration, wp['persistence_id'])
         wrote = True
@@ -610,7 +612,6 @@ def update_workflow_pattern(configuration, client_id, name):
     pass
 
 
-# TODO, implement
 def create_workflow_recipe(configuration, client_id, wr):
     """Creates a workflow recipe based on the passed wr object.
         Requires the following keys and structure:
@@ -630,7 +631,7 @@ def create_workflow_recipe(configuration, client_id, wr):
 
     # Prepare json for writing.
     # The name of the directory to be used in both the users home
-    # and the global state/workflow_patterns_home directory
+    # and the global state/workflow_recipes_home directory
     _logger = configuration.logger
     _logger.debug("WR: create_workflow_recipe, client_id: %s, wr: %s"
                   % (client_id, wr))
@@ -673,6 +674,7 @@ def create_workflow_recipe(configuration, client_id, wr):
 
     persistence_id = generate_random_ascii(wr_id_length, charset=wr_id_charset)
     wr_file_path = os.path.join(wr_home, persistence_id)
+
     if os.path.exists(wr_file_path):
         _logger.error('WR: unique filename conflict: %s '
                       % wr_file_path)
@@ -687,6 +689,7 @@ def create_workflow_recipe(configuration, client_id, wr):
     try:
         with open(wr_file_path, 'w') as j_file:
             json.dump(wr, j_file, indent=0)
+
         # Mark as modified
         mark_workflow_r_modified(configuration, wr['persistence_id'])
         wrote = True
@@ -713,12 +716,36 @@ def create_workflow_recipe(configuration, client_id, wr):
     pass
 
 
-def rule_identification_from_pattern(client_id, workflow_pattern,
-                                     configuration):
-    # TODO finish this
+def get_recipe_from_file(configuration, recipe_file):
+    """"""
+    # TODO, find out which type of recipe it is
+    _logger = configuration.logger
+    try:
+        with open(recipe_file) as raw_recipe:
+            json_recipe = json.load(raw_recipe)
+            return json_recipe
+    except Exception as err:
+        _logger.error("Failed to json load: %s from: %s " % (err, recipe_file))
+    return {}
+
+
+def get_pattern_from_file(configuration, pattern_file):
+    """"""
+    # TODO, find out which type of recipe it is
+    _logger = configuration.logger
+    try:
+        with open(pattern_file) as raw_recipe:
+            json_recipe = json.load(raw_recipe)
+            return json_recipe
+    except Exception as err:
+        _logger.error("Failed to json load: %s from: %s " % (err, pattern_file))
+    return {}
+
+
+def rule_identification_from_pattern(configuration, client_id,
+                                     workflow_pattern):
     """identifies if a task can be created, following the creation or
-    editing of a pattern . This pattern is read in as the object
-    workflow_pattern and is expected in the format."""
+    editing of a pattern ."""
 
     # work out recipe directory
     client_dir = client_id_dir(client_id)
@@ -733,108 +760,57 @@ def rule_identification_from_pattern(client_id, workflow_pattern,
     # Currently multiple recipes are crudely chained together. This will need
     # to be altered once we move into other languages than python.
     complete_recipe = ''
-    got_all_recipes = True
+    missed_recipes = []
     # Check if defined recipes exist already within system
-    for pattern_recipe in workflow_pattern['recipes']:
+    for recipe_name in workflow_pattern['recipes']:
+        _logger.info("DELETE ME - looking for recipe " + recipe_name)
         got_this_recipe = False
-        # TODO this will almost certainly need altered once recipes have been
-        #  implemented
         # This assumes that recipes are saved as their name.
         for recipe in os.listdir(recipe_dir_path):
-            if pattern_recipe == recipe:
-                try:
-                    recipe_path = os.path.join(recipe_dir_path, recipe)
-                    with open(recipe_path) as input_file:
-                        for line in input_file:
-                            complete_recipe += line
+            _logger.info("DELETE ME - looking at file " + recipe)
+            recipe_path = os.path.join(recipe_dir_path, recipe)
+            recipe = get_recipe_from_file(configuration, recipe_path)
+            if recipe:
+                if recipe['name'] == recipe_name:
+                    for line in recipe['recipe']:
+                        complete_recipe += line
                     got_this_recipe = True
-                except Exception:
-                    _logger.error('')
         if not got_this_recipe:
-            got_all_recipes = False
+            missed_recipes.append(recipe_name)
+    if missed_recipes:
+        return (False, 'Could not find all required recipes. Missing: ' +
+                str(missed_recipes))
+    return (True, 'All recipes found')
 
-    # if all recipes are present then check for data files
-    if got_all_recipes and complete_recipe != '':
-        pass
-        # Generate rule from pattern and recipe
 
-        # this doesn't seem true.
-        # TODO work this out according to grid_events lines 1574 to 1581
-        rule_dir_path = client_dir
-
-        user_arguments_dict = {
-#            '_csrf':['14e3ec5513c0080d14519445ed73c2f598bb43762e02519e0684'
-#                     '5e78cc820530'],
-            'vgrid_name': REJECT_UNSET,
-            'rule_id': [keyword_auto],
-            'path': [''],
-            'changes': [any_state],
-            'action': [keyword_auto],
-            'arguments': [''],
-            'rate_limit': [''],
-            'settle_time': [''],
-            'match_files': ['True'],
-            'match_dirs': ['False'],
-            'match_recursive': ['False'],
-            'rank': [''],
-        }
-        add_vgrid_trigger_main(client_id, user_arguments_dict)
-
-        # initial_data = []
-        # for input_dir in workflow_pattern['input']:
-        #     full_input_path = os.path.join(client_dir, input_dir)
-        #     for root, dirs, files in os.walk(full_input_path, topdown=False):
-        #         for name in files:
-        #             initial_data.append(os.path.join(root, name))
-        # for data in initial_data:
-        #     # start setting up to create new jobs
-        #     mrsl_fd = tempfile.NamedTemporaryFile(delete=False)
-        #     mrsl_path = mrsl_fd.name
-        #
-        #     base_dir = os.path.join(configuration.vgrid_files_home)
-        #     rel_src = data[len(base_dir):].lstrip(os.sep)
-        #
-        #     expand_map = get_path_expand_map(rel_src, rule, state)
-        #     mrsl_fd.truncate(0)
-        #
-        #     if not fill_mrsl_template(
-        #             job_template,
-        #             mrsl_fd,
-        #             rel_src,
-        #             state,
-        #             rule,
-        #             expand_map,
-        #             configuration,
-        #     ):
-        #         raise Exception('fill template failed')
-        #     # get a job id
-        #     (success, msg, jobid) = new_job(
-        #         mrsl_path,
-        #         client_id,
-        #         configuration,
-        #         False,
-        #         returnjobid=True)
-        #     if success:
-        #         self.__add_trigger_job_ent(configuration,
-        #                                    event, rule, jobid)
-        #
-        #         logger.info('(%s) submitted job for %s: %s'
-        #                     % (pid, target_path, msg))
-        #         self.__workflow_info(configuration,
-        #                              rule['vgrid_name'],
-        #                              'submitted job for %s: %s' %
-        #                              (rel_src, msg))
-        #     else:
-        #         raise Exception(msg)
-        #
-        # # Generate Tasks if possible
-        # for data in initial_data:
-        #     pass
-
-    # if we didn't find all the required recipes
-    else:
-        _logger.info("Did not find all the necessary recipes for pattern " +
-                     workflow_pattern['name'])
+    # # if all recipes are present then check for data files
+    # if got_all_recipes and complete_recipe != '':
+    #     pass
+    #     # Generate rule from pattern and recipe
+    #
+    #     rule_dir_path = client_dir
+    #
+    #     # TODO work this out according to grid_events lines 1574 to 1581
+    #     user_arguments_dict = {
+    #         'vgrid_name': REJECT_UNSET,
+    #         'rule_id': [keyword_auto],
+    #         'path': [''],
+    #         'changes': [any_state],
+    #         'action': [keyword_auto],
+    #         'arguments': [''],
+    #         'rate_limit': [''],
+    #         'settle_time': [''],
+    #         'match_files': ['True'],
+    #         'match_dirs': ['False'],
+    #         'match_recursive': ['False'],
+    #         'rank': [''],
+    #     }
+    #     add_vgrid_trigger_main(client_id, user_arguments_dict)
+    #
+    # # if we didn't find all the required recipes
+    # else:
+    #     _logger.info("Did not find all the necessary recipes for pattern " +
+    #                  workflow_pattern['name'])
 
 
 def rule_identification_from_recipe(client_id, workflow_recipe, configuration):
@@ -892,3 +868,5 @@ def rule_identification_from_recipe(client_id, workflow_recipe, configuration):
         if got_all_recipes and complete_recipe != '':
             pass
             # Generate rule from pattern and recipe
+
+

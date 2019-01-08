@@ -28,7 +28,7 @@
 
 
 """
-Register a workflow pattern and attach
+Register a workflow recipe and attach
 optional uploaded recipes to the pattern.
 
 TODO finish description
@@ -42,7 +42,8 @@ from shared.defaults import csrf_field
 from shared.init import initialize_main_variables
 from shared.handlers import safe_handler, get_csrf_limit
 from shared.functional import validate_input_and_cert
-from shared.workflows import create_workflow_pattern
+from shared.workflows import create_workflow_recipe, \
+    rule_identification_from_recipe
 from shared.safeinput import REJECT_UNSET
 
 
@@ -50,27 +51,11 @@ def signature():
     """Signaure of the main function"""
 
     defaults = {
-        'wp_name': [''],
-        'wp_inputs': REJECT_UNSET,
-        'wp_output': REJECT_UNSET,
-        'wp_type_filters': REJECT_UNSET,
-        'recipes': [''],
-        'recipesfilename': ['']
+        'wr_name': [''],
+        'wr_recipe': [''],
+        'wr_recipefilename': REJECT_UNSET
     }
-    return ['registerpattern', defaults]
-
-
-def get_recipe_from_upload(configuration, upload):
-    """"""
-    # TODO, find out which type of recipe it is
-    _logger = configuration.logger
-    try:
-        json_recipe = json.loads(upload)
-        return json_recipe
-    except Exception as err:
-        _logger.error("Failed to json load: %s from: %s " %
-                      (err, upload))
-    return None
+    return ['registerrecipe', defaults]
 
 
 def valid_recipe(configuration, recipe):
@@ -179,12 +164,8 @@ def get_declarations_dict(configuration, code):
 def main(client_id, user_arguments_dict):
     (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(client_id, op_header=False)
+
     defaults = signature()[1]
-    # TODO, ask Jonas about recipe content validation
-    #  skipping validation on recipe uploads for now
-    upload_key = 'recipes'
-    uploads = user_arguments_dict[upload_key]
-    del user_arguments_dict[upload_key]
 
     (validate_status, accepted) = validate_input_and_cert(
         user_arguments_dict,
@@ -196,30 +177,14 @@ def main(client_id, user_arguments_dict):
     )
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
-    logger.debug("addworkflowpattern, cliend_id: %s accepted %s" %
+    logger.debug("addworkflowrecipe, cliend_id: %s accepted %s" %
                  (client_id, accepted))
 
-    upload_name = 'recipesfilename'
-    # Extract inputs, output and type-filter
-    pattern_name, inputs_name, output_name, type_filter_name = 'wp_name', \
-        'wp_inputs', 'wp_output', 'wp_type_filters'
+    recipe_name_key = 'wr_name'
+    recipe_key = 'wr_recipe'
 
-    inputs = accepted[inputs_name]
-    output = accepted[output_name][-1]
-    type_filter = accepted[type_filter_name]
-    recipe_name = accepted[upload_name][-1]
-    pattern_name = accepted[pattern_name][-1]
-
-    paths = inputs + [output]
-    for path in paths:
-        if not valid_dir_input(configuration.user_home, path):
-            logger.warning(
-                'possible illegal directory traversal'
-                'attempt pattern_dirs: %s' % path)
-            output_objects.append({'object_type': 'error_text',
-                                   'text': 'The path given: %s'
-                                   ' is illgally formatted' % path})
-            return (output_objects, returnvalues.CLIENT_ERROR)
+    recipe_name = accepted[recipe_name_key][-1]
+    recipe_code = accepted[recipe_key][-1]
 
     if not safe_handler(configuration, 'post', op_name, client_id,
                         get_csrf_limit(configuration), accepted):
@@ -229,70 +194,38 @@ def main(client_id, user_arguments_dict):
              })
         return (output_objects, returnvalues.CLIENT_ERROR)
 
-    # Optional recipes
-    recipes_n_parameters = []
-    recipes = []
-    # Check upload files for recipes
-    for f_upload in uploads:
-        recipe = get_recipe_from_upload(configuration, f_upload)
-        if recipe:
-            recipes.append(recipe)
-    if recipes:
-        for recipe in recipes:
-            valid, msgs = valid_recipe(configuration, recipe)
-            if valid:
-                # Extract recipe and parameter cells from recipe
-                recipe_n_parameters = get_recipe_parameters(
-                    configuration, recipe)
-                if not recipe_n_parameters['recipes']:
-                    output_objects.append({'object_type': 'error_text',
-                                           'text': 'No recipe cells were '
-                                           'found in %s' %
-                                           recipe_name})
-                    return (output_objects, returnvalues.CLIENT_ERROR)
-                recipes_n_parameters.append(recipe_n_parameters)
-            else:
-                for msg in msgs:
-                    output_objects.append({'object_type': 'error_text',
-                                           'text': msg})
-                    return (output_objects, returnvalues.CLIENT_ERROR)
-
     output_objects.append({'object_type': 'header', 'text':
-                           ' Registering Pattern'})
-    pattern = {
-        'owner': client_id,
-        'inputs': inputs,
-        'output': output,
-        'type_filter': type_filter,
+                           ' Registering Recipe'})
+    recipe = {
+        'recipe': recipe_code
     }
     # Add optional userprovided name
-    if pattern_name:
-        pattern['name'] = pattern_name
-    # Add optional recipes
-    if recipes and recipes_n_parameters:
-        combined_rp = {}
-        for rp in recipes_n_parameters:
-            for k, v in rp.items():
-                if k not in combined_rp:
-                    combined_rp[k] = v
-                else:
-                    combined_rp.update(rp)
-        pattern['recipes'] = combined_rp['recipes']
-        pattern['variables'] = combined_rp['parameters']
+    if recipe_name:
+        recipe['name'] = recipe_name
 
-    created, msg = create_workflow_pattern(configuration,
+    created, msg = create_workflow_recipe(configuration,
                                            client_id,
-                                           pattern)
+                                           recipe)
     if not created:
         output_objects.append({'object_type': 'error_text',
                                'text': msg})
         return (output_objects, returnvalues.SYSTEM_ERROR)
 
     output_objects.append({'object_type': 'text',
-                           'text': "Successfully registered the pattern"})
+                           'text': "Successfully registered the recipe"})
+
+    activatable, msg = rule_identification_from_recipe(configuration,
+                                                        client_id, recipe)
+
+    if activatable:
+        output_objects.append({'object_type': 'text',
+                               'text': "Recipe is required by patterns. They "
+                                       "are now activatable"})
+    else:
+        output_objects.append({'object_type': 'text', 'text': msg})
+
     output_objects.append({'object_type': 'link',
                            'destination': 'vgridman.py',
                            'text': 'Back to the vgrid overview'})
 
-    # TODO if recipes exists (Attach to pattern)
     return (output_objects, returnvalues.OK)

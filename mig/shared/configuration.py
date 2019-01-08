@@ -302,6 +302,7 @@ class Configuration:
     twofactor_home = ''
     gdp_home = ''
     workflow_patterns_home = ''
+    workflow_recipes_home = ''
     seafile_mount = ''
     openid_store = ''
     paraview_home = ''
@@ -703,6 +704,9 @@ location.""" % self.config_file
         if config.has_option('GLOBAL', 'workflow_patterns_home'):
             self.workflow_patterns_home = config.get('GLOBAL',
                                                      'workflow_patterns_home')
+        if config.has_option('GLOBAL', 'workflow_recipes_home'):
+            self.workflow_recipes_home = config.get('GLOBAL',
+                                                    'workflow_recipes_home')
         if config.has_option('GLOBAL', 'freeze_home'):
             self.freeze_home = config.get('GLOBAL', 'freeze_home')
         if config.has_option('GLOBAL', 'sharelink_home'):

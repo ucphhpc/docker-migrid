@@ -39,7 +39,7 @@ from mig.shared.functionality.shared.shared.handlers import get_csrf_limit, \
 from mig.shared.functionality.shared.shared.pwhash import make_csrf_token
 from mig.shared.functionality.shared.shared.functional import \
     validate_input_and_cert
-from mig.shared.functionality.shared.shared.workflows import get_wp_with, CONF
+from mig.shared.functionality.shared.shared.workflows import get_wr_with, CONF
 
 
 list_operations = ['list']

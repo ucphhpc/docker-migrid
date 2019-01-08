@@ -443,15 +443,16 @@ in reaction to file system events.</p>
         or by .... </br>
         </p>"""})
 
+#        (Optional) Recipe(s): < input type = 'file' name = 'recipes' multiple / > < / br >
         output_objects.append({'object_type': 'html_form', 'text': """
         <form enctype='multipart/form-data' method='%(form_method)s'
             action='%(target_op)s.py'>
             Input: <input type='text' name='wp_inputs' /></br>
             Output: <input type='text' name='wp_output' /></br>
-            Type-Filter: <input type='text' name='wp_type_filters' /></br>
+            Recipe(s): <input type='text' name='wp_recipes' /></br>
+            Type-filter: <input type='text' name='wp_type_filters' /></br>
             <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
-            Optional Recipe(s): <input type='file' name='recipes' multiple /></br>
-            Optional Name: <input type='text' name='wp_name' /></br>
+            (Optional) Pattern name: <input type='text' name='wp_name' /></br>
             <input type='submit' value='Register Pattern'/>
         </form>
         """ % fill_helpers})
@@ -469,7 +470,7 @@ in reaction to file system events.</p>
                                'text': 'Register Workflow Recipes'})
 
         form_method = 'post'
-        target_op = 'addworkflowrecipes'
+        target_op = 'addworkflowrecipe'
         csrf_limit = get_csrf_limit(configuration)
 
         csrf_token = make_csrf_token(configuration, form_method,
@@ -507,8 +508,8 @@ in reaction to file system events.</p>
             <form enctype='multipart/form-data' method='%(form_method)s'
                 action='%(target_op)s.py'>
                 <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
-                Recipe(s): <input type='file' name='recipes' multiple /></br>
-                Optional Name: <input type='text' name='wr_name' /></br>
+                Recipe: <input type='file' name='wr_recipe'/></br>
+                (Optional) Recipe name: <input type='text' name='wr_name' /></br>
                 <input type='submit' value='Register Recipe'/>
             </form>
             """ % fill_helpers})

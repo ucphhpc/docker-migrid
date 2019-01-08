@@ -42,7 +42,8 @@ from shared.defaults import csrf_field
 from shared.init import initialize_main_variables
 from shared.handlers import safe_handler, get_csrf_limit
 from shared.functional import validate_input_and_cert
-from shared.workflows import create_workflow_pattern
+from shared.workflows import create_workflow_pattern, \
+    rule_identification_from_pattern
 from shared.safeinput import REJECT_UNSET
 
 
@@ -54,76 +55,9 @@ def signature():
         'wp_inputs': REJECT_UNSET,
         'wp_output': REJECT_UNSET,
         'wp_type_filters': REJECT_UNSET,
-        'recipes': [''],
-        'recipesfilename': ['']
+        'wp_recipes': ['']
     }
     return ['registerpattern', defaults]
-
-
-def get_recipe_from_upload(configuration, upload):
-    """"""
-    # TODO, find out which type of recipe it is
-    _logger = configuration.logger
-    try:
-        json_recipe = json.loads(upload)
-        return json_recipe
-    except Exception as err:
-        _logger.error("Failed to json load: %s from: %s " %
-                      (err, upload))
-    return None
-
-
-def valid_recipe(configuration, recipe):
-    """ Validate that the recipe has the
-    minimum amount of content, with the correct types.
-    """
-    # TODO check for cell_type, code
-    # TODO check for 'source' in each cell
-    _logger = configuration.logger
-    req_keys = [('cells', list), ('metadata', dict), ('nbformat', int)]
-    incorrect_keys = {'missing': [], 'invalid': []}
-    failed_msgs = []
-    for key in req_keys:
-        if key[0] not in recipe:
-            incorrect_keys['missing'].append(key[0])
-        if key[0] in recipe and not isinstance(recipe[key[0]], key[1]):
-            incorrect_keys['invalid'].append(key[0])
-
-    if incorrect_keys['missing']:
-        output_keys = ' '.join(incorrect_keys['missing'])
-        failed_msgs.append('Recipe %s the following required field: %s'
-                           % (recipe['name'], output_keys))
-
-    if incorrect_keys['invalid']:
-        output_keys = ' '.join(incorrect_keys['invalid'])
-        correct_types = '\n'.join([' is a '.join(key) for key in req_keys
-                                   if key[0] in incorrect_keys['invalid']])
-        failed_msgs.append('Recipe %s had invalid fields: %s '
-                           ' requires that %s ' % (recipe['name'],
-                                                   output_keys,
-                                                   correct_types))
-
-    # Detect which kernel to use (what language is used)
-    # As specified at
-    # https://nbformat.readthedocs.io/en/latest
-    # /format_description.html?highlight=language_info
-    # language_info['name'] tells which language is used in the recipe
-    if 'language_info' not in recipe['metadata'] or 'name' not in \
-            recipe['metadata']['language_info']:
-        failed_msgs.append('Recipe %s language is not specified')
-
-    lang = recipe['metadata']['language_info']['name']
-
-    # TODO, make configuration.valid_recipe_langauges
-    valid_languages = ['python']
-    if lang not in valid_languages:
-        output_lang = ' '.join(valid_languages)
-        failed_msgs.append('Recipe %s defined langauge is not supported. '
-                           ' Please use one of the following: %s'
-                           % (recipe['name'], output_lang))
-    if failed_msgs:
-        return False, failed_msgs
-    return True, []
 
 
 def get_tags_from_cell(cell):
@@ -133,29 +67,6 @@ def get_tags_from_cell(cell):
                 isinstance(cell['metadata']['tags'], list):
             return cell['metadata']['tags']
     return None
-
-
-def get_recipe_parameters(configuration, recipe):
-    """Returns a dict of cells that contain recipes
-    and parameters from the ipynb notebook.
-    This is based on whether the cell dictionary has a key with
-    the follwing format:
-         'metadata': {'tags': ['recipe']}
-    or
-        'metadata': {'tags': ['parameters']}
-    This is based on ipynb cell tagging.
-    e.g. https://github.com/jupyterlab/jupyterlab-celltags"""
-
-    rec_param = {'recipes': [], 'parameters': {}}
-    if 'cells' in recipe and isinstance(recipe['cells'], list):
-        for cell in recipe['cells']:
-            tags = get_tags_from_cell(cell)
-            if tags:
-                [rec_param['recipes'].append(cell['source'])
-                 if t == 'recipe' else rec_param['parameters'].update(
-                    get_declarations_dict(configuration, cell['source'])
-                ) if t == 'parameters' else None for t in tags]
-    return rec_param
 
 
 def get_declarations_dict(configuration, code):
@@ -180,11 +91,12 @@ def main(client_id, user_arguments_dict):
     (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(client_id, op_header=False)
     defaults = signature()[1]
+
+    logger.debug("addworkflowpattern, user_arguments_dict: " +
+                 str(user_arguments_dict))
+
     # TODO, ask Jonas about recipe content validation
     #  skipping validation on recipe uploads for now
-    upload_key = 'recipes'
-    uploads = user_arguments_dict[upload_key]
-    del user_arguments_dict[upload_key]
 
     (validate_status, accepted) = validate_input_and_cert(
         user_arguments_dict,
@@ -199,15 +111,16 @@ def main(client_id, user_arguments_dict):
     logger.debug("addworkflowpattern, cliend_id: %s accepted %s" %
                  (client_id, accepted))
 
-    upload_name = 'recipesfilename'
     # Extract inputs, output and type-filter
-    pattern_name, inputs_name, output_name, type_filter_name = 'wp_name', \
-        'wp_inputs', 'wp_output', 'wp_type_filters'
+    pattern_name, inputs_name, output_name, type_filter_name, recipe_name = \
+        'wp_name', 'wp_inputs', 'wp_output', 'wp_type_filters', 'wp_recipes'
+
+    logger.debug("addworkflowpattern, accepted: " + str(accepted))
 
     inputs = accepted[inputs_name]
     output = accepted[output_name][-1]
     type_filter = accepted[type_filter_name]
-    recipe_name = accepted[upload_name][-1]
+    recipes = accepted[recipe_name]
     pattern_name = accepted[pattern_name][-1]
 
     paths = inputs + [output]
@@ -229,33 +142,33 @@ def main(client_id, user_arguments_dict):
              })
         return (output_objects, returnvalues.CLIENT_ERROR)
 
-    # Optional recipes
-    recipes_n_parameters = []
-    recipes = []
-    # Check upload files for recipes
-    for f_upload in uploads:
-        recipe = get_recipe_from_upload(configuration, f_upload)
-        if recipe:
-            recipes.append(recipe)
-    if recipes:
-        for recipe in recipes:
-            valid, msgs = valid_recipe(configuration, recipe)
-            if valid:
-                # Extract recipe and parameter cells from recipe
-                recipe_n_parameters = get_recipe_parameters(
-                    configuration, recipe)
-                if not recipe_n_parameters['recipes']:
-                    output_objects.append({'object_type': 'error_text',
-                                           'text': 'No recipe cells were '
-                                           'found in %s' %
-                                           recipe_name})
-                    return (output_objects, returnvalues.CLIENT_ERROR)
-                recipes_n_parameters.append(recipe_n_parameters)
-            else:
-                for msg in msgs:
-                    output_objects.append({'object_type': 'error_text',
-                                           'text': msg})
-                    return (output_objects, returnvalues.CLIENT_ERROR)
+    # # Optional recipes
+    # recipes_n_parameters = []
+    # recipes = []
+    # # Check upload files for recipes
+    # for f_upload in uploads:
+    #     recipe = get_recipe_from_upload(configuration, f_upload)
+    #     if recipe:
+    #         recipes.append(recipe)
+    # if recipes:
+    #     for recipe in recipes:
+    #         valid, msgs = valid_recipe(configuration, recipe)
+    #         if valid:
+    #             # Extract recipe and parameter cells from recipe
+    #             recipe_n_parameters = get_recipe_parameters(
+    #                 configuration, recipe)
+    #             if not recipe_n_parameters['recipes']:
+    #                 output_objects.append({'object_type': 'error_text',
+    #                                        'text': 'No recipe cells were '
+    #                                        'found in %s' %
+    #                                        recipe_name})
+    #                 return (output_objects, returnvalues.CLIENT_ERROR)
+    #             recipes_n_parameters.append(recipe_n_parameters)
+    #         else:
+    #             for msg in msgs:
+    #                 output_objects.append({'object_type': 'error_text',
+    #                                        'text': msg})
+    #                 return (output_objects, returnvalues.CLIENT_ERROR)
 
     output_objects.append({'object_type': 'header', 'text':
                            ' Registering Pattern'})
@@ -264,21 +177,25 @@ def main(client_id, user_arguments_dict):
         'inputs': inputs,
         'output': output,
         'type_filter': type_filter,
+        'recipes': recipes
     }
+
+    logger.debug("addworkflowpattern, created pattern: " + str(pattern))
+
     # Add optional userprovided name
     if pattern_name:
         pattern['name'] = pattern_name
-    # Add optional recipes
-    if recipes and recipes_n_parameters:
-        combined_rp = {}
-        for rp in recipes_n_parameters:
-            for k, v in rp.items():
-                if k not in combined_rp:
-                    combined_rp[k] = v
-                else:
-                    combined_rp.update(rp)
-        pattern['recipes'] = combined_rp['recipes']
-        pattern['variables'] = combined_rp['parameters']
+    # # Add optional recipes
+    # if recipes and recipes_n_parameters:
+    #     combined_rp = {}
+    #     for rp in recipes_n_parameters:
+    #         for k, v in rp.items():
+    #             if k not in combined_rp:
+    #                 combined_rp[k] = v
+    #             else:
+    #                 combined_rp.update(rp)
+    #     pattern['recipes'] = combined_rp['recipes']
+    #     pattern['variables'] = combined_rp['parameters']
 
     created, msg = create_workflow_pattern(configuration,
                                            client_id,
@@ -290,9 +207,19 @@ def main(client_id, user_arguments_dict):
 
     output_objects.append({'object_type': 'text',
                            'text': "Successfully registered the pattern"})
+
+    activatable, msg = rule_identification_from_pattern(configuration,
+                                                        client_id, pattern)
+
+    if activatable:
+        output_objects.append({'object_type': 'text',
+                               'text': "All required recipes are present, "
+                                       "pattern is activatable"})
+    else:
+        output_objects.append({'object_type': 'text', 'text': msg})
+
     output_objects.append({'object_type': 'link',
                            'destination': 'vgridman.py',
                            'text': 'Back to the vgrid overview'})
 
-    # TODO if recipes exists (Attach to pattern)
     return (output_objects, returnvalues.OK)
