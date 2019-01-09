@@ -214,15 +214,19 @@ def main(client_id, user_arguments_dict):
     output_objects.append({'object_type': 'text',
                            'text': "Successfully registered the recipe"})
 
-    activatable, msg = rule_identification_from_recipe(configuration,
-                                                        client_id, recipe)
+    activated_patterns, incomplete_patterns = \
+        rule_identification_from_recipe(configuration, client_id, recipe)
 
-    if activatable:
+    for incomplete in incomplete_patterns:
         output_objects.append({'object_type': 'text',
-                               'text': "Recipe is required by patterns. They "
-                                       "are now activatable"})
-    else:
-        output_objects.append({'object_type': 'text', 'text': msg})
+                               'text': "Pattern " + incomplete + " "
+                                "requires recipe " + recipe['name'] + " but "
+                                "it requires other recipes to be activatable"})
+
+    for activated in activated_patterns:
+        output_objects.append({'object_type': 'text',
+                               'text': "Pattern " + activated +
+                                       " is activatable"})
 
     output_objects.append({'object_type': 'link',
                            'destination': 'vgridman.py',

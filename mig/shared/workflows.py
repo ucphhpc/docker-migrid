@@ -763,12 +763,10 @@ def rule_identification_from_pattern(configuration, client_id,
     missed_recipes = []
     # Check if defined recipes exist already within system
     for recipe_name in workflow_pattern['recipes']:
-        _logger.info("DELETE ME - looking for recipe " + recipe_name)
         got_this_recipe = False
         # This assumes that recipes are saved as their name.
-        for recipe in os.listdir(recipe_dir_path):
-            _logger.info("DELETE ME - looking at file " + recipe)
-            recipe_path = os.path.join(recipe_dir_path, recipe)
+        for recipe_file in os.listdir(recipe_dir_path):
+            recipe_path = os.path.join(recipe_dir_path, recipe_file)
             recipe = get_recipe_from_file(configuration, recipe_path)
             if recipe:
                 if recipe['name'] == recipe_name:
@@ -813,7 +811,7 @@ def rule_identification_from_pattern(configuration, client_id,
     #                  workflow_pattern['name'])
 
 
-def rule_identification_from_recipe(client_id, workflow_recipe, configuration):
+def rule_identification_from_recipe(configuration, client_id, workflow_recipe):
     # TODO finish this
     """identifies if a task can be created, following the creation or
     editing of a recipe . This pattern is read in as the object
@@ -834,39 +832,37 @@ def rule_identification_from_recipe(client_id, workflow_recipe, configuration):
     matching_patterns = []
     # Check if patterns exist already within system that need this recipe
     for pattern_file in os.listdir(pattern_dir_path):
-        # convert stored pattern into object
-        try:
-            with open(pattern_file, 'r') as raw_pattern:
-                pattern = json.load(raw_pattern)
-                if workflow_recipe['name'] in pattern['recipes']:
-                    matching_patterns.append(pattern)
-        except Exception, err:
-            _logger.error('failed to parse pattern file ' + pattern_file)
+        pattern_path = os.path.join(pattern_dir_path, pattern_file)
+        pattern = get_pattern_from_file(configuration, pattern_path)
+        if pattern:
+            if workflow_recipe['name'] in pattern['recipes']:
+                matching_patterns.append(pattern)
 
+    activatable_patterns = []
+    incomplete_patterns = []
     # now check all matching patterns have all their recipes
     for pattern in matching_patterns:
+        # Currently multiple recipes are crudely chained together. This will need
+        # to be altered once we move into other languages than python.
         complete_recipe = ''
-        got_all_recipes = True
-        # TODO this will almost certainly need altered once recipes have been
-        #  implemented
-        # This assumes that recipes are saved as their name.
-        for recipe in os.listdir(recipe_dir_path):
+        missed_recipes = []
+        # Check if defined recipes exist already within system
+        for recipe_name in pattern['recipes']:
             got_this_recipe = False
-            if recipe in pattern['recipes']:
-                try:
-                    recipe_path = os.path.join(recipe_dir_path, recipe)
-                    with open(recipe_path) as input_file:
-                        for line in input_file:
+            # This assumes that recipes are saved as their name.
+            for recipe_file in os.listdir(recipe_dir_path):
+                recipe_path = os.path.join(recipe_dir_path, recipe_file)
+                recipe = get_recipe_from_file(configuration, recipe_path)
+                if recipe:
+                    if recipe['name'] == recipe_name:
+                        for line in recipe['recipe']:
                             complete_recipe += line
-                    got_this_recipe = True
-                except Exception:
-                    _logger.error('')
+                        got_this_recipe = True
             if not got_this_recipe:
-                got_all_recipes = False
-
-        # if all recipes are present then we can update rules
-        if got_all_recipes and complete_recipe != '':
-            pass
-            # Generate rule from pattern and recipe
-
+                missed_recipes.append(recipe_name)
+        if missed_recipes:
+            incomplete_patterns.append(str(pattern['name']))
+        else:
+            activatable_patterns.append(str(pattern['name']))
+    return (activatable_patterns, incomplete_patterns)
 
