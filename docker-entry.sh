@@ -12,17 +12,11 @@ p) PASSWORD=${OPTARG};;
 esac
 done
 
-if [ "$USER" == "" ]; then
-    echo "The USER env variable has not been set"
-    exit 1
-fi
-
 # Create a default account (Use service owner account)
 if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
     # createuser.py Usage:
     # [OPTIONS] [FULL_NAME ORGANIZATION STATE COUNTRY EMAIL COMMENT PASSWORD]
-    su - $USER -c "$MIG_ROOT/mig/server/createuser.py -r devuser org dk dk $USERNAME foo $PASSWORD"
-    # Ensure permissions
+    su - $USER -c "$MIG_ROOT/mig/server/createuser.py devuser org dk dk $USERNAME foo $PASSWORD"
     chown $USER:$USER $MIG_ROOT/mig/server/MiG-users.db
     chmod 644 $MIG_ROOT/mig/server/MiG-users.db
 fi
@@ -47,12 +41,48 @@ if [ $status -ne 0 ]; then
     exit $status
 fi
 
+# Start every service for now
+# TODO make individual checks for each service
+/etc/init.d/migrid start script
+ps aux | grep script | grep -q -v grep
+status=$?
+if [ $status -ne 0 ]; then
+    echo "Failed to start script: $status"
+    exit $status
+fi
+
+# Start every service for now
+# TODO make individual checks for each service
+/etc/init.d/migrid start events
+ps aux | grep events | grep -q -v grep
+status=$?
+if [ $status -ne 0 ]; then
+    echo "Failed to start events: $status"
+    exit $status
+fi
+
 while sleep 60; do
     ps aux | grep openid | grep -q -v grep
-
     OPENID_STATUS=$?
+    
     if [ $OPENID_STATUS -ne 0 ]; then
         echo "OpenID service failed."
+        exit 1
+    fi
+
+    ps aux | grep script | grep -q -v grep
+    SCRIPT_STATUS=$?
+
+    if [ $SCRIPT_STATUS -ne 0 ]; then
+        echo "Script service failed."
+        exit 1
+    fi
+
+    ps aux | grep events | grep -q -v grep
+    EVENTS_STATUS=$?
+
+    if [ $EVENTS_STATUS -ne 0 ]; then
+        echo "Events service failed."
         exit 1
     fi
 
