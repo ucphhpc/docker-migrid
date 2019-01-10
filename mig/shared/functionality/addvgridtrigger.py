@@ -66,7 +66,6 @@ def signature():
 def main(client_id, user_arguments_dict):
     """Main function used by front end"""
 
-
     (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(client_id, op_header=False)
     client_dir = client_id_dir(client_id)
@@ -204,28 +203,8 @@ sub-%(vgrid_label)s and try again''' % {'rule_id': rule_id,
                  "found invalid change value %s" % change})
             return (output_objects, returnvalues.CLIENT_ERROR)
 
-        test_string = "A test string"
-        user_arguments_dict_string = str(user_arguments_dict)
-        # TODO DELETE ME
-        # New trigger with missing path
-        output_objects.append(
-            {'object_type': 'error_text', 'text': '''Test message from patch'''})
-        output_objects.append(
-            {'object_type': 'error_text',
-             'text': '''Second message from patch'''})
-        output_objects.append(
-            {'object_type': 'error_text',
-             'text': test_string})
-        output_objects.append(
-            {'object_type': 'error_text',
-             'text': client_id})
-        output_objects.append(
-            {'object_type': 'error_text',
-             'text': user_arguments_dict_string})
-        return (output_objects, returnvalues.CLIENT_ERROR)
-
+    # ------------------------------------------------------------------
     # Check if we should load saved trigger for rank change or update
-
     rule_dict = None
     if rank is not None or update_id is not None:
         (load_status, all_triggers) = vgrid_triggers(vgrid_name, configuration)
@@ -259,6 +238,8 @@ a job description file path as argument.'''})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     # Handle create and update (i.e. new, update all or just refresh mRSL)
+
+    # -------------------------------------------------------------------------
 
     if rank is None:
 
@@ -298,6 +279,7 @@ a job description file path as argument.'''})
             for rel_path in rule_dict['arguments']:
                 # IMPORTANT: path must be expanded to abs for proper chrooting
                 abs_path = os.path.abspath(os.path.join(base_dir, rel_path))
+                logger.debug("looking at location " + str(abs_path))
                 try:
                     if not valid_user_path(configuration, abs_path, base_dir,
                                            True):

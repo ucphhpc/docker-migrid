@@ -780,6 +780,7 @@ def rule_identification_from_pattern(configuration, client_id,
                 str(missed_recipes))
     return (True, 'All recipes found')
 
+    # TODO call vgrid_setup_trigger in vgrid.py
 
     # # if all recipes are present then check for data files
     # if got_all_recipes and complete_recipe != '':
@@ -866,3 +867,4 @@ def rule_identification_from_recipe(configuration, client_id, workflow_recipe):
             activatable_patterns.append(str(pattern['name']))
     return (activatable_patterns, incomplete_patterns)
 
+    # TODO call vgrid_setup_trigger in vgrid.py
