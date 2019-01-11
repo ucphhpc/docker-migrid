@@ -51,6 +51,7 @@ def signature():
     """Signaure of the main function"""
 
     defaults = {
+        'vgrid_name': REJECT_UNSET,
         'wr_name': [''],
         'wr_recipe': [''],
         'wr_recipefilename': REJECT_UNSET
@@ -180,12 +181,13 @@ def main(client_id, user_arguments_dict):
     logger.debug("addworkflowrecipe, cliend_id: %s accepted %s" %
                  (client_id, accepted))
 
-    recipe_name_key = 'wr_name'
-    recipe_key = 'wr_recipe'
-
+    recipe_name_key, recipe_key, vgrid_name = 'wr_name', 'wr_recipe', \
+                                              'vgrid_name'
+    
     recipe_name = accepted[recipe_name_key][-1]
     recipe_code = accepted[recipe_key][-1]
-
+    vgrid = accepted[vgrid_name][-1]
+    
     if not safe_handler(configuration, 'post', op_name, client_id,
                         get_csrf_limit(configuration), accepted):
         output_objects.append(
@@ -215,7 +217,8 @@ def main(client_id, user_arguments_dict):
                            'text': "Successfully registered the recipe"})
 
     activated_patterns, incomplete_patterns = \
-        rule_identification_from_recipe(configuration, client_id, recipe)
+        rule_identification_from_recipe(configuration, client_id, recipe,
+                                        vgrid)
 
     for incomplete in incomplete_patterns:
         output_objects.append({'object_type': 'text',
@@ -226,7 +229,7 @@ def main(client_id, user_arguments_dict):
     for activated in activated_patterns:
         output_objects.append({'object_type': 'text',
                                'text': "Pattern " + activated +
-                                       " is activatable"})
+                                       " is activatable and trigger created"})
 
     output_objects.append({'object_type': 'link',
                            'destination': 'vgridman.py',

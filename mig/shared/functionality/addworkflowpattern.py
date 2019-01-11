@@ -51,6 +51,7 @@ def signature():
     """Signaure of the main function"""
 
     defaults = {
+        'vgrid_name': REJECT_UNSET,
         'wp_name': [''],
         'wp_inputs': REJECT_UNSET,
         'wp_output': REJECT_UNSET,
@@ -92,6 +93,9 @@ def main(client_id, user_arguments_dict):
         initialize_main_variables(client_id, op_header=False)
     defaults = signature()[1]
 
+    logger.debug("DELETE ME - " + str(user_arguments_dict))
+    logger.debug("DELETE ME - " + str(op_name))
+
     logger.debug("addworkflowpattern, user_arguments_dict: " +
                  str(user_arguments_dict))
 
@@ -112,8 +116,9 @@ def main(client_id, user_arguments_dict):
                  (client_id, accepted))
 
     # Extract inputs, output and type-filter
-    pattern_name, inputs_name, output_name, type_filter_name, recipe_name = \
-        'wp_name', 'wp_inputs', 'wp_output', 'wp_type_filters', 'wp_recipes'
+    pattern_name, inputs_name, output_name, type_filter_name, recipe_name, \
+    vgrid_name = 'wp_name', 'wp_inputs', 'wp_output', 'wp_type_filters', \
+            'wp_recipes', 'vgrid_name'
 
     logger.debug("addworkflowpattern, accepted: " + str(accepted))
 
@@ -122,6 +127,7 @@ def main(client_id, user_arguments_dict):
     type_filter = accepted[type_filter_name]
     recipes = accepted[recipe_name]
     pattern_name = accepted[pattern_name][-1]
+    vgrid = accepted[vgrid_name][-1]
 
     paths = inputs + [output]
     for path in paths:
@@ -209,7 +215,7 @@ def main(client_id, user_arguments_dict):
                            'text': "Successfully registered the pattern"})
 
     activatable, msg = rule_identification_from_pattern(configuration,
-                                                        client_id, pattern)
+                                                    client_id, pattern, vgrid)
 
     if activatable:
         output_objects.append({'object_type': 'text',

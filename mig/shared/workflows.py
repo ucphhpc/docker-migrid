@@ -51,7 +51,7 @@ from shared.defaults import wp_id_charset, wp_id_length, wr_id_charset, \
     wr_id_length
 from shared.serial import dump
 from shared.functionality.addvgridtrigger import main as add_vgrid_trigger_main
-
+from shared.vgrid import vgrid_add_triggers
 from shared.job import fill_mrsl_template, new_job
 from shared.fileio import delete_file
 
@@ -743,7 +743,7 @@ def get_pattern_from_file(configuration, pattern_file):
 
 
 def rule_identification_from_pattern(configuration, client_id,
-                                     workflow_pattern):
+                                     workflow_pattern, vgrid):
     """identifies if a task can be created, following the creation or
     editing of a pattern ."""
 
@@ -764,55 +764,66 @@ def rule_identification_from_pattern(configuration, client_id,
     # Check if defined recipes exist already within system
     for recipe_name in workflow_pattern['recipes']:
         got_this_recipe = False
-        # This assumes that recipes are saved as their name.
-        for recipe_file in os.listdir(recipe_dir_path):
-            recipe_path = os.path.join(recipe_dir_path, recipe_file)
-            recipe = get_recipe_from_file(configuration, recipe_path)
-            if recipe:
-                if recipe['name'] == recipe_name:
-                    for line in recipe['recipe']:
-                        complete_recipe += line
-                    got_this_recipe = True
+        if os.path.isdir(recipe_dir_path):
+            # This assumes that recipes are saved as their name.
+            for recipe_file in os.listdir(recipe_dir_path):
+                recipe_path = os.path.join(recipe_dir_path, recipe_file)
+                recipe = get_recipe_from_file(configuration, recipe_path)
+                if recipe:
+                    if recipe['name'] == recipe_name:
+                        for line in recipe['recipe']:
+                            complete_recipe += line
+                        got_this_recipe = True
         if not got_this_recipe:
             missed_recipes.append(recipe_name)
     if missed_recipes:
         return (False, 'Could not find all required recipes. Missing: ' +
                 str(missed_recipes))
-    return (True, 'All recipes found')
 
-    # TODO call vgrid_setup_trigger in vgrid.py
+    recipe_dir_path = os.path.join(recipe_dir_path,
+                                   workflow_pattern['wp_recipes'][-1])
 
-    # # if all recipes are present then check for data files
-    # if got_all_recipes and complete_recipe != '':
-    #     pass
-    #     # Generate rule from pattern and recipe
-    #
-    #     rule_dir_path = client_dir
-    #
-    #     # TODO work this out according to grid_events lines 1574 to 1581
-    #     user_arguments_dict = {
-    #         'vgrid_name': REJECT_UNSET,
-    #         'rule_id': [keyword_auto],
-    #         'path': [''],
-    #         'changes': [any_state],
-    #         'action': [keyword_auto],
-    #         'arguments': [''],
-    #         'rate_limit': [''],
-    #         'settle_time': [''],
-    #         'match_files': ['True'],
-    #         'match_dirs': ['False'],
-    #         'match_recursive': ['False'],
-    #         'rank': [''],
-    #     }
-    #     add_vgrid_trigger_main(client_id, user_arguments_dict)
-    #
-    # # if we didn't find all the required recipes
-    # else:
-    #     _logger.info("Did not find all the necessary recipes for pattern " +
-    #                  workflow_pattern['name'])
+    _logger.info('All recipes found within trying to create trigger for recipe'
+                 ' at ' + recipe_dir_path + ' and inputs at ' +
+                 workflow_pattern['wp_inputs'])
+
+    # TODO do not create these triggers quite yet. possibly wait for some
+    #  activation toggle?
+
+    rule_dict = {
+         'rule_id': "%d" % (time.time() * 1E8),
+         'vgrid_name': vgrid,
+         # will only set up for first input directory. would like more
+         'path': workflow_pattern['wp_inputs'][-1],
+         'changes': ['created', 'modified'],
+         'run_as': client_id,
+         # may need custom action for amalgamation of recipes
+         'action': 'submit',
+         # will only consider first recipe. would like more
+         # will need to changed it account for recipe structure
+         'arguments': recipe_dir_path,
+         'rate_limit': '',
+         'settle_time': '',
+         'match_files': True,
+         'match_dirs': False,
+         # possibly should be False instead. Investigate
+         'match_recursive': True,
+         'templates': []
+    }
+
+    (add_status, add_msg) = vgrid_add_triggers(configuration,
+                                               vgrid,
+                                               [rule_dict],
+                                               update_id=None,
+                                               rank=None)
+
+    if not add_status:
+        return (False, 'Could not create trigger for pattern. ' + add_msg)
+    return (True, 'Trigger created')
 
 
-def rule_identification_from_recipe(configuration, client_id, workflow_recipe):
+def rule_identification_from_recipe(configuration, client_id, workflow_recipe,
+                                    vgrid):
     # TODO finish this
     """identifies if a task can be created, following the creation or
     editing of a recipe . This pattern is read in as the object
@@ -832,19 +843,20 @@ def rule_identification_from_recipe(configuration, client_id, workflow_recipe):
 
     matching_patterns = []
     # Check if patterns exist already within system that need this recipe
-    for pattern_file in os.listdir(pattern_dir_path):
-        pattern_path = os.path.join(pattern_dir_path, pattern_file)
-        pattern = get_pattern_from_file(configuration, pattern_path)
-        if pattern:
-            if workflow_recipe['name'] in pattern['recipes']:
-                matching_patterns.append(pattern)
+    if os.path.isdir(pattern_dir_path):
+        for pattern_file in os.listdir(pattern_dir_path):
+            pattern_path = os.path.join(pattern_dir_path, pattern_file)
+            pattern = get_pattern_from_file(configuration, pattern_path)
+            if pattern:
+                if workflow_recipe['name'] in pattern['recipes']:
+                    matching_patterns.append(pattern)
 
     activatable_patterns = []
     incomplete_patterns = []
     # now check all matching patterns have all their recipes
     for pattern in matching_patterns:
-        # Currently multiple recipes are crudely chained together. This will need
-        # to be altered once we move into other languages than python.
+        # Currently multiple recipes are crudely chained together. This will
+        # need to be altered eventually.
         complete_recipe = ''
         missed_recipes = []
         # Check if defined recipes exist already within system
@@ -861,10 +873,48 @@ def rule_identification_from_recipe(configuration, client_id, workflow_recipe):
                         got_this_recipe = True
             if not got_this_recipe:
                 missed_recipes.append(recipe_name)
-        if missed_recipes:
-            incomplete_patterns.append(str(pattern['name']))
-        else:
-            activatable_patterns.append(str(pattern['name']))
-    return (activatable_patterns, incomplete_patterns)
+        if not missed_recipes:
 
-    # TODO call vgrid_setup_trigger in vgrid.py
+            recipe_dir_path = os.path.join(recipe_dir_path,
+                                           pattern['wp_recipes'][-1])
+
+            _logger.info(
+                'All recipes found within trying to create trigger for recipe'
+                ' at ' + recipe_dir_path + ' and inputs at ' +
+                pattern['wp_inputs'])
+
+            # TODO do not create these triggers quite yet. possibly wait for
+            #  some activation toggle?
+
+            rule_dict = {
+                'rule_id': "%d" % (time.time() * 1E8),
+                'vgrid_name': vgrid,
+                # will only set up for first input directory. would like more
+                'path': pattern['wp_inputs'][-1],
+                'changes': ['created', 'modified'],
+                'run_as': client_id,
+                # may need custom action for amalgamation of recipes
+                'action': 'submit',
+                # will only consider first recipe. would like more
+                # will need to changed it account for recipe structure
+                'arguments': recipe_dir_path,
+                'rate_limit': '',
+                'settle_time': '',
+                'match_files': True,
+                'match_dirs': False,
+                # possibly should be False instead. Investigate
+                'match_recursive': True,
+                'templates': []
+            }
+
+            (add_status, add_msg) = vgrid_add_triggers(configuration,
+                                                       vgrid,
+                                                       [rule_dict],
+                                                       update_id=None,
+                                                       rank=None)
+
+            if not add_status:
+                incomplete_patterns.append(str(pattern['name']))
+            else:
+                activatable_patterns.append(str(pattern['name']))
+    return (activatable_patterns, incomplete_patterns)

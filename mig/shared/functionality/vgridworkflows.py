@@ -403,7 +403,8 @@ in reaction to file system events.</p>
 
         fill_helpers = {'form_method': form_method, 'target_op': target_op,
                         'csrf_field': csrf_field, 'csrf_limit': csrf_limit,
-                        'csrf_token': csrf_token, 'dest_dir': '.' + os.sep}
+                        'csrf_token': csrf_token, 'dest_dir': '.' + os.sep,
+                        'vgrid': vgrid_name}
 
         # Place the patterns and recipes seperately
 
@@ -443,7 +444,6 @@ in reaction to file system events.</p>
         or by .... </br>
         </p>"""})
 
-#        (Optional) Recipe(s): < input type = 'file' name = 'recipes' multiple / > < / br >
         output_objects.append({'object_type': 'html_form', 'text': """
         <form enctype='multipart/form-data' method='%(form_method)s'
             action='%(target_op)s.py'>
@@ -451,6 +451,7 @@ in reaction to file system events.</p>
             Output: <input type='text' name='wp_output' /></br>
             Recipe(s): <input type='text' name='wp_recipes' /></br>
             Type-filter: <input type='text' name='wp_type_filters' /></br>
+            <input type="hidden" name="vgrid_name" value="%(vgrid)s" />
             <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
             (Optional) Pattern name: <input type='text' name='wp_name' /></br>
             <input type='submit' value='Register Pattern'/>
@@ -481,7 +482,8 @@ in reaction to file system events.</p>
 
         fill_helpers = {'form_method': form_method, 'target_op': target_op,
                         'csrf_field': csrf_field, 'csrf_limit': csrf_limit,
-                        'csrf_token': csrf_token, 'dest_dir': '.' + os.sep}
+                        'csrf_token': csrf_token, 'dest_dir': '.' + os.sep,
+                        'vgrid': vgrid_name}
 
         output_objects.append({'object_type': 'html_form', 'text': """
             <p>
@@ -507,6 +509,7 @@ in reaction to file system events.</p>
         output_objects.append({'object_type': 'html_form', 'text': """
             <form enctype='multipart/form-data' method='%(form_method)s'
                 action='%(target_op)s.py'>
+                <input type="hidden" name="vgrid_name" value="%(vgrid)s" />
                 <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
                 Recipe: <input type='file' name='wr_recipe'/></br>
                 (Optional) Recipe name: <input type='text' name='wr_name' /></br>

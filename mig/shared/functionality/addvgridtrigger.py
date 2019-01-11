@@ -203,7 +203,6 @@ sub-%(vgrid_label)s and try again''' % {'rule_id': rule_id,
                  "found invalid change value %s" % change})
             return (output_objects, returnvalues.CLIENT_ERROR)
 
-    # ------------------------------------------------------------------
     # Check if we should load saved trigger for rank change or update
     rule_dict = None
     if rank is not None or update_id is not None:
@@ -238,8 +237,6 @@ a job description file path as argument.'''})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     # Handle create and update (i.e. new, update all or just refresh mRSL)
-
-    # -------------------------------------------------------------------------
 
     if rank is None:
 
@@ -303,6 +300,11 @@ a job description file path as argument.'''})
         rule_dict['templates'] = templates
 
     # Add to list and pickle
+
+    logger.debug("DELETE ME - vgrid_name: " + vgrid_name)
+    logger.debug("DELETE ME - rule_dict: " + str(rule_dict))
+    logger.debug("DELETE ME - update_id: " + str(update_id))
+    logger.debug("DELETE ME - rank: " + str(rank))
 
     (add_status, add_msg) = vgrid_add_triggers(configuration, vgrid_name,
                                                [rule_dict], update_id, rank)

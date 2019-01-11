@@ -30,6 +30,7 @@
 import fnmatch
 import os
 import re
+import time
 
 from shared.base import valid_dir_input
 from shared.defaults import default_vgrid, keyword_owners, keyword_members, \
@@ -1675,19 +1676,6 @@ def allow_members_adm(configuration, vgrid_name, client_id):
 def allow_resources_adm(configuration, vgrid_name, client_id):
     """Check if client_id is allowed to edit resources for vgrid"""
     return _shared_allow_adm(configuration, vgrid_name, client_id, 'resources')
-
-
-def vgrid_setup_trigger(configuration, vgrid_name, rule_dict, update_id, rank):
-    """Create a new vgrid trigger"""
-
-    # method kept for if we need somewhere to validate inputs. Delete if not
-    # needed
-
-    # TODO this should be called after rule_identification_from_recipe or
-    #  rule_identification_from_pattern within workflows.py
-
-    return vgrid_add_triggers(configuration, vgrid_name, [rule_dict],
-                              update_id, rank)
 
 
 if __name__ == "__main__":
