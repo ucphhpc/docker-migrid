@@ -291,7 +291,7 @@ def fields_to_mrsl(configuration, user_arguments_dict, external_dict):
             attr = user_arguments_dict[attr_name]
 
             # FIXME: this type check is not perfect... I should be
-            # able to extend on any sequence...
+            #  able to extend on any sequence...
 
             if isinstance(attr, list):
                 spec.extend(attr)
