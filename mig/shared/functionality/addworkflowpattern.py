@@ -148,34 +148,6 @@ def main(client_id, user_arguments_dict):
              })
         return (output_objects, returnvalues.CLIENT_ERROR)
 
-    # # Optional recipes
-    # recipes_n_parameters = []
-    # recipes = []
-    # # Check upload files for recipes
-    # for f_upload in uploads:
-    #     recipe = get_recipe_from_upload(configuration, f_upload)
-    #     if recipe:
-    #         recipes.append(recipe)
-    # if recipes:
-    #     for recipe in recipes:
-    #         valid, msgs = valid_recipe(configuration, recipe)
-    #         if valid:
-    #             # Extract recipe and parameter cells from recipe
-    #             recipe_n_parameters = get_recipe_parameters(
-    #                 configuration, recipe)
-    #             if not recipe_n_parameters['recipes']:
-    #                 output_objects.append({'object_type': 'error_text',
-    #                                        'text': 'No recipe cells were '
-    #                                        'found in %s' %
-    #                                        recipe_name})
-    #                 return (output_objects, returnvalues.CLIENT_ERROR)
-    #             recipes_n_parameters.append(recipe_n_parameters)
-    #         else:
-    #             for msg in msgs:
-    #                 output_objects.append({'object_type': 'error_text',
-    #                                        'text': msg})
-    #                 return (output_objects, returnvalues.CLIENT_ERROR)
-
     output_objects.append({'object_type': 'header', 'text':
                            ' Registering Pattern'})
     pattern = {
@@ -191,17 +163,6 @@ def main(client_id, user_arguments_dict):
     # Add optional userprovided name
     if pattern_name:
         pattern['name'] = pattern_name
-    # # Add optional recipes
-    # if recipes and recipes_n_parameters:
-    #     combined_rp = {}
-    #     for rp in recipes_n_parameters:
-    #         for k, v in rp.items():
-    #             if k not in combined_rp:
-    #                 combined_rp[k] = v
-    #             else:
-    #                 combined_rp.update(rp)
-    #     pattern['recipes'] = combined_rp['recipes']
-    #     pattern['variables'] = combined_rp['parameters']
 
     created, msg = create_workflow_pattern(configuration,
                                            client_id,

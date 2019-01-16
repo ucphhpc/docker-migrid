@@ -52,8 +52,9 @@ from shared.defaults import wp_id_charset, wp_id_length, wr_id_charset, \
 from shared.serial import dump
 from shared.functionality.addvgridtrigger import main as add_vgrid_trigger_main
 from shared.vgrid import vgrid_add_triggers
-from shared.job import fill_mrsl_template, new_job
+from shared.job import fill_mrsl_template, new_job, fields_to_mrsl
 from shared.fileio import delete_file
+from shared.mrslkeywords import get_keywords_dict
 
 WRITE_LOCK = 'write.lock'
 WORKFLOW_PATTERNS, MODTIME, CONF = ['__workflowpatterns__', '__modtime__',
@@ -640,11 +641,11 @@ def create_workflow_recipe(configuration, client_id, wr):
         msg = "A workflow recipe creation dependency was missing"
         _logger.error(
             "WR: creating_recipe, client_id was not set %s" % client_id)
-        return (False, msg)
+        return False, msg
 
     correct, msg = __correct_wr(configuration, wr)
     if not correct:
-        return (correct, msg)
+        return correct, msg
 
     # TODO check for create required keys
     client_dir = client_id_dir(client_id)
@@ -658,7 +659,7 @@ def create_workflow_recipe(configuration, client_id, wr):
                           % (wr['name'], client_id))
             msg = 'You already have a workflow recipe with the name %s' \
                   % wr['name']
-            return (False, msg)
+            return False, msg
 
     wr_home = os.path.join(configuration.workflow_recipes_home,
                            client_dir)
@@ -670,7 +671,7 @@ def create_workflow_recipe(configuration, client_id, wr):
                           (wr_home, err))
             msg = "Couldn't create the required dependencies for " \
                   "your workflow recipe"
-            return (False, msg)
+            return False, msg
 
     persistence_id = generate_random_ascii(wr_id_length, charset=wr_id_charset)
     wr_file_path = os.path.join(wr_home, persistence_id)
@@ -680,7 +681,7 @@ def create_workflow_recipe(configuration, client_id, wr):
                       % wr_file_path)
         msg = 'A workflow recipe conflict was encountered, '
         'please try and resubmit the recipe'
-        return (False, msg)
+        return False, msg
 
     wr['persistence_id'] = persistence_id
     # Save the recipe
@@ -707,11 +708,11 @@ def create_workflow_recipe(configuration, client_id, wr):
             _logger.error('WR: failed to remove the dangling wr: %s %s'
                           % (wr_file_path, err))
             msg += '\n Failed to cleanup after a failed workflow creation'
-        return (False, msg)
+        return False, msg
 
     _logger.info('WR: %s created at: %s ' %
                  (client_id, wr_file_path))
-    return (True, '')
+    return True, ''
 
     pass
 
@@ -790,36 +791,16 @@ def rule_identification_from_pattern(configuration, client_id,
     # TODO do not create these triggers quite yet. possibly wait for some
     #  activation toggle?
 
-    rule_dict = {
-         'rule_id': "%d" % (time.time() * 1E8),
-         'vgrid_name': vgrid,
-         # will only set up for first input directory. would like more
-         'path': workflow_pattern['wp_inputs'][-1],
-         'changes': ['created', 'modified'],
-         'run_as': client_id,
-         # may need custom action for amalgamation of recipes
-         'action': 'submit',
-         # will only consider first recipe. would like more
-         # will need to changed it account for recipe structure
-         'arguments': recipe_dir_path,
-         'rate_limit': '',
-         'settle_time': '',
-         'match_files': True,
-         'match_dirs': False,
-         # possibly should be False instead. Investigate
-         'match_recursive': True,
-         'templates': []
-    }
+    (trigger_status, trigger_msg) = create_trigger(configuration,
+                                                   _logger,
+                                                   vgrid,
+                                                   client_id,
+                                                   workflow_pattern,
+                                                   complete_recipe)
 
-    (add_status, add_msg) = vgrid_add_triggers(configuration,
-                                               vgrid,
-                                               [rule_dict],
-                                               update_id=None,
-                                               rank=None)
-
-    if not add_status:
-        return (False, 'Could not create trigger for pattern. ' + add_msg)
-    return (True, 'Trigger created')
+    if not trigger_status:
+        return False, 'Could not create trigger for pattern. ' + trigger_msg
+    return True, 'Trigger created'
 
 
 def rule_identification_from_recipe(configuration, client_id, workflow_recipe,
@@ -832,7 +813,7 @@ def rule_identification_from_recipe(configuration, client_id, workflow_recipe,
     # work out pattern directory
     client_dir = client_id_dir(client_id)
     pattern_dir_path = os.path.join(configuration.workflow_patterns_home,
-                                   client_dir)
+                                    client_dir)
     recipe_dir_path = os.path.join(configuration.workflow_recipes_home,
                                    client_dir)
 
@@ -886,35 +867,127 @@ def rule_identification_from_recipe(configuration, client_id, workflow_recipe,
             # TODO do not create these triggers quite yet. possibly wait for
             #  some activation toggle?
 
-            rule_dict = {
-                'rule_id': "%d" % (time.time() * 1E8),
-                'vgrid_name': vgrid,
-                # will only set up for first input directory. would like more
-                'path': pattern['wp_inputs'][-1],
-                'changes': ['created', 'modified'],
-                'run_as': client_id,
-                # may need custom action for amalgamation of recipes
-                'action': 'submit',
-                # will only consider first recipe. would like more
-                # will need to changed it account for recipe structure
-                'arguments': recipe_dir_path,
-                'rate_limit': '',
-                'settle_time': '',
-                'match_files': True,
-                'match_dirs': False,
-                # possibly should be False instead. Investigate
-                'match_recursive': True,
-                'templates': []
-            }
+            (trigger_status, trigger_msg) = create_trigger(configuration,
+                                                           _logger,
+                                                           vgrid,
+                                                           client_id,
+                                                           pattern,
+                                                           complete_recipe)
 
-            (add_status, add_msg) = vgrid_add_triggers(configuration,
-                                                       vgrid,
-                                                       [rule_dict],
-                                                       update_id=None,
-                                                       rank=None)
-
-            if not add_status:
+            if not trigger_status:
                 incomplete_patterns.append(str(pattern['name']))
             else:
                 activatable_patterns.append(str(pattern['name']))
-    return (activatable_patterns, incomplete_patterns)
+    return activatable_patterns, incomplete_patterns
+
+
+def create_workflow_task_file(configuration, client_id, complete_recipe):
+    _logger = configuration.logger
+
+    client_dir = client_id_dir(client_id)
+    task_home = os.path.join(configuration.workflow_tasks_home, client_dir)
+    if not os.path.exists(task_home):
+        try:
+            os.makedirs(task_home)
+        except Exception, err:
+            _logger.error("WT: couldn't create directory %s %s" %
+                          (task_home, err))
+            msg = "Couldn't create the required dependencies for " \
+                  "your workflow task"
+            return False, msg
+
+    # TODO improve this
+    # placeholder for unique name generation.
+    file_name = generate_random_ascii(wr_id_length, charset=wr_id_charset) + \
+                ".py"
+    task_file_path = os.path.join(task_home, file_name)
+    while os.path.exists(task_file_path):
+        file_name = generate_random_ascii(wr_id_length, charset=wr_id_charset)
+        task_file_path = os.path.join(task_home, file_name)
+
+    wrote = False
+    msg = ''
+    try:
+        with open(task_file_path, 'w') as new_file:
+            new_file.write(complete_recipe)
+        # Mark as modified. Don't do this? We shouldn't modify this . . .
+        # mark_workflow_r_modified(configuration, wr['persistence_id'])
+        wrote = True
+    except Exception, err:
+        _logger.error('WT: failed to write %s to disk %s' % (
+            task_file_path, err))
+        msg = 'Failed to save your workflow task, '
+        'please try and resubmit it'
+
+    if not wrote:
+        # Ensure that the failed write does not stick around
+        try:
+            os.remove(task_file_path)
+        except Exception, err:
+            _logger.error('WT: failed to remove the dangling task file: %s %s'
+                          % (task_file_path, err))
+            msg += '\n Failed to cleanup after a failed workflow creation'
+        return False, msg
+
+    _logger.info('WT: %s created at: %s ' %
+                 (client_id, task_file_path))
+    return True, task_file_path
+
+
+def create_trigger(configuration, _logger, vgrid, client_id, pattern,
+                   complete_recipe):
+
+    # TODO update the recipe with the arguments from the pattern before
+    #  sending off for task creation
+
+    (task_file_status, msg) = create_workflow_task_file(configuration,
+                                                        client_id,
+                                                        complete_recipe)
+    if not task_file_status:
+        return False, msg
+
+    arguments_dict = {
+        'EXECUTE': [
+            "python " + msg
+        ],
+        'EXECUTABLES': [
+            msg
+        ]
+    }
+    external_dict = get_keywords_dict(configuration)
+    mrsl = fields_to_mrsl(configuration, arguments_dict, external_dict)
+    try:
+        (mrsl_filehandle, mrsl_real_path) = tempfile.mkstemp(text=True)
+        # mrsl_relative_path = os.path.basename(mrsl_real_path)
+        os.write(mrsl_filehandle, mrsl)
+        os.close(mrsl_filehandle)
+    except Exception, err:
+        msg = "Failed to create temporary mRSL file"
+        _logger.error(msg + ": " + str(err))
+        return False, msg
+
+    rule_dict = {
+        'rule_id': "%d" % (time.time() * 1E8),
+        'vgrid_name': vgrid,
+        # will only set up for first input directory. would like more
+        'path': pattern['wp_inputs'][-1],
+        'changes': ['created', 'modified'],
+        'run_as': client_id,
+        'action': 'submit',
+        # will need to be changed to mRSL file from recipes
+        'arguments': mrsl_real_path,
+        'rate_limit': '',
+        'settle_time': '',
+        'match_files': True,
+        'match_dirs': False,
+        # possibly should be False instead. Investigate
+        'match_recursive': True,
+        'templates': []
+    }
+
+    (add_status, add_msg) = vgrid_add_triggers(configuration,
+                                               vgrid,
+                                               [rule_dict],
+                                               update_id=None,
+                                               rank=None)
+    return add_status, add_msg
