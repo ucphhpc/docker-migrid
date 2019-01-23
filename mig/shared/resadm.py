@@ -65,6 +65,8 @@ def put_fe_pgid(
     ):
     """Write front end PGID in resource home"""
 
+    logger.debug("DELETE ME (RESADM.PY) - put_fe_pgid")
+
     msg = ''
 
     # Please note that base_dir must end in slash to avoid access to other
@@ -122,6 +124,8 @@ def put_exe_pgid(
     sandbox=False,
     ):
     """Write exe PGID file in resource home and stop exe if requested"""
+
+    logger.debug("DELETE ME (RESADM.PY) - put_exe_pgid")
 
     msg = ''
 
@@ -197,6 +201,8 @@ def start_resource_exe_if_continuous(
     ):
     """If the resource is marked as continuous, then start the exe"""
 
+    logger.debug("DELETE ME (RESADM.PY) - start_resource_exe_if_continuous")
+
     found = False
 
     # open the resources configuration
@@ -265,6 +271,8 @@ def atomic_resource_exe_restart(
     """Atomic version of exe node restart needed for consistent
     clean up.
     """
+
+    logger.debug("DELETE ME (RESADM.PY) - atomic_resouce_exe_restart")
 
     resource_home = configuration.resource_home
 
@@ -482,6 +490,8 @@ def fill_master_node_script(
 def get_frontend_script(unique_resource_name, logger):
     """Create frontend_script"""
 
+    logger.debug("DELETE ME (RESADM.PY) - get_frontend_script")
+
     msg = ''
 
     configuration = get_configuration_object()
@@ -527,6 +537,8 @@ def get_frontend_script(unique_resource_name, logger):
 
 def get_master_node_script(unique_resource_name, exe_name, logger):
     """Create master_node_script"""
+
+    logger.debug("DELETE ME (RESADM.PY) - get_master_node_script")
 
     msg = ''
 
@@ -591,6 +603,8 @@ def check_mounted(target, logger):
     latter happens for sshfs mounts if sshfs somehow died and then fusermount
     is still required to clean up before a remount works.
     """
+    logger.debug("DELETE ME (RESADM.PY) - check_mounted")
+
     if os.path.ismount(target):
         return True
     mount_line = ' on %s type fuse.sshfs '% target
@@ -608,6 +622,8 @@ def start_resource_exe(
     lock_pgid_file=True,
     ):
     """Start exe node"""
+
+    logger.debug("DELETE ME (RESADM.PY) - start_resource_exe")
 
     msg = ''
 
@@ -773,6 +789,8 @@ def start_resource_store(
     ):
     """Start store node"""
 
+    logger.debug("DELETE ME (RESADM.PY) - start_resource_store")
+
     msg = ''
 
     configuration = get_configuration_object()
@@ -936,6 +954,8 @@ def start_resource_frontend(unique_resource_name, configuration,
                             logger):
     """Start resource front end"""
 
+    logger.debug("DELETE ME (RESADM.PY) - start_resource_frontend")
+
     return start_resource(unique_resource_name,
                           configuration.resource_home,
                           configuration.migserver_https_sid_url, logger)
@@ -948,6 +968,8 @@ def start_resource(
     logger,
     ):
     """Start resource frontend"""
+
+    logger.debug("DELETE ME (RESADM.PY) - start_resource")
 
     msg = ''
 
@@ -998,6 +1020,10 @@ def start_resource(
     # create needed dirs on resource frontend
 
     create_dirs = 'mkdir -p %s' % resource_config['RESOURCEHOME']
+
+    logger.debug("DELETE ME (RESADM.PY) - start_resource[create_dirs]: " + str(create_dirs))
+    logger.debug("DELETE ME (RESADM.PY) - start_resource[resource_config]: " +str(resource_config))
+
     (create_status, executed_command) = \
         execute_on_resource(create_dirs, False, resource_config, logger)
 
@@ -1046,6 +1072,8 @@ def resource_fe_action(
     logger,
     ):
     """This function handles status and stop for resource FE's"""
+
+    logger.debug("DELETE ME (RESADM.PY) - resource_fe_action")
 
     msg = ''
 
@@ -1178,6 +1206,8 @@ def resource_exe_action(
     If then parameter lock_pgid_file is False, the calling function
     must handle locking of the 'pgid_path'.
     """
+
+    logger.debug("DELETE ME (RESADM.PY) - resource_exe_action")
 
     msg = ''
 
@@ -1354,6 +1384,8 @@ def clean_resource_exe(
     ):
     """Clean exe node"""
 
+    logger.debug("DELETE ME (RESADM.PY) - clean_resource_exe")
+
     (status, msg) = resource_exe_action(unique_resource_name, exe_name,
             resource_home, 'clean', logger)
     return (status, msg)
@@ -1366,6 +1398,8 @@ def status_resource_exe(
     logger,
     ):
     """Get exe node status"""
+
+    logger.debug("DELETE ME (RESADM.PY) - statis_resource_exe")
 
     (status, msg) = resource_exe_action(unique_resource_name, exe_name,
             resource_home, 'status', logger)
@@ -1380,6 +1414,8 @@ def stop_resource_exe(
     ):
     """Stop exe node"""
 
+    logger.debug("DELETE ME (RESADM.PY) - stop_resource_exe")
+
     (status, msg) = resource_exe_action(unique_resource_name, exe_name,
             resource_home, 'stop', logger)
     return (status, msg)
@@ -1393,6 +1429,8 @@ def restart_resource_exe(
     logger,
     ):
     """Restart exe node"""
+
+    logger.debug("DELETE ME (RESADM.PY) - restart_resource_exe")
 
     (stop_status, stop_msg) = stop_resource_exe(unique_resource_name,
             exe_name, resource_home, logger)
@@ -1412,6 +1450,8 @@ def resource_store_action(
     lock_pgid_file=True,
     ):
     """This function handles status and stop for stores"""
+
+    logger.debug("DELETE ME (RESADM.PY) - resource_store_action")
 
     msg = ''
 
@@ -1542,6 +1582,8 @@ def clean_resource_store(
     ):
     """Clean store node"""
 
+    logger.debug("DELETE ME (RESADM.PY) - clean_resource_store")
+
     (status, msg) = resource_store_action(unique_resource_name, store_name,
             resource_home, 'clean', logger)
     return (status, msg)
@@ -1554,6 +1596,8 @@ def status_resource_store(
     logger,
     ):
     """Get store node status"""
+
+    logger.debug("DELETE ME (RESADM.PY) - status_resource_store")
 
     (status, msg) = resource_store_action(unique_resource_name, store_name,
             resource_home, 'status', logger)
@@ -1568,6 +1612,8 @@ def stop_resource_store(
     ):
     """Stop store node"""
 
+    logger.debug("DELETE ME (RESADM.PY) - stop_resource_store")
+
     (status, msg) = resource_store_action(unique_resource_name, store_name,
             resource_home, 'stop', logger)
     return (status, msg)
@@ -1580,6 +1626,8 @@ def restart_resource_store(
     logger,
     ):
     """Restart store node"""
+
+    logger.debug("DELETE ME (RESADM.PY) - restart_resource_store")
 
     (stop_status, stop_msg) = stop_resource_store(unique_resource_name,
             store_name, resource_home, logger)
@@ -1598,6 +1646,8 @@ def get_sandbox_exe_stop_command(
     ):
 
     # open the resources configuration
+
+    logger.debug("DELETE ME (RESADM.PY) - get_sandbox_exe_stop_command")
 
     resource_configuration_file = os.path.join(sandbox_home, sandboxkey,
                                                'config')
@@ -1638,12 +1688,16 @@ def status_resource_frontend(unique_resource_name, configuration,
                              logger):
     """Get status for resource front end"""
 
+    logger.debug("DELETE ME (RESADM.PY) - status_resource_frontend")
+
     return status_resource(unique_resource_name,
                            configuration.resource_home, logger)
 
 
 def status_resource(unique_resource_name, resource_home, logger):
     """Get status of resource front end"""
+
+    logger.debug("DELETE ME (RESADM.PY) - status_resource")
 
     (status, msg) = resource_fe_action(unique_resource_name,
             resource_home, 'status', logger)
@@ -1654,6 +1708,8 @@ def clean_resource_frontend(unique_resource_name, resource_home,
                             logger):
     """Clean resource front end"""
 
+    logger.debug("DELETE ME (RESADM.PY) - clean_resource_frontend")
+
     (status, msg) = resource_fe_action(unique_resource_name,
             resource_home, 'clean', logger)
     return (status, msg)
@@ -1662,12 +1718,16 @@ def clean_resource_frontend(unique_resource_name, resource_home,
 def stop_resource_frontend(unique_resource_name, configuration, logger):
     """Stop resource front end"""
 
+    logger.debug("DELETE ME (RESADM.PY) - stop_resource_frontend")
+
     return stop_resource(unique_resource_name,
                          configuration.resource_home, logger)
 
 
 def stop_resource(unique_resource_name, resource_home, logger):
     """Stop resource front end"""
+
+    logger.debug("DELETE ME (RESADM.PY) - stop_resource")
 
     (status, msg) = resource_fe_action(unique_resource_name,
             resource_home, 'stop', logger)
@@ -1677,6 +1737,8 @@ def stop_resource(unique_resource_name, resource_home, logger):
 def restart_resource_frontend(unique_resource_name, configuration,
                               logger):
     """Restart resource front end"""
+
+    logger.debug("DELETE ME (RESADM.PY) - restart_resource_frontend")
 
     return restart_resource(unique_resource_name,
                             configuration.resource_home,
@@ -1690,6 +1752,8 @@ def restart_resource(
     logger,
     ):
     """Restart resource front end"""
+
+    logger.debug("DELETE ME (RESADM.PY) - restart_resource")
 
     (stop_status, stop_msg) = stop_resource(unique_resource_name,
             resource_home, logger)

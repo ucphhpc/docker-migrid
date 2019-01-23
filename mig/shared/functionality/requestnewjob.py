@@ -59,6 +59,8 @@ def main(client_id, user_arguments_dict):
         initialize_main_variables(client_id, op_header=False, op_title=False,
                                   op_menu=client_id)
 
+    logger.debug("DELETE ME (REQUESTNEWJOB.PY) - main(start)")
+
     defaults = signature()[1]
     (validate_status, accepted) = validate_input(user_arguments_dict,
             defaults, output_objects, allow_rejects=False)

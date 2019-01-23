@@ -1177,6 +1177,10 @@ def vgrid_validate_entities(configuration, vgrid_name, kind, id_list):
     elif kind == 'triggers':
         # list of dictionaries on fixed format
         specs_map = get_trigger_keywords_dict(configuration)
+
+        _logger.debug("DELETE ME - id_list: " + str(id_list))
+        _logger.debug("DELETE ME - specs_map: " + str(specs_map))
+
         for entry in id_list:
             if not isinstance(entry, dict):
                 raise ValueError("invalid %s dictionary entry for %s: %s" % \

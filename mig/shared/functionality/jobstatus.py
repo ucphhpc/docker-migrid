@@ -417,6 +417,7 @@ def main(client_id, user_arguments_dict):
                                      'destination':
                                      "javascript: %s();" % js_name,
                                      'text': 'Cancel job'}
+
             target_op = 'jobschedule'
             csrf_token = make_csrf_token(configuration, form_method, target_op,
                                          client_id, csrf_limit)
@@ -430,6 +431,7 @@ def main(client_id, user_arguments_dict):
                                           "javascript: %s();" % js_name,
                                           'text':
                                           'Request schedule information'}
+
             target_op = 'jobfeasible'
             csrf_token = make_csrf_token(configuration, form_method, target_op,
                                          client_id, csrf_limit)

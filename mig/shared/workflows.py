@@ -782,11 +782,11 @@ def rule_identification_from_pattern(configuration, client_id,
                 str(missed_recipes))
 
     recipe_dir_path = os.path.join(recipe_dir_path,
-                                   workflow_pattern['wp_recipes'][-1])
+                                   workflow_pattern['recipes'][-1])
 
     _logger.info('All recipes found within trying to create trigger for recipe'
                  ' at ' + recipe_dir_path + ' and inputs at ' +
-                 workflow_pattern['wp_inputs'])
+                 str(workflow_pattern['inputs']))
 
     # TODO do not create these triggers quite yet. possibly wait for some
     #  activation toggle?
@@ -970,12 +970,14 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
         'rule_id': "%d" % (time.time() * 1E8),
         'vgrid_name': vgrid,
         # will only set up for first input directory. would like more
-        'path': pattern['wp_inputs'][-1],
+        'path': pattern['inputs'][-1],
         'changes': ['created', 'modified'],
         'run_as': client_id,
         'action': 'submit',
-        # will need to be changed to mRSL file from recipes
-        'arguments': mrsl_real_path,
+        #'action': 'command',
+        'arguments': [mrsl_real_path],
+        #'arguments': ["touch", "helloCreated.txt"],
+        #'arguments': ["badCommand"],
         'rate_limit': '',
         'settle_time': '',
         'match_files': True,

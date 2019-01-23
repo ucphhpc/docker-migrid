@@ -66,6 +66,9 @@ def get_job_id(configuration):
     """
 
     logger = configuration.logger
+
+    logger.debug("DELETE ME (JOB.PY) - get_job_id")
+
     filehandle = None
     job_id_counter_path = os.path.join(configuration.mig_system_files,
             'job_id_counter')
@@ -116,6 +119,9 @@ def fill_mrsl_template(
     Please note that mrsl_fd_or_path may be a path or a file-like object.
     """
     logger = configuration.logger
+
+    logger.debug("DELETE ME (JOB.PY) - fill_mrsl_template")
+
     logger.debug("fill template based on trigger for %s : %s and rule %s" % \
                  (trigger_path, state_change, rule))
     if isinstance(mrsl_fd_or_path, basestring):
@@ -155,6 +161,9 @@ def new_job(
     model can get job_id seperately (instead of the return message string)
     """
 
+    logger = configuration.logger
+    logger.debug("DELETE ME (JOB.PY) - new_job")
+
     mig_server_id = configuration.mig_server_id
 
     counter = get_job_id(configuration)
@@ -193,6 +202,9 @@ def failed_restart(
     ):
     """Helper for notifying grid_script when a exe restart failed"""
 
+    logger = configuration.logger
+    logger.debug("DELETE ME (JOB.PY) - failed_restart")
+
     # returns a tuple (bool status, str msg)
 
     send_message = 'RESTARTEXEFAILED %s %s %s\n'\
@@ -214,6 +226,9 @@ def finished_job(
     ):
     """Helper for notifying grid_script when a job finishes"""
 
+    logger = configuration.logger
+    logger.debug("DELETE ME (JOB.PY) - finished_job")
+
     # returns a tuple (bool status, str msg)
 
     send_message = 'RESOURCEFINISHEDJOB %s %s %s %s\n'\
@@ -229,6 +244,9 @@ def finished_job(
 def create_job_object_from_pickled_mrsl(filepath, logger,
         external_dict):
     """Helper for submit from pickled mRSL"""
+
+    logger.debug("DELETE ME (JOB.PY) - create_job_object_from_pickled_mrsl")
+
     job_dict = unpickle(filepath, logger)
     if not job_dict:
         return (False, 'could not unpickle mrsl file %s' % filepath)
@@ -257,6 +275,8 @@ def get_job_ids_with_specified_project_name(
     ):
     """Helper for finding a job with a given project field"""
 
+    logger.debug("DELETE ME (JOB.PY) - get_job_ids_with_specified_project_name")
+
     client_dir = client_id_dir(client_id)
 
     # Please note that base_dir must end in slash to avoid access to other
@@ -283,6 +303,10 @@ def get_job_ids_with_specified_project_name(
 
 def fields_to_mrsl(configuration, user_arguments_dict, external_dict):
     """Generate mRSL from fields"""
+
+    logger = configuration.logger
+    logger.debug("DELETE ME (JOB.PY) - field_to_mrsl")
+
     spec = []
     for key in external_dict.keys():
         attr_name = key

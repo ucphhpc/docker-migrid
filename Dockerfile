@@ -246,6 +246,29 @@ RUN update-ca-trust force-enable \
     && cp $CERT_DIR/combined.pem /etc/pki/ca-trust/source/anchors/ \
     && update-ca-trust extract
 
+RUN cd /app \
+    && yum install openssh-server -y \
+	&& ssh-keygen -t rsa -b 4096 -f '/root/.ssh/id_rsa' -P '' \
+	&& cd \
+	&& cp .ssh/id_rsa /etc/ssh/ \
+    && mv /etc/ssh/id_rsa /etc/ssh/ssh_host_rsa_key \
+	&& sed -i "HostKey /etc/ssh/ssh_host_ecdsa_key" "#HostKey /etc/ssh/ssh_host_ecdsa_key" \
+	&& sed -i "HostKey /etc/ssh/ssh_host_ed25519_key" "#HostKey /etc/ssh/ssh_host_ed25519_key"
+
+RUN yum install openssh-clients \
+    && cd /home/mig/ \
+    && mkdir .ssh \
+    && cd .ssh/ \
+    && touch authorized_keys \
+    && cp /root/.ssh/* . \
+    && cat id_rsa.pub > authorized_keys \
+    && chown mig:mig * \
+    && ch .. \
+    && chmod 700 .ssh \
+    && chown mig:mig .ssh
+
+WORKDIR $MIG_ROOT
+
 # Reap defuncted/orphaned processes
 ARG TINI_VERSION=v0.18.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
