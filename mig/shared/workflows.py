@@ -856,13 +856,20 @@ def rule_identification_from_recipe(configuration, client_id, workflow_recipe,
                 missed_recipes.append(recipe_name)
         if not missed_recipes:
 
+            _logger.info('DELETE ME - pattern:' + str(pattern))
             recipe_dir_path = os.path.join(recipe_dir_path,
-                                           pattern['wp_recipes'][-1])
+                                           pattern['recipes'][-1])
+            # recipe_dir_path = os.path.join(recipe_dir_path,
+            #                                pattern['wp_recipes'][-1])
 
             _logger.info(
                 'All recipes found within trying to create trigger for recipe'
                 ' at ' + recipe_dir_path + ' and inputs at ' +
-                pattern['wp_inputs'])
+                pattern['inputs'])
+            # _logger.info(
+            #     'All recipes found within trying to create trigger for recipe'
+            #     ' at ' + recipe_dir_path + ' and inputs at ' +
+            #     pattern['wp_inputs'])
 
             # TODO do not create these triggers quite yet. possibly wait for
             #  some activation toggle?
@@ -948,14 +955,32 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
 
     arguments_dict = {
         'EXECUTE': [
-            "python " + msg
+            "echo 'hello grid!'",
+            "echo '...each line here is executed'"
         ],
-        'EXECUTABLES': [
-            msg
+        'NOTIFY': [
+            "email: SETTINGS",
+            "jabber: SETTINGS"
+        ],
+        'MEMORY': [
+            "1"
+        ],
+        'DISK': [
+            "1"
+        ],
+        'CPUTIME': [
+            "30"
         ]
+    # 'EXECUTE': [
+        #     "python " + msg
+        # ],
+        # 'EXECUTABLES': [
+        #     msg
+        # ]
     }
     external_dict = get_keywords_dict(configuration)
     mrsl = fields_to_mrsl(configuration, arguments_dict, external_dict)
+    _logger.debug("DELETE ME - mRSL: " + str(mrsl))
     try:
         (mrsl_filehandle, mrsl_real_path) = tempfile.mkstemp(text=True)
         # mrsl_relative_path = os.path.basename(mrsl_real_path)
@@ -966,6 +991,10 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
         _logger.error(msg + ": " + str(err))
         return False, msg
 
+    mrsl_file = open(mrsl_real_path, 'r')
+    _logger.debug("DELETE ME: " + mrsl_file.read())
+    mrsl_file.close()
+
     rule_dict = {
         'rule_id': "%d" % (time.time() * 1E8),
         'vgrid_name': vgrid,
@@ -975,7 +1004,8 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
         'run_as': client_id,
         'action': 'submit',
         #'action': 'command',
-        'arguments': [mrsl_real_path],
+        'arguments': ['sampleMRSL.mRSL'],
+        #'arguments': [mrsl_real_path],
         #'arguments': ["touch", "helloCreated.txt"],
         #'arguments': ["badCommand"],
         'rate_limit': '',
@@ -986,6 +1016,13 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
         'match_recursive': True,
         'templates': []
     }
+
+    mrsl_file = open(mrsl_real_path, 'r')
+    arguments_string = ''
+    arguments_string += mrsl_file.read()
+    mrsl_file.close()
+    _logger.debug("DELETE ME - arguments_string: " + arguments_string)
+    rule_dict['templates'] = [arguments_string]
 
     (add_status, add_msg) = vgrid_add_triggers(configuration,
                                                vgrid,

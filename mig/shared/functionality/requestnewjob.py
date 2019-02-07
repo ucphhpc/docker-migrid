@@ -241,6 +241,8 @@ receive this message often, please increase the timeout for job requests.''' \
              'Fatal error: could not handle resource job request'})
         return (output_objects, returnvalues.ERROR)
 
+    logger.debug("DELETE ME - probably sent job request")
+
     output_objects.append(
             {'object_type': 'text', 'text': 'REQUESTNEWJOB OK. The job will '
              'be sent to the resource: %s.%s %s %s (sandboxkey: %s)'

@@ -246,16 +246,19 @@ RUN update-ca-trust force-enable \
     && cp $CERT_DIR/combined.pem /etc/pki/ca-trust/source/anchors/ \
     && update-ca-trust extract
 
-RUN cd /app \
-    && yum install openssh-server -y \
-	&& ssh-keygen -t rsa -b 4096 -f '/root/.ssh/id_rsa' -P '' \
-	&& cd \
-	&& cp .ssh/id_rsa /etc/ssh/ \
-    && mv /etc/ssh/id_rsa /etc/ssh/ssh_host_rsa_key \
-	&& sed -i "HostKey /etc/ssh/ssh_host_ecdsa_key" "#HostKey /etc/ssh/ssh_host_ecdsa_key" \
-	&& sed -i "HostKey /etc/ssh/ssh_host_ed25519_key" "#HostKey /etc/ssh/ssh_host_ed25519_key"
+WORKDIR /root
 
-RUN yum install openssh-clients \
+# Create ssh daemon to allow for local running of resources
+RUN yum install openssh-server -y \
+    && cd \
+    && ssh-keygen -t rsa -b 4096 -f '/root/.ssh/id_rsa' -P '' \
+    && cp .ssh/id_rsa /etc/ssh/ \
+    && mv /etc/ssh/id_rsa /etc/ssh/ssh_host_rsa_key \
+    && sed -i "s~HostKey /etc/ssh/ssh_host_ecdsa_key~#HostKey /etc/ssh/ssh_host_ecdsa_key~g" /etc/ssh/sshd_config \
+    && sed -i "s~HostKey /etc/ssh/ssh_host_ed25519_key~#HostKey /etc/ssh/ssh_host_ed25519_key~g" /etc/ssh/sshd_config
+
+# Create ssh client to allow for local running of resources
+RUN yum install openssh-clients -y \
     && cd /home/mig/ \
     && mkdir .ssh \
     && cd .ssh/ \
@@ -263,9 +266,14 @@ RUN yum install openssh-clients \
     && cp /root/.ssh/* . \
     && cat id_rsa.pub > authorized_keys \
     && chown mig:mig * \
-    && ch .. \
+    && cd .. \
     && chmod 700 .ssh \
     && chown mig:mig .ssh
+
+# Don't do this here, its starting in docker-entry.sh
+# RUN /usr/sbin/sshd \
+#    && netstat --listen
+# RUN netstat --listen
 
 WORKDIR $MIG_ROOT
 

@@ -110,6 +110,9 @@ def copy_file_to_resource(
 
     logger.debug("DELETE ME (SSH.PY) - copy_file_to_resource")
 
+    logger.debug("DELETE ME (SSH.PY) - local_path: " + local_path)
+    logger.debug("DELETE ME (SSH.PY) - dest_path: " + dest_path)
+
     configuration = get_configuration_object()
     local_filename = os.path.basename(local_path)
     multiplex = '0'
@@ -213,6 +216,10 @@ def copy_file_to_exe(
 
     logger.debug("DELETE ME (SSH.PY) - copy_file_to_exe")
 
+    logger.debug("DELETE ME (SSH.PY) - local_path: " + local_path)
+    logger.debug("DELETE ME (SSH.PY) - dest_path: " + dest_path)
+    logger.debug("DELETE ME (SSH.PY) - exe_name: " + exe_name)
+
     local_filename = os.path.basename(local_path)
     msg = ''
     unique_resource_name = resource_config['HOSTURL'] + '.'\
@@ -228,6 +235,9 @@ def copy_file_to_exe(
         dest_path = dest_path.lstrip(os.sep)
 
     # copy file to frontend
+
+    logger.debug("DELETE ME (SSH.PY) - local_path: " + local_path)
+    logger.debug("DELETE ME (SSH.PY) - dest_path: " + dest_path)
 
     copy_attempts = 3
     for attempt in range(copy_attempts):
@@ -361,8 +371,12 @@ def execute_on_resource(
         x_fwd = True
 
     options = default_ssh_options(close_stdin=True, x_forward=x_fwd)
+    # TODO This has been changed for simpler setup of a development enviroment
+    #  change this back, or resolve it properly later
+    # options += ['-o', 'Port=%s' % port, '-o', 'CheckHostIP=yes',
+    #             '-o', 'StrictHostKeyChecking=yes']
     options += ['-o', 'Port=%s' % port, '-o', 'CheckHostIP=yes',
-                '-o', 'StrictHostKeyChecking=yes']
+                '-o', 'StrictHostKeyChecking=no']
 
     if hostkey:
         options += ['-o', 'UserKnownHostsFile=%s' % key_path]
@@ -393,8 +407,8 @@ def execute_on_resource(
     logger.debug('running command: %s' % ssh_command_list)
     # NOTE: we use ssh command list here to avoid shell requirement
 
-    logger.debug("DELETE ME (SSH.PY) - exectute_on_resource[ssh_command_list]: " + str(ssh_command))
-    logger.debug("DELETE ME (SSH.PY) - exectute_on_resource[subprocess_pipe]: " + str(subprocess_pipe))
+    logger.debug("DELETE ME (SSH.PY) - execute_on_resource[ssh_command_list]: " + str(ssh_command))
+    logger.debug("DELETE ME (SSH.PY) - execute_on_resource[subprocess_pipe]: " + str(subprocess_pipe))
 
     ssh_proc = subprocess_popen(ssh_command_list,
                                 stdin=open("/dev/null", "r"),
@@ -404,6 +418,7 @@ def execute_on_resource(
     status = ssh_proc.wait()
     out_msg, err_msg = ssh_proc.communicate()
 
+    logger.debug('command status: %s' % str(status))
     logger.debug('command out: %s' % out_msg)
     logger.debug('command err: %s' % err_msg)
 

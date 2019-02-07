@@ -318,22 +318,32 @@ sandbox_stop_exe() {
 
 ### MAIN ###
 
+echo "DELETE ME - start of main" >> $frontendlog
+
 # Send the frontend ProcessGroupID to the MiG server.
 pid=$$
 pgid=`ps -o pgid= -p $pid`
 # Sandboxes don't send pgid
 if [ $sandbox -eq 0 ]; then
+    echo "DELETE ME - if sandbox == 0 " >> $frontendlog
     send_pgid "FE" $pgid
     retval=$?
     if [ $retval -ne 0 ]; then
+        echo "DELETE ME - if retval != 0 " >> $frontendlog
         exit 1
     fi
+    echo "DELETE ME - if retval == 0 " >> $frontendlog
 fi
+
+echo "DELETE ME - escaped if statement" >> $frontendlog
 
 # Loop through job handling forever
 while [ 1 ]; do
+    echo "DELETE ME - start of main loop" >> $frontendlog
     # Send leader PGIDs (leaders don't request jobs, so no givejob)
     for pgidfile in *.leader_pgid; do
+        echo "DELETE ME - looping through leader_pgid ($pgidfile)" >> $frontendlog
+
         # No matching expansion results in raw pattern value - just 
         # ignore
         if [ "$pgidfile" = '*.leader_pgid' ]; then
@@ -352,6 +362,8 @@ while [ 1 ]; do
     
     # SEND OUTPUTFILES
     for jobdone in *.jobdone; do
+        echo "DELETE ME - looping through jobdone ($jobdone)" >> $frontendlog
+
         # No matching expansion results in raw pattern value - just 
         # ignore
         if [ "$jobdone" = '*.jobdone' ]; then
@@ -399,6 +411,8 @@ while [ 1 ]; do
     
     # Send updatefiles
     for runrequest in *.runsendupdate; do
+        echo "DELETE ME - looping through runsendupdate ($runrequest)" >> $frontendlog
+
         # No matching expansion results in raw pattern value - just 
         # ignore
         if [ "$runrequest" = '*.runsendupdate' ]; then
@@ -471,6 +485,8 @@ while [ 1 ]; do
     
     # Get updatefiles
     for runrequest in *.rungetupdate; do
+        echo "DELETE ME - looping through rungetupdate ($runrequest)" >> $frontendlog
+
         # No matching expansion results in raw pattern value - just 
         # ignore
         if [ "$runrequest" = '*.rungetupdate' ]; then
@@ -554,6 +570,8 @@ while [ 1 ]; do
     
     # Forward update requests to exe
     for updaterequest in *.sendupdate *.getupdate; do
+        echo "DELETE ME - looping through sendupddate amd getupdate ($updaterequest)" >> $frontendlog
+
         # No matching expansion results in raw pattern value - just 
         # ignore
         if [ "$updaterequest" = '*.sendupdate' -o "$updaterequest" = '*.getupdate' ]; then
@@ -602,6 +620,8 @@ while [ 1 ]; do
     # if givejob exists, we must request a new job (and delete 
     # "givejob")
     for givejobrequest in *.givejob; do
+        echo "DELETE ME - looping through givejob ($givejobrequest)" >> $frontendlog
+
         # No matching expansion results in raw pattern value - just 
         # ignore
         if [ "$givejobrequest" = '*.givejob' ]; then
@@ -811,6 +831,8 @@ while [ 1 ]; do
     done
     
     if [ $clean_up_counter -gt $clean_up_interval ]; then
+        echo "DELETE ME - if clean_up_counter" >> $frontendlog
+
         # Age clean up internal files after 30 days to avoid errors piling up.
         # This should never replace server initiated job clean up with privacy in mind.
         # NB: We must use "find -mtime" here for sandbox resource to work.
@@ -840,6 +862,8 @@ while [ 1 ]; do
     
     # Sandbox job cancel/timeout
     if [ $sandbox -eq 1 ]; then
+        echo "DELETE ME - sandbox == 1" >> $frontendlog
+
         if [ $sandbox_timeout_counter -gt $sandbox_timeout_interval ]; then
             sandbox_stop_exe
             sandbox_timeout_counter=0

@@ -105,12 +105,12 @@ def time_out_jobs(stop_event):
                 logger.info('time_out_jobs(): %d job(s) in queue' % qlen)
 
                 # TODO: this is a race - 'Main' may modify executing_queue at
-                # any time!
-                # Especially since we ask it to remove the job we just looked
-                # at and then look at the next index, so we may skip jobs
-                # if it removes the job before we dequeue next index.
-                # We should use locking or at least remove from back to
-                # make it slightly better.
+                #  any time!
+                #  Especially since we ask it to remove the job we just looked
+                #  at and then look at the next index, so we may skip jobs
+                #  if it removes the job before we dequeue next index.
+                #  We should use locking or at least remove from back to
+                #  make it slightly better.
 
                 for i in range(0, qlen):
                     job = executing_queue.get_job(i)
@@ -415,6 +415,7 @@ while True:
         # *********                *********
         # *********     USER JOB   *********
         # *********                *********
+        logger.debug("DELETE ME - possible user job detected")
 
         print cap_line
         logger.info(cap_line)
@@ -535,7 +536,6 @@ while True:
         # put job in queue
 
         logger.debug("DELETE ME - enquing server job in job queue")
-
         job_queue.enqueue_job(dict_serverjob, job_queue.queue_length())
     elif cap_line.find('JOBSCHEDULE ') == 0:
 

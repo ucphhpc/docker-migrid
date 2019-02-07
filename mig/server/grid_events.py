@@ -831,6 +831,7 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
             return
         logger.info('(%s) proceed with handling of %s for %s %s'
                     % (pid, rule['action'], state, rel_src))
+        logger.info('DELETE ME - rule: ' + str(rule))
         self.__workflow_info(configuration, rule['vgrid_name'],
                              'handle %s for %s %s' % (rule['action'],
                                                       state, rel_src))

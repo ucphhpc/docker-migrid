@@ -61,6 +61,10 @@ if [ $status -ne 0 ]; then
     exit $status
 fi
 
+# Start ssh connections
+# TODO expand this to check service still running
+/usr/sbin/sshd
+
 while sleep 60; do
     ps aux | grep openid | grep -q -v grep
     OPENID_STATUS=$?

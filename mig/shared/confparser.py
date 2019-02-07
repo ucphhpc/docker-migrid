@@ -76,6 +76,8 @@ def run(configuration, localfile_spaces, unique_resource_name,
     if not configuration:
         configuration = get_configuration_object()
 
+    logger = configuration.logger
+
     (status, msg, conf) = get_resource_config_dict(configuration,
                                                    localfile_spaces)
 
@@ -119,6 +121,8 @@ def run(configuration, localfile_spaces, unique_resource_name,
                 re_dict_environment_names.append(re_environment['name'])
 
             if not len(value) == len(re_dict_environments):
+                logger.debug("DELETE ME - value: " + str(value))
+                logger.debug("DELETE ME - re_dict__enviroments: "+ str(re_dict_environments))
                 return (False,
                         "You have specified %s environments, but the runtime environment '%s' requires %s. Details about the runtime environment <a href='showre.py?re_name=%s'>here.</a>"
                          % (len(value), name,
