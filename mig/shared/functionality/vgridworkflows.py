@@ -412,7 +412,7 @@ in reaction to file system events.</p>
         <p>
         On this page you can register a Workflow Pattern
          and subsequent attached Recipes.
-        The Pattern requires 3 things i.e: </br> </br>
+        The Pattern requires three things i.e: </br> </br>
             - <b>input</b> </br>
             - <b>output</b> </br>
             - <b>type-filter</b> </br>
@@ -488,7 +488,7 @@ in reaction to file system events.</p>
         output_objects.append({'object_type': 'html_form', 'text': """
             <p>
             On this page you can register a Workflow Recipe.
-            The Recipe requires only 1 thing, a <b>recipe</b> definition. 
+            The Recipe requires only one thing, a <b>recipe</b> definition. 
             Currently this should always be in Python. A recipe <b>name</b> 
             may also be defined.
             </br> 

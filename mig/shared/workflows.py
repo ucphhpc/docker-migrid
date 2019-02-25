@@ -821,6 +821,7 @@ def rule_identification_from_recipe(configuration, client_id, workflow_recipe,
     _logger = configuration.logger
     _logger.info('%s is identifying any possible tasks from recipe creation '
                  '%s' % (client_id, workflow_recipe['name']))
+    _logger.info('DELETE ME - recipe_dir_path:' + recipe_dir_path)
 
     matching_patterns = []
     # Check if patterns exist already within system that need this recipe
@@ -844,8 +845,11 @@ def rule_identification_from_recipe(configuration, client_id, workflow_recipe,
         for recipe_name in pattern['recipes']:
             got_this_recipe = False
             # This assumes that recipes are saved as their name.
+            _logger.info('DELETE ME - recipe_dir_path:' + recipe_dir_path)
             for recipe_file in os.listdir(recipe_dir_path):
+                _logger.info('DELETE ME - recipe_file:' + recipe_file)
                 recipe_path = os.path.join(recipe_dir_path, recipe_file)
+                _logger.info('DELETE ME - recipe_path:' + recipe_path)
                 recipe = get_recipe_from_file(configuration, recipe_path)
                 if recipe:
                     if recipe['name'] == recipe_name:
@@ -865,7 +869,7 @@ def rule_identification_from_recipe(configuration, client_id, workflow_recipe,
             _logger.info(
                 'All recipes found within trying to create trigger for recipe'
                 ' at ' + recipe_dir_path + ' and inputs at ' +
-                pattern['inputs'])
+                str(pattern['inputs']))
             # _logger.info(
             #     'All recipes found within trying to create trigger for recipe'
             #     ' at ' + recipe_dir_path + ' and inputs at ' +
@@ -955,28 +959,33 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
 
     arguments_dict = {
         'EXECUTE': [
-            "echo 'hello grid!'",
-            "echo '...each line here is executed'"
+            "echo 'hello grid!' > dynamicJobOutputFile.txt",
+            "echo '...each line here is executed' >> dynamicJobOutputFile.txt",
+            "python samplePythonCode.py"
         ],
         'NOTIFY': [
             "email: SETTINGS",
             "jabber: SETTINGS"
         ],
         'MEMORY': [
-            "1"
+            "256"
         ],
         'DISK': [
             "1"
         ],
         'CPUTIME': [
             "30"
+        ],
+        'RETRIES': [
+            "1"
+        ],
+        'OUTPUTFILES': [
+            "dynamicJobOutputFile.txt",
+            "file_created_from_python.txt"
+        ],
+        'EXECUTABLES': [
+            "samplePythonCode.py"
         ]
-    # 'EXECUTE': [
-        #     "python " + msg
-        # ],
-        # 'EXECUTABLES': [
-        #     msg
-        # ]
     }
     external_dict = get_keywords_dict(configuration)
     mrsl = fields_to_mrsl(configuration, arguments_dict, external_dict)
@@ -1022,8 +1031,8 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
     arguments_string += mrsl_file.read()
     mrsl_file.close()
     _logger.debug("DELETE ME - arguments_string: " + arguments_string)
-    rule_dict['templates'] = [arguments_string]
-
+    # rule_dict['templates'] = [arguments_string]
+    # rule_dict['arguments'] = [mrsl_filehandle]
     (add_status, add_msg) = vgrid_add_triggers(configuration,
                                                vgrid,
                                                [rule_dict],
