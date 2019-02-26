@@ -230,6 +230,9 @@ doubt, just let the user request access and accept it with the
                 elem_id = elem[id_field]
                 for (field, _) in extra_fields:
                     val = elem.get(field, '')
+                    configuration.logger.warning('DELETE ME - elem: %s' % (str(elem)))
+                    configuration.logger.warning('DELETE ME - field: %s' % (str(field)))
+                    configuration.logger.warning('DELETE ME - val: %s' % (str(val)))
                     if isinstance(val, bool):
                         val = str(val)
                     elif not isinstance(val, basestring):

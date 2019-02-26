@@ -1000,9 +1000,16 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
         _logger.error(msg + ": " + str(err))
         return False, msg
 
+    # mrsl_file = open(mrsl_real_path, 'r')
+    # _logger.debug("DELETE ME: " + mrsl_file.read())
+    # mrsl_file.close()
+
     mrsl_file = open(mrsl_real_path, 'r')
-    _logger.debug("DELETE ME: " + mrsl_file.read())
+    arguments_string = ''
+    arguments_string += mrsl_file.read()
     mrsl_file.close()
+    # rule_dict['templates'] = [arguments_string]
+    # rule_dict['arguments'] = [mrsl_filehandle]
 
     rule_dict = {
         'rule_id': "%d" % (time.time() * 1E8),
@@ -1013,7 +1020,10 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
         'run_as': client_id,
         'action': 'submit',
         #'action': 'command',
-        'arguments': ['sampleMRSL.mRSL'],
+
+        # TODO this is the issue here. mrsl_filehandle is actually writing as 21, or some other number rather than a file handle. weird
+        'arguments': [mrsl_real_path],
+        #'arguments': ['sampleMRSL.mRSL'],
         #'arguments': [mrsl_real_path],
         #'arguments': ["touch", "helloCreated.txt"],
         #'arguments': ["badCommand"],
@@ -1023,16 +1033,14 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
         'match_dirs': False,
         # possibly should be False instead. Investigate
         'match_recursive': True,
-        'templates': []
+        'templates': [arguments_string]
+        #'templates': []
     }
 
-    mrsl_file = open(mrsl_real_path, 'r')
-    arguments_string = ''
-    arguments_string += mrsl_file.read()
-    mrsl_file.close()
-    _logger.debug("DELETE ME - arguments_string: " + arguments_string)
-    # rule_dict['templates'] = [arguments_string]
-    # rule_dict['arguments'] = [mrsl_filehandle]
+    _logger.debug("DELETE ME - mrsl_filehandle: " + str(mrsl_filehandle))
+    _logger.debug("DELETE ME - mrsl_real_path: " + str(mrsl_real_path))
+    _logger.debug("DELETE ME - rule_dict: " + str(rule_dict))
+
     (add_status, add_msg) = vgrid_add_triggers(configuration,
                                                vgrid,
                                                [rule_dict],
