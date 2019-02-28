@@ -627,17 +627,17 @@ class MiGRuleEventHandler(PatternMatchingEventHandler):
 
     def on_modified(self, event):
         """Handle modified rule file"""
-
+        logger.info('DELETE ME (grid_events) - on_modified(2): ' + str(event))
         self.update_rules(event)
 
     def on_created(self, event):
         """Handle new rule file"""
-
+        logger.info('DELETE ME (grid_events) - on_created(2): ' + str(event))
         self.update_rules(event)
 
     def on_deleted(self, event):
         """Handle deleted rule file"""
-
+        logger.info('DELETE ME (grid_events) - on_deleted(2): ' + str(event))
         self.update_rules(event)
 
 
@@ -841,8 +841,8 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
         else:
             wait_secs = 0.0
 
-            # logger.debug('(%s) no settle time for %s (%s)' % (pid,
-            #             target_path, rule))
+            logger.debug('(%s) no settle time for %s (%s)' % (pid,
+                        target_path, rule))
 
         while wait_secs > 0.0:
             logger.info('(%s) wait %.1fs for %s file events to settle down'
@@ -852,8 +852,8 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
                                  % (wait_secs, rel_src))
             time.sleep(wait_secs)
 
-            # logger.debug('(%s) slept %.1fs for %s file events to settle down'
-            #              % (pid, wait_secs, src_path))
+            logger.debug('(%s) slept %.1fs for %s file events to settle down'
+                         % (pid, wait_secs, src_path))
 
             time_stamp += wait_secs
             wait_secs = wait_settled(rule, src_path, state,
@@ -930,8 +930,8 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
                     ):
                         raise Exception('fill template failed')
 
-                    # logger.debug('(%s) filled template for %s in %s'
-                    #             % (pid, target_path, mrsl_path))
+                    logger.debug('(%s) filled template for %s in %s'
+                                % (pid, target_path, mrsl_path))
 
                     (success, msg, jobid) = new_job(
                         mrsl_path, rule['run_as'], configuration, False,
@@ -1006,7 +1006,7 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
             rel_path = src_path[shared_state['base_dir_len']:]
 
             # TODO: Optimize this such that only '.'
-            # extracts vgrid_name and specific dir_cache ?
+            #  extracts vgrid_name and specific dir_cache ?
 
             vgrid_name = rel_path.split(os.sep)[0]
             if not dir_cache.has_key(vgrid_name):
@@ -1130,10 +1130,10 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
 
         is_directory = event.is_directory
 
-        # logger.debug('(%s) got %s event for src_path: %s, directory: %s' % \
-        #             (pid, state, src_path, is_directory))
-        # logger.debug('(%s) filter %s against %s' % (pid,
-        #             all_rules.keys(), src_path))
+        logger.debug('(%s) got %s event for src_path: %s, directory: %s' % \
+                    (pid, state, src_path, is_directory))
+        logger.debug('(%s) filter %s against %s' % (pid,
+                    all_rules.keys(), src_path))
 
         if self._recent_miss(event):
             logger.debug('(%s) skip cached miss %s event for src_path: %s' %
@@ -1156,8 +1156,8 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
 
             if direct_hit or recursive_hit:
 
-                # logger.debug('(%s) matched %s for %s and/or %s' % (pid,
-                #             src_path, direct_regexp, recursive_regexp))
+                logger.debug('(%s) matched %s for %s and/or %s' % (pid,
+                            src_path, direct_regexp, recursive_regexp))
 
                 for rule in rule_list:
 
@@ -1167,29 +1167,29 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
                     if is_directory and not rule.get('match_dirs',
                                                      False):
 
-                        # logger.debug('(%s) skip event %s handling for dir: %s'
-                        #              % (pid, rule['rule_id'], src_path))
+                        logger.debug('(%s) skip event %s handling for dir: %s'
+                                     % (pid, rule['rule_id'], src_path))
 
                         continue
                     if not is_directory and not rule.get('match_files',
                                                          True):
 
-                        # logger.debug('(%s) skip %s event handling for file: %s'
-                        #             % (pid, rule['rule_id'], src_path))
+                        logger.debug('(%s) skip %s event handling for file: %s'
+                                    % (pid, rule['rule_id'], src_path))
 
                         continue
                     if not direct_hit and not rule.get('match_recursive',
                                                        False):
 
-                        # logger.debug('(%s) skip %s recurse event handling for: %s'
-                        #              % (pid, rule['rule_id'], src_path))
+                        logger.debug('(%s) skip %s recursive event handling for: %s'
+                                     % (pid, rule['rule_id'], src_path))
 
                         continue
                     if not state in rule['changes']:
 
-                        # logger.debug('(%s) skip %s %s event handling for: %s'
-                        #         % (pid, rule['rule_id'], state,
-                        #        src_path))
+                        logger.debug('(%s) skip %s %s event handling for: %s'
+                                % (pid, rule['rule_id'], state,
+                               src_path))
 
                         continue
 
@@ -1201,9 +1201,9 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
 
                     # User may have been removed from vgrid - log and ignore
 
-                    # logger.debug('(%s) check valid user %s in %s for %s' % \
-                    #              (pid, rule['run_as'], rule['vgrid_name'],
-                    #               rule['rule_id']))
+                    logger.debug('(%s) check valid user %s in %s for %s' % \
+                                 (pid, rule['run_as'], rule['vgrid_name'],
+                                  rule['rule_id']))
 
                     if not check_vgrid_access(configuration, rule['run_as'],
                                               rule['vgrid_name']):
@@ -1231,14 +1231,14 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
                             waiting_for_thread_resources = False
                         except threading.ThreadError, exc:
 
-                            # logger.debug('(%s) Waiting for thread resources to handle trigger: %s'
-                            #              % (pid, str(event)))
+                            logger.debug('(%s) Waiting for thread resources to handle trigger: %s'
+                                         % (pid, str(event)))
 
                             time.sleep(1)
 
-            # else:
-            #    logger.debug('(%s) skip %s with no matching rules'
-            #                 % (pid, target_path))
+            else:
+               logger.debug('(%s) skip %s with no matching rules'
+                            % (pid, target_path))
 
         # Finally update rule miss cache for this event
 
@@ -1266,17 +1266,17 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
 
     def on_modified(self, event):
         """Handle modified files"""
-
+        logger.info('DELETE ME (grid_events) - on_modified: ' + str(event))
         self.handle_event(event)
 
     def on_created(self, event):
         """Handle created files"""
-
+        logger.info('DELETE ME (grid_events) - on_created: ' + str(event))
         self.handle_event(event)
 
     def on_deleted(self, event):
         """Handle deleted files"""
-
+        logger.info('DELETE ME (grid_events) - on_deleted: ' + str(event))
         self.handle_event(event)
 
     def on_moved(self, event):
@@ -1285,6 +1285,7 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
         model all that well. Furthermore inotify emits a created and a deleted
         event for a move between different filesystems or symlinked dirs.
         """
+        logger.info('DELETE ME (grid_events) - on_moved: ' + str(event))
 
         for (change, path) in [('created', event.dest_path),
                                ('deleted', event.src_path)]:

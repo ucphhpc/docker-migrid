@@ -112,10 +112,10 @@ def copy_file_to_resource(
 
     logger.debug("DELETE ME (SSH.PY) - local_path: " + local_path)
     logger.debug("DELETE ME (SSH.PY) - dest_path: " + dest_path)
-    # text_file = open(local_path, 'r')
-    # file_text = text_file.read()
-    # text_file.close()
-    # logger.debug("DELETE ME (SSH.PY) - file: " + file_text)
+    text_file = open(local_path, 'r')
+    file_text = text_file.read()
+    text_file.close()
+    logger.debug("DELETE ME (SSH.PY) - file: " + file_text)
 
     configuration = get_configuration_object()
     local_filename = os.path.basename(local_path)
@@ -224,11 +224,11 @@ def copy_file_to_exe(
     and the copy method to the exe depends on the shared fs setting.
     """
 
-    logger.debug("DELETE ME (SSH.PY) - copy_file_to_exe")
-
-    logger.debug("DELETE ME (SSH.PY) - local_path: " + local_path)
-    logger.debug("DELETE ME (SSH.PY) - dest_path: " + dest_path)
-    logger.debug("DELETE ME (SSH.PY) - exe_name: " + exe_name)
+    # logger.debug("DELETE ME (SSH.PY) - copy_file_to_exe")
+    #
+    # logger.debug("DELETE ME (SSH.PY) - local_path: " + local_path)
+    # logger.debug("DELETE ME (SSH.PY) - dest_path: " + dest_path)
+    # logger.debug("DELETE ME (SSH.PY) - exe_name: " + exe_name)
 
     local_filename = os.path.basename(local_path)
     msg = ''
@@ -246,8 +246,8 @@ def copy_file_to_exe(
 
     # copy file to frontend
 
-    logger.debug("DELETE ME (SSH.PY) - local_path: " + local_path)
-    logger.debug("DELETE ME (SSH.PY) - dest_path: " + dest_path)
+    # logger.debug("DELETE ME (SSH.PY) - local_path: " + local_path)
+    # logger.debug("DELETE ME (SSH.PY) - dest_path: " + dest_path)
 
     copy_attempts = 3
     for attempt in range(copy_attempts):
@@ -324,7 +324,7 @@ def execute_on_resource(
     verified to be the case on January 8, 2016. Please keep it so!
     """
 
-    logger.debug("DELETE ME (SSH.PY) - exectute_on_resource")
+    # logger.debug("DELETE ME (SSH.PY) - exectute_on_resource")
 
     configuration = get_configuration_object()
     hostkey = resource_config['HOSTKEY']
@@ -417,8 +417,8 @@ def execute_on_resource(
     logger.debug('running command: %s' % ssh_command_list)
     # NOTE: we use ssh command list here to avoid shell requirement
 
-    logger.debug("DELETE ME (SSH.PY) - execute_on_resource[ssh_command_list]: " + str(ssh_command))
-    logger.debug("DELETE ME (SSH.PY) - execute_on_resource[subprocess_pipe]: " + str(subprocess_pipe))
+    # logger.debug("DELETE ME (SSH.PY) - execute_on_resource[ssh_command_list]: " + str(ssh_command))
+    # logger.debug("DELETE ME (SSH.PY) - execute_on_resource[subprocess_pipe]: " + str(subprocess_pipe))
 
     ssh_proc = subprocess_popen(ssh_command_list,
                                 stdin=open("/dev/null", "r"),
@@ -464,7 +464,7 @@ def execute_on_exe(
     Please see the note in execute_on_resource!
     """
 
-    logger.debug("DELETE ME (SSH.PY) - exectute_on_exe")
+    # logger.debug("DELETE ME (SSH.PY) - exectute_on_exe")
 
     node = exe_config['execution_node']
     user = exe_config['execution_user']
@@ -502,7 +502,7 @@ def execute_on_store(
     Please see the note in execute_on_resource!
     """
 
-    logger.debug("DELETE ME (SSH.PY) - exectute_on_store")
+    # logger.debug("DELETE ME (SSH.PY) - exectute_on_store")
 
     node = store_config['storage_node']
     user = store_config['storage_user']

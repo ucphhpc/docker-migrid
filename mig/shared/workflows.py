@@ -732,12 +732,11 @@ def get_recipe_from_file(configuration, recipe_file):
 
 def get_pattern_from_file(configuration, pattern_file):
     """"""
-    # TODO, find out which type of recipe it is
     _logger = configuration.logger
     try:
-        with open(pattern_file) as raw_recipe:
-            json_recipe = json.load(raw_recipe)
-            return json_recipe
+        with open(pattern_file) as raw_pattern:
+            json_pattern = json.load(raw_pattern)
+            return json_pattern
     except Exception as err:
         _logger.error("Failed to json load: %s from: %s " % (err, pattern_file))
     return {}
@@ -957,18 +956,19 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
     if not task_file_status:
         return False, msg
 
+    _logger.debug("DELETE ME - task_file_status: " + str(task_file_status))
+    _logger.debug("DELETE ME - msg: " + str(msg))
+
     arguments_dict = {
         'EXECUTE': [
-            "echo 'hello grid!' > dynamicJobOutputFile.txt",
-            "echo '...each line here is executed' >> dynamicJobOutputFile.txt",
-            "python samplePythonCode.py"
+            "python job.py",
         ],
         'NOTIFY': [
             "email: SETTINGS",
             "jabber: SETTINGS"
         ],
         'MEMORY': [
-            "256"
+            "1024"
         ],
         'DISK': [
             "1"
@@ -980,16 +980,24 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
             "1"
         ],
         'OUTPUTFILES': [
-            "dynamicJobOutputFile.txt",
-            "file_created_from_python.txt"
+            "input_file " + os.path.join("+TRIGGERVGRIDNAME+",
+                                         os.path.join(pattern['output'],
+                                                      "+TRIGGERFILENAME+")),
+            "someFile"
+        ],
+        'INPUTFILES': [
+            "+TRIGGERPATH+ input_file",
         ],
         'EXECUTABLES': [
-            "samplePythonCode.py"
+#            "/home/patch_of_scotland/Documents/Code/PyCharmProjects/MiG_implementation/state/workflow_tasks_home/+C=dk+ST=dk+L=NA+O=org+OU=NA+CN=devuser+emailAddress=dev@dev.dk/aPythonFile.py job.py"
+            "aPythonFile job.py"
         ]
     }
     external_dict = get_keywords_dict(configuration)
     mrsl = fields_to_mrsl(configuration, arguments_dict, external_dict)
-    _logger.debug("DELETE ME - mRSL: " + str(mrsl))
+    # TODO replace with dict to mrsl as a string
+    # this mrsl file is not the one used for actual job creation. Just used as
+    # a simple way of getting mrsl formatted text for argument_string.
     try:
         (mrsl_filehandle, mrsl_real_path) = tempfile.mkstemp(text=True)
         # mrsl_relative_path = os.path.basename(mrsl_real_path)
@@ -1000,16 +1008,10 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
         _logger.error(msg + ": " + str(err))
         return False, msg
 
-    # mrsl_file = open(mrsl_real_path, 'r')
-    # _logger.debug("DELETE ME: " + mrsl_file.read())
-    # mrsl_file.close()
-
     mrsl_file = open(mrsl_real_path, 'r')
     arguments_string = ''
     arguments_string += mrsl_file.read()
     mrsl_file.close()
-    # rule_dict['templates'] = [arguments_string]
-    # rule_dict['arguments'] = [mrsl_filehandle]
 
     rule_dict = {
         'rule_id': "%d" % (time.time() * 1E8),
@@ -1019,14 +1021,10 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
         'changes': ['created', 'modified'],
         'run_as': client_id,
         'action': 'submit',
-        #'action': 'command',
-
-        # TODO this is the issue here. mrsl_filehandle is actually writing as 21, or some other number rather than a file handle. weird
-        'arguments': [mrsl_real_path],
-        #'arguments': ['sampleMRSL.mRSL'],
-        #'arguments': [mrsl_real_path],
-        #'arguments': ["touch", "helloCreated.txt"],
-        #'arguments': ["badCommand"],
+        # arguments doesn't seem to be necessary at all, at least when created
+        # with this method
+        'arguments': [],
+        # 'arguments': ['sampleMRSL.mRSL'],
         'rate_limit': '',
         'settle_time': '',
         'match_files': True,
@@ -1034,12 +1032,9 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
         # possibly should be False instead. Investigate
         'match_recursive': True,
         'templates': [arguments_string]
-        #'templates': []
     }
 
-    _logger.debug("DELETE ME - mrsl_filehandle: " + str(mrsl_filehandle))
-    _logger.debug("DELETE ME - mrsl_real_path: " + str(mrsl_real_path))
-    _logger.debug("DELETE ME - rule_dict: " + str(rule_dict))
+    # _logger.debug("DELETE ME - rule_dict: " + str(rule_dict))
 
     (add_status, add_msg) = vgrid_add_triggers(configuration,
                                                vgrid,
@@ -1047,3 +1042,4 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
                                                update_id=None,
                                                rank=None)
     return add_status, add_msg
+
