@@ -91,7 +91,6 @@ def main(client_id, user_arguments_dict):
         'inputs': wp['inputs'],
         'owner': wp['owner'],
         'output': wp['output'],
-        'type_filter': wp['type_filter'],
         'recipes': wp['recipes'],
         'variables': wp['variables']
     }

@@ -55,7 +55,6 @@ def signature():
         'wp_name': [''],
         'wp_inputs': REJECT_UNSET,
         'wp_output': REJECT_UNSET,
-        'wp_type_filters': REJECT_UNSET,
         'wp_recipes': ['']
     }
     return ['registerpattern', defaults]
@@ -124,7 +123,6 @@ def main(client_id, user_arguments_dict):
 
     inputs = accepted[inputs_name]
     output = accepted[output_name][-1]
-    type_filter = accepted[type_filter_name]
     recipes = accepted[recipe_name]
     pattern_name = accepted[pattern_name][-1]
     vgrid = accepted[vgrid_name][-1]
@@ -154,7 +152,6 @@ def main(client_id, user_arguments_dict):
         'owner': client_id,
         'inputs': inputs,
         'output': output,
-        'type_filter': type_filter,
         'recipes': recipes
     }
 

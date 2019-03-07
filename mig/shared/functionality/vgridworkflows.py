@@ -457,7 +457,6 @@ in reaction to file system events.</p>
             Input: <input type='text' name='wp_inputs' /></br>
             Output: <input type='text' name='wp_output' /></br>
             Recipe(s): <input type='text' name='wp_recipes' /></br>
-            Type-filter: <input type='text' name='wp_type_filters' /></br>
             <input type="hidden" name="vgrid_name" value="%(vgrid)s" />
             <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
             (Optional) Pattern name: <input type='text' name='wp_name' /></br>

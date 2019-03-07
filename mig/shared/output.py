@@ -1407,8 +1407,6 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
     <h4>%(inputs)s</h4>
     <h3>Output</h3>
     <h4>%(output)s</h4>
-    <h3>Type-Filters</h3>
-    <h4>%(type_filter)s</h4>
     <h3>Parameters</h3>
     <h4>%(variables)s</h4>
     <h3>Recipes</h3>

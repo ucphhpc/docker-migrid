@@ -71,7 +71,6 @@ valid_wp = {'persistence_id': str,
             'name': str,
             'inputs': list,
             'output': str,
-            'type_filter': list,
             'recipes': list,
             'variables': dict,
             }
@@ -473,8 +472,6 @@ def __build_wp_object(configuration, **kwargs):
         'name': kwargs.get('name', valid_wp['name']()),
         'inputs': kwargs.get('inputs', valid_wp['inputs']()),
         'output': kwargs.get('output', valid_wp['output']()),
-        'type_filter': kwargs.get('type_filter',
-                                  valid_wp['type_filter']()),
         'recipes': kwargs.get('recipes', valid_wp['recipes']()),
         'variables': kwargs.get('variables', valid_wp['variables']())
     }
@@ -690,8 +687,8 @@ def create_workflow_pattern(configuration, client_id, wp):
         'name': 'pattern-name'
         'owner': 'string-owner',
         'inputs': [],
-        'output': '',
-        'type_filter': [],
+        'recipes': [],
+        'output': ''
     }
 
     The 'owner' key is required to be non-empty string.
@@ -736,6 +733,41 @@ def create_workflow_pattern(configuration, client_id, wp):
             msg = 'You already have a workflow pattern with the name %s' \
                   % wp['name']
             return (False, msg)
+
+    clients_patterns = get_wp_with(configuration,
+                                   client_id=client_id,
+                                   first=False,
+                                   owner=client_id)
+    _logger.debug('clients_patterns: ' + str(clients_patterns))
+    _logger.debug('wp: ' + str(wp))
+
+    # Is there a less intrusive way to do this? manually checking each
+    # pattern is a pain
+    for pattern in clients_patterns:
+        _logger.debug('looking for identical pattern: ' + str(pattern))
+        pattern_matches = True
+        for variable in wp:
+            if variable != 'name':
+                _logger.debug('considering variable: ' + str(variable))
+                try:
+                    if not wp[variable] == pattern[variable]:
+                        pattern_matches = False
+                        _logger.debug('variables are not the same')
+                    else:
+                        _logger.debug('variables are the same')
+
+                except:
+                    _logger.debug('WP: could not find variable ' + variable +
+                                  ' in  pattern: ' + str(pattern))
+                    pattern_matches = False
+        if pattern_matches:
+            _logger.error("WP: an identical pattern already exists")
+            msg = 'You already have a workflow pattern with identical ' \
+                  'characteristics'
+            return (False, msg)
+        else:
+            _logger.debug('patterns are not identical')
+
 
     wp_home = get_workflow_pattern_home(configuration, client_dir)
     if not os.path.exists(wp_home):
