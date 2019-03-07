@@ -48,6 +48,69 @@ def signature():
     return ['workflowpatterns', defaults]
 
 
+def workflow_patterns_table(configuration, client_id, output_objects):
+    output_objects.append({'object_type': 'sectionheader',
+                           'text': 'Registered Workflow Patterns'})
+
+    # Post token
+    csrf_limit = get_csrf_limit(configuration)
+    form_method = 'post'
+    target_op = 'rmworkflowpattern'
+    csrf_token = make_csrf_token(configuration, form_method, target_op,
+                                 client_id, csrf_limit)
+    helper = html_post_helper(target_op, '%s.py' % target_op,
+                              {'wp_name': '__DYNAMIC__',
+                               csrf_field: csrf_token})
+
+    workflow_patterns = []
+    wps = get_wp_with(configuration, first=False, client_id=client_id)
+    if wps:
+        output_objects.append({'object_type': 'html_form',
+                               'text': helper})
+
+    for wp in wps:
+        # TODO dont' type cast
+        #  add recipes and variables
+        if wp.get('owner'):
+            email = extract_field(wp['owner'], 'email')
+            if email:
+                wp['owner'] = email
+
+        # Prepare for display, cast to string
+        wp = {
+            'object_type': wp['object_type'],
+            'name': wp['name'],
+            'inputs': '\n '.join(wp['inputs']),
+            'output': wp['output'],
+            'recipes': wp['recipes']
+        }
+
+        # Prepare name link
+        wp['namelink'] = {'object_type': 'link',
+                          'destination': 'showworkflowpattern.py?wp_name=%s'
+                                         % wp['name'],
+                          'class': 'workflowlink',
+                          'title': 'Show Workflow Pattern',
+                          'text': '%s' % wp['name']}
+        # TODO add link to delete pattern
+        wp['delwplink'] = {'object_type': 'link',
+                           'destination': "javascript: confirmDialog("
+                                          "%s, '%s', %s, %s);"
+                                          % (
+                                          target_op, "Really remove workflow"
+                                                     "pattern %s ?" % wp[
+                                              'name'], 'undefined',
+                                          {'wp_name': wp['name']}),
+                           'class': 'removelink iconspace', 'title':
+                               'Remove workflow pattern %s' % wp['name'],
+                           'text': ''}
+        if wp:
+            workflow_patterns.append(wp)
+
+    output_objects.append({'object_type': 'workflowpatterns',
+                           'workflowpatterns': workflow_patterns})
+
+
 def main(client_id, user_arguments_dict):
     """Main function used by front end"""
     (configuration, logger, output_objects, op_name) = \
@@ -101,62 +164,6 @@ def main(client_id, user_arguments_dict):
                            'documentation',
                            'text': 'ReadTheDocs about Workflow Patterns'})
 
-    output_objects.append({'object_type': 'sectionheader',
-                           'text': 'Registered Workflow Patterns'})
+    workflow_patterns_table(configuration, client_id, output_objects)
 
-    # Post token
-    csrf_limit = get_csrf_limit(configuration)
-    form_method = 'post'
-    target_op = 'rmworkflowpattern'
-    csrf_token = make_csrf_token(configuration, form_method, target_op,
-                                 client_id, csrf_limit)
-    helper = html_post_helper(target_op, '%s.py' % target_op,
-                              {'wp_name': '__DYNAMIC__',
-                               csrf_field: csrf_token})
-
-    workflow_patterns = []
-    wps = get_wp_with(configuration, first=False, client_id=client_id)
-    logger.debug("Found wps: %s" % wps)
-    if wps:
-        output_objects.append({'object_type': 'html_form',
-                               'text': helper})
-
-    for wp in wps:
-        # TODO dont' type cast
-        #  add recipes and variables
-        if wp.get('owner'):
-            email = extract_field(wp['owner'], 'email')
-            if email:
-                wp['owner'] = email
-
-        # Prepare for display, cast to string
-        wp = {
-            'object_type': wp['object_type'],
-            'name': wp['name'],
-            'inputs': '\n '.join(wp['inputs']),
-            'output': wp['output']
-        }
-
-        logger.debug("Workflow patterns wp %s" % wp)
-        # Prepare name link
-        wp['namelink'] = {'object_type': 'link',
-                          'destination': 'showworkflowpattern.py?wp_name=%s'
-                          % wp['name'],
-                          'class': 'workflowlink',
-                          'title': 'Show Workflow Pattern',
-                          'text': '%s' % wp['name']}
-        # TODO add link to delete pattern
-        wp['delwplink'] = {'object_type': 'link',
-                           'destination': "javascript: confirmDialog("
-                           "%s, '%s', %s, %s);"
-                           % (target_op, "Really remove workflow"
-                              "pattern %s ?" % wp['name'], 'undefined',
-                              {'wp_name': wp['name']}),
-                           'class': 'removelink iconspace', 'title':
-                           'Remove workflow pattern %s' % wp['name'], 'text': ''}
-        if wp:
-            workflow_patterns.append(wp)
-
-    output_objects.append({'object_type': 'workflowpatterns',
-                           'workflowpatterns': workflow_patterns})
     return (output_objects, returnvalues.OK)

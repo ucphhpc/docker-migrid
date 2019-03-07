@@ -1375,10 +1375,11 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
 <table class="workflowpatns columnsort" id="workflowpatntable">
 <thead class="title">
     <tr>
-        <th>Name</th>
-        <th>Monitored Inputs</th>
-        <th>Output</th>
         <th>Actions</th>
+        <th>Name</th>
+        <th>Monitored Input(s)</th>
+        <th>Output</th>
+        <th>Recipe(s)</th>
     </tr>
 </thead>
 <tbody>
@@ -1386,11 +1387,12 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
             for single_wp in workflowpatterns:
                 lines.append('''
 <tr>
-<td>%s</td><td>%s</td><td>%s</td><td>%s</td>
-</tr>''' % (html_link(single_wp.get('namelink', '')),
+<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>
+</tr>''' % (html_link(single_wp.get('delwplink', '')),
+            html_link(single_wp.get('namelink', '')),
             single_wp.get('inputs', ''),
             single_wp.get('output', ''),
-            html_link(single_wp.get('delwplink', ''))))
+            single_wp.get('recipes', '')))
             lines.append('''
 </tbody>
 </table>''')
@@ -1412,6 +1414,41 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
     <h3>Recipes</h3>
     <h4>%(recipes)s</h4>
 </div>''' % wp)
+
+        elif i['object_type'] == 'workflowrecipes':
+            workflowrecipes = i['workflowrecipes']
+            lines.append('<div class="workflowrecipes">')
+            lines.append('''
+        <table class="workflowrcps columnsort" id="workflowrcptable">
+        <thead class="title">
+            <tr>
+                <th>Actions</th>            
+                <th>Name</th>
+                <th>Recipe</th>
+            </tr>
+        </thead>
+        <tbody>
+        ''')
+            for single_wr in workflowrecipes:
+                lines.append('''
+        <tr>
+        <td>%s</td><td>%s</td><td>%s</td>
+        </tr>''' % (html_link(single_wr.get('delwrlink', '')),
+                    html_link(single_wr.get('namelink', '')),
+                    single_wr.get('recipe', '')))
+            lines.append('''
+        </tbody>
+        </table>''')
+            lines.append('</div>')
+        elif i['object_type'] == 'workflowrecipe':
+            wr = i['workflowrecipe']
+            inputs, recipes = wr.get('inputs', []), wr.get('recipes', [])
+            lines.append('''
+        <div class="workflowrecipe">
+            <h3>Recipe: %(name)s</h3>
+            <h3>Recipe</h3>
+            <h4>%(recipe)s</h4>
+        </div>''' % wr)
         elif i['object_type'] == 'frozenarchives':
             frozenarchives = i['frozenarchives']
             lines.append('''

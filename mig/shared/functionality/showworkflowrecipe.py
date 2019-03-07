@@ -40,7 +40,7 @@ from shared.workflows import get_wr_with
 def signature():
     """Signature of the main function"""
 
-    defaults = {'wp_name': REJECT_UNSET}
+    defaults = {'wr_name': REJECT_UNSET}
     return ['workflowrecipe', defaults]
 
 
@@ -64,7 +64,7 @@ def main(client_id, user_arguments_dict):
 
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
-    wr_name = accepted['wp_name'][-1]
+    wr_name = accepted['wr_name'][-1]
 
     wr_client_home = os.path.join(configuration.workflow_recipes_home,
                                   client_id)
@@ -89,11 +89,8 @@ def main(client_id, user_arguments_dict):
     # Prepare for display
     display_wr = {
         'name': wr['name'],
-        'inputs': wr['inputs'],
-        'output': wr['output'],
-        'type_filter': wr['type_filter'],
-        'recipes': wr['recipes'],
-        'variables': wr['variables']
+        'owner': wr['owner'],
+        'recipe': wr['recipe']
     }
     display_wr = force_utf8_rec(display_wr)
 

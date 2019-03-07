@@ -132,6 +132,11 @@ def check_workflow_p_modified(configuration):
     """Check for modified workflow patterns and return a list of such IDs"""
     return check_entities_modified(configuration, 'workflowpatterns')
 
+def check_workflow_r_modified(configuration):
+    """Check for modified workflow recipes and return a list of such IDs"""
+    return check_entities_modified(configuration, 'workflowrecipes')
+
+
 def reset_entities_modified(configuration, kind):
     """Reset all modified entity marks of given kind"""
     modified_path = os.path.join(configuration.mig_system_files,
@@ -165,6 +170,10 @@ def reset_res_modified(configuration):
 def reset_workflow_p_modified(configuraiton):
     """Reset workflow patterns modified marks"""
     return reset_entities_modified(configuraiton, 'workflowpatterns')
+
+def reset_workflow_r_modified(configuraiton):
+    """Reset workflow recipes modified marks"""
+    return reset_entities_modified(configuraiton, 'workflowrecipes')
 
 if __name__ == "__main__":
     import sys

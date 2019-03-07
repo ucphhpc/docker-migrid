@@ -120,6 +120,11 @@ workflowpattern = {
     #'required': [],
     #'optional': ['name', 'inputs', 'output', 'type_filter', 'recipes', 'variables'],
     }
+workflowrecipe = {
+    'object_type': 'workflowrecipe',
+    #'required': [],
+    #'optional': ['name', 'inputs', 'output', 'type_filter', 'recipes', 'variables'],
+    }
 frozenfile = {'object_type': 'frozenfile', 'required': ['name', 'size',
               'checksum', 'timestamp'], 'optional': []}
 frozenarchive = {
@@ -228,6 +233,9 @@ runtimeenvironments = {'object_type': 'runtimeenvironments',
 workflowpatterns = {'object_type': 'workflowpatterns',
                     'required_list': [('workflowpatterns',
                                        'workflowpattern')]}
+workflowrecipes = {'object_type': 'workflowrecipes',
+                    'required_list': [('workflowrecipes',
+                                       'workflowrecipe')]}
 frozenarchives = {'object_type': 'frozenarchives',
                   'required_list': [('frozenarchives', 'frozenarchive'
                   )]}
@@ -396,6 +404,8 @@ valid_types_list = [
     runtimeenvironments,
     workflowpattern,
     workflowpatterns,
+    workflowrecipe,
+    workflowrecipes,
     frozenfile,
     frozenarchive,
     frozenarchives,

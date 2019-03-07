@@ -199,7 +199,8 @@ def main(client_id, user_arguments_dict):
     output_objects.append({'object_type': 'header', 'text':
                            ' Registering Recipe'})
     recipe = {
-        'recipe': recipe_code
+        'recipe': recipe_code,
+        'owner': client_id
     }
     # Add optional userprovided name
     if recipe_name:

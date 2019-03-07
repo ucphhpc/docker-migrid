@@ -27,19 +27,15 @@
 
 """Manage all the available workflow recipes"""
 
-import mig.shared.functionality.shared.shared.returnvalues as returnvalues
-from mig.shared.functionality.shared.shared.base import extract_field
-from mig.shared.functionality.shared.shared.init import \
-    initialize_main_variables, find_entry
-from mig.shared.functionality.shared.shared.html import themed_styles, \
-    man_base_html, confirm_js, jquery_ui_js, \
-    html_post_helper
-from mig.shared.functionality.shared.shared.handlers import get_csrf_limit, \
-    csrf_field
-from mig.shared.functionality.shared.shared.pwhash import make_csrf_token
-from mig.shared.functionality.shared.shared.functional import \
-    validate_input_and_cert
-from mig.shared.functionality.shared.shared.workflows import get_wr_with, CONF
+import shared.returnvalues as returnvalues
+from shared.base import extract_field
+from shared.init import initialize_main_variables, find_entry
+from shared.html import themed_styles, man_base_html, confirm_js, \
+    jquery_ui_js, html_post_helper
+from shared.handlers import get_csrf_limit, csrf_field
+from shared.pwhash import make_csrf_token
+from shared.functional import validate_input_and_cert
+from shared.workflows import get_wr_with, CONF
 
 
 list_operations = ['list']
@@ -50,6 +46,69 @@ def signature():
     """Signature of the main function"""
     defaults = {'operation': allowed_operations}
     return ['workflowrecipes', defaults]
+
+
+def workflow_recipes_table(configuration, client_id, output_objects):
+    output_objects.append({'object_type': 'sectionheader',
+                           'text': 'Registered Workflow Recipes'})
+
+    # Post token
+    csrf_limit = get_csrf_limit(configuration)
+    form_method = 'post'
+    target_op = 'rmworkflowrecipe'
+    csrf_token = make_csrf_token(configuration, form_method, target_op,
+                                 client_id, csrf_limit)
+    helper = html_post_helper(target_op, '%s.py' % target_op,
+                              {'wr_name': '__DYNAMIC__',
+                               csrf_field: csrf_token})
+
+    workflow_recipes = []
+    wrs = get_wr_with(configuration, first=False, client_id=client_id)
+    if wrs:
+        output_objects.append({'object_type': 'html_form',
+                               'text': helper})
+
+    configuration.logger.debug('DELETE ME - wrs: ' + str(wrs))
+
+    for wr in wrs:
+        # TODO dont' type cast
+        #  add recipes and variables
+
+        configuration.logger.debug('DELETE ME - wr: ' + str(wr))
+        if wr.get('owner'):
+            email = extract_field(wr['owner'], 'email')
+            if email:
+                wr['owner'] = email
+
+        # Prepare for display, cast to string
+        wr = {
+            'object_type': wr['object_type'],
+            'name': wr['name'],
+            'recipe': wr['recipe']
+        }
+
+        # Prepare name link
+        wr['namelink'] = {'object_type': 'link',
+                          'destination': 'showworkflowrecipe.py?wr_name=%s'
+                                         % wr['name'],
+                          'class': 'workflowlink',
+                          'title': 'Show Workflow Recipe',
+                          'text': '%s' % wr['name']}
+        # TODO add link to delete pattern
+        wr['delwrlink'] = {'object_type': 'link',
+                           'destination': "javascript: confirmDialog(%s, '%s', "
+                                          "%s, %s);" % (target_op, "Really "
+                                          "remove workflow recipe %s ?" %
+                                          wr['name'], 'undefined', {'wr_name':
+                                          wr['name']}), 'class': 'removelink '
+                                          'iconspace', 'title': 'Remove '
+                                          'workflow recipe %s' % wr['name'],
+                                          'text': ''}
+        if wr:
+            workflow_recipes.append(wr)
+
+    output_objects.append({'object_type': 'workflowrecipes',
+                           'workflowrecipes': workflow_recipes})
 
 
 def main(client_id, user_arguments_dict):
@@ -90,73 +149,14 @@ def main(client_id, user_arguments_dict):
     output_objects.append({'object_type': 'header',
                            'text': 'Workflow Recipes'})
 
-    output_objects.append({'object_type': 'text',
-                           'text': 'Some description of this page. TODO'})
-
     # TODO link to external readthedocs
     output_objects.append({'object_type': 'link',
                            'destination': '',
                            'class': 'infolink iconspace',
-                           'title': 'Redirect to Workflow Recipes '
+                           'title': 'Redirect to Workflow Recipe '
                            'documentation',
                            'text': 'ReadTheDocs about Workflow Recipes'})
 
-    output_objects.append({'object_type': 'sectionheader',
-                           'text': 'Registered Workflow Recipes'})
+    workflow_recipes_table(configuration, client_id, output_objects)
 
-    # Post token
-    csrf_limit = get_csrf_limit(configuration)
-    form_method = 'post'
-    target_op = 'rmworkflowerecipe'
-    csrf_token = make_csrf_token(configuration, form_method, target_op,
-                                 client_id, csrf_limit)
-    helper = html_post_helper(target_op, '%s.py' % target_op,
-                              {'wr_name': '__DYNAMIC__',
-                               csrf_field: csrf_token})
-
-    workflow_recipes = []
-    wrs = get_wr_with(configuration, first=False, client_id=client_id)
-    logger.debug("Found wrs: %s" % wrs)
-    if wrs:
-        output_objects.append({'object_type': 'html_form',
-                               'text': helper})
-
-    for wr in wrs:
-        # TODO dont' type cast
-        #  add recipes and variables
-        if wr.get('owner'):
-            email = extract_field(wr['owner'], 'email')
-            if email:
-                wr['owner'] = email
-
-        # Prepare for display, cast to string
-        wr = {
-            'object_type': wr['object_type'],
-            'name': wr['name'],
-            'inputs': '\n '.join(wr['inputs']),
-            'output': wr['output']
-        }
-
-        logger.debug("Workflow recipes wr %s" % wr)
-        # Prepare name link
-        wr['namelink'] = {'object_type': 'link',
-                          'destination': 'showworkflowrecipe.py?wr_name=%s'
-                          % wr['name'],
-                          'class': 'workflowlink',
-                          'title': 'Show Workflow Recipe',
-                          'text': '%s' % wr['name']}
-        # TODO add link to delete pattern
-        wr['delwrlink'] = {'object_type': 'link',
-                           'destination': "javascript: confirmDialog("
-                           "%s, '%s', %s, %s);"
-                           % (target_op, "Really remove workflow"
-                              "recipe %s ?" % wr['name'], 'undefined',
-                              {'wr_name': wr['name']}),
-                           'class': 'removelink iconspace', 'title':
-                           'Remove workflow recipe %s' % wr['name'], 'text': ''}
-        if wr:
-            workflow_recipes.append(wr)
-
-    output_objects.append({'object_type': 'workflowrecipes',
-                           'workflowrecipes': workflow_recipes})
     return (output_objects, returnvalues.OK)

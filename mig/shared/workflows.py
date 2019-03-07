@@ -44,7 +44,8 @@ from shared.functional import REJECT_UNSET
 from shared.base import client_id_dir, force_utf8_rec
 from shared.map import load_system_map
 from shared.modified import check_workflow_p_modified, \
-    reset_workflow_p_modified, mark_workflow_p_modified, \
+    check_workflow_r_modified, reset_workflow_p_modified, \
+    reset_workflow_r_modified, mark_workflow_p_modified, \
     mark_workflow_r_modified
 from shared.pwhash import generate_random_ascii
 from shared.defaults import wp_id_charset, wp_id_length, wr_id_charset, \
@@ -57,13 +58,13 @@ from shared.fileio import delete_file
 from shared.mrslkeywords import get_keywords_dict
 
 WRITE_LOCK = 'write.lock'
-WORKFLOW_PATTERNS, MODTIME, CONF = ['__workflowpatterns__', '__modtime__',
-                                    '__conf__']
+WORKFLOW_PATTERNS, WORKFLOW_RECIPES, MODTIME, CONF = \
+    ['__workflowpatterns__', '__workflowrecipes__', '__modtime__', '__conf__']
 MAP_CACHE_SECONDS = 60
 
-last_load = {WORKFLOW_PATTERNS: 0}
-last_refresh = {WORKFLOW_PATTERNS: 0}
-last_map = {WORKFLOW_PATTERNS: {}}
+last_load = {WORKFLOW_PATTERNS: 0, WORKFLOW_RECIPES: 0}
+last_refresh = {WORKFLOW_PATTERNS: 0, WORKFLOW_RECIPES: 0}
+last_map = {WORKFLOW_PATTERNS: {}, WORKFLOW_RECIPES: {}}
 
 valid_wp = {'persistence_id': str,
             'owner': str,
@@ -72,13 +73,17 @@ valid_wp = {'persistence_id': str,
             'output': str,
             'type_filter': list,
             'recipes': list,
-            'variables': dict}
-
+            'variables': dict,
+            }
 
 valid_wr = {'persistence_id': str,
             'owner': str,
             'name': str,
-            'recipe': str}
+            'recipe': str
+            }
+
+# TODO several of the following functions can probably be rolled together. If
+#  at the end of implementation this is still the case then do so
 
 
 def __correct_wp(configuration, wp):
@@ -178,108 +183,168 @@ def __load_wp(configuration, wp_path):
     return {}
 
 
-def __load_wp_map(configuration, do_lock=True):
+def __load_wr(configuration, wr_path):
+    """Load the workflow recipe from the specified path"""
+    _logger = configuration.logger
+    _logger.debug("WR: load_wr, wr_path: %s" % wr_path)
+
+    if not os.path.exists(wr_path):
+        _logger.error("WR: %s does not exist" % wr_path)
+        return {}
+
+    try:
+        wr = None
+        with open(wr_path, 'r') as _wr_path:
+            wr = json.load(_wr_path)
+    except Exception, err:
+        configuration.logger.error('WR: could not open workflow recipe %s %s'
+                                   %(wr_path, err))
+    if wr and isinstance(wr, dict):
+        # Ensure string type
+        wr = force_utf8_rec(wr)
+        correct, _ = __correct_wr(configuration, wr)
+        if correct:
+            return wr
+    return {}
+
+
+def __load_map(configuration, to_load, do_lock=True):
     """Load map of workflow patterns. Uses a pickled
     dictionary for efficiency. Optional do_lock option is used to enable and
     disable locking during load.
     """
     _logger = configuration.logger
-    _logger.debug("WP: __load_wp_map")
-    return load_system_map(configuration, 'workflowpatterns', do_lock)
+    _logger.debug("Workflows: __load_map")
+    if to_load == 'pattern':
+        return load_system_map(configuration, 'workflowpatterns', do_lock)
+    elif to_load == 'recipe':
+        return load_system_map(configuration, 'workflowrecipes', do_lock)
 
 
-def __refresh_wp_map(configuration):
-    """Refresh map of workflow patterns. Uses a pickled dictionary for
-    efficiency. Only update map for workflow patterns that appeared or
+def __refresh_map(configuration, to_refresh):
+    """Refresh map of workflow objects. Uses a pickled dictionary for
+    efficiency. Only update map for workflow objects that appeared or
     disappeared after last map save.
     NOTE: Save start time so that any concurrent updates get caught next time
     """
     _logger = configuration.logger
-    _logger.debug("WP: __refresh_wp_map")
+    _logger.debug("Workflows: __refresh_map")
 
     start_time = time.time()
     dirty = []
-    map_path = os.path.join(configuration.mig_system_files,
+    map_path = ''
+    if to_refresh == 'pattern':
+        map_path = os.path.join(configuration.mig_system_files,
                             'workflowpatterns.map')
+    elif to_refresh == 'recipe':
+        map_path = os.path.join(configuration.mig_system_files,
+                            'workflowrecipes.map')
     lock_path = map_path.replace('.map', '.lock')
     lock_handle = open(lock_path, 'a')
     fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
-    workflow_p_map, map_stamp = __load_wp_map(configuration,
-                                              do_lock=False)
-    # Find all workflow patterns
-    (load_status, all_wps) = __list_path_wps(configuration)
-    if not load_status:
-        _logger.warning('WP: failed to load list: %s' % all_wps)
-        return workflow_p_map
 
-    for wp_dir, wp_file in all_wps:
-        wp_mtime = os.path.getmtime(os.path.join(wp_dir, wp_file))
+    workflow_map, map_stamp = __load_map(configuration, to_refresh,
+                                             do_lock=False)
+
+    # Find all workflow objectss
+    (load_status, all_objects) = __list_path(configuration, to_refresh)
+    if not load_status:
+        _logger.warning('Workflows: failed to load list: %s' % all_objects)
+        return workflow_map
+
+    for workflow_dir, workflow_file in all_objects:
+        wp_mtime = os.path.getmtime(os.path.join(workflow_dir, workflow_file))
 
         # init first time
-        workflow_p_map[wp_file] = workflow_p_map.get(wp_file, {})
-        if CONF not in workflow_p_map[wp_file] or wp_mtime >= map_stamp:
-            wp = __load_wp(configuration, os.path.join(wp_dir, wp_file))
-            workflow_p_map[wp_file][CONF] = wp
-            workflow_p_map[wp_file][MODTIME] = map_stamp
-            dirty.append([wp_file])
+        workflow_map[workflow_file] = workflow_map.get(workflow_file, {})
+        if CONF not in workflow_map[workflow_file] or wp_mtime >= map_stamp:
+            object = ''
+            if to_refresh == 'pattern':
+                object = __load_wp(configuration, os.path.join(workflow_dir,
+                                                               workflow_file))
+            elif to_refresh == 'recipe':
+                object = __load_wr(configuration, os.path.join(workflow_dir,
+                                                               workflow_file))
+            workflow_map[workflow_file][CONF] = object
+            workflow_map[workflow_file][MODTIME] = map_stamp
+            dirty.append([workflow_file])
+
+            # TODO complete this
 
     # Remove any missing workflow patterns from map
-    missing_wp = [wp_file for wp_file in workflow_p_map.keys()
-                  if wp_file not in [_wp_file for _wp_path, _wp_file in
-                                     all_wps]]
+    missing_workflow = [workflow_file for workflow_file in workflow_map.keys()
+                  if workflow_file not in [_workflow_file for _workflow_path, _workflow_file in
+                                     all_objects]]
 
-    for wp_file in missing_wp:
-        del workflow_p_map[wp_file]
-        dirty.append([wp_file])
+    for workflow_file in missing_workflow:
+        del workflow_map[workflow_file]
+        dirty.append([workflow_file])
 
     if dirty:
         try:
-            dump(workflow_p_map, map_path)
+            dump(workflow_map, map_path)
             os.utime(map_path, (start_time, start_time))
         except Exception, err:
-            _logger.error('WP: could not save map, or %s' % err)
-    last_refresh[WORKFLOW_PATTERNS] = start_time
+            _logger.error('Workflows: could not save map, or %s' % err)
+    if to_refresh == 'pattern':
+        last_refresh[WORKFLOW_PATTERNS] = start_time
+    elif to_refresh == 'recipe':
+        last_refresh[WORKFLOW_RECIPES] = start_time
     lock_handle.close()
-    return workflow_p_map
+    return workflow_map
 
 
-def __list_path_wps(configuration):
+def __list_path(configuration, to_get):
     """Returns a list of tuples, containing the path to the individual
-    workflow patterns and the actual workflow pattern: (path,wp)
+    workflow objects and the actual objects. These can be either patterns or
+    recipes: (path,wp)
     """
     _logger = configuration.logger
-    _logger.debug("WP: __list_path_wps")
+    _logger.debug("Workflows: __list_path")
 
-    wp_home = configuration.workflow_patterns_home
-    workflows = []
-    if not os.path.exists(wp_home):
-        try:
-            os.makedirs(wp_home)
-        except Exception, err:
-            _logger.error('WP: not able to create directory %s %s' %
-                          (wp_home, err))
-            return (False, 'Failed to setup required directory for workflow '
-                           'patterns')
-
-    client_dirs = os.listdir(wp_home)
+    # patterns = []
+    objects = []
+    # Note that this is currently listing all objects for all users. This
+    # might want to be altered to only the current user and global? That might
+    # be to much needless processing if multiple users are using the system at
+    # once though. Talk to Jonas/Martion about this. Also note this system is
+    # terrible
+    user_home_dir = configuration.user_home
+    client_dirs = os.listdir(user_home_dir)
+    client_dirs.remove('no_grid_jobs_in_grid_scheduler')
     for client_dir in client_dirs:
-        dir_content = []
-        client_path = os.path.join(wp_home,
-                                   client_dir)
-        dir_content = os.listdir(client_path)
-        for entry in dir_content:
-            # Skip dot files/dirs and the write lock
-            if entry.startswith('.') or entry == WRITE_LOCK:
-                continue
-            if os.path.isfile(os.path.join(client_path, entry)):
-                workflows.append((client_path, entry))
+        if os.path.isdir(os.path.join(user_home_dir, client_dir)):
+            client_home = ''
+            if to_get == 'pattern':
+                client_home = get_workflow_pattern_home(configuration, client_dir)
+            elif to_get == 'recipe':
+                client_home = get_workflow_recipe_home(configuration, client_dir)
             else:
-                _logger.warning('WP: %s in %s is not a plain file, move it?' %
-                                (entry, client_path))
-    return (True, workflows)
+                return (False, "Invalid input. Must be 'pattern' or 'recipe'")
+            if not os.path.exists(client_home):
+                try:
+                    os.makedirs(client_home)
+                    _logger.debug('create client dir: ' + client_home)
+                except Exception, err:
+                    _logger.error('WP: not able to create directory %s %s' %
+                                  (client_home, err))
+                    return (
+                    False, 'Failed to setup required directory for workflow ' +
+                            to_get)
+            dir_content = os.listdir(client_home)
+            for entry in dir_content:
+                # Skip dot files/dirs and the write lock
+                if entry.startswith('.') or entry == WRITE_LOCK:
+                    continue
+                if os.path.isfile(os.path.join(client_home, entry)):
+                    objects.append((client_home, entry))
+                else:
+                    _logger.warning('WP: %s in %s is not a plain file, move it?' %
+                                    (entry, client_home))
+    return (True, objects)
 
 
-def __query_map_for(configuration, client_id=None, **kwargs):
+def __query_map_for_patterns(configuration, client_id=None, **kwargs):
     """"""
     _logger = configuration.logger
     _logger.debug("WP: query_map, client_id: %s, kwargs: %s" % (client_id,
@@ -292,21 +357,55 @@ def __query_map_for(configuration, client_id=None, **kwargs):
 
     matches = []
     for _, wp_content in wp_map.items():
+        _logger.debug("WP: looking at: " + str(wp_content))
+
         if CONF in wp_content:
             wp_obj = __build_wp_object(configuration, **wp_content[CONF])
             _logger.debug("WP: wp_obj %s" % wp_obj)
             if not wp_obj:
+                _logger.debug("WP: wasn't a wp object")
                 continue
             if kwargs:
+                _logger.debug("WP: got some kwargs")
                 for k, v in kwargs.items():
+                    _logger.debug("WP: k: " + str(k))
+                    _logger.debug("WP: v: " + str(v))
                     if k in wp_obj and v == wp_obj[k]:
+                        _logger.debug("WP: matches! : " + str(wp_obj))
                         matches.append(wp_obj)
             else:
                 matches.append(wp_obj)
     return matches
 
 
-def __query_map_for_first(configuration, client_id=None, **kwargs):
+def __query_map_for_recipes(configuration, client_id=None, **kwargs):
+    """"""
+    _logger = configuration.logger
+    _logger.debug("WR: query_map, client_id: %s, kwargs: %s" % (client_id,
+                                                                kwargs))
+    wr_map = get_wr_map(configuration)
+    if client_id:
+        wr_map = {k: v for k, v in wr_map.items()
+                  if CONF in v and 'owner' in v[CONF]
+                  and client_id == v[CONF]['owner']}
+
+    matches = []
+    for _, wr_content in wr_map.items():
+        if CONF in wr_content:
+            wr_obj = __build_wr_object(configuration, **wr_content[CONF])
+            _logger.debug("WR: wr_obj %s" % wr_obj)
+            if not wr_obj:
+                continue
+            if kwargs:
+                for k, v in kwargs.items():
+                    if k in wr_obj and v == wr_obj[k]:
+                        matches.append(wr_obj)
+            else:
+                matches.append(wr_obj)
+    return matches
+
+
+def __query_map_for_first_patterns(configuration, client_id=None, **kwargs):
     """"""
     _logger = configuration.logger
     _logger.debug("WP: query_map_first, client_id: %s, kwargs: %s"
@@ -329,6 +428,32 @@ def __query_map_for_first(configuration, client_id=None, **kwargs):
                         return wp_obj
             else:
                 return wp_obj
+    return None
+
+
+def __query_map_for_first_recipes(configuration, client_id=None, **kwargs):
+    """"""
+    _logger = configuration.logger
+    _logger.debug("WR: query_map_first, client_id: %s, kwargs: %s"
+                  % (client_id, kwargs))
+    wr_map = get_wr_map(configuration)
+    if client_id:
+        wr_map = {k: v for k, v in wr_map.items()
+                  if CONF in v and 'owner' in v[CONF]
+                  and client_id == v[CONF]['owner']}
+
+    for _, wr_content in wr_map.items():
+        if CONF in wr_content:
+            wr_obj = __build_wr_object(configuration, **wr_content[CONF])
+            _logger.debug("WR: wr_obj %s" % wr_obj)
+            if not wr_obj:
+                continue
+            if kwargs:
+                for k, v in kwargs.items():
+                    if k in wr_obj and v == wr_obj[k]:
+                        return wr_obj
+            else:
+                return wr_obj
     return None
 
 
@@ -367,12 +492,30 @@ def __build_wr_object(configuration, **kwargs):
     wr_obj = {
         'object_type': 'workflowrecipe',
         'persistence_id': kwargs.get('persistence_id',
-                                     valid_wp['persistence_id']()),
-        'owner': kwargs.get('owner', valid_wp['owner']()),
-        'name': kwargs.get('name', valid_wp['name']()),
-        'recipe': kwargs.get('recipe', valid_wp['recipe']())
+                                     valid_wr['persistence_id']()),
+        'owner': kwargs.get('owner', valid_wr['owner']()),
+        'name': kwargs.get('name', valid_wr['name']()),
+        'recipe': kwargs.get('recipe', valid_wr['recipe']())
     }
     return wr_obj
+
+
+def get_workflow_pattern_home(configuration, client_dir):
+    user_home_dir = os.path.join(configuration.user_home, client_dir)
+    pattern_home = user_home_dir + configuration.workflow_patterns_home
+    return pattern_home
+
+
+def get_workflow_recipe_home(configuration, client_dir):
+    user_home_dir = os.path.join(configuration.user_home, client_dir)
+    recipe_home = user_home_dir + configuration.workflow_recipes_home
+    return recipe_home
+
+
+def get_workflow_task_home(configuration, client_dir):
+    user_home_dir = os.path.join(configuration.user_home, client_dir)
+    task_home = user_home_dir + configuration.workflow_tasks_home
+    return task_home
 
 
 def get_wp_map(configuration):
@@ -391,15 +534,39 @@ def get_wp_map(configuration):
         _logger.info('WP: refreshing map (%s)'
                      % modified_patterns)
         map_stamp = time.time()
-        workflow_p_map = __refresh_wp_map(configuration)
+        workflow_p_map = __refresh_map(configuration, 'pattern')
         reset_workflow_p_modified(configuration)
     else:
         _logger.debug('WP: no changes - not refreshing')
-        workflow_p_map, map_stamp = __load_wp_map(configuration)
+        workflow_p_map, map_stamp = __load_map(configuration, 'pattern')
     last_map[WORKFLOW_PATTERNS] = workflow_p_map
     last_refresh[WORKFLOW_PATTERNS] = map_stamp
     last_load[WORKFLOW_PATTERNS] = map_stamp
     return workflow_p_map
+
+
+def get_wr_map(configuration):
+    """Returns the current map of workflow recipes and
+    their configurations. Caches the map for load prevention with
+    repeated calls within short time span.
+    """
+    _logger = configuration.logger
+    _logger.debug("WR: get_wr_map")
+    modified_recipes, _ = check_workflow_r_modified(configuration)
+    if modified_recipes:
+        _logger.info('WR: refreshing map (%s)'
+                     % modified_recipes)
+        map_stamp = time.time()
+        workflow_r_map = __refresh_map(configuration, 'recipe')
+        reset_workflow_r_modified(configuration)
+    else:
+        _logger.debug('WR: no changes - not refreshing')
+        workflow_r_map, map_stamp = __load_map(configuration, 'recipe')
+    last_map[WORKFLOW_RECIPES] = workflow_r_map
+    last_refresh[WORKFLOW_RECIPES] = map_stamp
+    last_load[WORKFLOW_RECIPES] = map_stamp
+    _logger.debug('WR: wr_map: - ' + str(workflow_r_map))
+    return workflow_r_map
 
 
 def get_wp_with(configuration, first=True, client_id=None, **kwargs):
@@ -411,9 +578,9 @@ def get_wp_with(configuration, first=True, client_id=None, **kwargs):
         _logger.error('WP: wrong format supplied for %s', type(kwargs))
         return None
     if first:
-        wp = __query_map_for_first(configuration, client_id, **kwargs)
+        wp = __query_map_for_first_patterns(configuration, client_id, **kwargs)
     else:
-        wp = __query_map_for(configuration, client_id, **kwargs)
+        wp = __query_map_for_patterns(configuration, client_id, **kwargs)
     return wp
 
 
@@ -426,10 +593,22 @@ def get_wr_with(configuration, first=True, client_id=None, **kwargs):
         _logger.error('WR: wrong format supplied for %s', type(kwargs))
         return None
     if first:
-        wr = __query_map_for_first(configuration, client_id, **kwargs)
+        wr = __query_map_for_first_recipes(configuration, client_id, **kwargs)
     else:
-        wr = __query_map_for(configuration, client_id, **kwargs)
+        wr = __query_map_for_recipes(configuration, client_id, **kwargs)
     return wr
+
+
+def get_pattern(map_object):
+    """ Function to return a pattern object from a map entry. This will strip
+    off any system metadata"""
+    return map_object[CONF]
+
+
+def get_recipe(map_object):
+    """ Function to return a recipe object from a map entry. This will strip
+        off any system metadata"""
+    return map_object[CONF]
 
 
 def delete_workflow_pattern(configuration, client_id, name):
@@ -451,8 +630,8 @@ def delete_workflow_pattern(configuration, client_id, name):
     wp = get_wp_with(configuration, client_id=client_id, name=name)
     persistence_id = wp['persistence_id']
 
-    wp_path = os.path.join(configuration.workflow_patterns_home, client_dir,
-                           persistence_id)
+    wp_path = os.path.join(get_workflow_pattern_home(
+        configuration, client_dir), persistence_id)
     if not os.path.exists(wp_path):
         msg = "The '%s' workflow pattern dosen't appear to exist" % name
         _logger.error("WP: can't delete %s it dosen't exist" % wp_path)
@@ -481,14 +660,19 @@ def delete_workflow_recipe(configuration, client_id, name):
         return (False, msg)
 
     client_dir = client_id_dir(client_id)
-    wr = get_wp_with(configuration, client_id=client_id, name=name)
+    wr = get_wr_with(configuration, client_id=client_id, name=name)
     persistence_id = wr['persistence_id']
 
-    wr_path = os.path.join(configuration.workflow_recipes_home, client_dir,
-                           persistence_id)
-    if not os.path.exists(wr_path):
+    if not wr:
         msg = "The '%s' workflow recipe dosen't appear to exist" % name
-        _logger.error("WR: can't delete %s it dosen't exist" % wr_path)
+        _logger.error("WR: can't delete %s it dosen't exist" % name)
+        return (False, msg)
+
+    wr_path = os.path.join(get_workflow_recipe_home(
+        configuration, client_dir), persistence_id)
+    if not os.path.exists(wr_path):
+        msg = "The '%s' workflow recipe has been moved/deleted already" % name
+        _logger.error("WR: can't delete %s it no longer exists" % wr_path)
         return (False, msg)
 
     if not delete_file(wr_path, configuration.logger):
@@ -553,8 +737,7 @@ def create_workflow_pattern(configuration, client_id, wp):
                   % wp['name']
             return (False, msg)
 
-    wp_home = os.path.join(configuration.workflow_patterns_home,
-                           client_dir)
+    wp_home = get_workflow_pattern_home(configuration, client_dir)
     if not os.path.exists(wp_home):
         try:
             os.makedirs(wp_home)
@@ -586,6 +769,8 @@ def create_workflow_pattern(configuration, client_id, wp):
         # Mark as modified
         mark_workflow_p_modified(configuration, wp['persistence_id'])
         wrote = True
+        _logger.debug('marking new pattern ' + wp['persistence_id'] +
+                      ' as modified')
     except Exception, err:
         _logger.error('WP: failed to write %s to disk %s' % (
             wp_file_path, err))
@@ -605,12 +790,6 @@ def create_workflow_pattern(configuration, client_id, wp):
     _logger.info('WP: %s created at: %s ' %
                  (client_id, wp_file_path))
     return (True, '')
-
-
-# TODO, implement
-def update_workflow_pattern(configuration, client_id, name):
-    """Update a workflow pattern"""
-    pass
 
 
 def create_workflow_recipe(configuration, client_id, wr):
@@ -647,7 +826,8 @@ def create_workflow_recipe(configuration, client_id, wr):
     if not correct:
         return correct, msg
 
-    # TODO check for create required keys
+    # TODO make this work. Currently allowing multiple recipes with the same
+    #  name
     client_dir = client_id_dir(client_id)
     if 'name' not in wr:
         wr['name'] = generate_random_ascii(wr_id_length, charset=wr_id_charset)
@@ -661,8 +841,10 @@ def create_workflow_recipe(configuration, client_id, wr):
                   % wr['name']
             return False, msg
 
-    wr_home = os.path.join(configuration.workflow_recipes_home,
-                           client_dir)
+    wr_home = get_workflow_recipe_home(configuration, client_dir)
+    # wr_home = os.path.join(configuration.workflow_recipes_home,
+    #                        client_dir)
+    _logger.debug("DELETE ME - wr_home: " + str(wr_home))
     if not os.path.exists(wr_home):
         try:
             os.makedirs(wr_home)
@@ -686,11 +868,14 @@ def create_workflow_recipe(configuration, client_id, wr):
     wr['persistence_id'] = persistence_id
     # Save the recipe
     wrote = False
+    _logger.debug('DELETE ME - wr to be saved:' + str(wr))
+
     msg = ''
     try:
         with open(wr_file_path, 'w') as j_file:
             json.dump(wr, j_file, indent=0)
 
+        _logger.debug('DELETE ME - marking recipe as modified')
         # Mark as modified
         mark_workflow_r_modified(configuration, wr['persistence_id'])
         wrote = True
@@ -717,40 +902,22 @@ def create_workflow_recipe(configuration, client_id, wr):
     pass
 
 
-def get_recipe_from_file(configuration, recipe_file):
-    """"""
-    # TODO, find out which type of recipe it is
-    _logger = configuration.logger
-    try:
-        with open(recipe_file) as raw_recipe:
-            json_recipe = json.load(raw_recipe)
-            return json_recipe
-    except Exception as err:
-        _logger.error("Failed to json load: %s from: %s " % (err, recipe_file))
-    return {}
+# TODO, implement
+def update_workflow_pattern(configuration, client_id, name):
+    """Update a workflow pattern"""
+    pass
 
 
-def get_pattern_from_file(configuration, pattern_file):
-    """"""
-    _logger = configuration.logger
-    try:
-        with open(pattern_file) as raw_pattern:
-            json_pattern = json.load(raw_pattern)
-            return json_pattern
-    except Exception as err:
-        _logger.error("Failed to json load: %s from: %s " % (err, pattern_file))
-    return {}
+# TODO, implement
+def update_workflow_recipes(configuration, client_id, name):
+    """Update a workflow recipe"""
+    pass
 
 
 def rule_identification_from_pattern(configuration, client_id,
                                      workflow_pattern, vgrid):
     """identifies if a task can be created, following the creation or
     editing of a pattern ."""
-
-    # work out recipe directory
-    client_dir = client_id_dir(client_id)
-    recipe_dir_path = os.path.join(configuration.workflow_recipes_home,
-                                   client_dir)
 
     # setup logger
     _logger = configuration.logger
@@ -761,31 +928,30 @@ def rule_identification_from_pattern(configuration, client_id,
     # to be altered once we move into other languages than python.
     complete_recipe = ''
     missed_recipes = []
+
     # Check if defined recipes exist already within system
     for recipe_name in workflow_pattern['recipes']:
-        got_this_recipe = False
-        if os.path.isdir(recipe_dir_path):
-            # This assumes that recipes are saved as their name.
-            for recipe_file in os.listdir(recipe_dir_path):
-                recipe_path = os.path.join(recipe_dir_path, recipe_file)
-                recipe = get_recipe_from_file(configuration, recipe_path)
-                if recipe:
-                    if recipe['name'] == recipe_name:
-                        for line in recipe['recipe']:
-                            complete_recipe += line
-                        got_this_recipe = True
-        if not got_this_recipe:
+        _logger.info("looking for recipe :" + recipe_name)
+
+        recipe = get_wr_with(configuration,
+                             client_id=client_id,
+                             first=True,
+                             name=recipe_name)
+        _logger.info("recipe :" + str(recipe))
+
+        if recipe:
+            _logger.info("found and adding recipe :" + recipe_name)
+            for line in recipe['recipe']:
+                complete_recipe += line
+        else:
             missed_recipes.append(recipe_name)
     if missed_recipes:
         return (False, 'Could not find all required recipes. Missing: ' +
                 str(missed_recipes))
 
-    recipe_dir_path = os.path.join(recipe_dir_path,
-                                   workflow_pattern['recipes'][-1])
-
-    _logger.info('All recipes found within trying to create trigger for recipe'
-                 ' at ' + recipe_dir_path + ' and inputs at ' +
-                 str(workflow_pattern['inputs']))
+    _logger.info('All recipes found within trying to create trigger '
+                 'for pattern ' + workflow_pattern['name'] + ' and inputs '
+                 'at ' + str(workflow_pattern['inputs']))
 
     # TODO do not create these triggers quite yet. possibly wait for some
     #  activation toggle?
@@ -809,28 +975,25 @@ def rule_identification_from_recipe(configuration, client_id, workflow_recipe,
     editing of a recipe . This pattern is read in as the object
     workflow_recipe and is expected in the format."""
 
-    # work out pattern directory
-    client_dir = client_id_dir(client_id)
-    pattern_dir_path = os.path.join(configuration.workflow_patterns_home,
-                                    client_dir)
-    recipe_dir_path = os.path.join(configuration.workflow_recipes_home,
-                                   client_dir)
-
     # setup logger
     _logger = configuration.logger
     _logger.info('%s is identifying any possible tasks from recipe creation '
                  '%s' % (client_id, workflow_recipe['name']))
-    _logger.info('DELETE ME - recipe_dir_path:' + recipe_dir_path)
 
     matching_patterns = []
+    patterns = get_wp_with(configuration,
+                           client_id=client_id,
+                           first=False,
+                           owner=client_id)
     # Check if patterns exist already within system that need this recipe
-    if os.path.isdir(pattern_dir_path):
-        for pattern_file in os.listdir(pattern_dir_path):
-            pattern_path = os.path.join(pattern_dir_path, pattern_file)
-            pattern = get_pattern_from_file(configuration, pattern_path)
-            if pattern:
-                if workflow_recipe['name'] in pattern['recipes']:
-                    matching_patterns.append(pattern)
+    if not patterns:
+        _logger.info('DELETE ME - no appropriate patterns to check')
+        return [], []
+    for pattern in patterns:
+        _logger.info('DELETE ME - pattern: ' + str(pattern))
+
+        if workflow_recipe['name'] in pattern['recipes']:
+            matching_patterns.append(pattern)
 
     activatable_patterns = []
     incomplete_patterns = []
@@ -842,37 +1005,20 @@ def rule_identification_from_recipe(configuration, client_id, workflow_recipe,
         missed_recipes = []
         # Check if defined recipes exist already within system
         for recipe_name in pattern['recipes']:
-            got_this_recipe = False
-            # This assumes that recipes are saved as their name.
-            _logger.info('DELETE ME - recipe_dir_path:' + recipe_dir_path)
-            for recipe_file in os.listdir(recipe_dir_path):
-                _logger.info('DELETE ME - recipe_file:' + recipe_file)
-                recipe_path = os.path.join(recipe_dir_path, recipe_file)
-                _logger.info('DELETE ME - recipe_path:' + recipe_path)
-                recipe = get_recipe_from_file(configuration, recipe_path)
-                if recipe:
-                    if recipe['name'] == recipe_name:
-                        for line in recipe['recipe']:
-                            complete_recipe += line
-                        got_this_recipe = True
-            if not got_this_recipe:
+            recipe = get_wr_with(configuration,
+                                 client_id=client_id,
+                                 name=recipe_name)
+            if recipe:
+                for line in recipe['recipe']:
+                    complete_recipe += line
+            else:
                 missed_recipes.append(recipe_name)
         if not missed_recipes:
-
             _logger.info('DELETE ME - pattern:' + str(pattern))
-            recipe_dir_path = os.path.join(recipe_dir_path,
-                                           pattern['recipes'][-1])
-            # recipe_dir_path = os.path.join(recipe_dir_path,
-            #                                pattern['wp_recipes'][-1])
 
             _logger.info(
                 'All recipes found within trying to create trigger for recipe'
-                ' at ' + recipe_dir_path + ' and inputs at ' +
-                str(pattern['inputs']))
-            # _logger.info(
-            #     'All recipes found within trying to create trigger for recipe'
-            #     ' at ' + recipe_dir_path + ' and inputs at ' +
-            #     pattern['wp_inputs'])
+                + pattern['name'] + ' and inputs at ' + str(pattern['inputs']))
 
             # TODO do not create these triggers quite yet. possibly wait for
             #  some activation toggle?
@@ -895,7 +1041,7 @@ def create_workflow_task_file(configuration, client_id, complete_recipe):
     _logger = configuration.logger
 
     client_dir = client_id_dir(client_id)
-    task_home = os.path.join(configuration.workflow_tasks_home, client_dir)
+    task_home = get_workflow_task_home(configuration, client_dir)
     if not os.path.exists(task_home):
         try:
             os.makedirs(task_home)
@@ -980,17 +1126,16 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
             "1"
         ],
         'OUTPUTFILES': [
-            "input_file " + os.path.join("+TRIGGERVGRIDNAME+",
+            "someFile " + os.path.join("+TRIGGERVGRIDNAME+",
                                          os.path.join(pattern['output'],
                                                       "+TRIGGERFILENAME+")),
-            "someFile"
         ],
         'INPUTFILES': [
             "+TRIGGERPATH+ input_file",
         ],
         'EXECUTABLES': [
-#            "/home/patch_of_scotland/Documents/Code/PyCharmProjects/MiG_implementation/state/workflow_tasks_home/+C=dk+ST=dk+L=NA+O=org+OU=NA+CN=devuser+emailAddress=dev@dev.dk/aPythonFile.py job.py"
-            "aPythonFile job.py"
+            # msg + " job.py"
+            "aPythonFile.py job.py"
         ]
     }
     external_dict = get_keywords_dict(configuration)

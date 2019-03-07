@@ -64,6 +64,7 @@ def main(client_id, user_arguments_dict, environ=None):
         return (accepted, returnvalues.CLIENT_ERROR)
 
     wr_name = accepted['wr_name'][-1]
+
     success, msg = delete_workflow_recipe(configuration, client_id, wr_name)
     if not success:
         output_objects.append({'object_type': 'error_text',

@@ -54,6 +54,10 @@ from shared.vgrid import vgrid_add_remove_table, vgrid_is_owner_or_member, \
     vgrid_triggers, vgrid_set_triggers
 from shared.handlers import get_csrf_limit
 from shared.pwhash import make_csrf_token
+from shared.workflows import get_wp_map
+from shared.functionality.workflowpatterns import workflow_patterns_table
+from shared.functionality.workflowrecipes import workflow_recipes_table
+from shared.output import html_link
 
 default_pager_entries = 20
 
@@ -383,13 +387,16 @@ in reaction to file system events.</p>
 
         output_objects.append({'object_type': 'html_form', 'text':  '''</div>'''})
 
-        # Register workflow pattern and optional recipes
+
         output_objects.append({'object_type': 'html_form', 'text': '''
         <div id="jupyter-tab-pattern">
         '''})
 
+        # Register workflow patterns
+        workflow_patterns_table(configuration, client_id, output_objects)
+
         output_objects.append({'object_type': 'sectionheader',
-                               'text': 'Register Workflow Pattern and Recipes'})
+                               'text': 'Register Workflow Patterns'})
 
         form_method = 'post'
         target_op = 'addworkflowpattern'
@@ -466,6 +473,9 @@ in reaction to file system events.</p>
         output_objects.append({'object_type': 'html_form', 'text': '''
             <div id="jupyter-tab-recipe">
             '''})
+
+        # Register workflow patterns
+        workflow_recipes_table(configuration, client_id, output_objects)
 
         output_objects.append({'object_type': 'sectionheader',
                                'text': 'Register Workflow Recipes'})

@@ -89,6 +89,7 @@ def main(client_id, user_arguments_dict):
     display_wp = {
         'name': wp['name'],
         'inputs': wp['inputs'],
+        'owner': wp['owner'],
         'output': wp['output'],
         'type_filter': wp['type_filter'],
         'recipes': wp['recipes'],
