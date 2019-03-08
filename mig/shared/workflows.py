@@ -1136,6 +1136,9 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
 
     _logger.debug("DELETE ME - task_file_status: " + str(task_file_status))
     _logger.debug("DELETE ME - msg: " + str(msg))
+    client_dir = client_id_dir(client_id)
+    user_home_dir = os.path.join(configuration.user_home, client_dir)
+    trigger_path = msg.replace(user_home_dir, "")
 
     arguments_dict = {
         'EXECUTE': [
@@ -1167,7 +1170,8 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
         ],
         'EXECUTABLES': [
             # msg + " job.py"
-            "aPythonFile.py job.py"
+            # "aPythonFile.py job.py"
+            trigger_path + " job.py"
         ]
     }
     external_dict = get_keywords_dict(configuration)
