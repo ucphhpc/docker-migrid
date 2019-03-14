@@ -43,7 +43,7 @@ from shared.init import initialize_main_variables
 from shared.handlers import safe_handler, get_csrf_limit
 from shared.functional import validate_input_and_cert
 from shared.workflows import create_workflow_pattern, \
-    rule_identification_from_pattern
+    rule_identification_from_pattern, protected_pattern_variables
 from shared.safeinput import REJECT_UNSET
 
 
@@ -55,7 +55,8 @@ def signature():
         'wp_name': [''],
         'wp_inputs': REJECT_UNSET,
         'wp_output': REJECT_UNSET,
-        'wp_recipes': ['']
+        'wp_recipes': [''],
+        'wp_variables': ['']
     }
     return ['registerpattern', defaults]
 
@@ -95,6 +96,31 @@ def main(client_id, user_arguments_dict):
     logger.debug("DELETE ME - " + str(user_arguments_dict))
     logger.debug("DELETE ME - " + str(op_name))
 
+    # TODO probably do this somewhere else? seems like this might have come up
+    #  by now
+    # convert recipes into list of entries
+    seperated_recipes = []
+    for entry in user_arguments_dict['wp_recipes']:
+        # TODO change this to regex to account for spaces etc
+        if ';' in entry:
+            split_entry = entry.split(';')
+            for split in split_entry:
+                seperated_recipes.append(split)
+        else:
+            seperated_recipes.append(entry)
+    user_arguments_dict['wp_recipes'] = seperated_recipes
+    # convert variables into list of entires
+    seperated_variables = []
+    for entry in user_arguments_dict['wp_variables']:
+        # TODO change this to regex to account for spaces etc
+        if ';' in entry:
+            split_entry = entry.split(';')
+            for split in split_entry:
+                seperated_variables.append(split)
+        else:
+            seperated_variables.append(entry)
+    user_arguments_dict['wp_variables'] = seperated_variables
+
     logger.debug("addworkflowpattern, user_arguments_dict: " +
                  str(user_arguments_dict))
 
@@ -111,19 +137,20 @@ def main(client_id, user_arguments_dict):
     )
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
-    logger.debug("addworkflowpattern, cliend_id: %s accepted %s" %
+    logger.debug("addworkflowpattern, client_id: %s accepted %s" %
                  (client_id, accepted))
 
     # Extract inputs, output and type-filter
-    pattern_name, inputs_name, output_name, type_filter_name, recipe_name, \
-    vgrid_name = 'wp_name', 'wp_inputs', 'wp_output', 'wp_type_filters', \
-            'wp_recipes', 'vgrid_name'
+    pattern_name, inputs_name, output_name, recipe_name, variables_name, \
+    vgrid_name = 'wp_name', 'wp_inputs', 'wp_output', 'wp_recipes', \
+                 'wp_variables', 'vgrid_name'
 
     logger.debug("addworkflowpattern, accepted: " + str(accepted))
 
     inputs = accepted[inputs_name]
     output = accepted[output_name][-1]
     recipes = accepted[recipe_name]
+    variables_list = accepted[variables_name]
     pattern_name = accepted[pattern_name][-1]
     vgrid = accepted[vgrid_name][-1]
 
@@ -146,13 +173,52 @@ def main(client_id, user_arguments_dict):
              })
         return (output_objects, returnvalues.CLIENT_ERROR)
 
+    # sort out variables
+    variables_dict = {}
+    for variable in protected_pattern_variables:
+        variables_dict[variable] = '\"' + str(variable) + '\"'
+    for variable in variables_list:
+        try:
+            split = variable.split('=')
+            name, value = split[0], split[1]
+
+            if name in protected_pattern_variables:
+                output_objects.append({'object_type': 'error_text', 'text':
+                    '''variable %s is already defined by the system and 
+                    cannot be defined by a user. Please rename your 
+                    variable''' % name})
+                return (output_objects, returnvalues.CLIENT_ERROR)
+            if name in variables_dict.keys():
+                output_objects.append({'object_type': 'error_text', 'text':
+                    '''variable %s is defined multiple times. Please only 
+                    define a variable once''' % name})
+                return (output_objects, returnvalues.CLIENT_ERROR)
+            # try:
+            #     value = float(value)
+            # except ValueError:
+            #     pass
+            # try:
+            #     if int(value) == float(value):
+            #         value = int(value)
+            # except ValueError:
+            #     pass
+            variables_dict[name] = value
+        except:
+            output_objects.append({'object_type': 'error_text', 'text':
+                '''variable %s is incorrectly formatted. Should be one 
+                assignment of the form a=1''' % variable})
+            return (output_objects, returnvalues.CLIENT_ERROR)
+
+    logger.debug("addworkflowpattern, variables_dict: " + str(variables_dict))
+
     output_objects.append({'object_type': 'header', 'text':
                            ' Registering Pattern'})
     pattern = {
         'owner': client_id,
         'inputs': inputs,
         'output': output,
-        'recipes': recipes
+        'recipes': recipes,
+        'variables': variables_dict
     }
 
     logger.debug("addworkflowpattern, created pattern: " + str(pattern))

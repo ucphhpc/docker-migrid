@@ -1372,6 +1372,9 @@ def guess_type(name):
         for key in ('wp_name', 'wp_recipes'):
             __type_map[key] = lambda x: valid_alphanumeric(x, max_length=32)
 
+        for key in ('wp_variables', ):
+            __type_map[key] = lambda x: valid_printable(x, max_length=32)
+
         for key in ('wp_inputs', ):
             __type_map[key] = valid_path_patterns
 

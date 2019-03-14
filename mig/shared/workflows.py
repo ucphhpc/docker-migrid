@@ -81,6 +81,9 @@ valid_wr = {'persistence_id': str,
             'recipe': str
             }
 
+protected_pattern_variables = ['wf_input_file', 'wf_output_file']
+
+
 # TODO several of the following functions can probably be rolled together. If
 #  at the end of implementation this is still the case then do so
 
@@ -954,7 +957,8 @@ def rule_identification_from_pattern(configuration, client_id,
     # setup logger
     _logger = configuration.logger
     _logger.info('%s is identifying any possible tasks from pattern creation '
-                 '%s' % (client_id, workflow_pattern['name']))
+                 '%s: %s' % (client_id, workflow_pattern['name'],
+                             str(workflow_pattern)))
 
     # Currently multiple recipes are crudely chained together. This will need
     # to be altered once we move into other languages than python.
@@ -987,6 +991,9 @@ def rule_identification_from_pattern(configuration, client_id,
 
     # TODO do not create these triggers quite yet. possibly wait for some
     #  activation toggle?
+
+    _logger.info('creating trigger: ' + str(workflow_pattern) +
+                                            ' with recipe ' + complete_recipe)
 
     (trigger_status, trigger_msg) = create_trigger(configuration,
                                                    _logger,
@@ -1069,8 +1076,10 @@ def rule_identification_from_recipe(configuration, client_id, workflow_recipe,
     return activatable_patterns, incomplete_patterns
 
 
-def create_workflow_task_file(configuration, client_id, complete_recipe):
+def create_workflow_task_file(configuration, client_id, complete_recipe,
+                              variables):
     _logger = configuration.logger
+    _logger.debug("DELETE ME - variables: " + str(variables))
 
     client_dir = client_id_dir(client_id)
     task_home = get_workflow_task_home(configuration, client_dir)
@@ -1093,11 +1102,17 @@ def create_workflow_task_file(configuration, client_id, complete_recipe):
         file_name = generate_random_ascii(wr_id_length, charset=wr_id_charset)
         task_file_path = os.path.join(task_home, file_name)
 
+    task = ''
+    # add variables into recipe
+    for variable in variables.keys():
+        task += variable + " = " + str(variables[variable]) + "\n"
+    task += complete_recipe
+
     wrote = False
     msg = ''
     try:
         with open(task_file_path, 'w') as new_file:
-            new_file.write(complete_recipe)
+            new_file.write(task)
         # Mark as modified. Don't do this? We shouldn't modify this . . .
         # mark_workflow_r_modified(configuration, wr['persistence_id'])
         wrote = True
@@ -1128,9 +1143,16 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
     # TODO update the recipe with the arguments from the pattern before
     #  sending off for task creation
 
+    wf_input_file = "wf_input_file"
+    wf_output_file = "wf_output_file"
+
+    _logger.debug("DELETE ME - given pattern: " + str(pattern))
+    _logger.debug("DELETE ME - given recipe: " + str(complete_recipe))
+
     (task_file_status, msg) = create_workflow_task_file(configuration,
                                                         client_id,
-                                                        complete_recipe)
+                                                        complete_recipe,
+                                                        pattern['variables'])
     if not task_file_status:
         return False, msg
 
@@ -1138,11 +1160,12 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
     _logger.debug("DELETE ME - msg: " + str(msg))
     client_dir = client_id_dir(client_id)
     user_home_dir = os.path.join(configuration.user_home, client_dir)
-    trigger_path = msg.replace(user_home_dir, "")
+    task_path = msg.replace(user_home_dir, "")
 
     arguments_dict = {
         'EXECUTE': [
-            "python job.py",
+#            "python job.py",
+            "ls -la >> " + wf_output_file
         ],
         'NOTIFY': [
             "email: SETTINGS",
@@ -1161,17 +1184,17 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
             "1"
         ],
         'OUTPUTFILES': [
-            "someFile " + os.path.join("+TRIGGERVGRIDNAME+",
+            wf_output_file + " " + os.path.join("+TRIGGERVGRIDNAME+",
                                          os.path.join(pattern['output'],
                                                       "+TRIGGERFILENAME+")),
         ],
         'INPUTFILES': [
-            "+TRIGGERPATH+ input_file",
+            "+TRIGGERPATH+ " + wf_input_file,
         ],
         'EXECUTABLES': [
             # msg + " job.py"
             # "aPythonFile.py job.py"
-            trigger_path + " job.py"
+            task_path + " job.py"
         ]
     }
     external_dict = get_keywords_dict(configuration)

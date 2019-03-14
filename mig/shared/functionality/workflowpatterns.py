@@ -82,7 +82,8 @@ def workflow_patterns_table(configuration, client_id, output_objects):
             'name': wp['name'],
             'inputs': '\n '.join(wp['inputs']),
             'output': wp['output'],
-            'recipes': wp['recipes']
+            'recipes': wp['recipes'],
+            'variables': wp['variables']
         }
 
         # Prepare name link

@@ -1380,6 +1380,7 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
         <th>Monitored Input(s)</th>
         <th>Output</th>
         <th>Recipe(s)</th>
+        <th>Variable(s)</th>
     </tr>
 </thead>
 <tbody>
@@ -1387,12 +1388,13 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
             for single_wp in workflowpatterns:
                 lines.append('''
 <tr>
-<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>
+<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>
 </tr>''' % (html_link(single_wp.get('delwplink', '')),
             html_link(single_wp.get('namelink', '')),
             single_wp.get('inputs', ''),
             single_wp.get('output', ''),
-            single_wp.get('recipes', '')))
+            single_wp.get('recipes', ''),
+            single_wp.get('variables', '')))
             lines.append('''
 </tbody>
 </table>''')
