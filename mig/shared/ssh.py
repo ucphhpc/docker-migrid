@@ -108,14 +108,14 @@ def copy_file_to_resource(
     using scp.
     """
 
-    logger.debug("DELETE ME (SSH.PY) - copy_file_to_resource")
-
-    logger.debug("DELETE ME (SSH.PY) - local_path: " + local_path)
-    logger.debug("DELETE ME (SSH.PY) - dest_path: " + dest_path)
+    # logger.debug("DELETE ME (SSH.PY) - copy_file_to_resource")
+    #
+    # logger.debug("DELETE ME (SSH.PY) - local_path: " + local_path)
+    # logger.debug("DELETE ME (SSH.PY) - dest_path: " + dest_path)
     text_file = open(local_path, 'r')
     file_text = text_file.read()
     text_file.close()
-    logger.debug("DELETE ME (SSH.PY) - file: " + file_text)
+    # logger.debug("DELETE ME (SSH.PY) - file: " + file_text)
 
     configuration = get_configuration_object()
     local_filename = os.path.basename(local_path)
@@ -175,7 +175,7 @@ def copy_file_to_resource(
     text_file = open(local_path, 'r')
     file_text = text_file.read()
     text_file.close()
-    logger.debug("DELETE ME (SSH.PY) - file: " + file_text)
+    # logger.debug("DELETE ME (SSH.PY) - file: " + file_text)
 
     # NOTE: we use scp command list here to avoid shell requirement
     scp_proc = subprocess_popen(scp_command_list,

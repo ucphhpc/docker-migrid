@@ -1164,8 +1164,8 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
 
     arguments_dict = {
         'EXECUTE': [
-#            "python job.py",
-            "ls -la >> " + wf_output_file
+            "python job.py",
+#            "ls -la >> " + wf_output_file
         ],
         'NOTIFY': [
             "email: SETTINGS",
