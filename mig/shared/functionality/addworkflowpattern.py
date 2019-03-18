@@ -43,7 +43,8 @@ from shared.init import initialize_main_variables
 from shared.handlers import safe_handler, get_csrf_limit
 from shared.functional import validate_input_and_cert
 from shared.workflows import create_workflow_pattern, \
-    rule_identification_from_pattern, protected_pattern_variables
+    rule_identification_from_pattern, protected_pattern_variables, \
+    get_wp_with, update_workflow_pattern, WF_PATTERN_NAME
 from shared.safeinput import REJECT_UNSET
 
 
@@ -176,7 +177,10 @@ def main(client_id, user_arguments_dict):
     # sort out variables
     variables_dict = {}
     for variable in protected_pattern_variables:
-        variables_dict[variable] = '\"' + str(variable) + '\"'
+        if variable == WF_PATTERN_NAME:
+            variables_dict[variable] = '\"' + pattern_name + '\"'
+        else:
+            variables_dict[variable] = '\"' + str(variable) + '\"'
     for variable in variables_list:
         try:
             split = variable.split('=')
@@ -226,6 +230,24 @@ def main(client_id, user_arguments_dict):
     # Add optional userprovided name
     if pattern_name:
         pattern['name'] = pattern_name
+        existing_pattern = get_wp_with(configuration,
+                                        client_id=client_id,
+                                        name=pattern_name)
+        if existing_pattern is not None:
+            logger.debug("addworkflowpattern, DELETE ME - existing patterns: "
+                         + str(existing_pattern))
+            persistence_id = existing_pattern['persistence_id']
+            updated, msg = update_workflow_pattern(configuration,
+                                                   client_id,
+                                                   pattern,
+                                                   persistence_id)
+            if not updated:
+                output_objects.append({'object_type': 'error_text',
+                                       'text': msg})
+                return (output_objects, returnvalues.SYSTEM_ERROR)
+            output_objects.append({'object_type': 'text',
+                                   'text': "Successfully updated the pattern"})
+            return (output_objects, returnvalues.OK)
 
     created, msg = create_workflow_pattern(configuration,
                                            client_id,

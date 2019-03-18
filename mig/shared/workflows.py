@@ -81,7 +81,10 @@ valid_wr = {'persistence_id': str,
             'recipe': str
             }
 
-protected_pattern_variables = ['wf_input_file', 'wf_output_file']
+WF_INPUT, WF_OUTPUT, WF_PATTERN_NAME = \
+    'wf_input_file', 'wf_output_file', 'wf_pattern_name'
+
+protected_pattern_variables = [WF_INPUT, WF_OUTPUT, WF_PATTERN_NAME]
 
 
 # TODO several of the following functions can probably be rolled together. If
@@ -934,19 +937,119 @@ def create_workflow_recipe(configuration, client_id, wr):
                  (client_id, wr_file_path))
     return True, ''
 
-    pass
+
+def update_workflow_pattern(configuration, client_id, pattern, persistence_id):
+    _logger = configuration.logger
+    _logger.debug("WP: update_workflow_pattern, client_id: %s, pattern: %s"
+                  % (client_id, pattern))
+
+    if not client_id:
+        msg = "A workflow pattern create dependency was missing"
+        _logger.error("WP: update_workflow_pattern, client_id was not set %s" %
+                      client_id)
+        return (False, msg)
+
+    correct, msg = __correct_wp(configuration, pattern)
+    if not correct:
+        return (correct, msg)
+
+    # TODO check for create required keys
+    client_dir = client_id_dir(client_id)
+    wp_home = get_workflow_pattern_home(configuration, client_dir)
+    wp_file_path = os.path.join(wp_home, persistence_id)
+
+    pattern['persistence_id'] = persistence_id
+    # Save the pattern
+    wrote = False
+    msg = ''
+    try:
+        with open(wp_file_path, 'w') as j_file:
+            json.dump(pattern, j_file, indent=0)
+
+        # Mark as modified
+        mark_workflow_p_modified(configuration, pattern['persistence_id'])
+        wrote = True
+        _logger.debug('marking editted pattern ' + pattern['persistence_id'] +
+                      ' as modified')
+    except Exception, err:
+        _logger.error('WP: failed to write %s to disk %s' % (
+            wp_file_path, err))
+        msg = 'Failed to save your workflow pattern, '
+        'please try and resubmit it'
+
+    # This will want changed, we don't want to delete a working recipe just
+    # because we can't updated it
+    if not wrote:
+        # Ensure that the failed write does not stick around
+        try:
+            os.remove(wp_file_path)
+        except Exception, err:
+            _logger.error('WP: failed to remove the dangling wp: %s %s'
+                          % (wp_file_path, err))
+            msg += '\n Failed to cleanup after a failed workflow creation'
+        return (False, msg)
+
+    _logger.info('WP: %s updated at: %s ' %
+                 (client_id, wp_file_path))
+    return (True, '')
 
 
-# TODO, implement
-def update_workflow_pattern(configuration, client_id, name):
-    """Update a workflow pattern"""
-    pass
-
-
-# TODO, implement
-def update_workflow_recipes(configuration, client_id, name):
+def update_workflow_recipes(configuration, client_id, recipe, persistence_id):
     """Update a workflow recipe"""
-    pass
+
+    _logger = configuration.logger
+    _logger.debug("WR: update_workflow_recipe, client_id: %s, recipe: %s"
+                  % (client_id, recipe))
+
+    if not client_id:
+        msg = "A workflow recipe update dependency was missing"
+        _logger.error(
+            "WR: update_workflow_recipe, client_id was not set %s" % client_id)
+        return False, msg
+
+    correct, msg = __correct_wr(configuration, recipe)
+    if not correct:
+        return correct, msg
+
+    client_dir = client_id_dir(client_id)
+    wr_home = get_workflow_recipe_home(configuration, client_dir)
+    wr_file_path = os.path.join(wr_home, persistence_id)
+
+    recipe['persistence_id'] = persistence_id
+    # Save the recipe
+    wrote = False
+    _logger.debug('DELETE ME - wr to be saved:' + str(recipe))
+
+    msg = ''
+    try:
+        with open(wr_file_path, 'w') as j_file:
+            json.dump(recipe, j_file, indent=0)
+
+        _logger.debug('DELETE ME - marking recipe as modified')
+        # Mark as modified
+        mark_workflow_r_modified(configuration, recipe['persistence_id'])
+        wrote = True
+    except Exception, err:
+        _logger.error('WR: failed to write %s to disk %s' % (
+            wr_file_path, err))
+        msg = 'Failed to save your workflow recipe, '
+        'please try and resubmit it'
+
+    # This will want changed, we don't want to delete a working recipe just
+    # because we can't updated it
+    if not wrote:
+        # Ensure that the failed write does not stick around
+        try:
+            os.remove(wr_file_path)
+        except Exception, err:
+            _logger.error('WR: failed to remove the dangling wr: %s %s'
+                          % (wr_file_path, err))
+            msg += '\n Failed to cleanup after a failed workflow update'
+        return False, msg
+
+    _logger.info('WR: %s updated at: %s ' %
+                 (client_id, wr_file_path))
+    return True, ''
 
 
 def rule_identification_from_pattern(configuration, client_id,
@@ -1143,9 +1246,6 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
     # TODO update the recipe with the arguments from the pattern before
     #  sending off for task creation
 
-    wf_input_file = "wf_input_file"
-    wf_output_file = "wf_output_file"
-
     _logger.debug("DELETE ME - given pattern: " + str(pattern))
     _logger.debug("DELETE ME - given recipe: " + str(complete_recipe))
 
@@ -1164,8 +1264,7 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
 
     arguments_dict = {
         'EXECUTE': [
-            "python job.py",
-#            "ls -la >> " + wf_output_file
+            "python wf_job.py",
         ],
         'NOTIFY': [
             "email: SETTINGS",
@@ -1184,17 +1283,15 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
             "1"
         ],
         'OUTPUTFILES': [
-            wf_output_file + " " + os.path.join("+TRIGGERVGRIDNAME+",
+            WF_OUTPUT + " " + os.path.join("+TRIGGERVGRIDNAME+",
                                          os.path.join(pattern['output'],
                                                       "+TRIGGERFILENAME+")),
         ],
         'INPUTFILES': [
-            "+TRIGGERPATH+ " + wf_input_file,
+            "+TRIGGERPATH+ " + WF_INPUT,
         ],
         'EXECUTABLES': [
-            # msg + " job.py"
-            # "aPythonFile.py job.py"
-            task_path + " job.py"
+            task_path + " wf_job.py"
         ]
     }
     external_dict = get_keywords_dict(configuration)
