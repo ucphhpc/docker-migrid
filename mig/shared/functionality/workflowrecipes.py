@@ -84,7 +84,8 @@ def workflow_recipes_table(configuration, client_id, output_objects):
         wr = {
             'object_type': wr['object_type'],
             'name': wr['name'],
-            'recipe': wr['recipe']
+            'recipe': wr['recipe'],
+            'triggers': wr['triggers']
         }
 
         # Prepare name link

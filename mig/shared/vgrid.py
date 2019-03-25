@@ -954,6 +954,11 @@ def vgrid_list(vgrid_name, group, configuration, recursive=True,
         name_path = os.path.join(configuration.vgrid_home, vgrid_dir, name)
         (status, msg) = list_items_in_pickled_list(name_path, _logger,
                                                    allow_missing)
+
+        _logger.debug("DELETE ME - group: " + str(group))
+        _logger.debug("DELETE ME - items list(status): " + str(status))
+        _logger.debug("DELETE ME - items list(msg): " + str(msg))
+
         if status:
 
             # msg is a list

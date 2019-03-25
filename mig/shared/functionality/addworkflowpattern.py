@@ -38,7 +38,7 @@ import json
 import shared.returnvalues as returnvalues
 
 from shared.base import valid_dir_input
-from shared.defaults import csrf_field
+from shared.defaults import csrf_field, wp_id_charset, wp_id_length
 from shared.init import initialize_main_variables
 from shared.handlers import safe_handler, get_csrf_limit
 from shared.functional import validate_input_and_cert
@@ -46,6 +46,7 @@ from shared.workflows import create_workflow_pattern, \
     rule_identification_from_pattern, protected_pattern_variables, \
     get_wp_with, update_workflow_pattern, WF_PATTERN_NAME
 from shared.safeinput import REJECT_UNSET
+from shared.pwhash import generate_random_ascii
 
 
 def signature():
@@ -148,14 +149,18 @@ def main(client_id, user_arguments_dict):
 
     logger.debug("addworkflowpattern, accepted: " + str(accepted))
 
-    inputs = accepted[inputs_name]
+    input = accepted[inputs_name][-1]
     output = accepted[output_name][-1]
     recipes = accepted[recipe_name]
     variables_list = accepted[variables_name]
-    pattern_name = accepted[pattern_name][-1]
+    name = accepted[pattern_name][-1]
     vgrid = accepted[vgrid_name][-1]
 
-    paths = inputs + [output]
+    logger.debug('pattern name: ' + str(name))
+    if name == '':
+        name = generate_random_ascii(wp_id_length, charset=wp_id_charset)
+
+    paths = [input] + [output]
     for path in paths:
         if not valid_dir_input(configuration.user_home, path):
             logger.warning(
@@ -178,40 +183,41 @@ def main(client_id, user_arguments_dict):
     variables_dict = {}
     for variable in protected_pattern_variables:
         if variable == WF_PATTERN_NAME:
-            variables_dict[variable] = '\"' + pattern_name + '\"'
+            variables_dict[variable] = '\"' + name + '\"'
         else:
             variables_dict[variable] = '\"' + str(variable) + '\"'
-    for variable in variables_list:
-        try:
-            split = variable.split('=')
-            name, value = split[0], split[1]
+    if variables_list != ['']:
+        for variable in variables_list:
+            try:
+                split = variable.split('=')
+                key, value = split[0], split[1]
 
-            if name in protected_pattern_variables:
+                if key in protected_pattern_variables:
+                    output_objects.append({'object_type': 'error_text', 'text':
+                        '''variable %s is already defined by the system and 
+                        cannot be defined by a user. Please rename your 
+                        variable''' % key})
+                    return (output_objects, returnvalues.CLIENT_ERROR)
+                if key in variables_dict.keys():
+                    output_objects.append({'object_type': 'error_text', 'text':
+                        '''variable %s is defined multiple times. Please only 
+                        define a variable once''' % key})
+                    return (output_objects, returnvalues.CLIENT_ERROR)
+                # try:
+                #     value = float(value)
+                # except ValueError:
+                #     pass
+                # try:
+                #     if int(value) == float(value):
+                #         value = int(value)
+                # except ValueError:
+                #     pass
+                variables_dict[key] = value
+            except:
                 output_objects.append({'object_type': 'error_text', 'text':
-                    '''variable %s is already defined by the system and 
-                    cannot be defined by a user. Please rename your 
-                    variable''' % name})
+                    '''variable %s is incorrectly formatted. Should be one 
+                    assignment of the form a=1''' % variable})
                 return (output_objects, returnvalues.CLIENT_ERROR)
-            if name in variables_dict.keys():
-                output_objects.append({'object_type': 'error_text', 'text':
-                    '''variable %s is defined multiple times. Please only 
-                    define a variable once''' % name})
-                return (output_objects, returnvalues.CLIENT_ERROR)
-            # try:
-            #     value = float(value)
-            # except ValueError:
-            #     pass
-            # try:
-            #     if int(value) == float(value):
-            #         value = int(value)
-            # except ValueError:
-            #     pass
-            variables_dict[name] = value
-        except:
-            output_objects.append({'object_type': 'error_text', 'text':
-                '''variable %s is incorrectly formatted. Should be one 
-                assignment of the form a=1''' % variable})
-            return (output_objects, returnvalues.CLIENT_ERROR)
 
     logger.debug("addworkflowpattern, variables_dict: " + str(variables_dict))
 
@@ -219,20 +225,21 @@ def main(client_id, user_arguments_dict):
                            ' Registering Pattern'})
     pattern = {
         'owner': client_id,
-        'inputs': inputs,
+        'inputs': input,
         'output': output,
         'recipes': recipes,
-        'variables': variables_dict
+        'variables': variables_dict,
+        'vgrids': vgrid
     }
 
     logger.debug("addworkflowpattern, created pattern: " + str(pattern))
 
     # Add optional userprovided name
-    if pattern_name:
-        pattern['name'] = pattern_name
+    if name:
+        pattern['name'] = name
         existing_pattern = get_wp_with(configuration,
                                         client_id=client_id,
-                                        name=pattern_name)
+                                        name=name)
         if existing_pattern is not None:
             logger.debug("addworkflowpattern, DELETE ME - existing patterns: "
                          + str(existing_pattern))
@@ -261,7 +268,9 @@ def main(client_id, user_arguments_dict):
                            'text': "Successfully registered the pattern"})
 
     activatable, msg = rule_identification_from_pattern(configuration,
-                                                    client_id, pattern, vgrid)
+                                                        client_id,
+                                                        pattern,
+                                                        True)
 
     if activatable:
         output_objects.append({'object_type': 'text',

@@ -1381,6 +1381,7 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
         <th>Output</th>
         <th>Recipe(s)</th>
         <th>Variable(s)</th>
+        <th>Trigger</th>
     </tr>
 </thead>
 <tbody>
@@ -1388,13 +1389,14 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
             for single_wp in workflowpatterns:
                 lines.append('''
 <tr>
-<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>
+<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>
 </tr>''' % (html_link(single_wp.get('delwplink', '')),
             html_link(single_wp.get('namelink', '')),
             single_wp.get('inputs', ''),
             single_wp.get('output', ''),
             single_wp.get('recipes', ''),
-            single_wp.get('variables', '')))
+            single_wp.get('variables', ''),
+            single_wp.get('trigger', '')))
             lines.append('''
 </tbody>
 </table>''')
@@ -1413,6 +1415,8 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
     <h4>%(variables)s</h4>
     <h3>Recipes</h3>
     <h4>%(recipes)s</h4>
+    <h3>Trigger</h3>
+    <h4>%(triggers)s</h4>
 </div>''' % wp)
 
         elif i['object_type'] == 'workflowrecipes':
@@ -1425,6 +1429,7 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
                 <th>Actions</th>            
                 <th>Name</th>
                 <th>Recipe</th>
+                <th>Trigger(s)</th>
             </tr>
         </thead>
         <tbody>
@@ -1432,10 +1437,11 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
             for single_wr in workflowrecipes:
                 lines.append('''
         <tr>
-        <td>%s</td><td>%s</td><td>%s</td>
+        <td>%s</td><td>%s</td><td>%s</td><td>%s</td>
         </tr>''' % (html_link(single_wr.get('delwrlink', '')),
                     html_link(single_wr.get('namelink', '')),
-                    single_wr.get('recipe', '')))
+                    single_wr.get('recipe', ''),
+                    single_wr.get('triggers', '')))
             lines.append('''
         </tbody>
         </table>''')
@@ -1448,6 +1454,8 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
             <h3>Recipe: %(name)s</h3>
             <h3>Recipe</h3>
             <h4>%(recipe)s</h4>
+            <h3>Trigger(s)</h3>
+            <h4>%(trigger)s</h4>
         </div>''' % wr)
         elif i['object_type'] == 'frozenarchives':
             frozenarchives = i['frozenarchives']

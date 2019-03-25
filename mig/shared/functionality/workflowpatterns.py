@@ -80,10 +80,11 @@ def workflow_patterns_table(configuration, client_id, output_objects):
         wp = {
             'object_type': wp['object_type'],
             'name': wp['name'],
-            'inputs': '\n '.join(wp['inputs']),
+            'inputs': wp['inputs'],
             'output': wp['output'],
             'recipes': wp['recipes'],
-            'variables': wp['variables']
+            'variables': wp['variables'],
+            'trigger': wp['trigger']
         }
 
         # Prepare name link

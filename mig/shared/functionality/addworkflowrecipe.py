@@ -43,7 +43,7 @@ from shared.init import initialize_main_variables
 from shared.handlers import safe_handler, get_csrf_limit
 from shared.functional import validate_input_and_cert
 from shared.workflows import create_workflow_recipe, \
-    rule_identification_from_recipe, get_wr_with, update_workflow_recipes
+    rule_identification_from_recipe, get_wr_with, update_workflow_recipe
 from shared.safeinput import REJECT_UNSET
 
 
@@ -200,7 +200,8 @@ def main(client_id, user_arguments_dict):
                            ' Registering Recipe'})
     recipe = {
         'recipe': recipe_code,
-        'owner': client_id
+        'owner': client_id,
+        'vgrids': vgrid
     }
     # Add optional userprovided name
     if recipe_name:
@@ -213,10 +214,10 @@ def main(client_id, user_arguments_dict):
             logger.debug("addworkflowrecipe, DELETE ME - existing recipe: "
                          + str(existing_recipe))
             persistence_id = existing_recipe['persistence_id']
-            updated, msg = update_workflow_recipes(configuration,
-                                                   client_id,
-                                                   recipe,
-                                                   persistence_id)
+            updated, msg = update_workflow_recipe(configuration,
+                                                  client_id,
+                                                  recipe,
+                                                  persistence_id)
 
             if not updated:
                 output_objects.append({'object_type': 'error_text',
@@ -238,8 +239,10 @@ def main(client_id, user_arguments_dict):
                            'text': "Successfully registered the recipe"})
 
     activated_patterns, incomplete_patterns = \
-        rule_identification_from_recipe(configuration, client_id, recipe,
-                                        vgrid)
+        rule_identification_from_recipe(configuration,
+                                        client_id,
+                                        recipe,
+                                        True)
 
     for incomplete in incomplete_patterns:
         output_objects.append({'object_type': 'text',
