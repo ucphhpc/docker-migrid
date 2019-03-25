@@ -1372,14 +1372,23 @@ def rule_deletion_from_recipe(configuration, client_id, wr):
                         _logger.info('%s removed trigger: %s' % (client_id,
                                                                  trigger_id))
                     break
+
+            _logger.debug("DELETE ME rule_deletion_from_recipe about to start updating trigger list: " + str(recipe_list))
             # delete the reference to the trigger for these recipes
             for recipe_name in recipe_list:
+                _logger.debug(
+                    "DELETE ME rule_deletion_from_recipe considering " + recipe_name)
                 recipe = get_wr_with(configuration,
                                      client_id=client_id,
                                      persistence_id=recipe_name)
-                new_recipe_variables = recipe['triggers']
-                new_recipe_variables.pop(str(vgrid_name + trigger_id), None)
-
+                _logger.debug(
+                    "DELETE ME rule_deletion_from_recipe recipe: " + str(recipe))
+                new_recipe_variables = {
+                    'triggers': recipe['triggers']
+                }
+                new_recipe_variables['triggers'].pop(
+                    str(vgrid_name + trigger_id),
+                    None)
                 update_workflow_recipe(configuration,
                                        client_id,
                                        new_recipe_variables,
