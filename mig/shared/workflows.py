@@ -28,6 +28,7 @@
 
 """Workflow functions"""
 
+import copy
 import fcntl
 import json
 import os
@@ -209,6 +210,7 @@ def __load_wp(configuration, wp_path):
         wp = force_utf8_rec(wp)
         correct, _ = __correct_wp(configuration, wp)
         if correct:
+            _logger.debug('DElETE ME - loaded wp: ' + str(wp))
             return wp
     return {}
 
@@ -276,25 +278,48 @@ def __refresh_map(configuration, to_refresh):
     workflow_map, map_stamp = __load_map(configuration, to_refresh,
                                              do_lock=False)
 
+    _logger.debug('DELETE ME - workflow_map: ' + str(workflow_map))
+    _logger.debug('DELETE ME - map_stamp: ' + str(map_stamp))
+
     # Find all workflow objectss
     (load_status, all_objects) = __list_path(configuration, to_refresh)
+    _logger.debug('DELETE ME - load_status: ' + str(load_status))
+    _logger.debug('DELETE ME - all_objects: ' + str(all_objects))
     if not load_status:
         _logger.warning('Workflows: failed to load list: %s' % all_objects)
         return workflow_map
 
     for workflow_dir, workflow_file in all_objects:
+        _logger.debug('DELETE ME - workflow_dir: ' + str(workflow_dir))
+        _logger.debug('DELETE ME - workflow_file: ' + str(workflow_file))
         wp_mtime = os.path.getmtime(os.path.join(workflow_dir, workflow_file))
+        _logger.debug('DELETE ME - wp_mtime : ' + str(wp_mtime))
+        _logger.debug('DELETE ME - map_stamp: ' + str(map_stamp))
+        _logger.debug('DELETE ME - raw wp_mtime : %s' % wp_mtime)
+        _logger.debug('DELETE ME - raw map_stamp: %s' % map_stamp)
+        _logger.debug('DELETE ME - 10dp wp_mtime : %.10f' % wp_mtime)
+        _logger.debug('DELETE ME - 10dp map_stamp: %.10f' % map_stamp)
 
         # init first time
         workflow_map[workflow_file] = workflow_map.get(workflow_file, {})
+        if CONF not in workflow_map[workflow_file]:
+            _logger.debug('DELETE ME - CONF is not in workflow_map[workflow_file]: ' + str(workflow_map[workflow_file]))
+        if wp_mtime >= map_stamp:
+            _logger.debug('DELETE ME - wp_mtime is greater than or equal to map_stamp: ' + str(wp_mtime) + ' ' + str(map_stamp))
+        _logger.debug(str(wp_mtime >= map_stamp))
+
         if CONF not in workflow_map[workflow_file] or wp_mtime >= map_stamp:
             object = ''
             if to_refresh == 'pattern':
                 object = __load_wp(configuration, os.path.join(workflow_dir,
                                                                workflow_file))
+                _logger.debug(
+                    'DELETE ME - pattern object: ' + str(object))
             elif to_refresh == 'recipe':
                 object = __load_wr(configuration, os.path.join(workflow_dir,
                                                                workflow_file))
+                _logger.debug(
+                    'DELETE ME - recipe object: ' + str(object))
             workflow_map[workflow_file][CONF] = object
             workflow_map[workflow_file][MODTIME] = map_stamp
             dirty.append([workflow_file])
@@ -804,6 +829,8 @@ def create_workflow_pattern(configuration, client_id, wp):
                   % wp['name']
             return (False, msg)
 
+
+    # TODO update how this is done
     clients_patterns = get_wp_with(configuration,
                                    client_id=client_id,
                                    first=False,
@@ -929,6 +956,8 @@ def create_workflow_recipe(configuration, client_id, wr):
     if not correct:
         return correct, msg
 
+    # TODO update how this is done
+
     # TODO make this work. Currently allowing multiple recipes with the same
     #  name
     client_dir = client_id_dir(client_id)
@@ -1021,7 +1050,10 @@ def update_workflow_pattern(configuration, client_id, new_pattern_variables, per
                            owner=client_id,
                            persistence_id=persistence_id)
 
-    preexisting_trigger = pattern['trigger']
+    if 'trigger' in pattern:
+        preexisting_trigger = pattern['trigger']
+    else:
+        preexisting_trigger = False
 
     _logger.debug('update_workflow_pattern, got pattern: ' + str(pattern))
     _logger.debug('update_workflow_pattern, applying variables: '
@@ -1236,14 +1268,6 @@ def rule_identification_from_recipe(configuration,
                            first=False,
                            owner=client_id,
                            vgrids=vgrid)
-
-    patterns2 = get_wp_with(configuration,
-                           client_id=client_id,
-                           first=False,
-                           owner=client_id,
-                           vgrids=vgrid)
-    _logger.info('DELETE ME - patterns: ' + str(patterns))
-    _logger.info('DELETE ME - patterns2: ' + str(patterns2))
 
     # Check if patterns exist already within system that need this recipe
     if not patterns:
@@ -1576,7 +1600,7 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
     # mark pattern and recipes as having created this trigger
     _logger.debug("DELETE ME - pattern: " + str(pattern))
 
-    _logger.debug("DELETE ME - updating patern and recipe(s) with trigger "
+    _logger.debug("DELETE ME - updating pattern and recipe(s) with trigger "
                   "reference")
 
     new_pattern_variables = {
@@ -1612,30 +1636,34 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
     if apply_retroactive:
         for root, dirs, files in os.walk(vgrid_files_home, topdown=False):
             for name in files:
+                _logger.debug("DELETE ME - retroactively spotted " + name)
                 file_path = os.path.join(root, name)
                 if regex.match(file_path):
-                    _logger.debug("DELETE ME - found file " + file_path)
-                    relative_path = file_path.replace(vgrid_files_home, '')
-                    _logger.debug("DELETE ME - relative_path " + relative_path)
-                    file_arguments_dict = arguments_dict
+                    relative_path = file_path.replace(
+                        configuration.vgrid_files_home, ''
+                    )
+                    _logger.debug("DELETE ME - relative_path: " + relative_path)
+
+                    file_arguments_dict = copy.deepcopy(arguments_dict)
+                    _logger.debug("DELETE ME - file_arguments_dict: " + str(file_arguments_dict))
+
                     for argument in file_arguments_dict.keys():
                         for index, element in enumerate(
                                 file_arguments_dict[argument]):
                             if '+TRIGGERPATH+' in element:
                                 file_arguments_dict[argument][index] = \
-                                    file_arguments_dict[argument][index].replace(
-                                        '+TRIGGERPATH+',
-                                        relative_path)
+                                    file_arguments_dict[argument][index]\
+                                        .replace('+TRIGGERPATH+', relative_path)
                             if '+TRIGGERFILENAME+' in element:
                                 file_arguments_dict[argument][index] = \
-                                    file_arguments_dict[argument][index].replace(
-                                        '+TRIGGERFILENAME+',
-                                        name)
+                                    file_arguments_dict[argument][index]\
+                                        .replace('+TRIGGERFILENAME+', name)
                             if '+TRIGGERVGRIDNAME+' in element:
                                 file_arguments_dict[argument][index] = \
                                     file_arguments_dict[argument][index].replace(
                                         '+TRIGGERVGRIDNAME+', vgrid)
                     mrsl = fields_to_mrsl(configuration, file_arguments_dict, external_dict)
+                    _logger.debug('DELETE ME - mRSL: ' + mrsl)
                     (file_handle, real_path) = tempfile.mkstemp(text=True)
                     # relative_path = os.path.basename(real_path)
                     os.write(file_handle, mrsl)
