@@ -324,8 +324,6 @@ def __refresh_map(configuration, to_refresh):
             workflow_map[workflow_file][MODTIME] = map_stamp
             dirty.append([workflow_file])
 
-            # TODO complete this
-
     # Remove any missing workflow patterns from map
     missing_workflow = [workflow_file for workflow_file in workflow_map.keys()
                   if workflow_file not in [_workflow_file for _workflow_path, _workflow_file in
@@ -829,33 +827,29 @@ def create_workflow_pattern(configuration, client_id, wp):
                   % wp['name']
             return (False, msg)
 
-
-    # TODO update how this is done
+    # TODO apply this to pattern as well
+    # need to still check variables as they might not match exactly
     clients_patterns = get_wp_with(configuration,
                                    client_id=client_id,
                                    first=False,
-                                   owner=client_id)
+                                   owner=client_id,
+                                   inputs=wp['inputs'],
+                                   output=wp['output'],
+                                   vgrids=wp['vgrids'])
     _logger.debug('clients_patterns: ' + str(clients_patterns))
     _logger.debug('wp: ' + str(wp))
-
-    # Is there a less intrusive way to do this? manually checking each
-    # pattern is a pain
     for pattern in clients_patterns:
-        _logger.debug('looking for identical pattern: ' + str(pattern))
         pattern_matches = True
-        for variable in wp:
-            if variable != 'name':
-                _logger.debug('considering variable: ' + str(variable))
+        for variable in wp['variables'].keys():
+            # ignore wf_pattern_name variable
+            if variable != WF_PATTERN_NAME:
+                _logger.debug("DELETE ME looking at variable " + str(variable))
                 try:
-                    if not wp[variable] == pattern[variable]:
+                    if pattern['variables'][variable] \
+                            != wp['variables'][variable]:
                         pattern_matches = False
-                        _logger.debug('variables are not the same')
-                    else:
-                        _logger.debug('variables are the same')
-
-                except:
-                    _logger.debug('WP: could not find variable ' + variable +
-                                  ' in  pattern: ' + str(pattern))
+                        _logger.debug("DELETE ME doesn't match")
+                except KeyError:
                     pattern_matches = False
         if pattern_matches:
             _logger.error("WP: an identical pattern already exists")
@@ -864,7 +858,6 @@ def create_workflow_pattern(configuration, client_id, wp):
             return (False, msg)
         else:
             _logger.debug('patterns are not identical')
-
 
     wp_home = get_workflow_pattern_home(configuration, client_dir)
     if not os.path.exists(wp_home):
@@ -1636,17 +1629,12 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
     if apply_retroactive:
         for root, dirs, files in os.walk(vgrid_files_home, topdown=False):
             for name in files:
-                _logger.debug("DELETE ME - retroactively spotted " + name)
                 file_path = os.path.join(root, name)
                 if regex.match(file_path):
                     relative_path = file_path.replace(
                         configuration.vgrid_files_home, ''
                     )
-                    _logger.debug("DELETE ME - relative_path: " + relative_path)
-
                     file_arguments_dict = copy.deepcopy(arguments_dict)
-                    _logger.debug("DELETE ME - file_arguments_dict: " + str(file_arguments_dict))
-
                     for argument in file_arguments_dict.keys():
                         for index, element in enumerate(
                                 file_arguments_dict[argument]):
@@ -1663,7 +1651,6 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
                                     file_arguments_dict[argument][index].replace(
                                         '+TRIGGERVGRIDNAME+', vgrid)
                     mrsl = fields_to_mrsl(configuration, file_arguments_dict, external_dict)
-                    _logger.debug('DELETE ME - mRSL: ' + mrsl)
                     (file_handle, real_path) = tempfile.mkstemp(text=True)
                     # relative_path = os.path.basename(real_path)
                     os.write(file_handle, mrsl)
