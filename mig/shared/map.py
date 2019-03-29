@@ -41,10 +41,17 @@ def load_system_map(configuration, kind, do_lock):
         lock_handle = open(lock_path, 'a')
         fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
     try:
-        configuration.logger.info("before %s map load" % kind)
+        configuration.logger.info("map.py before %s map load" % kind)
         entity_map = load(map_path)
-        configuration.logger.info("after %s map load" % kind)
+        configuration.logger.info("map.py after %s map load" % kind)
         map_stamp = os.path.getmtime(map_path)
+
+        configuration.logger.info("DELETE ME - START POINT")
+        configuration.logger.info("DELETE ME - map_stamp: " + str(map_stamp))
+        configuration.logger.info("DELETE ME - map_path: " + str(map_path))
+        configuration.logger.info("DELETE ME - entity_map: " + str(entity_map))
+        configuration.logger.info("DELETE ME - END POINT")
+
     except IOError:
         configuration.logger.warn("No %s map to load" % kind)
         entity_map = {}

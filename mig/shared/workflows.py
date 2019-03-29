@@ -293,9 +293,23 @@ def __refresh_map(configuration, to_refresh):
         return workflow_map
 
     for workflow_dir, workflow_file in all_objects:
+        workflow_map[workflow_file] = workflow_map.get(workflow_file, {})
+
         _logger.debug('DELETE ME - workflow_dir: ' + str(workflow_dir))
         _logger.debug('DELETE ME - workflow_file: ' + str(workflow_file))
+        # the previous way of calculating wp_mtime isn't 'accurate' enough.
+        # When identifying from pattern creation it takes lone enough some
+        # overlap can occur. This has been changed to the new way shown below,
+        # but the old method is left unless UNFORESEEN CONSEQUENCES OCCUR.
         wp_mtime = os.path.getmtime(os.path.join(workflow_dir, workflow_file))
+        # if MODTIME not in workflow_map[workflow_file]:
+        #     wp_mtime = os.path.getmtime(
+        #         os.path.join(workflow_dir, workflow_file))
+        # else:
+        #     _logger.debug('DELETE ME - workflow_map[workflow_file]: '
+        #                   + str(workflow_map[workflow_file]))
+        #     wp_mtime = workflow_map[workflow_file][MODTIME]
+
         _logger.debug('DELETE ME - wp_mtime : ' + str(wp_mtime))
         _logger.debug('DELETE ME - map_stamp: ' + str(map_stamp))
         _logger.debug('DELETE ME - raw wp_mtime : %s' % wp_mtime)
@@ -304,7 +318,6 @@ def __refresh_map(configuration, to_refresh):
         _logger.debug('DELETE ME - 10dp map_stamp: %.10f' % map_stamp)
 
         # init first time
-        workflow_map[workflow_file] = workflow_map.get(workflow_file, {})
         if CONF not in workflow_map[workflow_file]:
             _logger.debug('DELETE ME - CONF is not in workflow_map[workflow_file]: ' + str(workflow_map[workflow_file]))
         if wp_mtime >= map_stamp:
@@ -337,6 +350,7 @@ def __refresh_map(configuration, to_refresh):
         dirty.append([workflow_file])
 
     if dirty:
+        _logger.debug('DELETE ME - dirty: ' + str(dirty))
         try:
             dump(workflow_map, map_path)
             os.utime(map_path, (start_time, start_time))
@@ -608,10 +622,6 @@ def get_wp_map(configuration):
     """
     _logger = configuration.logger
     _logger.debug("WP: get_wp_map")
-    # TODO, if deletion has happend don't use cache
-    # if last_load[WORKFLOW_PATTERNS] + MAP_CACHE_SECONDS > time.time():
-    #    _logger.debug('WP: using map')
-    #    return last_map[WORKFLOW_PATTERNS]
     modified_patterns, _ = check_workflow_p_modified(configuration)
     if modified_patterns:
         _logger.info('WP: refreshing map (%s)'
@@ -648,7 +658,6 @@ def get_wr_map(configuration):
     last_map[WORKFLOW_RECIPES] = workflow_r_map
     last_refresh[WORKFLOW_RECIPES] = map_stamp
     last_load[WORKFLOW_RECIPES] = map_stamp
-    _logger.debug('WR: wr_map: - ' + str(workflow_r_map))
     return workflow_r_map
 
 
