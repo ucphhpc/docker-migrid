@@ -56,8 +56,11 @@ from shared.serial import dump
 from shared.functionality.addvgridtrigger import main as add_vgrid_trigger_main
 from shared.vgrid import vgrid_add_triggers, vgrid_remove_triggers, \
     vgrid_is_trigger, vgrid_triggers
-from shared.job import fill_mrsl_template, new_job, fields_to_mrsl
-from shared.fileio import delete_file
+from shared.job import fill_mrsl_template, new_job, fields_to_mrsl, \
+    get_job_ids_with_task_file_in_contents
+from shared.functionality.jobaction import main as jobaction
+from shared.fileio import delete_file, send_message_to_grid_script, unpickle, \
+    unpickle_and_change_status
 from shared.mrslkeywords import get_keywords_dict
 
 
@@ -1043,6 +1046,11 @@ def update_workflow_pattern(configuration, client_id, new_pattern_variables, per
                            owner=client_id,
                            persistence_id=persistence_id)
 
+    if not pattern:
+        msg = 'Could not locate pattern'
+        _logger.debug(msg)
+        return(False, msg)
+
     if 'trigger' in pattern:
         preexisting_trigger = pattern['trigger']
     else:
@@ -1329,13 +1337,10 @@ def rule_deletion_from_pattern(configuration, client_id, wp):
             if trigger['rule_id'] == trigger_id:
                 if 'recipes' in trigger.keys():
                     recipe_list = trigger['recipes']
-                    (rm_status, rm_msg) = vgrid_remove_triggers(
-                        configuration, vgrid_name, [trigger_id])
-                    if not rm_status:
-                        _logger.error('%s failed to remove trigger: %s' %
-                                      (client_id, rm_msg))
-                    _logger.info('%s removed trigger: %s' % (client_id,
-                                                             trigger_id))
+                    delete_trigger(configuration,
+                                   client_id,
+                                   vgrid_name,
+                                   trigger_id)
                 break
 
         # delete the reference to the trigger for these recipes
@@ -1381,13 +1386,10 @@ def rule_deletion_from_recipe(configuration, client_id, wr):
 
                     if 'recipes' in trigger.keys():
                         recipe_list = trigger['recipes']
-                        (rm_status, rm_msg) = vgrid_remove_triggers(
-                            configuration, vgrid_name, [trigger_id])
-                        if not rm_status:
-                            _logger.error('%s failed to remove trigger: %s' %
-                                          (client_id, rm_msg))
-                        _logger.info('%s removed trigger: %s' % (client_id,
-                                                                 trigger_id))
+                        delete_trigger(configuration,
+                                       client_id,
+                                       vgrid_name,
+                                       trigger_id)
                     break
 
             _logger.debug("DELETE ME rule_deletion_from_recipe about to start updating trigger list: " + str(recipe_list))
@@ -1472,6 +1474,77 @@ def create_workflow_task_file(configuration, client_id, complete_recipe,
                  (client_id, task_file_path))
     return True, task_file_path
 
+
+def delete_trigger(configuration, client_id, vgrid_name, trigger_id):
+    logger = configuration.logger
+    logger.info('delete_trigger client_id: ' + client_id + ' vgrid_name: '
+                 + vgrid_name + ' trigger_id: ' + trigger_id)
+
+    # get trigger task file
+    (got_triggers, all_triggers) = vgrid_triggers(vgrid_name, configuration)
+
+    if not got_triggers:
+        logger.debug('Could not load triggers')
+
+    logger.debug('DELETE ME - all_triggers' + str(all_triggers))
+    for trigger in all_triggers:
+        if trigger['rule_id'] == trigger_id:
+            trigger_to_delete = trigger
+            logger.debug('DELETE ME - trigger_to_delete' + str(trigger_to_delete))
+
+    # TODO keep working on this
+    if trigger_to_delete:
+        logger.debug('DELETE ME - finding jobs to cancel')
+        task_file = trigger_to_delete['task_file']
+        matching_jobs = get_job_ids_with_task_file_in_contents(client_id,
+                                                               task_file,
+                                                               configuration.mrsl_files_dir,
+                                                               logger)
+        logger.debug('DELETE ME - matching_jobs' + str(matching_jobs))
+
+        new_state = 'CANCELED'
+        client_dir = client_id_dir(client_id)
+        for job_id in matching_jobs:
+            logger.debug('DELETE ME - found job ' + str(job_id))
+
+            file_path = os.path.join(configuration.mrsl_files_dir, client_dir, job_id + '.mRSL')
+            job = unpickle(file_path, logger)
+
+            if not job:
+                logger.error('Could not open job file')
+                continue
+
+            logger.debug('DELETE ME - looking for file at ' + file_path)
+
+            possible_cancel_states = ['PARSE', 'QUEUED', 'RETRY', 'EXECUTING',
+                                      'FROZEN']
+
+            if not job['STATUS'] in possible_cancel_states:
+                logger.error('Could not cancel job with status '
+                             + job['STATUS'])
+                continue
+
+            if not unpickle_and_change_status(file_path, new_state, logger):
+                logger.error('%s could not cancel job: %s' % (client_id, job_id))
+
+            if not job.has_key('UNIQUE_RESOURCE_NAME'):
+                job['UNIQUE_RESOURCE_NAME'] = 'UNIQUE_RESOURCE_NAME_NOT_FOUND'
+            if not job.has_key('EXE'):
+                job['EXE'] = 'EXE_NAME_NOT_FOUND'
+
+            message = 'JOBACTION ' + job_id + ' ' \
+                      + job['STATUS'] + ' ' + new_state + ' ' \
+                      + job['UNIQUE_RESOURCE_NAME'] + ' ' \
+                      + job['EXE'] + '\n'
+            if not send_message_to_grid_script(message, logger, configuration):
+                logger.error('%s failed to send message to grid script: %s' %
+                         (client_id, message))
+    (rm_status, rm_msg) = vgrid_remove_triggers(configuration,
+                                                vgrid_name,
+                                                [trigger_id])
+    if not rm_status:
+        logger.error('%s failed to remove trigger: %s' %
+                      (client_id, rm_msg))
 
 def create_trigger(configuration, _logger, vgrid, client_id, pattern,
                     recipe_list, apply_retroactive):
@@ -1576,7 +1649,8 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
         'templates': [arguments_string],
         # be careful here. Not sure if this will have unintended consequences
         'pattern': pattern['persistence_id'],
-        'recipes': recipe_ids
+        'recipes': recipe_ids,
+        'task_file': task_path
     }
 
     # _logger.debug("DELETE ME - rule_dict: " + str(rule_dict))

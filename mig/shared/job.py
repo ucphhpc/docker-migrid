@@ -301,6 +301,43 @@ def get_job_ids_with_specified_project_name(
     return matching_job_ids
 
 
+def get_job_ids_with_task_file_in_contents(
+    client_id,
+    task_file,
+    mrsl_files_dir,
+    logger,
+    ):
+    """Helper for finding a job which uses a give task file"""
+
+    client_dir = client_id_dir(client_id)
+
+    if task_file[0] == os.path.sep:
+        task_file = task_file[1:]
+
+    # Please note that base_dir must end in slash to avoid access to other
+    # user dirs when own name is a prefix of another user name
+
+    base_dir = os.path.abspath(os.path.join(mrsl_files_dir, client_dir)) \
+         + os.sep
+
+    # this is heavy :-/ we must loop all the mrsl files submitted by the user
+    # to find the job ids belonging to the specified project
+
+    matching_job_ids = []
+    all_files = os.listdir(base_dir)
+
+    for mrsl_file in all_files:
+        job_dict = unpickle(base_dir + os.sep + mrsl_file, logger)
+
+        if not job_dict:
+            continue
+        if job_dict.has_key('EXECUTABLES'):
+            for executable in job_dict['EXECUTABLES']:
+                if task_file in executable:
+                    matching_job_ids.append(job_dict['JOB_ID'])
+    return matching_job_ids
+
+
 def fields_to_mrsl(configuration, user_arguments_dict, external_dict):
     """Generate mRSL from fields"""
 
