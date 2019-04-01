@@ -1370,7 +1370,7 @@ def guess_type(name):
         # Workflow Pattern
 
         for key in ('wp_name', 'wp_recipes'):
-            __type_map[key] = lambda x: valid_alphanumeric(x, max_length=32)
+            __type_map[key] = lambda x: valid_backend_name(x, max_length=32)
 
         for key in ('wp_variables', ):
             __type_map[key] = lambda x: valid_printable(x, max_length=32)
@@ -1384,7 +1384,7 @@ def guess_type(name):
         # Workflow Recipe
 
         for key in ('wr_name', ):
-            __type_map[key] = lambda x: valid_alphanumeric(x, max_length=32)
+            __type_map[key] = lambda x: valid_backend_name(x, max_length=32)
 
         for key in ('wr_recipefilename', ):
             __type_map[key] = valid_path_pattern
