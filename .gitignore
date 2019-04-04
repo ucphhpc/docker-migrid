@@ -120,3 +120,5 @@ mig/server/MiG-users.db
 mig/server/server.stdin
 
 .vscode/
+
+Anaconda.sh

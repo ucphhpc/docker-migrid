@@ -48,7 +48,10 @@ def signature():
     return ['workflowrecipes', defaults]
 
 
-def workflow_recipes_table(configuration, client_id, output_objects):
+def workflow_recipes_table(configuration,
+                           client_id,
+                           output_objects,
+                           vgrid=None):
     output_objects.append({'object_type': 'sectionheader',
                            'text': 'Registered Workflow Recipes'})
 
@@ -60,10 +63,19 @@ def workflow_recipes_table(configuration, client_id, output_objects):
                                  client_id, csrf_limit)
     helper = html_post_helper(target_op, '%s.py' % target_op,
                               {'wr_name': '__DYNAMIC__',
+                               'vgrid': '__DYNAMIC__',
                                csrf_field: csrf_token})
 
     workflow_recipes = []
-    wrs = get_wr_with(configuration, first=False, client_id=client_id)
+    if vgrid:
+        wrs = get_wr_with(configuration,
+                          first=False,
+                          client_id=client_id,
+                          vgrids=vgrid)
+    else:
+        wrs = get_wr_with(configuration,
+                          first=False,
+                          client_id=client_id)
     if wrs:
         output_objects.append({'object_type': 'html_form',
                                'text': helper})
@@ -101,7 +113,8 @@ def workflow_recipes_table(configuration, client_id, output_objects):
                                           "%s, %s);" % (target_op, "Really "
                                           "remove workflow recipe %s ?" %
                                           wr['name'], 'undefined', {'wr_name':
-                                          wr['name']}), 'class': 'removelink '
+                                          wr['name'], 'vgrid': vgrid}),
+                                          'class': 'removelink '
                                           'iconspace', 'title': 'Remove '
                                           'workflow recipe %s' % wr['name'],
                                           'text': ''}

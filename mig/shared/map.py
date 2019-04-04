@@ -44,6 +44,7 @@ def load_system_map(configuration, kind, do_lock):
         configuration.logger.info("map.py before %s map load" % kind)
         entity_map = load(map_path)
         configuration.logger.info("map.py after %s map load" % kind)
+
         map_stamp = os.path.getmtime(map_path)
 
         configuration.logger.info("DELETE ME - START POINT")

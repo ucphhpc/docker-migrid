@@ -208,7 +208,8 @@ def main(client_id, user_arguments_dict):
         recipe['name'] = recipe_name
         existing_recipe = get_wr_with(configuration,
                                       client_id=client_id,
-                                      name=recipe_name)
+                                      name=recipe_name,
+                                      vgrids=vgrid)
         # editting previous recipe, not creating a new one
         if existing_recipe is not None:
             logger.debug("addworkflowrecipe, DELETE ME - existing recipe: "
@@ -216,6 +217,7 @@ def main(client_id, user_arguments_dict):
             persistence_id = existing_recipe['persistence_id']
             updated, msg = update_workflow_recipe(configuration,
                                                   client_id,
+                                                  vgrid,
                                                   recipe,
                                                   persistence_id)
 
@@ -228,8 +230,9 @@ def main(client_id, user_arguments_dict):
             return (output_objects, returnvalues.OK)
 
     created, msg = create_workflow_recipe(configuration,
-                                           client_id,
-                                           recipe)
+                                          client_id,
+                                          vgrid,
+                                          recipe)
     if not created:
         output_objects.append({'object_type': 'error_text',
                                'text': msg})

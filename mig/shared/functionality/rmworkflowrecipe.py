@@ -39,7 +39,8 @@ def signature():
     """Signature of the main function"""
 
     defaults = {
-        'wr_name': REJECT_UNSET
+        'wr_name': REJECT_UNSET,
+        'vgrid': REJECT_UNSET
     }
     return ['', defaults]
 
@@ -63,9 +64,16 @@ def main(client_id, user_arguments_dict, environ=None):
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
 
-    wr_name = accepted['wr_name'][-1]
+    logger.debug('DELETE ME rmworkflowrecipe accepted: ' + str(accepted))
+    logger.debug('DELETE ME rmworkflowrecipe user_arguments_dict: ' + str(user_arguments_dict))
 
-    success, msg = delete_workflow_recipe(configuration, client_id, wr_name)
+    wr_name = accepted['wr_name'][-1]
+    vgrid = accepted['vgrid'][-1]
+
+    success, msg = delete_workflow_recipe(configuration,
+                                          client_id,
+                                          vgrid,
+                                          wr_name)
     if not success:
         output_objects.append({'object_type': 'error_text',
                                'text': msg})

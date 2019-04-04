@@ -38,7 +38,8 @@ def signature():
     """Signature of the main function"""
 
     defaults = {
-        'wp_name': REJECT_UNSET
+        'wp_name': REJECT_UNSET,
+        'vgrid': REJECT_UNSET
     }
     return ['', defaults]
 
@@ -63,7 +64,12 @@ def main(client_id, user_arguments_dict, environ=None):
         return (accepted, returnvalues.CLIENT_ERROR)
 
     wp_name = accepted['wp_name'][-1]
-    success, msg = delete_workflow_pattern(configuration, client_id, wp_name)
+    vgrid = accepted['vgrid'][-1]
+
+    success, msg = delete_workflow_pattern(configuration,
+                                           client_id,
+                                           vgrid,
+                                           wp_name)
     if not success:
         output_objects.append({'object_type': 'error_text',
                                'text': msg})

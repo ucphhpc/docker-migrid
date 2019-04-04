@@ -48,7 +48,10 @@ def signature():
     return ['workflowpatterns', defaults]
 
 
-def workflow_patterns_table(configuration, client_id, output_objects):
+def workflow_patterns_table(configuration, client_id, output_objects,
+                            vgrid=None):
+    configuration.logger.debug(('DELETE ME - workflow_patterns_table'))
+    
     output_objects.append({'object_type': 'sectionheader',
                            'text': 'Registered Workflow Patterns'})
 
@@ -60,10 +63,19 @@ def workflow_patterns_table(configuration, client_id, output_objects):
                                  client_id, csrf_limit)
     helper = html_post_helper(target_op, '%s.py' % target_op,
                               {'wp_name': '__DYNAMIC__',
+                               'vgrid': '__DYNAMIC__',
                                csrf_field: csrf_token})
 
     workflow_patterns = []
-    wps = get_wp_with(configuration, first=False, client_id=client_id)
+    if vgrid:
+        wps = get_wp_with(configuration,
+                          first=False,
+                          client_id=client_id,
+                          vgrids=vgrid)
+    else:
+        wps = get_wp_with(configuration,
+                          first=False,
+                          client_id=client_id)
     if wps:
         output_objects.append({'object_type': 'html_form',
                                'text': helper})
@@ -102,7 +114,8 @@ def workflow_patterns_table(configuration, client_id, output_objects):
                                           target_op, "Really remove workflow"
                                                      "pattern %s ?" % wp[
                                               'name'], 'undefined',
-                                          {'wp_name': wp['name']}),
+                                          {'wp_name': wp['name'],
+                                           'vgrid': vgrid}),
                            'class': 'removelink iconspace', 'title':
                                'Remove workflow pattern %s' % wp['name'],
                            'text': ''}

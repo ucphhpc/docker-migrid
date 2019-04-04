@@ -203,15 +203,6 @@ def main(client_id, user_arguments_dict):
                         '''variable %s is defined multiple times. Please only 
                         define a variable once''' % key})
                     return (output_objects, returnvalues.CLIENT_ERROR)
-                # try:
-                #     value = float(value)
-                # except ValueError:
-                #     pass
-                # try:
-                #     if int(value) == float(value):
-                #         value = int(value)
-                # except ValueError:
-                #     pass
                 variables_dict[key] = value
             except:
                 output_objects.append({'object_type': 'error_text', 'text':
@@ -238,14 +229,16 @@ def main(client_id, user_arguments_dict):
     if name:
         pattern['name'] = name
         existing_pattern = get_wp_with(configuration,
-                                        client_id=client_id,
-                                        name=name)
+                                       client_id=client_id,
+                                       name=name,
+                                       vgrids=vgrid)
         if existing_pattern is not None:
             logger.debug("addworkflowpattern, DELETE ME - existing patterns: "
                          + str(existing_pattern))
             persistence_id = existing_pattern['persistence_id']
             updated, msg = update_workflow_pattern(configuration,
                                                    client_id,
+                                                   vgrid,
                                                    pattern,
                                                    persistence_id)
             if not updated:
@@ -258,6 +251,7 @@ def main(client_id, user_arguments_dict):
 
     created, msg = create_workflow_pattern(configuration,
                                            client_id,
+                                           vgrid,
                                            pattern)
     if not created:
         output_objects.append({'object_type': 'error_text',
