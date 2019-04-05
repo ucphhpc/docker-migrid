@@ -101,27 +101,19 @@ def main(client_id, user_arguments_dict):
     # TODO probably do this somewhere else? seems like this might have come up
     #  by now
     # convert recipes into list of entries
-    seperated_recipes = []
-    for entry in user_arguments_dict['wp_recipes']:
-        # TODO change this to regex to account for spaces etc
-        if ';' in entry:
-            split_entry = entry.split(';')
-            for split in split_entry:
-                seperated_recipes.append(split)
-        else:
-            seperated_recipes.append(entry)
-    user_arguments_dict['wp_recipes'] = seperated_recipes
-    # convert variables into list of entires
-    seperated_variables = []
-    for entry in user_arguments_dict['wp_variables']:
-        # TODO change this to regex to account for spaces etc
-        if ';' in entry:
-            split_entry = entry.split(';')
-            for split in split_entry:
-                seperated_variables.append(split)
-        else:
-            seperated_variables.append(entry)
-    user_arguments_dict['wp_variables'] = seperated_variables
+
+    listable = ['wp_recipes', 'wp_variables', 'wp_output']
+    for list in listable:
+        seperated_recipes = []
+        for entry in user_arguments_dict[list]:
+            # TODO change this to regex to account for spaces etc
+            if ';' in entry:
+                split_entry = entry.split(';')
+                for split in split_entry:
+                    seperated_recipes.append(split)
+            else:
+                seperated_recipes.append(entry)
+        user_arguments_dict[list] = seperated_recipes
 
     logger.debug("addworkflowpattern, user_arguments_dict: " +
                  str(user_arguments_dict))
@@ -150,7 +142,7 @@ def main(client_id, user_arguments_dict):
     logger.debug("addworkflowpattern, accepted: " + str(accepted))
 
     input = accepted[inputs_name][-1]
-    output = accepted[output_name][-1]
+    output_list = accepted[output_name]
     recipes = accepted[recipe_name]
     variables_list = accepted[variables_name]
     name = accepted[pattern_name][-1]
@@ -160,16 +152,7 @@ def main(client_id, user_arguments_dict):
     if name == '':
         name = generate_random_ascii(wp_id_length, charset=wp_id_charset)
 
-    paths = [input] + [output]
-    for path in paths:
-        if not valid_dir_input(configuration.user_home, path):
-            logger.warning(
-                'possible illegal directory traversal'
-                'attempt pattern_dirs: %s' % path)
-            output_objects.append({'object_type': 'error_text',
-                                   'text': 'The path given: %s'
-                                   ' is illgally formatted' % path})
-            return (output_objects, returnvalues.CLIENT_ERROR)
+    paths = [input]
 
     if not safe_handler(configuration, 'post', op_name, client_id,
                         get_csrf_limit(configuration), accepted):
@@ -210,14 +193,67 @@ def main(client_id, user_arguments_dict):
                     assignment of the form a=1''' % variable})
                 return (output_objects, returnvalues.CLIENT_ERROR)
 
-    logger.debug("addworkflowpattern, variables_dict: " + str(variables_dict))
+    # TODO sort this out properly
+    output_dict = {}
+    if output_list != ['']:
+        for output in output_list:
+            logger.debug('DELETE ME output: ' + str(output))
+            try:
+                tuple = output.split('=')
+                logger.debug('DELETE ME tuple: ' + str(tuple))
+                key, value = tuple[0], tuple[1]
+
+                if key in protected_pattern_variables:
+                    output_objects.append({'object_type': 'error_text', 'text':
+                        '''variable %s is already defined by the system and 
+                        cannot be defined by a user. Please rename your 
+                        output file''' % key})
+                    return (output_objects, returnvalues.CLIENT_ERROR)
+                if key in output_dict.keys():
+                    output_objects.append({'object_type': 'error_text', 'text':
+                        '''output %s is defined multiple times. Please only 
+                        define an output once''' % key})
+                    return (output_objects, returnvalues.CLIENT_ERROR)
+                if key in variables_dict.keys():
+                    output_objects.append({'object_type': 'error_text', 'text':
+                        '''output %s is defined as a variable. Please only 
+                        define a variable once''' % key})
+                    return (output_objects, returnvalues.CLIENT_ERROR)
+                if '*' not in value:
+                    output_objects.append({'object_type': 'text', 'text':
+                        '''output file name %s is hard coded and will always 
+                        be overwritten by the most recent job to compete. If 
+                        this is not desired use a * character for dynamic name 
+                        creation''' % value})
+
+                output_dict[key] = value
+                variables_dict[key] = "'" + key + "'"
+                paths.append(value)
+            except:
+                output_objects.append({'object_type': 'error_text', 'text':
+                    '''output_list %s is incorrectly formatted. Should be one 
+                    assignment of the form file=dir/file.txt''' % output})
+                return (output_objects, returnvalues.CLIENT_ERROR)
+
+    logger.debug("DELETE ME - addworkflowpattern, variables_dict: " + str(variables_dict))
+
+    logger.debug("DELETE ME - paths: " + str(paths))
+    for path in paths:
+        if not valid_dir_input(configuration.user_home, path):
+            logger.warning(
+                'possible illegal directory traversal '
+                'attempt pattern_dirs: %s' % path)
+            output_objects.append({'object_type': 'error_text',
+                                   'text': 'The path given: %s'
+                                   ' is illgally formatted' % path})
+            return (output_objects, returnvalues.CLIENT_ERROR)
 
     output_objects.append({'object_type': 'header', 'text':
                            ' Registering Pattern'})
     pattern = {
         'owner': client_id,
         'inputs': input,
-        'output': output,
+        'output': output_dict,
         'recipes': recipes,
         'variables': variables_dict,
         'vgrids': vgrid

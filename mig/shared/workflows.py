@@ -80,7 +80,7 @@ VALID_PATTERN = {
     'owner': str,
     'name': str,
     'inputs': str,
-    'output': str,
+    'output': dict,
     'recipes': list,
     'variables': dict,
     'vgrids': str
@@ -110,10 +110,9 @@ UPDATE_TRIGGER_RECIPE = [
     'recipe'
 ]
 
-WF_INPUT, WF_OUTPUT, WF_PATTERN_NAME = \
-    'wf_input_file', 'wf_output_file', 'wf_pattern_name'
+WF_INPUT, WF_PATTERN_NAME = 'wf_input_file', 'wf_pattern_name'
 
-protected_pattern_variables = [WF_INPUT, WF_OUTPUT, WF_PATTERN_NAME]
+protected_pattern_variables = [WF_INPUT, WF_PATTERN_NAME]
 
 
 # TODO several of the following functions can probably be rolled together. If
@@ -1603,9 +1602,16 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
 
     _logger.debug("DELETE ME - task_file_status: " + str(task_file_status))
     _logger.debug("DELETE ME - msg: " + str(msg))
-    client_dir = client_id_dir(client_id)
-    user_home_dir = os.path.join(configuration.user_home, client_dir)
-    task_path = msg.replace(user_home_dir, "")
+    task_path = msg.replace(configuration.vgrid_files_home, "")
+    if task_path.startswith('/'):
+        task_path =  task_path[1:]
+
+    output_files_string = ''
+    for key, value in pattern['output'].items():
+        if output_files_string != '':
+            output_files_string += '\n'
+        updated_value = value.replace('*', '+TRIGGERFILENAME+')
+        output_files_string += (key + ' ' + updated_value)
 
     arguments_dict = {
         'EXECUTE': [
@@ -1628,11 +1634,7 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
             "1"
         ],
         'OUTPUTFILES': [
-            WF_OUTPUT + " "
-            + os.path.join("+TRIGGERVGRIDNAME+",
-                           pattern['output'],
-                           "+TRIGGERFILENAME+"
-                           ),
+            output_files_string
         ],
         'INPUTFILES': [
             "+TRIGGERPATH+ " + WF_INPUT,
