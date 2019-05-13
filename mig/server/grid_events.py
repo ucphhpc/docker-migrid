@@ -44,6 +44,7 @@ import tempfile
 import time
 import threading
 import multiprocessing
+import json
 
 try:
     from watchdog.observers import Observer
@@ -1144,17 +1145,62 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
 
         # Each target_path pattern has one or more rules associated
 
+        # ignore the event if it is a buffer being updated, but is not yet
+        # complete
+        # TODO improve buffer event detection
+        if configuration.workflow_buffer_home in src_path:
+            with open(src_path) as buffer_file:
+                buffer = json.load(buffer_file)
+                for _, value in buffer.items():
+                    if value is None:
+                        logger.debug('(%s) skip %s event as only update for '
+                                     'incomplete buffer: %s' %
+                                     (pid, state, src_path))
+                        return
+
+        logger.debug('DELETE ME - all_rules: %s' % all_rules)
+
         for (target_path, rule_list) in all_rules.items():
+
+            # check to see if a buffer should be updated
+            if configuration.workflow_buffer_home in target_path:
+
+                logger.debug('(%s) matched %s, and is bufferable file'
+                             % (pid, src_path))
+
+                with open(target_path) as buffer_file:
+                    buffer = json.load(buffer_file)
+                    for buffer_target_path, _ in buffer.items():
+                        if src_path.endswith(buffer_target_path):
+                            if os.path.isfile(src_path):
+                                input_file = open(src_path, 'r')
+                                contents_string = ''
+                                contents_string += input_file.read()
+                                input_file.close()
+                                buffer[buffer_target_path] = contents_string
+                                buffer_file.write(buffer)
+                                logger.debug('(%s) resulted in updated buffer '
+                                             'at %s ' % (pid, src_path))
 
             # Do not use ordinary fnmatch as it lets '*' match anything
             # including '/' which leads to greedy matching in subdirs
+
+            # TODO Possibly change this system, is a bit hacky
+            target_path = target_path.replace('.*', '*')
+            target_path = target_path.replace('\\', '')
 
             recursive_regexp = fnmatch.translate(target_path)
             direct_regexp = recursive_regexp.replace('.*', '[^/]*')
             recursive_hit = re.match(recursive_regexp, src_path)
             direct_hit = re.match(direct_regexp, src_path)
 
-            if direct_hit or recursive_hit:
+            logger.debug('DELETE ME - target_path: %s' % target_path)
+            logger.debug('DELETE ME - rule_list: %s' % rule_list)
+            logger.debug('DELETE ME - recursive_regexp: %s' % recursive_regexp)
+            logger.debug('DELETE ME - direct_regexp: %s' % direct_regexp)
+
+
+            if (direct_hit or recursive_hit):
 
                 logger.debug('(%s) matched %s for %s and/or %s' % (pid,
                             src_path, direct_regexp, recursive_regexp))

@@ -1392,7 +1392,7 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
 <td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>
 </tr>''' % (html_link(single_wp.get('delwplink', '')),
             html_link(single_wp.get('namelink', '')),
-            single_wp.get('inputs', ''),
+            single_wp.get('trigger_paths', ''),
             single_wp.get('output', ''),
             single_wp.get('recipes', ''),
             single_wp.get('variables', ''),
@@ -1403,12 +1403,12 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
             lines.append('</div>')
         elif i['object_type'] == 'workflowpattern':
             wp = i['workflowpattern']
-            inputs, recipes = wp.get('inputs', []), wp.get('recipes', [])
+            trigger_paths, recipes = wp.get('trigger_paths', []), wp.get('recipes', [])
             lines.append('''
 <div class="workflowpattern">
     <h3>Pattern: %(name)s</h3>
     <h3>Inputs</h3>
-    <h4>%(inputs)s</h4>
+    <h4>%(trigger_paths)s</h4>
     <h3>Output</h3>
     <h4>%(output)s</h4>
     <h3>Parameters</h3>

@@ -79,7 +79,8 @@ VALID_PATTERN = {
     'trigger': dict,
     'owner': str,
     'name': str,
-    'inputs': str,
+    'input_file': str,
+    'trigger_paths': list,
     'output': dict,
     'recipes': list,
     'variables': dict,
@@ -110,10 +111,104 @@ UPDATE_TRIGGER_RECIPE = [
     'recipe'
 ]
 
-WF_INPUT, WF_PATTERN_NAME = 'wf_input_file', 'wf_pattern_name'
+WF_INPUT = 'wf_input_file'
 
-protected_pattern_variables = [WF_INPUT, WF_PATTERN_NAME]
+class Pattern:
 
+    # Could make name optional, but I think its clearer to make it mandatory
+    def __init__(self, name):
+        self.name = name
+        self.input_file = None
+        self.trigger_paths = []
+        self.outputs = {}
+        self.recipes = []
+        self.variables = {}
+
+    def integrity_check(self):
+        warning = ''
+        if self.input_file is None:
+            return (False, "An input file must be defined. This is the file "
+                           "that is used to trigger any processing and can be "
+                           "defined using the methods '.add_single_input' or "
+                           "'add_multiple_input")
+        if len(self.trigger_paths) == 0:
+            return (False, "At least one input path must be defined. This is "
+                           "the path to the file that is used to trigger any "
+                           "processing and can be defined using the methods "
+                           "'.add_single_input' or 'add_multiple_input")
+        if len(self.outputs) == 0:
+            warning += '\n No output has been set, meaning no resulting ' \
+                       'data will be copied back into the vgrid. ANY OUTPUT ' \
+                       'WILL BE LOST.'
+        if len(self.recipes) == 0:
+            return (False, "No recipes have been defined")
+        return (True, warning)
+
+    def add_single_input(self, input_file, regex_path):
+        # print('%s is adding single input with file: %s and path: %s' %
+        #       (self.name, input_file, regex_path))
+        if len(self.trigger_paths) == 0:
+            self.input_file = input_file
+            self.trigger_paths = [regex_path]
+            self.add_variable(input_file, input_file)
+        else:
+            raise Exception('Could not create single input %s, as input '
+                            'already defined' % input_file)
+
+    def add_gathering_input(self, input_file, common_path, starting_index, number_of_files):
+        # print('%s is adding gathing inputs with file: %s, common_path: %s, stating_index %d, and number_of_files: %d' %
+        #       (self.name, input_file, common_path, starting_index, number_of_files))
+        if len(self.trigger_paths) == 0:
+            # common path must have '*' in it to act as wildcard for diffrenet indexed files
+            star_count = common_path.count('*')
+            if star_count == 0:
+                raise Exception("common_path must contain a '*' character.")
+            if star_count > 1:
+                raise Exception("common_path should only contain one '*' character.")
+            self.input_file = input_file
+            self.add_variable(input_file, input_file)
+            for index in range(0, number_of_files):
+                path = common_path.replace('*', str(index + starting_index))
+                self.trigger_paths.append(path)
+        else:
+            raise Exception('Could not create gathering input %s, as input '
+                            'already defined' % input_file)
+
+    def add_output(self, output_name, output_location):
+        # print('%s is adding output with name: %s and path: %s' %
+        #       (self.name, output_name, output_location))
+        if output_name not in self.outputs.keys():
+            self.outputs[output_name] = output_location
+            self.add_variable(output_name, output_name)
+        else:
+            raise Exception('Could not create output %s as already defined'
+                            % output_name)
+
+    def add_recipe(self, recipe):
+        # print('%s is adding recipe: %s' % (self.name, recipe))
+        self.recipes.append(recipe)
+
+    def add_variable(self, variable_name, variable_value):
+        # print('%s is adding variable with name: %s and value: %s' %
+        #       (self.name, variable_name, variable_value))
+        # put variable as a string. Should allow any declared variable type to
+        # be stored
+        if variable_name not in self.variables.keys():
+            self.variables[variable_name] = variable_value
+        else:
+            raise Exception('Could not create variable %s as it is alrady '
+                            'defined' % variable_name)
+
+def __recipe_regex(name):
+    # TODO improve this so it only matches valid functions
+    # remove final character from signature regex as that is a bracket we can
+    # do without
+    return __recipe_signature_regex(name)[:-1] + "((\\n {4}.*)+))"
+
+
+def __recipe_signature_regex(name):
+    # TODO improve this so it only matches valid functions
+    return "(def \\s*" + name + "*\\(.*\\):\\n*)"
 
 # TODO several of the following functions can probably be rolled together. If
 #  at the end of implementation this is still the case then do so
@@ -165,14 +260,14 @@ def __correct_wr(configuration, wr):
         _logger.error("WR: __correct_wr, wr had an incorrect type %s" % wr)
         return (False, msg)
 
-    msg = "The workflow pattern had an incorrect structure, " + contact_msg
+    msg = "The workflow recipe had an incorrect structure, " + contact_msg
     for k, v in wr.items():
         if k not in VALID_RECIPE:
             _logger.error("WR: __correct_wr, wr had an incorrect key %s, "
                           "allowed are %s" % (k, VALID_RECIPE.keys()))
             return (False, msg)
         if not isinstance(v, VALID_RECIPE[k]):
-            _logger.error("WP: __correct_wr, wr had an incorrect value type "
+            _logger.error("WR: __correct_wr, wr had an incorrect value type "
                           "%s, on key %s, valid is %s"
                           % (type(v), k, VALID_RECIPE[k]))
             return (False, msg)
@@ -562,7 +657,8 @@ def __build_wp_object(configuration, **kwargs):
                                      VALID_PATTERN['persistence_id']()),
         'owner': kwargs.get('owner', VALID_PATTERN['owner']()),
         'name': kwargs.get('name', VALID_PATTERN['name']()),
-        'inputs': kwargs.get('inputs', VALID_PATTERN['inputs']()),
+        'input_file': kwargs.get('input_file', VALID_PATTERN['input_file']()),
+        'trigger_paths': kwargs.get('trigger_paths', VALID_PATTERN['trigger_paths']()),
         'output': kwargs.get('output', VALID_PATTERN['output']()),
         'recipes': kwargs.get('recipes', VALID_PATTERN['recipes']()),
         'variables': kwargs.get('variables', VALID_PATTERN['variables']()),
@@ -609,6 +705,12 @@ def get_workflow_task_home(configuration, vgrid):
     vgrid_dir = os.path.join(configuration.vgrid_files_home, vgrid)
     task_home = os.path.join(vgrid_dir + configuration.workflow_tasks_home)
     return task_home
+
+
+def get_workflow_buffer_home(configuration, vgrid):
+    vgrid_dir = os.path.join(configuration.vgrid_files_home, vgrid)
+    buffer_home = os.path.join(vgrid_dir + configuration.workflow_buffer_home)
+    return buffer_home
 
 
 def get_wp_map(configuration):
@@ -721,10 +823,7 @@ def delete_workflow_pattern(configuration, client_id, vgrid, name):
     persistence_id = wp['persistence_id']
 
     if wp['trigger']:
-        rule_deletion_from_pattern(configuration,
-                                   client_id,
-                                   vgrid,
-                                   wp)
+        __rule_deletion_from_pattern(configuration, client_id, vgrid, wp)
 
     wp_path = os.path.join(
         get_workflow_pattern_home(configuration, vgrid),
@@ -740,7 +839,7 @@ def delete_workflow_pattern(configuration, client_id, vgrid, name):
         return (False, msg)
     mark_workflow_p_modified(configuration, persistence_id)
 
-    return (True, '')
+    return (True, 'Deleted pattern %s.' % wp['name'])
 
 
 def delete_workflow_recipe(configuration, client_id, vgrid, name):
@@ -767,10 +866,7 @@ def delete_workflow_recipe(configuration, client_id, vgrid, name):
     _logger.debug("DELETE ME wr: - " + str(wr))
 
     if wr['triggers']:
-        rule_deletion_from_recipe(configuration,
-                                  client_id,
-                                  vgrid,
-                                  wr)
+        __rule_deletion_from_recipe(configuration, client_id, vgrid, wr)
 
     if not wr:
         msg = "The '%s' workflow recipe dosen't appear to exist" % name
@@ -788,19 +884,20 @@ def delete_workflow_recipe(configuration, client_id, vgrid, name):
         msg = "Could not delete the '%s' workflow recipe"
         return (False, msg)
     mark_workflow_r_modified(configuration, persistence_id)
-    return (True, '')
+    return (True, 'Deleted recipe %s.' % wr['name'])
 
 
-def create_workflow_pattern(configuration, client_id, vgrid, wp):
+def __create_workflow_pattern(configuration, client_id, vgrid, wp):
     """ Creates a workflow patterns based on the passed wp object.
     Requires the following keys and structure:
 
-    wp = {
-        'name': 'pattern-name'
-        'owner': 'string-owner',
-        'inputs': '',
-        'recipes': [],
-        'output': ''
+    pattern = {
+        'owner': client_id,
+        'inputs': input_dict,
+        'output': output_dict,
+        'recipes': recipes_list,
+        'variables': variables_dict,
+        'vgrids': vgrid
     }
 
     The 'owner' key is required to be non-empty string.
@@ -821,62 +918,60 @@ def create_workflow_pattern(configuration, client_id, vgrid, wp):
     _logger = configuration.logger
     _logger.debug("WP: create_workflow_pattern, client_id: %s, wp: %s"
                   % (client_id, wp))
-
-    if not client_id:
-        msg = "A workflow pattern create dependency was missing"
-        _logger.error("WP: create_workflow, client_id was not set %s" %
-                      client_id)
-        return (False, msg)
-
-    correct, msg = __correct_wp(configuration, wp)
-    if not correct:
-        return (correct, msg)
-
-    if 'name' not in wp:
-        wp['name'] = generate_random_ascii(wp_id_length, charset=wp_id_charset)
-    else:
-        wp_exists = get_wp_with(configuration,
-                                client_id=client_id,
-                                name=wp['name'],
-                                vgrids=vgrid)
-        if wp_exists:
-            _logger.error("WP: a wp with name: %s already exists: %s"
-                          % (wp['name'], client_id))
-            msg = 'You already have a workflow pattern with the name %s' \
-                  % wp['name']
-            return (False, msg)
-
-    # TODO apply this to pattern as well
-    # need to still check variables as they might not match exactly
-    clients_patterns = get_wp_with(configuration,
-                                   client_id=client_id,
-                                   first=False,
-                                   owner=client_id,
-                                   inputs=wp['inputs'],
-                                   output=wp['output'],
-                                   vgrids=wp['vgrids'])
-    _logger.debug('clients_patterns: ' + str(clients_patterns))
-    _logger.debug('wp: ' + str(wp))
-    for pattern in clients_patterns:
-        pattern_matches = True
-        for variable in wp['variables'].keys():
-            # ignore wf_pattern_name variable
-            if variable != WF_PATTERN_NAME:
-                _logger.debug("DELETE ME looking at variable " + str(variable))
-                try:
-                    if pattern['variables'][variable] \
-                            != wp['variables'][variable]:
-                        pattern_matches = False
-                        _logger.debug("DELETE ME doesn't match")
-                except KeyError:
-                    pattern_matches = False
-        if pattern_matches:
-            _logger.error("WP: an identical pattern already exists")
-            msg = 'You already have a workflow pattern with identical ' \
-                  'characteristics'
-            return (False, msg)
-        else:
-            _logger.debug('patterns are not identical')
+    #
+    # if not client_id:
+    #     msg = "A workflow pattern create dependency was missing"
+    #     _logger.error("WP: create_workflow, client_id was not set %s" %
+    #                   client_id)
+    #     return (False, msg)
+    #
+    # correct, msg = __correct_wp(configuration, wp)
+    # if not correct:
+    #     return (correct, msg)
+    #
+    # if 'name' not in wp:
+    #     wp['name'] = generate_random_ascii(wp_id_length, charset=wp_id_charset)
+    # else:
+    #     wp_exists = get_wp_with(configuration,
+    #                             client_id=client_id,
+    #                             name=wp['name'],
+    #                             vgrids=vgrid)
+    #     if wp_exists:
+    #         _logger.error("WP: a wp with name: %s already exists: %s"
+    #                       % (wp['name'], client_id))
+    #         msg = 'You already have a workflow pattern with the name %s' \
+    #               % wp['name']
+    #         return (False, msg)
+    #
+    # # TODO apply this to pattern as well
+    # # need to still check variables as they might not match exactly
+    # clients_patterns = get_wp_with(configuration,
+    #                                client_id=client_id,
+    #                                first=False,
+    #                                owner=client_id,
+    #                                trigger_paths=wp['trigger_paths'],
+    #                                output=wp['output'],
+    #                                vgrids=wp['vgrids'])
+    # _logger.debug('clients_patterns: ' + str(clients_patterns))
+    # _logger.debug('wp: ' + str(wp))
+    # for pattern in clients_patterns:
+    #     pattern_matches = True
+    #     for variable in wp['variables'].keys():
+    #         _logger.debug("DELETE ME looking at variable " + str(variable))
+    #         try:
+    #             if pattern['variables'][variable] \
+    #                     != wp['variables'][variable]:
+    #                 pattern_matches = False
+    #                 _logger.debug("DELETE ME doesn't match")
+    #         except KeyError:
+    #             pattern_matches = False
+    #     if pattern_matches:
+    #         _logger.error("WP: an identical pattern already exists")
+    #         msg = 'You already have a workflow pattern with identical ' \
+    #               'characteristics'
+    #         return (False, msg)
+    #     else:
+    #         _logger.debug('patterns are not identical')
 
     wp_home = get_workflow_pattern_home(configuration, vgrid)
     if not os.path.exists(wp_home):
@@ -931,10 +1026,10 @@ def create_workflow_pattern(configuration, client_id, vgrid, wp):
 
     _logger.info('WP: %s created at: %s ' %
                  (client_id, wp_file_path))
-    return (True, '')
+    return (True, 'Created pattern %s.' % wp['name'])
 
 
-def create_workflow_recipe(configuration, client_id, vgrid, wr):
+def __create_workflow_recipe(configuration, client_id, vgrid, wr):
     """Creates a workflow recipe based on the passed wr object.
         Requires the following keys and structure:
 
@@ -958,27 +1053,27 @@ def create_workflow_recipe(configuration, client_id, vgrid, wr):
     _logger.debug("WR: create_workflow_recipe, client_id: %s, wr: %s"
                   % (client_id, wr))
 
-    if not client_id:
-        msg = "A workflow recipe creation dependency was missing"
-        _logger.error(
-            "WR: creating_recipe, client_id was not set %s" % client_id)
-        return False, msg
-
-    correct, msg = __correct_wr(configuration, wr)
-    if not correct:
-        return correct, msg
-
-    if 'name' not in wr:
-        wr['name'] = generate_random_ascii(wr_id_length, charset=wr_id_charset)
-    else:
-        wr_exists = get_wr_with(configuration, client_id=client_id,
-                                name=wr['name'])
-        if wr_exists:
-            _logger.error("WR: a wr with name: %s already exists: %s"
-                          % (wr['name'], client_id))
-            msg = 'You already have a workflow recipe with the name %s' \
-                  % wr['name']
-            return False, msg
+    # if not client_id:
+    #     msg = "A workflow recipe creation dependency was missing"
+    #     _logger.error(
+    #         "WR: creating_recipe, client_id was not set %s" % client_id)
+    #     return False, msg
+    #
+    # correct, msg = __correct_wr(configuration, wr)
+    # if not correct:
+    #     return correct, msg
+    #
+    # if 'name' not in wr:
+    #     wr['name'] = generate_random_ascii(wr_id_length, charset=wr_id_charset)
+    # else:
+    #     wr_exists = get_wr_with(configuration, client_id=client_id,
+    #                             name=wr['name'])
+    #     if wr_exists:
+    #         _logger.error("WR: a wr with name: %s already exists: %s"
+    #                       % (wr['name'], client_id))
+    #         msg = 'You already have a workflow recipe with the name %s' \
+    #               % wr['name']
+    #         return False, msg
 
     wr_home = get_workflow_recipe_home(configuration, vgrid)
 
@@ -1036,14 +1131,11 @@ def create_workflow_recipe(configuration, client_id, vgrid, wr):
 
     _logger.info('WR: %s created at: %s ' %
                  (client_id, wr_file_path))
-    return True, ''
+    return True, 'Created recipe %s.' % wr['name']
 
 
-def update_workflow_pattern(configuration,
-                            client_id,
-                            vgrid,
-                            new_pattern_variables,
-                            persistence_id):
+def __update_workflow_pattern(configuration, client_id, vgrid,
+                            new_pattern_variables, persistence_id):
     _logger = configuration.logger
     _logger.debug("WP: update_workflow_pattern, client_id: %s, pattern: %s"
                   % (client_id, persistence_id))
@@ -1070,6 +1162,15 @@ def update_workflow_pattern(configuration,
         preexisting_trigger = pattern['trigger']
     else:
         preexisting_trigger = False
+
+    # don't update if the recipe is the same
+    to_edit = False
+    for variable in new_pattern_variables.keys():
+        if pattern[variable] != new_pattern_variables[variable]:
+            to_edit = True
+    if not to_edit:
+        return False, 'Did not update pattern %s as contents are identical.' % \
+               pattern['name']
 
     _logger.debug('update_workflow_pattern, got pattern: ' + str(pattern))
     _logger.debug('update_workflow_pattern, applying variables: '
@@ -1123,22 +1224,15 @@ def update_workflow_pattern(configuration,
     if preexisting_trigger:
         if any([i in new_pattern_variables for i in UPDATE_TRIGGER_PATTERN]):
             _logger.debug('replacing old trigger')
-            rule_deletion_from_pattern(configuration,
-                                       client_id,
-                                       vgrid,
-                                       pattern)
-            rule_identification_from_pattern(configuration, client_id, pattern, True)
+            __rule_deletion_from_pattern(configuration, client_id, vgrid, pattern)
+            __rule_identification_from_pattern(configuration, client_id, pattern, True)
 
-    _logger.info('WP: %s updated at: %s ' %
-                 (client_id, wp_file_path))
-    return (True, '')
+    _logger.info('WP: %s updated at: %s ' % (client_id, wp_file_path))
+    return (True, 'Updated pattern %s.' % pattern['name'])
 
 
-def update_workflow_recipe(configuration,
-                           client_id,
-                           vgrid,
-                           new_recipe_variables,
-                           persistence_id):
+def __update_workflow_recipe(configuration, client_id, vgrid,
+                           new_recipe_variables, persistence_id):
     """Update a workflow recipe"""
 
     _logger = configuration.logger
@@ -1157,6 +1251,17 @@ def update_workflow_recipe(configuration,
                          owner=client_id,
                          persistence_id=persistence_id,
                          vgrids=vgrid)
+
+    _logger.debug('DELETE ME - pre-updated recipe:' + str(recipe))
+    _logger.debug('DELETE ME - recipe suggestion:' + str(new_recipe_variables))
+
+    # don't update if the recipe is the same
+    to_edit = False
+    for variable in new_recipe_variables.keys():
+        if recipe[variable] != new_recipe_variables[variable]:
+            to_edit = True
+    if not to_edit:
+        return False, 'Did not update recipe %s as contents are identical.' % recipe['name']
 
     for variable in new_recipe_variables.keys():
         recipe[variable] = new_recipe_variables[variable]
@@ -1203,21 +1308,16 @@ def update_workflow_recipe(configuration,
     # if there is a trigger then delete the old one and start a new one.
     if recipe['triggers']:
         if any([i in new_recipe_variables for i in UPDATE_TRIGGER_RECIPE]):
-            rule_deletion_from_recipe(configuration,
-                                      client_id,
-                                      vgrid,
-                                      recipe)
-            rule_identification_from_recipe(configuration, client_id, recipe, True)
+            __rule_deletion_from_recipe(configuration, client_id, vgrid, recipe)
+            __rule_identification_from_recipe(configuration, client_id, recipe, True)
 
     _logger.info('WR: %s updated at: %s ' %
                  (client_id, wr_file_path))
-    return True, ''
+    return True, 'Updated recipe %s.' % recipe['name']
 
 
-def rule_identification_from_pattern(configuration,
-                                     client_id,
-                                     workflow_pattern,
-                                     apply_retroactive):
+def __rule_identification_from_pattern(configuration, client_id,
+                                     workflow_pattern, apply_retroactive):
     """identifies if a task can be created, following the creation or
     editing of a pattern ."""
 
@@ -1254,7 +1354,7 @@ def rule_identification_from_pattern(configuration,
 
     _logger.info('All recipes found within trying to create trigger '
                  'for pattern ' + workflow_pattern['name'] + ' and inputs '
-                 'at ' + str(workflow_pattern['inputs']))
+                 'at ' + str(workflow_pattern['trigger_paths']))
 
     # TODO do not create these triggers quite yet. possibly wait for some
     #  activation toggle?
@@ -1269,13 +1369,11 @@ def rule_identification_from_pattern(configuration,
 
     if not trigger_status:
         return False, 'Could not create trigger for pattern. ' + trigger_msg
-    return True, 'Trigger created'
+    return True, 'Trigger created from pattern %s.' % workflow_pattern['name']
 
 
-def rule_identification_from_recipe(configuration,
-                                    client_id,
-                                    workflow_recipe,
-                                    apply_retroactive):
+def __rule_identification_from_recipe(configuration, client_id,
+                                    workflow_recipe, apply_retroactive):
     # TODO finish this
     """identifies if a task can be created, following the creation or
     editing of a recipe . This pattern is read in as the object
@@ -1296,7 +1394,7 @@ def rule_identification_from_recipe(configuration,
     # Check if patterns exist already within system that need this recipe
     if not patterns:
         _logger.info('DELETE ME - no appropriate patterns to check')
-        return [], []
+        return False, 'No appropriate patterns to check for recipe %s' % workflow_recipe['name']
     for pattern in patterns:
         _logger.info('DELETE ME - pattern: ' + str(pattern))
 
@@ -1324,8 +1422,8 @@ def rule_identification_from_recipe(configuration,
             _logger.info('DELETE ME - pattern:' + str(pattern))
 
             _logger.info(
-                'All recipes found within trying to create trigger for recipe'
-                + pattern['name'] + ' and inputs at ' + str(pattern['inputs']))
+                'All recipes found within trying to create trigger for recipe '
+                + pattern['name'] + ' and inputs at ' + str(pattern['trigger_paths']))
 
             # TODO do not create these triggers quite yet. possibly wait for
             #  some activation toggle?
@@ -1342,10 +1440,13 @@ def rule_identification_from_recipe(configuration,
                 incomplete_patterns.append(str(pattern['name']))
             else:
                 activatable_patterns.append(str(pattern['name']))
-    return activatable_patterns, incomplete_patterns
+    msg = " %d trigger(s) created from recipe %s." % (len(activatable_patterns), workflow_recipe['name'])
+    if len(incomplete_patterns) > 0:
+        msg += " There are %d additional patterns(s) recipes that use this recipe, but are waiting for additional recipes before activation" % len(incomplete_patterns)
+    return True, msg
 
 
-def rule_deletion_from_pattern(configuration, client_id, vgrid, wp):
+def __rule_deletion_from_pattern(configuration, client_id, vgrid, wp):
     _logger = configuration.logger
 
     _logger.debug("DELETE ME wp[trigger]: - " + str(wp['trigger']))
@@ -1374,16 +1475,11 @@ def rule_deletion_from_pattern(configuration, client_id, vgrid, wp):
             new_recipe_variables = {
                 'triggers': recipe['triggers']
             }
-            new_recipe_variables['triggers'].pop(str(vgrid_name + trigger_id),
-                                                 None)
-            update_workflow_recipe(configuration,
-                                   client_id,
-                                   vgrid,
-                                   new_recipe_variables,
-                                   recipe['persistence_id'])
+            new_recipe_variables['triggers'].pop(str(vgrid_name + trigger_id), None)
+            __update_workflow_recipe(configuration, client_id, vgrid, new_recipe_variables, recipe['persistence_id'])
 
 
-def rule_deletion_from_recipe(configuration, client_id, vgrid, wr):
+def __rule_deletion_from_recipe(configuration, client_id, vgrid, wr):
     _logger = configuration.logger
 
     _logger.debug("DELETE ME wr[triggers]: - " + str(wr['triggers']))
@@ -1403,11 +1499,7 @@ def rule_deletion_from_recipe(configuration, client_id, vgrid, wr):
                         new_pattern_variables = {
                             'trigger': {}
                         }
-                        update_workflow_pattern(configuration,
-                                                client_id,
-                                                vgrid,
-                                                new_pattern_variables,
-                                                pattern_id)
+                        __update_workflow_pattern(configuration, client_id, vgrid, new_pattern_variables, pattern_id)
 
                     if 'recipes' in trigger.keys():
                         recipe_list = trigger['recipes']
@@ -1434,11 +1526,7 @@ def rule_deletion_from_recipe(configuration, client_id, vgrid, wr):
                 new_recipe_variables['triggers'].pop(
                     str(vgrid_name + trigger_id),
                     None)
-                update_workflow_recipe(configuration,
-                                       client_id,
-                                       vgrid,
-                                       new_recipe_variables,
-                                       recipe['persistence_id'])
+                __update_workflow_recipe(configuration, client_id, vgrid, new_recipe_variables, recipe['persistence_id'])
 
 
 def create_workflow_task_file(configuration, client_id, vgrid, complete_recipe,
@@ -1469,7 +1557,12 @@ def create_workflow_task_file(configuration, client_id, vgrid, complete_recipe,
     task = ''
     # add variables into recipe
     for variable in variables.keys():
-        task += variable + " = " + str(variables[variable]) + "\n"
+        _logger.debug("DELETE ME - adding variable: %s of type: %s" % (variables[variable], type(variables[variable])))
+        if type(variables[variable]) is str:
+            _logger.debug("DELETE ME - found str variable %s" % variables[variable])
+            task += variable + " = '" + str(variables[variable]) + "'\n"
+        else:
+            task += variable + " = " + str(variables[variable]) + "\n"
     task += complete_recipe
 
     wrote = False
@@ -1499,6 +1592,74 @@ def create_workflow_task_file(configuration, client_id, vgrid, complete_recipe,
     _logger.info('WT: %s created at: %s ' %
                  (client_id, task_file_path))
     return True, task_file_path
+
+
+def create_workflow_buffer_file(configuration, client_id, vgrid, trigger_paths, input_file, apply_retroactive):
+    _logger = configuration.logger
+    _logger.debug("DELETE ME - trigger_paths: " + str(trigger_paths))
+
+    buffer_home = get_workflow_buffer_home(configuration, vgrid)
+    _logger.debug("DELETE ME - buffer_home: " + str(buffer_home))
+    if not os.path.exists(buffer_home):
+        try:
+            os.makedirs(buffer_home)
+        except Exception, err:
+            _logger.error("WT: couldn't create directory %s %s" %
+                          (buffer_home, err))
+            msg = "Couldn't create the required dependencies for " \
+                  "your workflow task"
+            return False, msg
+
+    # TODO improve this
+    # placeholder for unique name generation.
+    file_name = generate_random_ascii(wr_id_length, charset=wr_id_charset) + \
+                ".json"
+    buffer_file_path = os.path.join(buffer_home, file_name)
+    while os.path.exists(buffer_file_path):
+        file_name = generate_random_ascii(wr_id_length, charset=wr_id_charset)
+        buffer_file_path = os.path.join(buffer_home, file_name)
+
+    buffer = {}
+    # add input into buffer
+    for path in trigger_paths:
+        buffer[path] = None
+        if apply_retroactive:
+            file_path = os.path.join(configuration.vgrid_files_home, path)
+            _logger.debug("DELETE ME - looking for retroactive buffered file: " + str(file_path))
+            if os.path.isfile(file_path):
+                _logger.debug("DELETE ME - is a file")
+                input_file = open(file_path, 'r')
+                contents_string = ''
+                contents_string += input_file.read()
+                input_file.close()
+                buffer[path] = contents_string
+                _logger.debug("DELETE ME - contents is: " + contents_string)
+
+    wrote = False
+    msg = ''
+    try:
+        with open(buffer_file_path, 'w') as new_file:
+            new_file.write(str(buffer))
+        wrote = True
+    except Exception, err:
+        _logger.error('WB: failed to write %s to disk %s' % (
+            buffer_file_path, err))
+        msg = 'Failed to save your workflow buffer file, '
+        'please try and resubmit it'
+
+    if not wrote:
+        # Ensure that the failed write does not stick around
+        try:
+            os.remove(buffer_file_path)
+        except Exception, err:
+            _logger.error('WB: failed to remove the dangling buffer file: %s '
+                          '%s' % (buffer_file_path, err))
+            msg += '\n Failed to cleanup after a failed workflow creation'
+        return False, msg
+
+    _logger.info('WB: %s created at: %s ' %
+                 (client_id, buffer_file_path))
+    return True, buffer_file_path
 
 
 def delete_trigger(configuration, client_id, vgrid_name, trigger_id):
@@ -1585,6 +1746,32 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
     _logger.debug("DELETE ME - given pattern: " + str(pattern))
     _logger.debug("DELETE ME - given recipes: " + str(recipe_list))
 
+    if len(pattern['trigger_paths']) > 1:
+        _logger.debug("DELETE ME - before create_multi_input_trigger")
+        add_status, add_msg = create_multi_input_trigger(configuration,
+                                                         _logger,
+                                                         vgrid,
+                                                         client_id,
+                                                         pattern,
+                                                         recipe_list,
+                                                         apply_retroactive)
+    else:
+        add_status, add_msg = create_single_input_trigger(configuration,
+                                                          _logger,
+                                                          vgrid,
+                                                          client_id,
+                                                          pattern,
+                                                          recipe_list,
+                                                          apply_retroactive)
+
+    return add_status, add_msg
+
+
+def create_single_input_trigger(configuration, _logger, vgrid, client_id,
+                                pattern, recipe_list, apply_retroactive):
+    _logger.debug("DELETE ME - given pattern: " + str(pattern))
+    _logger.debug("DELETE ME - given recipes: " + str(recipe_list))
+
     complete_recipe = ''
     recipe_ids = []
     for recipe in recipe_list:
@@ -1604,14 +1791,19 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
     _logger.debug("DELETE ME - msg: " + str(msg))
     task_path = msg.replace(configuration.vgrid_files_home, "")
     if task_path.startswith('/'):
-        task_path =  task_path[1:]
+        task_path = task_path[1:]
 
     output_files_string = ''
     for key, value in pattern['output'].items():
         if output_files_string != '':
             output_files_string += '\n'
-        updated_value = value.replace('*', '+TRIGGERFILENAME+')
+        # TODO take this out and just use existing name pulling system
+        updated_value = value.replace('*', '+TRIGGERPREFIX+')
+        updated_value = os.path.join(vgrid, updated_value)
         output_files_string += (key + ' ' + updated_value)
+
+    input_file_name = pattern['input_file']
+    input_file_path = pattern['trigger_paths'][0]
 
     arguments_dict = {
         'EXECUTE': [
@@ -1633,16 +1825,17 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
         'RETRIES': [
             "1"
         ],
+        'INPUTFILES': [
+            "+TRIGGERPATH+ " + input_file_name
+        ],
         'OUTPUTFILES': [
             output_files_string
-        ],
-        'INPUTFILES': [
-            "+TRIGGERPATH+ " + WF_INPUT,
         ],
         'EXECUTABLES': [
             task_path + " wf_job.py"
         ]
     }
+
     external_dict = get_keywords_dict(configuration)
     mrsl = fields_to_mrsl(configuration, arguments_dict, external_dict)
     # TODO replace with dict to mrsl as a string
@@ -1668,13 +1861,13 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
         'rule_id': trigger_id,
         'vgrid_name': vgrid,
         # will only set up for first input directory. would like more
-        'path': pattern['inputs'],
         'changes': ['created', 'modified'],
         'run_as': client_id,
         'action': 'submit',
         # arguments doesn't seem to be necessary at all, at least when created
         # with this method
         'arguments': [],
+        'path': input_file_path,
         # 'arguments': ['sampleMRSL.mRSL'],
         'rate_limit': '',
         'settle_time': '',
@@ -1689,7 +1882,7 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
         'task_file': task_path
     }
 
-    # _logger.debug("DELETE ME - rule_dict: " + str(rule_dict))
+    _logger.debug("DELETE ME - rule_dict: " + str(rule_dict))
 
     (add_status, add_msg) = vgrid_add_triggers(configuration,
                                                vgrid,
@@ -1702,7 +1895,6 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
 
     # mark pattern and recipes as having created this trigger
     _logger.debug("DELETE ME - pattern: " + str(pattern))
-
     _logger.debug("DELETE ME - updating pattern and recipe(s) with trigger "
                   "reference")
 
@@ -1712,12 +1904,14 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
             'trigger_id': trigger_id
         }
     }
-    update_workflow_pattern(configuration,
-                            client_id,
-                            vgrid,
-                            new_pattern_variables,
-                            pattern['persistence_id'])
+
+    __update_workflow_pattern(configuration, client_id, vgrid, new_pattern_variables, pattern['persistence_id'])
+
+    _logger.debug("DELETE ME - recipe_list: " + str(recipe_list))
+
     for recipe in recipe_list:
+        _logger.debug("DELETE ME - recipe: " + str(recipe))
+
         new_recipe_variables = {
             'triggers': recipe['triggers']
         }
@@ -1725,11 +1919,7 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
             'vgrid': vgrid,
             'trigger_id': trigger_id
         }
-        update_workflow_recipe(configuration,
-                               client_id,
-                               vgrid,
-                               new_recipe_variables,
-                               recipe['persistence_id'])
+        __update_workflow_recipe(configuration, client_id, vgrid, new_recipe_variables, recipe['persistence_id'])
 
     # TODO investigate why things only update properly if we don't immediately
     #  refresh
@@ -1739,34 +1929,51 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
     # probably do this somewhere else, but it'll do for now
     # check for pre-existing files that could trip the trigger
     vgrid_files_home = os.path.join(configuration.vgrid_files_home, vgrid)
-    input_dir = pattern['inputs']
-    regex = re.compile(os.path.join(vgrid_files_home, input_dir))
 
-    # if required, then apply retoractively to existing files
+    # if required, then apply retroactively to existing files
+    _logger.debug("DELETE ME - considering retroactive applications")
     if apply_retroactive:
+        _logger.debug("DELETE ME - look into retroactive")
+        _logger.debug("DELETE ME - vgrid_files_home: " + str(vgrid_files_home))
+        _logger.debug("DELETE ME - input_file_path: " + str(input_file_path))
+        _logger.debug("DELETE ME - check against: " + str(os.path.join(vgrid_files_home, input_file_path)))
+
         for root, dirs, files in os.walk(vgrid_files_home, topdown=False):
             for name in files:
                 file_path = os.path.join(root, name)
-                if regex.match(file_path):
+                prefix = name
+                if '.' in prefix:
+                    prefix = prefix[:prefix.index('.')]
+                _logger.debug("DELETE ME - file_path: " + str(file_path))
+                regex_path = os.path.join(vgrid_files_home, input_file_path)
+                _logger.debug("DELETE ME - regex_path: " + str(regex_path))
+                if re.match(regex_path, file_path):
+                    _logger.debug("DELETE ME - match found")
                     relative_path = file_path.replace(
                         configuration.vgrid_files_home, ''
                     )
                     file_arguments_dict = copy.deepcopy(arguments_dict)
+                    _logger.debug("DELETE ME - file_arguments_dict: %s" % str(file_arguments_dict))
                     for argument in file_arguments_dict.keys():
                         for index, element in enumerate(
                                 file_arguments_dict[argument]):
                             if '+TRIGGERPATH+' in element:
                                 file_arguments_dict[argument][index] = \
-                                    file_arguments_dict[argument][index]\
-                                    .replace('+TRIGGERPATH+', relative_path)
+                                    file_arguments_dict[argument][index] \
+                                        .replace('+TRIGGERPATH+',
+                                                 relative_path)
                             if '+TRIGGERFILENAME+' in element:
                                 file_arguments_dict[argument][index] = \
-                                    file_arguments_dict[argument][index]\
-                                    .replace('+TRIGGERFILENAME+', name)
+                                    file_arguments_dict[argument][index] \
+                                        .replace('+TRIGGERFILENAME+', name)
+                            if '+TRIGGERPREFIX+' in element:
+                                file_arguments_dict[argument][index] = \
+                                    file_arguments_dict[argument][index] \
+                                        .replace('+TRIGGERPREFIX+', prefix)
                             if '+TRIGGERVGRIDNAME+' in element:
                                 file_arguments_dict[argument][index] = \
-                                    file_arguments_dict[argument][index]\
-                                    .replace('+TRIGGERVGRIDNAME+', vgrid)
+                                    file_arguments_dict[argument][index] \
+                                        .replace('+TRIGGERVGRIDNAME+', vgrid)
                     mrsl = fields_to_mrsl(configuration,
                                           file_arguments_dict,
                                           external_dict)
@@ -1777,6 +1984,237 @@ def create_trigger(configuration, _logger, vgrid, client_id, pattern,
                     _logger.debug('applying rule retroactively to create new '
                                   'job for: ' + real_path)
                     new_job(real_path, client_id, configuration, False, True)
-
     return add_status, add_msg
 
+
+def create_multi_input_trigger(configuration, _logger, vgrid, client_id,
+                               pattern, recipe_list, apply_retroactive):
+    _logger.debug("DELETE ME - create_multi_input_trigger")
+    _logger.debug("DELETE ME - pattern: " + str(pattern))
+
+    (file_status, msg) = create_workflow_buffer_file(configuration,
+                                                     client_id,
+                                                     vgrid,
+                                                     pattern['trigger_paths'],
+                                                     pattern['input_file'],
+                                                     apply_retroactive)
+
+    _logger.debug("DELETE ME - buffer_file_status: " + str(file_status))
+    _logger.debug("DELETE ME - msg: " + str(msg))
+    buffer_path = msg.replace(configuration.vgrid_files_home, "")
+    if buffer_path.startswith('/'):
+        buffer_path = buffer_path[1:]
+
+    if not file_status:
+        return False, msg
+
+    pattern['trigger_paths'] = [buffer_path]
+
+    add_status, add_msg = create_single_input_trigger(configuration,
+                                                      _logger,
+                                                      vgrid,
+                                                      client_id,
+                                                      pattern,
+                                                      recipe_list,
+                                                      False)
+
+    # if not add_status:
+    return add_status, add_msg
+
+
+def scrape_for_workflow_objects(configuration, client_id, vgrid, source, name):
+
+    _logger = configuration.logger
+    _logger.debug("scrape_for_workflow_objects, client_id: %s, source: %s"
+                  % (client_id, source))
+
+    if not client_id:
+        msg = "A workflow creation dependency was missing"
+        _logger.error("scrape_for_workflow_object, client_id was not set %s"
+                      % client_id)
+        return False, msg
+
+    starting_variables = dir()
+    pattern_count = 0
+    recipe_count = 0
+    feedback = ''
+
+    try:
+        _logger.debug("starting source inspection")
+        exec(source)
+
+        new_variables = dir()
+        for item in starting_variables:
+            if item in new_variables:
+                new_variables.remove(item)
+        new_variables.remove('starting_variables')
+
+
+        for variable_name in new_variables:
+            variable = locals()[variable_name]
+            _logger.debug("looking at variable: %s of type %s" % (variable, type(variable)))
+
+            # python 3
+            # if type(variable) == Pattern:
+            #     pattern_count += 1
+            # python 2
+            if isinstance(variable, Pattern):
+                _logger.debug("Found a pattern whilst scraping: %s" % variable_name)
+
+                pattern_count += 1
+
+                pattern_dict = {
+                    'name': variable.name,
+                    'input_file': variable.input_file,
+                    'trigger_paths': variable.trigger_paths,
+                    'recipes': variable.recipes,
+                    'vgrids': vgrid,
+                    'owner': client_id,
+                    'output': variable.outputs,
+                    'variables': variable.variables
+                }
+                status, msg = define_pattern(configuration, client_id, vgrid, pattern_dict)
+
+                if not status:
+                    return (False, msg)
+                feedback += "\n%s" % msg
+
+    except Exception as exception:
+        _logger.error("Error encountered whilst running source: %s", exception)
+        # Re-add this later once it is decided what we're doing with existing notebooks
+        # return(False, exception.message)
+
+    if pattern_count == 0:
+        _logger.debug("Found no patterns, notebook %s is being registered as a recipe" % name)
+
+        recipe_count += 1
+
+        if '.ipynb' in name:
+            name = name.replace('.ipynb', '')
+
+
+        recipe_dict = {
+            'name': name,
+            'recipe': source,
+            'owner': client_id,
+            'vgrids': vgrid
+        }
+        status, msg = \
+            define_recipe(configuration, client_id, vgrid, recipe_dict)
+
+        if not status:
+            return (False, msg)
+        feedback += "\n%s" % msg
+
+
+    count_msg = '%d patterns and %d recipes were found.' % \
+          (pattern_count, recipe_count)
+
+    _logger.debug("Scraping complete.")
+
+    return (True, "%s\n%s" % (feedback, count_msg))
+
+
+def define_pattern(configuration, client_id, vgrid, pattern):
+    _logger = configuration.logger
+    _logger.debug("WP: define_pattern, client_id: %s, pattern: %s"
+                  % (client_id, pattern))
+
+    if not client_id:
+        msg = "A workflow pattern create dependency was missing"
+        _logger.error("client_id was not set %s" %
+                      client_id)
+        return (False, msg)
+
+    correct, msg = __correct_wp(configuration, pattern)
+    if not correct:
+        return (correct, msg)
+
+    if 'name' not in pattern:
+        pattern['name'] = generate_random_ascii(wp_id_length, charset=wp_id_charset)
+    else:
+        existing_pattern = get_wp_with(configuration,
+                                client_id=client_id,
+                                name=pattern['name'],
+                                vgrids=vgrid)
+        if existing_pattern:
+            # _logger.error("WP: a pattern with name: %s already exists: %s"
+            #               % (pattern['name'], client_id))
+            # msg = 'You already have a workflow pattern with the name %s' \
+            #       % pattern['name']
+            persistence_id = existing_pattern['persistence_id']
+            status, msg = __update_workflow_pattern(configuration, client_id, vgrid, pattern, persistence_id)
+
+            return (True, msg)
+
+    # TODO apply this to pattern as well
+    # need to still check variables as they might not match exactly
+    clients_patterns = get_wp_with(configuration,
+                                   client_id=client_id,
+                                   first=False,
+                                   owner=client_id,
+                                   trigger_paths=pattern['trigger_paths'],
+                                   output=pattern['output'],
+                                   vgrids=pattern['vgrids'])
+    _logger.debug('clients_patterns: ' + str(clients_patterns))
+    _logger.debug('pattern: ' + str(pattern))
+    for pattern in clients_patterns:
+        pattern_matches = True
+        for variable in pattern['variables'].keys():
+            _logger.debug("DELETE ME looking at variable " + str(variable))
+            try:
+                if pattern['variables'][variable] \
+                        != pattern['variables'][variable]:
+                    pattern_matches = False
+                    _logger.debug("DELETE ME doesn't match")
+            except KeyError:
+                pattern_matches = False
+        if pattern_matches:
+            _logger.error("An identical pattern already exists")
+            msg = 'You already have a workflow pattern with identical ' \
+                  'characteristics to %s' % pattern['name']
+            return (False, msg)
+        else:
+            _logger.debug('patterns are not identical')
+
+    _, creation_msg = __create_workflow_pattern(configuration, client_id, vgrid, pattern)
+
+    _, identification_msg = __rule_identification_from_pattern(configuration, client_id, pattern, True)
+
+    return (True, "%s%s" % (creation_msg, identification_msg))
+
+
+def define_recipe(configuration, client_id, vgrid, recipe):
+    _logger = configuration.logger
+    _logger.debug("WR: define_recipe, client_id: %s, recipe: %s"
+                  % (client_id, recipe))
+
+    if not client_id:
+        msg = "A workflow recipe creation dependency was missing"
+        _logger.error("client_id was not set %s" % client_id)
+        return False, msg
+
+    correct, msg = __correct_wr(configuration, recipe)
+    if not correct:
+        return correct, msg
+
+    if 'name' not in recipe:
+        recipe['name'] = generate_random_ascii(wr_id_length, charset=wr_id_charset)
+    else:
+        existing_recipe = get_wr_with(configuration,
+                                      client_id=client_id,
+                                      name=recipe['name'])
+        if existing_recipe:
+            # _logger.error("A recipe with name: %s already exists: %s"
+            #               % (recipe['name'], client_id))
+            # msg = 'You already have a workflow recipe with the name %s' \
+            #       % recipe['name']
+            persistence_id = existing_recipe['persistence_id']
+            status, msg = __update_workflow_recipe(configuration, client_id, vgrid, recipe, persistence_id)
+            return (True, msg)
+
+    _, creation_msg = __create_workflow_recipe(configuration, client_id, vgrid, recipe)
+
+    _, identification_msg = __rule_identification_from_recipe(configuration, client_id, recipe, True)
+
+    return (True, "%s%s" % (creation_msg, identification_msg))

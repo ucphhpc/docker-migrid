@@ -88,7 +88,7 @@ def main(client_id, user_arguments_dict):
     # Prepare for display
     display_wp = {
         'name': wp['name'],
-        'inputs': wp['inputs'],
+        'inputs': list(wp['trigger_paths'].values()),
         'owner': wp['owner'],
         'output': wp['output'],
         'recipes': wp['recipes'],

@@ -660,10 +660,10 @@ def valid_path_patterns(
     pattern_list,
     min_length=1,
     max_length=4096,
-    extra_chars='.*?',
+    extra_chars='.*?\\',
 ):
     """Verify that supplied pattern_list only contains characters that
-    we consider valid in paths. Valid wild card characters are added
+    we consider valid for regex paths. Valid wild card characters are added
     by default.
     """
 
@@ -1390,6 +1390,15 @@ def guess_type(name):
             __type_map[key] = valid_path_pattern
 
         for key in ('wr_recipe', ):
+            __type_map[key] = valid_printable
+
+        # Workflow notebook
+
+        for key in ('wf_notebookfilename', ):
+            # __type_map[key] = lambda x: valid_path_pattern(x, max_length=32)
+            __type_map[key] = valid_path_pattern
+
+        for key in ('wf_notebook', ):
             __type_map[key] = valid_printable
 
     # Return type checker from __type_map with fall back to alphanumeric

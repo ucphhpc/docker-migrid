@@ -336,6 +336,7 @@ your disposal:<br/>
 <li><a href="#jobs-tab">Active Trigger Jobs</a></li>
 <li><a href="#jupyter-tab-pattern">Register Patterns</a></li>
 <li><a href="#jupyter-tab-recipe">Register Recipes</a></li>
+<li><a href="#jupyter-tab-notebook">Register Notebook</a></li>
 </ul>
 '''})
         # Display existing triggers and form to add new ones
@@ -536,6 +537,53 @@ in reaction to file system events.</p>
         output_objects.append({'object_type': 'html_form', 'text': '''
              </div>
              '''})
+
+        # Register jupyter notebook containing patterns and  recipes
+        output_objects.append({'object_type': 'html_form', 'text': '''
+                    <div id="jupyter-tab-notebook">
+                    '''})
+
+        output_objects.append({'object_type': 'sectionheader',
+                               'text': 'Register Jupyter Notebook'})
+
+        form_method = 'post'
+        target_op = 'scrapenotebookforworkflow'
+        csrf_limit = get_csrf_limit(configuration)
+
+        csrf_token = make_csrf_token(configuration, form_method,
+                                     target_op, client_id, csrf_limit)
+
+        (add_import, add_init, add_ready) = fancy_upload_js(configuration,
+                                                            csrf_token=csrf_token)
+
+        fill_helpers = {'form_method': form_method, 'target_op': target_op,
+                        'csrf_field': csrf_field, 'csrf_limit': csrf_limit,
+                        'csrf_token': csrf_token, 'dest_dir': '.' + os.sep,
+                        'vgrid': vgrid_name}
+
+        output_objects.append({'object_type': 'html_form', 'text': """
+                    <p>
+                    On this page you can register a JupyterLab notebook. Valid 
+                    patterns will be scraped from it and a workflow will be 
+                    formed, if possible If no patterns are present it is 
+                    assumed that the notebook is a recipe and is read in as 
+                    such.
+                    </p>"""})
+
+        output_objects.append({'object_type': 'html_form', 'text': """
+                    <form enctype='multipart/form-data' method='%(form_method)s'
+                        action='%(target_op)s.py'>
+                        <input type="hidden" name="vgrid_name" value="%(vgrid)s" />
+                        <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
+                        JupyterLab Notebook:
+                        <input type='file' name='wf_notebook'/></br>
+                        <input type='submit' value='Register Notebook'/>
+                    </form>
+                    """ % fill_helpers})
+
+        output_objects.append({'object_type': 'html_form', 'text': '''
+                     </div>
+                     '''})
 
     if operation in show_operations:
         output_objects.append({'object_type': 'html_form', 'text':  '''</div>'''})

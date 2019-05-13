@@ -109,6 +109,7 @@ def fix_missing(config_file, verbose=True):
         'workflow_patterns_home': '/.workflow_patterns_home',
         'workflow_recipes_home': '/workflow_recipes_home',
         'workflow_tasks_home': '/.workflow_tasks_home',
+        'workflow_buffer_home': '/.workflow_buffer_home',
         'site_vgrid_links': 'files web tracker workflows monitor',
         'site_vgrid_creators': 'distinguished_name:.*',
         'site_vgrid_label': 'VGrid',
@@ -305,6 +306,7 @@ class Configuration:
     workflow_patterns_home = ''
     workflow_recipes_home = ''
     workflow_tasks_home = ''
+    workflow_buffer_home = ''
     seafile_mount = ''
     openid_store = ''
     paraview_home = ''
@@ -711,7 +713,10 @@ location.""" % self.config_file
                                                     'workflow_recipes_home')
         if config.has_option('GLOBAL', 'workflow_tasks_home'):
             self.workflow_tasks_home = config.get('GLOBAL',
-                                                    'workflow_tasks_home')
+                                                  'workflow_tasks_home')
+        if config.has_option('GLOBAL', 'workflow_buffer_home'):
+            self.workflow_buffer_home = config.get('GLOBAL',
+                                                   'workflow_buffer_home')
         if config.has_option('GLOBAL', 'freeze_home'):
             self.freeze_home = config.get('GLOBAL', 'freeze_home')
         if config.has_option('GLOBAL', 'sharelink_home'):
