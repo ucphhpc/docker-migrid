@@ -415,7 +415,6 @@ while True:
         # *********                *********
         # *********     USER JOB   *********
         # *********                *********
-        logger.debug("DELETE ME - possible user job detected")
 
         print cap_line
         logger.info(cap_line)
@@ -501,7 +500,6 @@ while True:
         
         # put job in queue
 
-        logger.debug("DELETE ME - enquing user job in job queue")
         job_queue.enqueue_job(dict_userjob, job_queue.queue_length())
 
         user_dict = {}
@@ -535,7 +533,6 @@ while True:
 
         # put job in queue
 
-        logger.debug("DELETE ME - enquing server job in job queue")
         job_queue.enqueue_job(dict_serverjob, job_queue.queue_length())
     elif cap_line.find('JOBSCHEDULE ') == 0:
 
@@ -1109,8 +1106,6 @@ while True:
                     else:
 
                         # put original job in back in job queue
-
-                        logger.debug("DELETE ME - requing job in job queue")
 
                         job_queue.enqueue_job(job_dict,
                                 job_queue.queue_length())

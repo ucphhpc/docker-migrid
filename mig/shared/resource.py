@@ -800,25 +800,17 @@ def write_resource_config(configuration, resource_conf, conf_path):
     """Write resource_conf dictionary settings into conf_path on disk"""
 
     logger = configuration.logger
-    logger.debug("DELETE ME - resource_conf:" + str(resource_conf))
 
     lines = []
     for (field, __) in resconfkeywords.get_resource_specs(configuration):
-        logger.debug("DELETE ME - field:" + str(field))
         value = resource_conf.get(field, None)
-        logger.debug("DELETE ME - value:" + str(field))
 
         if value:
             if 'RUNTIMEENVIRONMENT' == field:
-                logger.debug("DELETE ME - value was RUNTIMEENVIROMENT")
                 lines.append('::%s::' % field)
                 for (re_name, env_pairs) in value:
-                    logger.debug("DELETE ME - re_name: "+ str(re_name))
                     lines.append('name: %s' % re_name)
-                    logger.debug("DELETE ME - env_pairs: "+ str(env_pairs))
                     for (env_name, env_val) in env_pairs:
-                        logger.debug("DELETE ME - env_name: " + str(env_name))
-                        logger.debug("DELETE ME - env_val: " + str(env_val))
                         lines.append('%s=%s' % (env_name, env_val))
                 lines.append('')
             elif 'EXECONFIG' == field:

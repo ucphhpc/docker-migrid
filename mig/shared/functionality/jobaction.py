@@ -60,8 +60,6 @@ def main(client_id, user_arguments_dict):
     (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(client_id)
 
-    logger.debug('DELETE ME - jobaction: user_arguments_dict: ' + str(user_arguments_dict))
-
     client_dir = client_id_dir(client_id)
     defaults = signature()[1]
     (validate_status, accepted) = validate_input_and_cert(
@@ -236,12 +234,6 @@ jobs!''' % (job_id, action)
             job_dict['EXE'] = 'EXE_NAME_NOT_FOUND'
 
         # notify queue
-
-        logger.debug('DELETE ME - sending message: '
-                     + 'JOBACTION ' + job_id + ' ' + job_dict['STATUS'] + ' '
-                     + new_state + ' ' + job_dict['UNIQUE_RESOURCE_NAME']
-                     + ' ' + job_dict['EXE'] + '\n')
-
         if not send_message_to_grid_script('JOBACTION ' + job_id + ' '
                                            + job_dict['STATUS'] + ' '
                                            + new_state + ' '

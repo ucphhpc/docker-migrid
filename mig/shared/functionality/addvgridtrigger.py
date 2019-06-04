@@ -301,11 +301,6 @@ a job description file path as argument.'''})
 
     # Add to list and pickle
 
-    logger.debug("DELETE ME - vgrid_name: " + vgrid_name)
-    logger.debug("DELETE ME - rule_dict: " + str(rule_dict))
-    logger.debug("DELETE ME - update_id: " + str(update_id))
-    logger.debug("DELETE ME - rank: " + str(rank))
-
     (add_status, add_msg) = vgrid_add_triggers(configuration, vgrid_name,
                                                [rule_dict], update_id, rank)
     if not add_status:

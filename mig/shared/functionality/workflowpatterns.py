@@ -50,8 +50,6 @@ def signature():
 
 def workflow_patterns_table(configuration, client_id, output_objects,
                             vgrid=None):
-    configuration.logger.debug(('DELETE ME - workflow_patterns_table'))
-    
     output_objects.append({'object_type': 'sectionheader',
                            'text': 'Registered Workflow Patterns'})
 

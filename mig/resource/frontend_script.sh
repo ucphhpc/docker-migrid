@@ -683,7 +683,6 @@ while [ 1 ]; do
         echo "cd to job-dir_$localjobname" 1>> $frontendlog 2>> $frontendlog
         cd job-dir_$localjobname 1>> $frontendlog 2>> $frontendlog
 
-        echo "DELETE ME" 1>> $frontendlog 2>> $frontendlog
         ls -la 1>> $frontendlog 2>> $frontendlog
 
         # Write exe

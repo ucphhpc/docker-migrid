@@ -64,9 +64,6 @@ def main(client_id, user_arguments_dict, environ=None):
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
 
-    logger.debug('DELETE ME rmworkflowrecipe accepted: ' + str(accepted))
-    logger.debug('DELETE ME rmworkflowrecipe user_arguments_dict: ' + str(user_arguments_dict))
-
     wr_name = accepted['wr_name'][-1]
     vgrid = accepted['vgrid'][-1]
 

@@ -10,6 +10,7 @@ from shared.workflows import scrape_for_workflow_objects
 
 CELL_TYPE, CODE, SOURCE = 'cell_type', 'code', 'source'
 
+
 def signature():
     """Signaure of the main function"""
 
@@ -20,11 +21,11 @@ def signature():
     }
     return ['registernotebook', defaults]
 
+
 def main(client_id, user_arguments_dict):
     (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(client_id, op_header=False)
 
-    logger.debug('DELETE ME - START OF SCRAPING NOTEBOOK')
     logger.debug('user_arguments_dict: \n%s' % user_arguments_dict)
 
     defaults = signature()[1]
@@ -34,51 +35,38 @@ def main(client_id, user_arguments_dict):
     # put filename in list
     user_arguments_dict[note_book_name] = [user_arguments_dict[note_book_name]]
 
-    logger.debug('DELETE ME - defaults: %s ' % defaults)
-
     (validate_status, accepted) = validate_input_and_cert(
-        user_arguments_dict,
-        defaults,
-        output_objects,
-        client_id,
-        configuration,
-        allow_rejects=False,
-    )
-
-
-    logger.debug('DELETE ME - accepted: %s ' % accepted)
+        user_arguments_dict, defaults, output_objects, client_id,
+        configuration, allow_rejects=False,)
 
     vgrid = accepted[vgrid_name][-1]
     name = accepted[note_book_name][-1]
-
-    logger.debug('DELETE ME - notebook name: %s ' % name)
 
     # TODO get this loading in proper strings, not unicode
     notebook = json.loads(accepted["wf_notebook"][-1])
     if not isinstance(notebook, dict):
         output_objects.append({'object_type': 'error_text', 'text':
-            'Notebook is not formatted correctly'
-    })
+            'Notebook is not formatted correctly'})
 
     metadata = notebook['metadata']
 
     # Check notebook is in python
-    if metadata['kernelspec']['language'].encode('ascii') != 'python'.encode('ascii'):
+    if metadata['kernelspec']['language'].encode('ascii') \
+            != 'python'.encode('ascii'):
         output_objects.append({'object_type': 'error_text', 'text':
-            'Notebook is not written in python, instead is %s' % metadata['kernelspec']['language'].encode('ascii')
-    })
+            'Notebook is not written in python, instead is %s'
+            % metadata['kernelspec']['language'].encode('ascii')})
 
     output_objects.append({'object_type': 'text', 'text':
         'Registering JupyetLab Notebook and attempting to scrape valid '
-        'workflow patterns and recipes...'
-    })
+        'workflow patterns and recipes...'})
 
-    status, msg = scrape_for_workflow_objects(configuration, client_id, vgrid, notebook, name)
+    status, msg = scrape_for_workflow_objects(
+        configuration, client_id, vgrid, notebook, name)
 
     output_objects.append({'object_type': 'text', 'text':msg})
 
     output_objects.append({'object_type': 'text', 'text':
-        'Finished scraping notebook'
-    })
+        'Finished scraping notebook'})
 
     return (output_objects, returnvalues.OK)

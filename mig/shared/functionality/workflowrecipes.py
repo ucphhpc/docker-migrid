@@ -80,13 +80,10 @@ def workflow_recipes_table(configuration,
         output_objects.append({'object_type': 'html_form',
                                'text': helper})
 
-    configuration.logger.debug('DELETE ME - wrs: ' + str(wrs))
-
     for wr in wrs:
         # TODO dont' type cast
         #  add recipes and variables
 
-        configuration.logger.debug('DELETE ME - wr: ' + str(wr))
         if wr.get('owner'):
             email = extract_field(wr['owner'], 'email')
             if email:

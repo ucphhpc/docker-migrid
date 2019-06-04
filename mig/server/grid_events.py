@@ -629,17 +629,14 @@ class MiGRuleEventHandler(PatternMatchingEventHandler):
 
     def on_modified(self, event):
         """Handle modified rule file"""
-        logger.info('DELETE ME (grid_events) - on_modified(2): ' + str(event))
         self.update_rules(event)
 
     def on_created(self, event):
         """Handle new rule file"""
-        logger.info('DELETE ME (grid_events) - on_created(2): ' + str(event))
         self.update_rules(event)
 
     def on_deleted(self, event):
         """Handle deleted rule file"""
-        logger.info('DELETE ME (grid_events) - on_deleted(2): ' + str(event))
         self.update_rules(event)
 
 
@@ -833,7 +830,6 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
             return
         logger.info('(%s) proceed with handling of %s for %s %s'
                     % (pid, rule['action'], state, rel_src))
-        logger.info('DELETE ME - rule: ' + str(rule))
         self.__workflow_info(configuration, rule['vgrid_name'],
                              'handle %s for %s %s' % (rule['action'],
                                                       state, rel_src))
@@ -1154,24 +1150,19 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
             with h5py.File(src_path, 'a') as buffer_file:
                 expected_data_files = buffer_file
                 for key in expected_data_files:
-                    logger.debug('key: %s with data: %s' % (key, len(expected_data_files[key].keys())))
+                    logger.debug('key: %s with data: %s'
+                                 % (key, len(expected_data_files[key].keys())))
                     if len(expected_data_files[key].keys()):
-                        logger.debug('(%s) skip %s event as only update for incomplete buffer: %s' % (pid, state, src_path))
+                        logger.debug('(%s) skip %s event as only update for '
+                                     'incomplete buffer: %s'
+                                     % (pid, state, src_path))
                         return
-
-        logger.debug('DELETE ME - all_rules: %s' % all_rules)
 
         rule_hit = False
 
         # Each target_path pattern has one or more rules associated
 
         for (target_path, rule_list) in all_rules.items():
-
-            logger.debug('DELETE ME - src_path: %s' % src_path)
-            logger.debug('DELETE ME - target_path: %s' % target_path)
-            logger.debug('DELETE ME - rule_list: %s' % rule_list)
-            logger.debug('DELETE ME - configuration.workflow_buffer_home: %s' % configuration.workflow_buffer_home)
-
             # TODO compress this code once finalised
             # check to see if a buffer should be updated
             if configuration.workflow_buffer_home in target_path:
@@ -1186,15 +1177,19 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
                     with h5py.File(target_path, 'a') as h5_buffer_file:
                         logger.debug('opening %s' % target_path)
                         expected_data_files = h5_buffer_file.keys()
-                        logger.debug('Buffer is looking for files: %s' % expected_data_files)
+                        logger.debug('Buffer is looking for files: %s'
+                                     % expected_data_files)
                         if src_path in expected_data_files:
                             logger.debug('src path is in buffer')
                             with h5py.File(src_path, 'r') as h5_data_file:
                                 logger.debug('opening src file')
                                 for data_key in h5_data_file.keys():
                                     logger.debug('copying %s' % data_key)
-                                    h5_buffer_file.copy(h5_data_file[data_key], src_path + "/" + data_key)
-                            logger.debug('(%s) resulted in updated buffer at %s ' % (pid, src_path))
+                                    h5_buffer_file.copy(
+                                        h5_data_file[data_key],
+                                        src_path + "/" + data_key)
+                            logger.debug('(%s) resulted in updated buffer at '
+                                         '%s ' % (pid, src_path))
 
             # Do not use ordinary fnmatch as it lets '*' match anything
             # including '/' which leads to greedy matching in subdirs
@@ -1207,9 +1202,6 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
             direct_regexp = recursive_regexp.replace('.*', '[^/]*')
             recursive_hit = re.match(recursive_regexp, src_path)
             direct_hit = re.match(direct_regexp, src_path)
-
-            logger.debug('DELETE ME - recursive_regexp: %s' % recursive_regexp)
-            logger.debug('DELETE ME - direct_regexp: %s' % direct_regexp)
 
             if (direct_hit or recursive_hit):
 
@@ -1323,17 +1315,14 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
 
     def on_modified(self, event):
         """Handle modified files"""
-        logger.info('DELETE ME (grid_events) - on_modified: ' + str(event))
         self.handle_event(event)
 
     def on_created(self, event):
         """Handle created files"""
-        logger.info('DELETE ME (grid_events) - on_created: ' + str(event))
         self.handle_event(event)
 
     def on_deleted(self, event):
         """Handle deleted files"""
-        logger.info('DELETE ME (grid_events) - on_deleted: ' + str(event))
         self.handle_event(event)
 
     def on_moved(self, event):
@@ -1342,7 +1331,6 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
         model all that well. Furthermore inotify emits a created and a deleted
         event for a move between different filesystems or symlinked dirs.
         """
-        logger.info('DELETE ME (grid_events) - on_moved: ' + str(event))
 
         for (change, path) in [('created', event.dest_path),
                                ('deleted', event.src_path)]:
@@ -1670,9 +1658,6 @@ def monitor(configuration, vgrid_name):
     # buffer file generates a modification event, which means we need to check
     # the file ...
     ignore_patterns = [os.path.join(file_monitor_home, configuration.workflow_buffer_home)]
-
-    logger.info('(%s) DELETE ME - monitoring: %s ' % (pid, file_patterns))
-    logger.info('(%s) DELETE ME - ignoringing: %s ' % (pid, file_patterns))
 
     shared_state['file_handler'] = MiGFileEventHandler(
         patterns=file_patterns, ignore_patterns=ignore_patterns, ignore_directories=False, case_sensitive=True)

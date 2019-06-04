@@ -166,16 +166,10 @@ def main(client_id, user_arguments_dict):
         initialize_main_variables(client_id, op_header=False)
 
     defaults = signature()[1]
-    logger.debug("DELETE ME - recipe user_arguments_dict: %s" % user_arguments_dict)
 
     (validate_status, accepted) = validate_input_and_cert(
-        user_arguments_dict,
-        defaults,
-        output_objects,
-        client_id,
-        configuration,
-        allow_rejects=False,
-    )
+        user_arguments_dict, defaults, output_objects, client_id,
+        configuration, allow_rejects=False,)
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
     logger.debug("addworkflowrecipe, cliend_id: %s accepted %s" %
@@ -187,8 +181,6 @@ def main(client_id, user_arguments_dict):
     recipe_name = accepted[recipe_name_key][-1]
     recipe_code = accepted[recipe_key][-1]
     vgrid = accepted[vgrid_name][-1]
-
-    logger.debug("DELETE ME - recipe recipe_name: %s" % recipe_name)
 
     if not safe_handler(configuration, 'post', op_name, client_id,
                         get_csrf_limit(configuration), accepted):
@@ -207,61 +199,6 @@ def main(client_id, user_arguments_dict):
     }
 
     status, msg = define_recipe(configuration, client_id, vgrid, recipe)
-
-    # # Add optional userprovided name
-    # if recipe_name:
-    #     recipe['name'] = recipe_name
-    #     existing_recipe = get_wr_with(configuration,
-    #                                   client_id=client_id,
-    #                                   name=recipe_name,
-    #                                   vgrids=vgrid)
-    #     # editting previous recipe, not creating a new one
-    #     if existing_recipe is not None:
-    #         logger.debug("addworkflowrecipe, DELETE ME - existing recipe: "
-    #                      + str(existing_recipe))
-    #         persistence_id = existing_recipe['persistence_id']
-    #         updated, msg = update_workflow_recipe(configuration,
-    #                                               client_id,
-    #                                               vgrid,
-    #                                               recipe,
-    #                                               persistence_id)
-    #
-    #         if not updated:
-    #             output_objects.append({'object_type': 'error_text',
-    #                                    'text': msg})
-    #             return (output_objects, returnvalues.SYSTEM_ERROR)
-    #         output_objects.append({'object_type': 'text',
-    #                                'text': "Successfully updated the recipe"})
-    #         return (output_objects, returnvalues.OK)
-    #
-    # created, msg = create_workflow_recipe(configuration,
-    #                                       client_id,
-    #                                       vgrid,
-    #                                       recipe)
-    # if not created:
-    #     output_objects.append({'object_type': 'error_text',
-    #                            'text': msg})
-    #     return (output_objects, returnvalues.SYSTEM_ERROR)
-    #
-    # output_objects.append({'object_type': 'text',
-    #                        'text': "Successfully registered the recipe"})
-
-    # activated_patterns, incomplete_patterns = \
-    #     rule_identification_from_recipe(configuration,
-    #                                     client_id,
-    #                                     recipe,
-    #                                     True)
-    #
-    # for incomplete in incomplete_patterns:
-    #     output_objects.append({'object_type': 'text',
-    #                            'text': "Pattern " + incomplete + " "
-    #                             "requires recipe " + recipe['name'] + " but "
-    #                             "it requires other recipes to be activatable"})
-    #
-    # for activated in activated_patterns:
-    #     output_objects.append({'object_type': 'text',
-    #                            'text': "Pattern " + activated +
-    #                                    " is activatable and trigger created"})
 
     output_objects.append({'object_type': 'link',
                            'destination': 'vgridman.py',

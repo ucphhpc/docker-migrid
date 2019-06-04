@@ -59,8 +59,6 @@ def main(client_id, user_arguments_dict):
         initialize_main_variables(client_id, op_header=False, op_title=False,
                                   op_menu=client_id)
 
-    logger.debug("DELETE ME (REQUESTNEWJOB.PY) - main(start)")
-
     defaults = signature()[1]
     (validate_status, accepted) = validate_input(user_arguments_dict,
             defaults, output_objects, allow_rejects=False)
@@ -240,8 +238,6 @@ receive this message often, please increase the timeout for job requests.''' \
             {'object_type': 'error_text', 'text':
              'Fatal error: could not handle resource job request'})
         return (output_objects, returnvalues.ERROR)
-
-    logger.debug("DELETE ME - probably sent job request")
 
     output_objects.append(
             {'object_type': 'text', 'text': 'REQUESTNEWJOB OK. The job will '

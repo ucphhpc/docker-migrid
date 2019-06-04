@@ -107,9 +107,6 @@ def main(client_id, user_arguments_dict):
         initialize_main_variables(client_id, op_header=False)
     defaults = signature()[1]
 
-    logger.debug("DELETE ME - " + str(user_arguments_dict))
-    logger.debug("DELETE ME - " + str(op_name))
-
     # TODO probably do this somewhere else? seems like this might have come up
     #  by now
     # convert recipes into list of entries
@@ -241,10 +238,8 @@ def main(client_id, user_arguments_dict):
     output_dict = {}
     if output_list != ['']:
         for output in output_list:
-            logger.debug('DELETE ME output: ' + str(output))
             try:
                 tuple = output.split('=')
-                logger.debug('DELETE ME tuple: ' + str(tuple))
                 key, value = tuple[0], tuple[1]
 
                 if key in variables_dict.keys():
@@ -272,10 +267,8 @@ def main(client_id, user_arguments_dict):
     input_dict = {}
     if inputs_list != ['']:
         for input in inputs_list:
-            logger.debug('DELETE ME input: ' + str(input))
             # try:
             tuple = input.split('=')
-            logger.debug('DELETE ME tuple: ' + str(tuple))
             key, value = tuple[0], tuple[1]
 
             if key in variables_dict.keys():
@@ -301,9 +294,6 @@ def main(client_id, user_arguments_dict):
             #         assignment of the form file=dir/file.txt''' % input})
             #     return (output_objects, returnvalues.CLIENT_ERROR)
 
-    logger.debug("DELETE ME - addworkflowpattern, variables_dict: " + str(variables_dict))
-
-    logger.debug("DELETE ME - paths: " + str(paths))
     for path in paths:
         if not valid_dir_input(configuration.user_home, path):
             logger.warning(
@@ -331,54 +321,6 @@ def main(client_id, user_arguments_dict):
     logger.debug("addworkflowpattern, created pattern: " + str(pattern))
 
     status, msg = define_pattern(configuration, client_id, vgrid, pattern)
-
-    # # Add optional userprovided name
-    # if name:
-    #     pattern['name'] = name
-    #     existing_pattern = get_wp_with(configuration,
-    #                                    client_id=client_id,
-    #                                    name=name,
-    #                                    vgrids=vgrid)
-    #     if existing_pattern is not None:
-    #         logger.debug("addworkflowpattern, DELETE ME - existing patterns: "
-    #                      + str(existing_pattern))
-    #         persistence_id = existing_pattern['persistence_id']
-    #         updated, msg = update_workflow_pattern(configuration,
-    #                                                client_id,
-    #                                                vgrid,
-    #                                                pattern,
-    #                                                persistence_id)
-    #         if not updated:
-    #             output_objects.append({'object_type': 'error_text',
-    #                                    'text': msg})
-    #             return (output_objects, returnvalues.SYSTEM_ERROR)
-    #         output_objects.append({'object_type': 'text',
-    #                                'text': "Successfully updated the pattern"})
-    #         return (output_objects, returnvalues.OK)
-    #
-    # created, msg = create_workflow_pattern(configuration,
-    #                                        client_id,
-    #                                        vgrid,
-    #                                        pattern)
-    # if not created:
-    #     output_objects.append({'object_type': 'error_text',
-    #                            'text': msg})
-    #     return (output_objects, returnvalues.SYSTEM_ERROR)
-    #
-    # output_objects.append({'object_type': 'text',
-    #                        'text': "Successfully registered the pattern"})
-    #
-    # # activatable, msg = rule_identification_from_pattern(configuration,
-    # #                                                     client_id,
-    # #                                                     pattern,
-    # #                                                     True)
-    # #
-    # # if activatable:
-    # #     output_objects.append({'object_type': 'text',
-    # #                            'text': "All required recipes are present, "
-    # #                                    "pattern is activatable"})
-    # # else:
-    # #     output_objects.append({'object_type': 'text', 'text': msg})
 
     output_objects.append({'object_type': 'link',
                            'destination': 'vgridman.py',

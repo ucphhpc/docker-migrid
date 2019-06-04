@@ -47,12 +47,6 @@ def load_system_map(configuration, kind, do_lock):
 
         map_stamp = os.path.getmtime(map_path)
 
-        configuration.logger.info("DELETE ME - START POINT")
-        configuration.logger.info("DELETE ME - map_stamp: " + str(map_stamp))
-        configuration.logger.info("DELETE ME - map_path: " + str(map_path))
-        configuration.logger.info("DELETE ME - entity_map: " + str(entity_map))
-        configuration.logger.info("DELETE ME - END POINT")
-
     except IOError:
         configuration.logger.warn("No %s map to load" % kind)
         entity_map = {}
