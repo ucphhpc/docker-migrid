@@ -334,8 +334,8 @@ your disposal:<br/>
 <ul>
 <li><a href="#manage-tab">Manage Triggers</a></li>
 <li><a href="#jobs-tab">Active Trigger Jobs</a></li>
-<li><a href="#jupyter-tab-pattern">Register Patterns</a></li>
-<li><a href="#jupyter-tab-recipe">Register Recipes</a></li>
+<li><a href="#jupyter-tab-pattern">Patterns</a></li>
+<li><a href="#jupyter-tab-recipe">Recipes</a></li>
 <li><a href="#jupyter-tab-notebook">Register Notebook</a></li>
 </ul>
 '''})
@@ -399,76 +399,76 @@ in reaction to file system events.</p>
                                 output_objects,
                                 vgrid=vgrid_name)
 
-        output_objects.append({'object_type': 'sectionheader',
-                               'text': 'Register Workflow Patterns'})
-
-        form_method = 'post'
-        target_op = 'addworkflowpattern'
-        csrf_limit = get_csrf_limit(configuration)
-
-        csrf_token = make_csrf_token(configuration, form_method,
-                                     target_op, client_id, csrf_limit)
-
-        (add_import, add_init, add_ready) = fancy_upload_js(configuration,
-                                                            csrf_token=csrf_token)
-
-        fill_helpers = {'form_method': form_method, 'target_op': target_op,
-                        'csrf_field': csrf_field, 'csrf_limit': csrf_limit,
-                        'csrf_token': csrf_token, 'dest_dir': '.' + os.sep,
-                        'vgrid': vgrid_name}
-
-        # Place the patterns and recipes seperately
-
-        output_objects.append({'object_type': 'html_form', 'text': """
-        <p>
-        On this page you can register a Workflow Pattern.
-        The Pattern requires three things i.e:</br>
-        </br>
-            - <b>input</b>  </br>
-            - <b>output</b> </br>
-            - <b>recipes</b> </br>
-        </br>
-        The <b>input</b> defines the system path from which the workflow should
-         monitor for incoming events that should trigger the execution of an 
-         attached Recipe. It can be expressed as a regular expression so that 
-         multiple inputs can be defined or so that only certain file types may 
-         be noticed. For instance <b>input_dir/*</b> will pick up all files 
-         within the directory 'input_dir'. Note that files already present 
-         within the vgrid will also be tested for eligability.</br>
-        </br>
-        The <b>output</b> defines the system directory into which the workflow 
-        will save its output. For example <b>output_dir</b> will save all output
-         files within the 'output_dir' directory.</br>
-        </br>
-        The <b>recipes</b> define the program/source code that should be 
-        executed on the triggering of a valid event. Multiple recipes can be 
-        listed and should be seperated with a semicolon. These recipes will be 
-        chained together to form one larger recipe.</br>
-        </br>
-        The pattern may also be given a <b>name</b>. This name must be unique and if 
-        not provided, a dynamically generated one shall be created. If you wish
-         to update an already registered pattern then enter the same name here 
-         and changes will be applied.</br>
-        </br>
-        The pattern can be given a number of <b>variables</b>. These should be
-         expressed in the form <b>a=1;b='string'</b>. Note that they are 
-         separated by a semi-colon.</br>        
-        </p>"""})
-
-        output_objects.append({'object_type': 'html_form', 'text': """
-        <form enctype='multipart/form-data' method='%(form_method)s'
-            action='%(target_op)s.py'>
-            Input: <input type='text' name='wp_inputs' /></br>
-            Output: <input type='text' name='wp_output' /></br>
-            Recipe(s): <input type='text' name='wp_recipes' /></br>
-            <input type="hidden" name="vgrid_name" value="%(vgrid)s" />
-            <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
-            (Optional) Pattern name: <input type='text' name='wp_name' /></br>
-            (Optional) Variables: <input type='text' name='wp_variables' /></br>
-            <input type='submit' value='Register Pattern'/>
-        </form>
-        """ % fill_helpers})
-
+        # output_objects.append({'object_type': 'sectionheader',
+        #                        'text': 'Register Workflow Patterns'})
+        #
+        # form_method = 'post'
+        # target_op = 'addworkflowpattern'
+        # csrf_limit = get_csrf_limit(configuration)
+        #
+        # csrf_token = make_csrf_token(configuration, form_method,
+        #                              target_op, client_id, csrf_limit)
+        #
+        # (add_import, add_init, add_ready) = fancy_upload_js(configuration,
+        #                                                     csrf_token=csrf_token)
+        #
+        # fill_helpers = {'form_method': form_method, 'target_op': target_op,
+        #                 'csrf_field': csrf_field, 'csrf_limit': csrf_limit,
+        #                 'csrf_token': csrf_token, 'dest_dir': '.' + os.sep,
+        #                 'vgrid': vgrid_name}
+        #
+        # # Place the patterns and recipes seperately
+        #
+        # output_objects.append({'object_type': 'html_form', 'text': """
+        # <p>
+        # On this page you can register a Workflow Pattern.
+        # The Pattern requires three things i.e:</br>
+        # </br>
+        #     - <b>input</b>  </br>
+        #     - <b>output</b> </br>
+        #     - <b>recipes</b> </br>
+        # </br>
+        # The <b>input</b> defines the system path from which the workflow should
+        #  monitor for incoming events that should trigger the execution of an
+        #  attached Recipe. It can be expressed as a regular expression so that
+        #  multiple inputs can be defined or so that only certain file types may
+        #  be noticed. For instance <b>input_dir/*</b> will pick up all files
+        #  within the directory 'input_dir'. Note that files already present
+        #  within the vgrid will also be tested for eligability.</br>
+        # </br>
+        # The <b>output</b> defines the system directory into which the workflow
+        # will save its output. For example <b>output_dir</b> will save all output
+        #  files within the 'output_dir' directory.</br>
+        # </br>
+        # The <b>recipes</b> define the program/source code that should be
+        # executed on the triggering of a valid event. Multiple recipes can be
+        # listed and should be seperated with a semicolon. These recipes will be
+        # chained together to form one larger recipe.</br>
+        # </br>
+        # The pattern may also be given a <b>name</b>. This name must be unique and if
+        # not provided, a dynamically generated one shall be created. If you wish
+        #  to update an already registered pattern then enter the same name here
+        #  and changes will be applied.</br>
+        # </br>
+        # The pattern can be given a number of <b>variables</b>. These should be
+        #  expressed in the form <b>a=1;b='string'</b>. Note that they are
+        #  separated by a semi-colon.</br>
+        # </p>"""})
+        #
+        # output_objects.append({'object_type': 'html_form', 'text': """
+        # <form enctype='multipart/form-data' method='%(form_method)s'
+        #     action='%(target_op)s.py'>
+        #     Input: <input type='text' name='wp_inputs' /></br>
+        #     Output: <input type='text' name='wp_output' /></br>
+        #     Recipe(s): <input type='text' name='wp_recipes' /></br>
+        #     <input type="hidden" name="vgrid_name" value="%(vgrid)s" />
+        #     <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
+        #     (Optional) Pattern name: <input type='text' name='wp_name' /></br>
+        #     (Optional) Variables: <input type='text' name='wp_variables' /></br>
+        #     <input type='submit' value='Register Pattern'/>
+        # </form>
+        # """ % fill_helpers})
+        #
         output_objects.append({'object_type': 'html_form', 'text': '''
          </div>
          '''})
@@ -484,56 +484,56 @@ in reaction to file system events.</p>
                                output_objects,
                                vgrid=vgrid_name)
 
-        output_objects.append({'object_type': 'sectionheader',
-                               'text': 'Register Workflow Recipes'})
-
-        form_method = 'post'
-        target_op = 'addworkflowrecipe'
-        csrf_limit = get_csrf_limit(configuration)
-
-        csrf_token = make_csrf_token(configuration, form_method,
-                                     target_op, client_id, csrf_limit)
-
-        (add_import, add_init, add_ready) = fancy_upload_js(configuration,
-                                                            csrf_token=csrf_token)
-
-        fill_helpers = {'form_method': form_method, 'target_op': target_op,
-                        'csrf_field': csrf_field, 'csrf_limit': csrf_limit,
-                        'csrf_token': csrf_token, 'dest_dir': '.' + os.sep,
-                        'vgrid': vgrid_name}
-
-        output_objects.append({'object_type': 'html_form', 'text': """
-            <p>
-            On this page you can register a Workflow Recipe.
-            The Recipe requires only one thing, a <b>recipe</b> definition. 
-            Currently this should always be in Python. A recipe <b>name</b> may
-             also be defined.</br> 
-            </br> 
-            The <b>recipe</b> defines the processing that is run in the event 
-            of a trigger being fired. This may accept inputs from a pattern, 
-            such as <b>wf_input_file</b> defining the input data file and 
-            <b>wf_output_file</b> which defines the output data file. In 
-            addition the pattern may define its own variables that are passed 
-            on to an individual instance of a recipe when it is used to 
-            generate a job.</br>
-            </br> 
-            The <b>name</b> is the unique identifier used to identify a recipe 
-            within a pattern. It can be set by a user or be automatically 
-            generated. To edit a previously created recipe, enter the 
-            appropriate name here and changes will be applied.
-            </p>"""})
-
-        output_objects.append({'object_type': 'html_form', 'text': """
-            <form enctype='multipart/form-data' method='%(form_method)s'
-                action='%(target_op)s.py'>
-                <input type="hidden" name="vgrid_name" value="%(vgrid)s" />
-                <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
-                Recipe: <input type='file' name='wr_recipe'/></br>
-                (Optional) Recipe name: <input type='text' name='wr_name' /></br>
-                <input type='submit' value='Register Recipe'/>
-            </form>
-            """ % fill_helpers})
-
+        # output_objects.append({'object_type': 'sectionheader',
+        #                        'text': 'Register Workflow Recipes'})
+        #
+        # form_method = 'post'
+        # target_op = 'addworkflowrecipe'
+        # csrf_limit = get_csrf_limit(configuration)
+        #
+        # csrf_token = make_csrf_token(configuration, form_method,
+        #                              target_op, client_id, csrf_limit)
+        #
+        # (add_import, add_init, add_ready) = fancy_upload_js(configuration,
+        #                                                     csrf_token=csrf_token)
+        #
+        # fill_helpers = {'form_method': form_method, 'target_op': target_op,
+        #                 'csrf_field': csrf_field, 'csrf_limit': csrf_limit,
+        #                 'csrf_token': csrf_token, 'dest_dir': '.' + os.sep,
+        #                 'vgrid': vgrid_name}
+        #
+        # output_objects.append({'object_type': 'html_form', 'text': """
+        #     <p>
+        #     On this page you can register a Workflow Recipe.
+        #     The Recipe requires only one thing, a <b>recipe</b> definition.
+        #     Currently this should always be in Python. A recipe <b>name</b> may
+        #      also be defined.</br>
+        #     </br>
+        #     The <b>recipe</b> defines the processing that is run in the event
+        #     of a trigger being fired. This may accept inputs from a pattern,
+        #     such as <b>wf_input_file</b> defining the input data file and
+        #     <b>wf_output_file</b> which defines the output data file. In
+        #     addition the pattern may define its own variables that are passed
+        #     on to an individual instance of a recipe when it is used to
+        #     generate a job.</br>
+        #     </br>
+        #     The <b>name</b> is the unique identifier used to identify a recipe
+        #     within a pattern. It can be set by a user or be automatically
+        #     generated. To edit a previously created recipe, enter the
+        #     appropriate name here and changes will be applied.
+        #     </p>"""})
+        #
+        # output_objects.append({'object_type': 'html_form', 'text': """
+        #     <form enctype='multipart/form-data' method='%(form_method)s'
+        #         action='%(target_op)s.py'>
+        #         <input type="hidden" name="vgrid_name" value="%(vgrid)s" />
+        #         <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
+        #         Recipe: <input type='file' name='wr_recipe'/></br>
+        #         (Optional) Recipe name: <input type='text' name='wr_name' /></br>
+        #         <input type='submit' value='Register Recipe'/>
+        #     </form>
+        #     """ % fill_helpers})
+        #
         output_objects.append({'object_type': 'html_form', 'text': '''
              </div>
              '''})

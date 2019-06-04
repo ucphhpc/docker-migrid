@@ -121,6 +121,11 @@ RUN pip install --user \
     watchdog \
     scandir
 
+# Modules required by workflows.py
+RUN pip install --user \
+    h5py \
+    papermill
+
 # Modules required by grid_sftp.py
 RUN pip install --user \
     paramiko

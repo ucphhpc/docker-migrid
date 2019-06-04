@@ -45,6 +45,7 @@ import time
 import threading
 import multiprocessing
 import json
+import h5py
 
 try:
     from watchdog.observers import Observer
@@ -1141,46 +1142,59 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
                          (pid, state, src_path))
             return
 
-        rule_hit = False
-
-        # Each target_path pattern has one or more rules associated
+        # process patterns if event is modification of the pattern
+        # definition notebook
+        vgrid_files_home = configuration.vgrid_files_home
+        logger.debug("vgrid_files_home: %s" % vgrid_files_home)
 
         # ignore the event if it is a buffer being updated, but is not yet
         # complete
         # TODO improve buffer event detection
         if configuration.workflow_buffer_home in src_path:
-            with open(src_path) as buffer_file:
-                buffer = json.load(buffer_file)
-                for _, value in buffer.items():
-                    if value is None:
-                        logger.debug('(%s) skip %s event as only update for '
-                                     'incomplete buffer: %s' %
-                                     (pid, state, src_path))
+            with h5py.File(src_path, 'a') as buffer_file:
+                expected_data_files = buffer_file
+                for key in expected_data_files:
+                    logger.debug('key: %s with data: %s' % (key, len(expected_data_files[key].keys())))
+                    if len(expected_data_files[key].keys()):
+                        logger.debug('(%s) skip %s event as only update for incomplete buffer: %s' % (pid, state, src_path))
                         return
 
         logger.debug('DELETE ME - all_rules: %s' % all_rules)
 
+        rule_hit = False
+
+        # Each target_path pattern has one or more rules associated
+
         for (target_path, rule_list) in all_rules.items():
 
+            logger.debug('DELETE ME - src_path: %s' % src_path)
+            logger.debug('DELETE ME - target_path: %s' % target_path)
+            logger.debug('DELETE ME - rule_list: %s' % rule_list)
+            logger.debug('DELETE ME - configuration.workflow_buffer_home: %s' % configuration.workflow_buffer_home)
+
+            # TODO compress this code once finalised
             # check to see if a buffer should be updated
             if configuration.workflow_buffer_home in target_path:
 
-                logger.debug('(%s) matched %s, and is bufferable file'
-                             % (pid, src_path))
+                logger.debug('(%s) rule is waiting for buffer file %s'
+                             % (pid, target_path))
 
-                with open(target_path) as buffer_file:
-                    buffer = json.load(buffer_file)
-                    for buffer_target_path, _ in buffer.items():
-                        if src_path.endswith(buffer_target_path):
-                            if os.path.isfile(src_path):
-                                input_file = open(src_path, 'r')
-                                contents_string = ''
-                                contents_string += input_file.read()
-                                input_file.close()
-                                buffer[buffer_target_path] = contents_string
-                                buffer_file.write(buffer)
-                                logger.debug('(%s) resulted in updated buffer '
-                                             'at %s ' % (pid, src_path))
+                buffer_extension = target_path[target_path.rfind('.'):]
+                src_extension = src_path[src_path.rfind('.'):]
+                if buffer_extension == src_extension == '.hdf5':
+                    logger.debug('Buffer is in hdf5')
+                    with h5py.File(target_path, 'a') as h5_buffer_file:
+                        logger.debug('opening %s' % target_path)
+                        expected_data_files = h5_buffer_file.keys()
+                        logger.debug('Buffer is looking for files: %s' % expected_data_files)
+                        if src_path in expected_data_files:
+                            logger.debug('src path is in buffer')
+                            with h5py.File(src_path, 'r') as h5_data_file:
+                                logger.debug('opening src file')
+                                for data_key in h5_data_file.keys():
+                                    logger.debug('copying %s' % data_key)
+                                    h5_buffer_file.copy(h5_data_file[data_key], src_path + "/" + data_key)
+                            logger.debug('(%s) resulted in updated buffer at %s ' % (pid, src_path))
 
             # Do not use ordinary fnmatch as it lets '*' match anything
             # including '/' which leads to greedy matching in subdirs
@@ -1194,11 +1208,8 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
             recursive_hit = re.match(recursive_regexp, src_path)
             direct_hit = re.match(direct_regexp, src_path)
 
-            logger.debug('DELETE ME - target_path: %s' % target_path)
-            logger.debug('DELETE ME - rule_list: %s' % rule_list)
             logger.debug('DELETE ME - recursive_regexp: %s' % recursive_regexp)
             logger.debug('DELETE ME - direct_regexp: %s' % direct_regexp)
-
 
             if (direct_hit or recursive_hit):
 
@@ -1653,8 +1664,18 @@ def monitor(configuration, vgrid_name):
 
     file_monitor = Observer()
     file_patterns = [os.path.join(file_monitor_home, '*')]
+
+    # ignore buffer files as h5py generates far too many system events, and we
+    # can easily get stuck in an infinite loop of events, where checking a
+    # buffer file generates a modification event, which means we need to check
+    # the file ...
+    ignore_patterns = [os.path.join(file_monitor_home, configuration.workflow_buffer_home)]
+
+    logger.info('(%s) DELETE ME - monitoring: %s ' % (pid, file_patterns))
+    logger.info('(%s) DELETE ME - ignoringing: %s ' % (pid, file_patterns))
+
     shared_state['file_handler'] = MiGFileEventHandler(
-        patterns=file_patterns, ignore_directories=False, case_sensitive=True)
+        patterns=file_patterns, ignore_patterns=ignore_patterns, ignore_directories=False, case_sensitive=True)
     file_monitor.schedule(shared_state['file_handler'], file_monitor_home,
                           recursive=False)
     file_monitor.start()
