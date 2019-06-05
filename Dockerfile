@@ -168,8 +168,10 @@ RUN ./generateconfs.py \
     --enable_crontab=True \
     --enable_imnotify=True \
     --enable_hsts=True \
-    --enable_jupyter=False \
+    --enable_jupyter=True \
     --enable_sftp_subsys=True \
+    --jupyter_services="modi.http://modi" \
+    --jupyter_services_desc="{'modi': 'Hello from modi'}" \
     --base_fqdn=$DOMAIN \
     --public_fqdn=www.$DOMAIN \
     --public_port=80 \
@@ -237,6 +239,13 @@ RUN cp generated-confs/MiG.conf $WEB_DIR/conf.d/ \
 RUN cp generated-confs/apache2.conf $WEB_DIR/ \
     && cp generated-confs/ports.conf $WEB_DIR/ \
     && cp generated-confs/envvars $WEB_DIR/
+
+# Jupyter apache confs
+RUN mkdir -p $WEB_DIR/conf.extras.d \
+    && cp generated-confs/MiG-jupyter-def.conf $WEB_DIR/conf.extras.d \
+    && cp generated-confs/MiG-jupyter-openid.conf $WEB_DIR/conf.extras.d \
+    && cp generated-confs/MiG-jupyter-proxy.conf $WEB_DIR/conf.extras.d/ \
+    && cp generated-confs/MiG-jupyter-rewrite.conf $WEB_DIR/conf.extras.d/
 
 # Disable certificate check for OID
 RUN sed -i '/\/server.ca.pem/ a SSLProxyCheckPeerName off' $WEB_DIR/conf.d/MiG.conf \
