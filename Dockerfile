@@ -170,8 +170,8 @@ RUN ./generateconfs.py \
     --enable_hsts=True \
     --enable_jupyter=True \
     --enable_sftp_subsys=True \
-    --jupyter_services="modi.http://modi" \
-    --jupyter_services_desc="{'modi': 'Hello from modi'}" \
+    --jupyter_services="dag.http://dag" \
+    --jupyter_services_desc="{'dag': 'Hello from dag'}" \
     --base_fqdn=$DOMAIN \
     --public_fqdn=www.$DOMAIN \
     --public_port=80 \
