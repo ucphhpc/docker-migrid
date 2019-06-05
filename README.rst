@@ -2,7 +2,7 @@
 docker-migrid
 =============
 
-A containerized version of the middelware `Minimum Intrusion Grid (MiG) <https://sourceforge.net/projects/migrid/>`_ system.
+A containerized version of the middleware `Minimum Intrusion Grid (MiG) <https://sourceforge.net/projects/migrid/>`_ system.
 
 ------------
 Introduction
@@ -37,7 +37,7 @@ Getting Started
 
 To begin with the migrid docker image should be built with::
 
-    make build
+    make
 
 
 Beyond creating the image, the build target will also
@@ -54,7 +54,7 @@ for the current configuration/state files of the services.
 Futhermore, to make the DNS resolution work properly for discovering ``migrid.test``
 as a local URL. The host device should be configured so that it queries the
 localhost ``devdns`` service before any external nameserver.
-E.g. on a OSX system either through dnsmasq::
+E.g. on a OSX or Linux system either through dnsmasq::
 
     # append to end of dnsmasq.conf
     address=/.test/127.0.0.1

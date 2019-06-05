@@ -108,7 +108,12 @@ venv.bak/
 # Migrid mount volume directories
 certs/
 httpd/
-mig/
 state/
+
+# Dont store current config and db
+mig/server/MiG-users.db
+
+# Dont store job queue
+mig/server/server.stdin
 
 .vscode/
