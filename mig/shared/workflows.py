@@ -1709,6 +1709,25 @@ def create_multi_input_trigger(configuration, _logger, vgrid, client_id,
     return add_status, add_msg
 
 
+def import_notebook_as_recipe(configuration, client_id, vgrid, notebook, name):
+    """Reads a provided notebook in as a recipe"""
+    if '.ipynb' in name:
+        name = name.replace('.ipynb', '')
+
+    recipe_dict = {
+        'name': name,
+        'recipe': notebook,
+        'owner': client_id,
+        'vgrids': vgrid
+    }
+    status, msg = define_recipe(
+        configuration, client_id, vgrid, recipe_dict)
+
+    if not status:
+        return False, msg
+    return True, msg
+
+
 def scrape_for_workflow_objects(configuration, client_id, vgrid, notebook,
                                 name):
     """Scrapes a given jupyter notebook for defined workflow patterns. If
@@ -1809,23 +1828,10 @@ def scrape_for_workflow_objects(configuration, client_id, vgrid, notebook,
         _logger.debug("Found no patterns, notebook %s is being registered as "
                       "a recipe" % name)
 
-        recipe_count += 1
-
-        if '.ipynb' in name:
-            name = name.replace('.ipynb', '')
-
-        recipe_dict = {
-            'name': name,
-            'recipe': notebook,
-            'owner': client_id,
-            'vgrids': vgrid
-        }
-        status, msg = define_recipe(
-            configuration, client_id, vgrid, recipe_dict)
-
-        if not status:
-            return False, msg
-        feedback += "\n%s" % msg
+        status, feedback = import_notebook_as_recipe(configuration, client_id,
+                                                     vgrid, notebook, name)
+        if status:
+            recipe_count += 1
 
     count_msg = '%d patterns and %d recipes were found.' % \
           (pattern_count, recipe_count)

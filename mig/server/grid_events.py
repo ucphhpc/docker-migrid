@@ -78,13 +78,14 @@ from shared.conf import get_configuration_object
 from shared.defaults import valid_trigger_changes, workflows_log_name, \
     workflows_log_size, workflows_log_cnt, csrf_field
 from shared.events import get_path_expand_map
-from shared.fileio import makedirs_rec, pickle, unpickle
+from shared.fileio import makedirs_rec, pickle, unpickle, delete_file
 from shared.handlers import get_csrf_limit, make_csrf_token
 from shared.job import fill_mrsl_template, new_job
 from shared.logger import daemon_logger, reopen_log
 from shared.serial import load
 from shared.vgrid import vgrid_valid_entities
 from shared.vgridaccess import check_vgrid_access
+from shared.workflows import import_notebook_as_recipe, define_pattern
 
 # Global trigger rule dictionaries with rules for all VGrids
 
@@ -1138,14 +1139,14 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
                          (pid, state, src_path))
             return
 
-        # process patterns if event is modification of the pattern
-        # definition notebook
-        vgrid_files_home = configuration.vgrid_files_home
-        logger.debug("vgrid_files_home: %s" % vgrid_files_home)
+        # ---------------------------------------------------------------------
+        # TODO this section should probably be moved into the traditional
+        #  trigger handling. Do it once we know what structure actually is as
+        #  may be difficult to implement. Also consider if we want to make use
+        #  of the mig_meow module here
 
         # ignore the event if it is a buffer being updated, but is not yet
         # complete
-        # TODO improve buffer event detection
         if configuration.workflow_buffer_home in src_path:
             with h5py.File(src_path, 'a') as buffer_file:
                 expected_data_files = buffer_file
@@ -1157,6 +1158,53 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
                                      'incomplete buffer: %s'
                                      % (pid, state, src_path))
                         return
+
+        # check if event is something being passed from mig_meow
+        MIG_MEOW_DIR = '.meow_export_home'
+        NOTEBOOK_EXTENSION = '.ipynb'
+        PATTERN_EXTENSION = '.pattern'
+        if MIG_MEOW_DIR in src_path:
+            logger.debug("(%s) Spotted potential mig_meow export: %s"
+                         % (pid, src_path))
+            try:
+                filename = src_path[src_path.rfind(os.path.sep)+1:]
+                extension = filename[filename.rfind('.'):]
+
+                preceeding_path = src_path[:src_path.index(MIG_MEOW_DIR)-1]
+                vgrid = preceeding_path[preceeding_path.rfind(os.path.sep)+1:]
+
+                # TODO pull client_id from somewhere.
+                if extension == NOTEBOOK_EXTENSION:
+                    notebook = json.loads(src_path)
+                    if not isinstance(notebook, dict):
+                        raise Exception("(%s) Notebook %s is not formatted "
+                                        "correctly" % (pid, src_path))
+
+                    import_notebook_as_recipe(configuration, client_id,
+                                              vgrid, notebook, filename)
+                elif extension == PATTERN_EXTENSION:
+                    pattern = json.loads(src_path)
+                    if not isinstance(pattern, dict):
+                        raise Exception("(%s) Pattern %s is not formatted "
+                                        "correctly" % (pid, src_path))
+                    define_pattern(configuration, client_id, vgrid, pattern)
+
+                else:
+                    logger.debug("(%s) Export format could not be "
+                                 "determined." % pid)
+            except Exception as exception:
+                logger.debug("(%s) Exported file %s could not be processed "
+                             "correctly. %s" % (pid, src_path, exception))
+                pass
+
+            if not delete_file(src_path, configuration.logger):
+                logger.debug("(%s) Exported file %s could not be deleted."
+                             % (pid, src_path))
+                return
+            logger.debug("(%s) Exported file %s processed and deleted."
+                         % (pid, src_path))
+            return
+        # ---------------------------------------------------------------------
 
         rule_hit = False
 
