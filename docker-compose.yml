@@ -1,29 +1,27 @@
 version: '3.7'
 
 services:
-  devdns:
-    image: ruudud/devdns
-    container_name: devdns
-    ports: ["53:53/udp"]
-    volumes:
-    - /var/run/docker.sock:/var/run/docker.sock:ro
-    environment:
-      TZ: Europe/Copenhagen
-
   migrid:
     image: nielsbohr/migrid:edge
-    container_name: migrid
+    hostname: migrid
     environment:
       TZ: Europe/Copenhagen
-    depends_on:
-      - devdns
     networks:
       default:
         aliases:
+          - migrid
+          - migrid.test
           - io.migrid.test
           - www.migrid.test
           - oid.migrid.test
           - sid.migrid.test
+    # Hack to make httpd bind to 0.0.0.0 across services
+    # instead of 127.0.0.1
+    extra_hosts:
+      - "io.migrid.test:0.0.0.0"
+      - "www.migrid.test:0.0.0.0"
+      - "oid.migrid.test:0.0.0.0"
+      - "sid.migrid.test:0.0.0.0"
     volumes:
       - type: volume
         source: httpd
@@ -40,56 +38,44 @@ services:
       - type: bind
         source: ./dev/mock_users.csv
         target: /home/mig/mig/server/mock_users.csv
-    env_file:
-      - migrid-httpd.env
+      - type: bind
+        source: ./docker-entry.sh
+        target: /app/docker-entry.sh
     command: /app/docker-entry.sh -u dev@dev.dk -p Passw0rd123
-
-  nginx-proxy:
-    image: jwilder/nginx-proxy
-    container_name: nginx-proxy
-    depends_on:
-      - migrid
-      - dag
-    ports:
-    - "80:80"
-    - "443:443"
-    volumes:
-    - /var/run/docker.sock:/tmp/docker.sock:ro
-    - ./nginx-proxy/migrid.conf:/etc/nginx/conf.d/migrid.conf:ro
-    - ./nginx-proxy/dag.conf:/etc/nginx/conf.d/dag.conf:ro
-    - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/oid.migrid.test.crt:ro
-    - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/sid.migrid.test.crt:ro
-    - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/oid.migrid.test.key:ro
-    - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/sid.migrid.test.key:ro
 
   dag:
     image: nielsbohr/jupyterhub:latest
-    container_name: dag
+    hostname: dag
     depends_on:
-      - devdns
+      - migrid
     environment:
       - JUPYTERHUB_CRYPT_KEY=${JUPYTERHUB_CRYPT_KEY}
+    networks:
+      default:
+        aliases:
+          - dag
     volumes:
       - ./hub/jupyterhub_dag_config.py:/srv/jupyterhub/jupyter_config.py:ro
       - /var/run/docker.sock:/var/run/docker.sock:rw
     command: jupyterhub --debug -f /srv/jupyterhub/jupyter_config.py
 
-  openldap:
-    image: osixia/openldap:1.2.3
-    container_name: openldap
-    environment:
-      TZ: Europe/Copenhagen
-      LDAP_DOMAIN: "migrid.org"
-      LDAP_ADMIN_PASSWORD: "dummyldap_password"
-      LDAP_RFC2307BIS_SCHEMA: "true"
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    hostname: nginx-proxy
+    depends_on:
+      - migrid
+      - dag
     ports:
-      - "389:389/tcp"
-      - "636:636/tcp"
+      - "80:80"
+      - "443:443"
     volumes:
-       - ./openldap/mount_schema:/container/service/slapd/assets/config/bootstrap/schema:rw
-       - ./openldap/openldap-servers:/opt/openldap-servers:rw
-    command: --copy-service --loglevel debug
-
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./nginx-proxy/migrid.conf:/etc/nginx/conf.d/migrid.conf:ro
+      - ./nginx-proxy/dag.conf:/etc/nginx/conf.d/dag.conf:ro
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/oid.migrid.test.crt:ro
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/sid.migrid.test.crt:ro
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/oid.migrid.test.key:ro
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/sid.migrid.test.key:ro
 
 volumes:
   certs:

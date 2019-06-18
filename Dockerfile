@@ -169,6 +169,7 @@ RUN ./generateconfs.py \
     --enable_imnotify=True \
     --enable_hsts=True \
     --enable_jupyter=True \
+    --enable_sftp=False \
     --enable_sftp_subsys=True \
     --jupyter_services="dag.http://dag" \
     --jupyter_services_desc="{'dag': 'Hello from dag'}" \
