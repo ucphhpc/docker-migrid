@@ -83,7 +83,12 @@ configured as a Docker Swarm Manager. This is accomplished via::
 Start the stack
 ---------------
 
-After the initial build has been made, the service stack can be deployed locally
+Before the stack is deployed, the ``dag``/JupyterHub service requires that the
+``JUPYTERHUB_CRYPT_KEY`` environment variable is defined via::
+
+    source hub/setup_jup_crypt_secret.sh
+
+After this and the initial build has been made, the service stack can be deployed locally
 via `docker stack deploy <https://docs.docker.com/engine/reference/commandline/stack_deploy>`_, i.e.::
 
     docker stack deploy --compose-file docker-compose.yml migrid-service
