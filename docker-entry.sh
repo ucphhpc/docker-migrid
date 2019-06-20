@@ -27,56 +27,56 @@ if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
     chown -R $USER:$USER $MIG_ROOT/state
 fi
 
+# Start rsyslog
+#/usr/sbin/rsyslogd
+
 # Load required httpd environment vars
 source migrid-httpd.env
 
 /usr/sbin/httpd -k start
-status=$?
-if [ $status -ne 0 ]; then
-    echo "Failed to start httpd: $status"
-    exit $status
+HTTPD_STATUS=$?
+if [ $HTTPD_STATUS -ne 0 ]; then
+    echo "Failed to start httpd: $HTTPD_STATUS"
+    exit $HTTPD_STATUS
 fi
 
 # Start every service for now
 # TODO make individual checks for each service
 /etc/init.d/migrid start openid
 ps aux | grep openid | grep -q -v grep
-status=$?
-if [ $status -ne 0 ]; then
-    echo "Failed to start openid: $status"
-    exit $status
+OPENID_STATUS=$?
+if [ $OPENID_STATUS -ne 0 ]; then
+    echo "Failed to start openid: $OPENID_STATUS"
+    exit $OPENID_STATUS
 fi
 
-/etc/init.d/migrid start sftpsubsys
-ps aux | grep sshd | grep -q -v grep
-status=$?
-if [ $status -ne 0 ]; then
-    echo "Failed to start sshd: $status"
-    exit $status
+/etc/init.d/migrid start sftp
+ps aux | grep grid_sftp.py | grep -v -q grep
+SFTP_STATUS=$?
+if [ $SFTP_STATUS -ne 0 ]; then
+    echo "Failed to start sshd: $SFTP_STATUS"
+    exit $SFTP_STATUS
 fi
 
 while sleep 60; do
+    ps aux | grep httpd | grep -q -v grep
+    HTTPD_STATUS=$?
+    if [ $HTTPD_STATUS -ne 0 ]; then
+        echo "Httpd service failed."
+        exit 1
+    fi
+
     ps aux | grep openid | grep -q -v grep
     OPENID_STATUS=$?
-    
     if [ $OPENID_STATUS -ne 0 ]; then
         echo "OpenID service failed."
         exit 1
     fi
 
-    ps aux | grep sshd | grep -q -v grep
+    ps aux | grep grid_sftp.py | grep -v -q grep
     SFTP_STATUS=$?
-    
     if [ $SFTP_STATUS -ne 0 ]; then
         echo "sshd service failed."
-        exit 1
-    fi
-
-    ps aux | grep httpd | grep -q -v grep
-    HTTPD_STATUS=$?
-
-    if [ $HTTPD_STATUS -ne 0 ]; then
-        echo "Httpd service failed."
         exit 1
     fi
 done

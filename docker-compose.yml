@@ -6,6 +6,8 @@ services:
     hostname: migrid
     environment:
       TZ: Europe/Copenhagen
+    ports:
+      - "2222:2222"
     networks:
       default:
         aliases:
@@ -41,6 +43,9 @@ services:
       - type: bind
         source: ./docker-entry.sh
         target: /app/docker-entry.sh
+      - ./res/libnss_mig.conf:/etc/libnss_mig.conf
+      - ./res/nsswitch.conf:/etc/nsswitch.conf
+      - ./res/sshd:/etc/pam.d/sshd
     command: /app/docker-entry.sh -u dev@dev.dk -p Passw0rd123
 
   dag:
@@ -54,6 +59,7 @@ services:
       default:
         aliases:
           - dag
+          - dag.test
     volumes:
       - ./hub/jupyterhub_dag_config.py:/srv/jupyterhub/jupyter_config.py:ro
       - /var/run/docker.sock:/var/run/docker.sock:rw

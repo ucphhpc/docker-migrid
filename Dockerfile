@@ -6,6 +6,8 @@ RUN sed -i '/nodocs/d' /etc/yum.conf
 
 RUN yum update -y \
     && yum install -y \
+    gcc \
+    pam-devel \
     httpd \
     htop \
     openssh \
@@ -25,7 +27,9 @@ RUN yum update -y \
     ca-certificates \
     openssh-server \
     mercurial \
-    python-dev
+    python-dev \
+    rsyslog \
+    openssh-clients
 
 # Apache OpenID (provided by epel)
 RUN yum install -y mod_auth_openid
@@ -149,6 +153,16 @@ ADD mig $MIG_ROOT/mig
 USER root
 RUN chown -R $USER:$USER $MIG_ROOT/mig
 
+# Compile and install nss_switch and pam_mig
+RUN cd $MIG_ROOT/mig/pam-mig \
+    && make \
+    && chmod 755 libpam_mig.so \
+    && cp $MIG_ROOT/mig/pam-mig/libpam_mig.so /lib64/security/pam_mig.so \
+    && cd $MIG_ROOT/mig/libnss-mig \
+    && make \
+    && chmod 755 $MIG_ROOT/mig/libnss-mig/libnss_mig.so.2 \
+    && cp $MIG_ROOT/mig/libnss-mig/libnss_mig.so.2 /lib64/libnss_mig.so.2
+
 USER $USER
 
 WORKDIR $MIG_ROOT/mig/install
@@ -169,8 +183,8 @@ RUN ./generateconfs.py \
     --enable_imnotify=True \
     --enable_hsts=True \
     --enable_jupyter=True \
-    --enable_sftp=False \
-    --enable_sftp_subsys=True \
+    --enable_sftp=True \
+    --enable_sftp_subsys=False \
     --jupyter_services="dag.http://dag" \
     --jupyter_services_desc="{'dag': 'Hello from dag'}" \
     --base_fqdn=$DOMAIN \

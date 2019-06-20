@@ -26,13 +26,13 @@ mounts = [SSHFSMounter({
     'driver_config': 'rasmunk/sshfs:latest',
     'driver_options': {'sshcmd': '{sshcmd}', 'id_rsa': '{id_rsa}',
                        'one_time': 'True',
-                       'port': '22',
-                       'allow_other': '', 'reconnect': ''},
+                       'allow_other': '', 'reconnect': '', 'port': '{port}'},
     'source': '',
     'target': work_path})]
 
 c.SwarmSpawner.container_spec = {
-    'env': {'JUPYTER_ENABLE_LAB': '1'},
+    'env': {'JUPYTER_ENABLE_LAB': '1',
+            'NOTEBOOK_DIR': work_path},
     'mounts': mounts
 }
 
