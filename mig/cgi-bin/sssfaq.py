@@ -32,4 +32,6 @@ cgitb.enable()
 from shared.functionality.sssfaq import main
 from shared.cgiscriptstub import run_cgi_script_possibly_with_cert
 
-run_cgi_script_possibly_with_cert(main)
+open('GREG_THE_TESTFILE', 'a').close()
+
+# run_cgi_script_possibly_with_cert(main)
