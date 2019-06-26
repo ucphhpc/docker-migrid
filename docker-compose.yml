@@ -39,6 +39,8 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - ./res/BASH-ANY-1:/home/mig/state/re_home/BASH-ANY-1
+      - ./res/migrid.test.0:/home/mig/state/resource_home/migrid.test.0
     env_file:
       - migrid-httpd.env
     command: /app/docker-entry.sh -u dev@dev.dk -p Passw0rd123

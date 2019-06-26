@@ -1,0 +1,103 @@
+::HOSTURL::
+migrid.test
+
+::HOSTIDENTIFIER::
+0
+
+::ANONYMOUS::
+True
+
+::HOSTKEY::
+migrid.test,172.21.0.3 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCzNKJvhIO44H1IfL1/6veG1Bl5xbafYDLiBlxGMB9Zmy0ZdoDC/50vcjdlrpb0EAR/mji7EVhopj82HaznO+Cx/qz6PPlkhZ3MFB1jgV7Nyy6WFr440Ik/dKAZPPF3P4m9d3Rf3yoW/RN7rMaKehQEKKlF1b2rOeunKBHawn0j0m0KeS6mKTVNeLm4D+otYrtmVeGTiNhXRoN9aMJSLzs7THfXowCkTzOqHb77Ne/hQlVp38++jdkQ6fvxZa7idnTtkS90cRNSEJDR3xIfa414EM5t0RW9raM4rtbmll8iK7amArw8VKz6ssHo8xThrc6Y5MdOGZaqIAS2WhUEqgXMVKWdd3rN/T8WzPqIRpxf4I+QvJodT7+FoETrUdG9AJG/Ib+PEknJgbD9Q92bvNsU0wEgdZMaVfJ3GmgdfU1smKgFxlBawLzEg2KroAJ3aVlHpcuDEw48711Dazcv3ISZQEwMPkkso0R8qe7+P5/HivxsVWKjRFg3w/PAG1eM89M7vVEkaWDlHoK7/Oa3zr2e2LAd/9Mi1HP96KD+t0URnGzERVJ5wLUEhLVHfFW6UX3Qv4SiyIPpe5ACGkgHLIfSynDM4RbXexlqUwXcQ1v98ItyrOVZdvGVKQ/gmlXtZdMbbqqQqMHePe6obYog8gigtrK+TCv9pQ6dBmJTKKaG4Q==
+
+::SSHPORT::
+22
+
+::MIGUSER::
+mig
+
+::RESOURCEHOME::
+/home/mig/MiG/mig_frontend/migrid.test.0
+
+::FRONTENDNODE::
+migrid.test
+
+::SCRIPTLANGUAGE::
+sh
+
+::JOBTYPE::
+batch
+
+::ENFORCELIMITS::
+ULIMIT_PROCESSES ULIMIT_CPUTIME ULIMIT_MEMORY ULIMIT_DISK
+
+::NODECOUNT::
+1
+
+::CPUCOUNT::
+1
+
+::MEMORY::
+1024
+
+::DISK::
+10
+
+::ARCHITECTURE::
+X86
+
+::RUNTIMEENVIRONMENT::
+name: BASH-ANY-1
+BASH=bash
+
+::FRONTENDLOG::
+/home/mig/MiG/mig_frontend/migrid.test.0/frontend.log
+
+::SSHMULTIPLEX::
+False
+
+::LRMSTYPE::
+Batch
+
+::PUBLICNAME::
+MigridItself
+
+::MAXDOWNLOADBANDWIDTH::
+0
+
+::MAXUPLOADBANDWIDTH::
+0
+
+::EXECONFIG::
+name=migrid.test
+cputime=80000
+nodecount=1
+execution_precondition=uptime | grep "load average: 0"
+prepend_execute=nice
+exehostlog=/home/mig/MiG/mig_exe/migrid.test.0/migrid.test/exehost.log
+joblog=/home/mig/MiG/mig_exe/migrid.test.0/migrid.test/job.log
+execution_user=mig
+execution_node=migrid.test
+execution_dir=/home/mig/MiG/mig_exe/migrid.test.0/migrid.test
+start_command=ssh -n -o BatchMode=yes -o ConnectionAttempts=2 -o ConnectTimeout=10 mig@migrid.test "cd /home/mig/MiG/mig_exe/migrid.test.0/migrid.test && chmod 700 master_node_script_migrid.test.sh && nice ./master_node_script_migrid.test.sh start"
+status_command=ssh -n -o BatchMode=yes -o ConnectionAttempts=2 -o ConnectTimeout=10 mig@migrid.test "ps -o pid= -o user= -g $mig_exe_pgid | grep mig"
+stop_command=ssh -n -o BatchMode=yes -o ConnectionAttempts=2 -o ConnectTimeout=10 mig@migrid.test "kill -9 -$mig_exe_pgid"
+clean_command=ssh -n -o BatchMode=yes -o ConnectionAttempts=2 -o ConnectTimeout=10 mig@migrid.test "killall -9 -u mig master_node_script_migrid.test.sh; rm -rf --one-file-system /home/mig/MiG/mig_exe/migrid.test.0/migrid.test"
+continuous=True
+shared_fs=True
+vgrid=Generic
+
+::STORECONFIG::
+name=
+storage_disk=10
+storage_protocol=sftp
+storage_port=22
+storage_user=
+storage_node=
+storage_dir=MiG/mig_store/migrid.test.0/
+start_command=ssh -n -o BatchMode=yes -o ConnectionAttempts=2 -o ConnectTimeout=10 @ "echo no action required for "
+status_command=ssh -n -o BatchMode=yes -o ConnectionAttempts=2 -o ConnectTimeout=10 @ "echo no action required for "
+stop_command=ssh -n -o BatchMode=yes -o ConnectionAttempts=2 -o ConnectTimeout=10 @ "echo no action required for "
+clean_command=ssh -n -o BatchMode=yes -o ConnectionAttempts=2 -o ConnectTimeout=10 @ "echo no action required for "
+shared_fs=True
+vgrid=Generic
