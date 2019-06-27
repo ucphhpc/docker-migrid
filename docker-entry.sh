@@ -14,17 +14,18 @@ done
 
 # Create a default account (Use service owner account)
 if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
-    # createuser.py Usage:
     echo "Creating $USERNAME"
+    # Ensure the database is present
+    su - $USER -c "$MIG_ROOT/mig/server/migrateusers.py"
+    # createuser.py Usage:
     # [OPTIONS] [FULL_NAME ORGANIZATION STATE COUNTRY EMAIL COMMENT PASSWORD]
+    su - $USER -c "$MIG_ROOT/mig/server/deleteuser.py -i /C=dk/ST=dk/L=NA/O=org/OU=NA/CN=devuser/emailAddress=$USERNAME"
     su - $USER -c "$MIG_ROOT/mig/server/createuser.py -r devuser org dk dk $USERNAME foo $PASSWORD"
+    echo "Ensure correct permissions for $USERNAME"
     chown $USER:$USER $MIG_ROOT/mig/server/MiG-users.db
     chmod 644 $MIG_ROOT/mig/server/MiG-users.db
+    chown -R $USER:$USER $MIG_ROOT/state
 fi
-
-# Create default VGrid
-
-
 
 # Load required httpd environment vars
 source migrid-httpd.env

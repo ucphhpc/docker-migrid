@@ -2,7 +2,10 @@ OWNER=nielsbohr
 IMAGE=migrid
 TAG=edge
 
-all: clean build
+all: build
+
+init:
+	mkdir -p ./{certs,httpd,mig,state}
 
 build:
 	mkdir -p ./certs
