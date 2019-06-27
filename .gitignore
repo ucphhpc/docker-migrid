@@ -122,3 +122,6 @@ mig/server/server.stdin
 .vscode/
 
 Anaconda.sh
+
+# Don't skip images lib, contains required javascript libraries
+!mig/images/lib
