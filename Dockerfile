@@ -23,8 +23,12 @@ RUN yum update -y \
     net-tools \
     telnet \
     ca-certificates \
-    mercurial \
-    python-dev
+    mercurial
+
+RUN yum install -y \
+    # python-devel \
+    python36-devel \
+    python36-pip
 
 # Apache OpenID (provided by epel)
 RUN yum install -y mod_auth_openid
@@ -125,6 +129,13 @@ RUN pip install --user \
 RUN pip install --user \
     h5py \
     papermill
+
+# Install required jupyter kernels for
+# papermil to work
+RUN python2 -m pip install ipykernel --user \
+    && python2 -m ipykernel install --user \
+    && python3 -m pip install ipykernel --user \
+    && python3 -m ipykernel install --user
 
 # Modules required by grid_sftp.py
 RUN pip install --user \
@@ -274,11 +285,6 @@ RUN yum install openssh-clients -y \
     && cd .. \
     && chmod 700 .ssh \
     && chown mig:mig .ssh
-
-# Don't do this here, its starting in docker-entry.sh
-# RUN /usr/sbin/sshd \
-#    && netstat --listen
-# RUN netstat --listen
 
 WORKDIR $MIG_ROOT
 

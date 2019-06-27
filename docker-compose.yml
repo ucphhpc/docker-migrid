@@ -39,8 +39,11 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      # Mount the BASH runtime env & migrid.test.0 resource
       - ./res/BASH-ANY-1:/home/mig/state/re_home/BASH-ANY-1
       - ./res/migrid.test.0:/home/mig/state/resource_home/migrid.test.0
+      - ./example_notebooks/test_notebook.ipynb:/home/mig/state/user_home/+C=dk+ST=dk+L=NA+O=org+OU=NA+CN=devuser+emailAddress=dev@dev.dk/test_notebook.ipynb
+      - ./res/test_job.py:/home/mig/state/user_home/+C=dk+ST=dk+L=NA+O=org+OU=NA+CN=devuser+emailAddress=dev@dev.dk/test_job.py
     env_file:
       - migrid-httpd.env
     command: /app/docker-entry.sh -u dev@dev.dk -p Passw0rd123
