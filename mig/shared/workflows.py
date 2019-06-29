@@ -1898,7 +1898,7 @@ def define_pattern(configuration, client_id, vgrid, pattern):
         pattern_matches = True
         for variable in pattern['variables'].keys():
             try:
-                # FIXME, local scope check,
+                # FIXME, local scope conflict,
                 # Are you trying to check against the passed in 'pattern' parameter?
                 # Also, why wouldn't you allow a pattern to use the same variable names?
                 if pattern['variables'][variable] \
