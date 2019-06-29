@@ -3,6 +3,7 @@
 #
 # --- BEGIN_HEADER ---
 #
+# TODO, update this
 # refunctions - runtime environment functions
 # Copyright (C) 2003-2016  The MiG Project lead by Brian Vinter
 #
@@ -1481,10 +1482,15 @@ def create_single_input_trigger(configuration, _logger, vgrid, client_id,
     recipe_ids = []
     for recipe in recipe_list:
         recipe_ids.append(recipe['persistence_id'])
-        cells = cells + recipe['recipe']['cells']
+        cells.extend(recipe['recipe']['cells'])
+
+    # TODO, fix metadata hack of just using the last one
+    # This field is required by papermill for it to parameterize the
+    # notebook correctly
+    _logger.info("WP: recipe_list %s before complete_notebook" % recipe_list)
     complete_notebook = {
         "cells": cells,
-        "metadata": {},
+        "metadata": recipe_list[-1]['recipe']['metadata'],
         "nbformat": 4,
         "nbformat_minor": 2
     }
@@ -1533,7 +1539,7 @@ def create_single_input_trigger(configuration, _logger, vgrid, client_id,
             "30"
         ],
         'RETRIES': [
-            "1"
+            "0"
         ],
         'INPUTFILES': [
             "+TRIGGERPATH+ " + input_file_name
@@ -1762,6 +1768,12 @@ def scrape_for_workflow_objects(configuration, client_id, vgrid, notebook,
 
     try:
         _logger.debug("starting source inspection")
+        # FIXME, Don't do this, eventhough it's executed as the mig user and not root
+        # It still has a ton of permissions.
+        # It's okay for the job engine to execute 'code' since it is sandboxed in terms of 
+        # syscall it can make
+        # Also in general we should never use exec() unless there is no other way
+        # And we have complete control over what 'code' will be
         exec(code)
 
         new_variables = dir()
@@ -1886,6 +1898,9 @@ def define_pattern(configuration, client_id, vgrid, pattern):
         pattern_matches = True
         for variable in pattern['variables'].keys():
             try:
+                # FIXME, local scope check,
+                # Are you trying to check against the passed in 'pattern' parameter?
+                # Also, why wouldn't you allow a pattern to use the same variable names?
                 if pattern['variables'][variable] \
                         != pattern['variables'][variable]:
                     pattern_matches = False

@@ -26,9 +26,16 @@ RUN yum update -y \
     mercurial
 
 RUN yum install -y \
-    # python-devel \
+    python2-devel \
+    python2-pip \
     python36-devel \
     python36-pip
+
+RUN python2 -m pip install --upgrade pip \
+    && python3 -m pip install --upgrade pip
+
+# Install systemwide papermill
+RUN python3 -m pip install papermill
 
 # Apache OpenID (provided by epel)
 RUN yum install -y mod_auth_openid
@@ -118,15 +125,15 @@ RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
     && python get-pip.py --user
 
 ENV PATH=$PATH:/home/$USER/.local/bin
-RUN pip install --user https://github.com/openid/python-openid/archive/master.zip
+RUN pip2 install --user https://github.com/openid/python-openid/archive/master.zip
 
 # Modules required by grid_events.py
-RUN pip install --user \
+RUN pip2 install --user \
     watchdog \
     scandir
 
 # Modules required by workflows.py
-RUN pip install --user \
+RUN pip2 install --user \
     h5py \
     papermill
 
@@ -138,16 +145,16 @@ RUN python2 -m pip install ipykernel --user \
     && python3 -m ipykernel install --user
 
 # Modules required by grid_sftp.py
-RUN pip install --user \
+RUN pip2 install --user \
     paramiko
 
 # Modules required by grid_webdavs
-RUN pip install --user \
+RUN pip2 install --user \
     wsgidav \
     CherryPy
 
 # Modules required by grid_ftps
-RUN pip install --user \
+RUN pip2 install --user \
     pyftpdlib
 
 WORKDIR $MIG_ROOT/mig/install
@@ -286,7 +293,21 @@ RUN yum install openssh-clients -y \
     && chmod 700 .ssh \
     && chown mig:mig .ssh
 
+RUN yum install -y conda
+
+USER $USER
 WORKDIR $MIG_ROOT
+
+# Install astra kernel
+ENV CONDA_ENV_ASTRA=$MIG_ROOT/.conda/envs/astra
+RUN conda create -n astra -y -c astra-toolbox astra-toolbox
+
+RUN $CONDA_ENV_ASTRA/bin/pip install ipykernel --user \
+    && $CONDA_ENV_ASTRA/bin/python -m ipykernel install --name astra --user \
+    && $CONDA_ENV_ASTRA/bin/pip install matplotlib
+
+USER root
+WORKDIR /
 
 # Reap defuncted/orphaned processes
 ARG TINI_VERSION=v0.18.0
@@ -299,7 +320,6 @@ ADD migrid-httpd.env /app/migrid-httpd.env
 RUN chown $USER:$USER /app/docker-entry.sh \
     && chmod +x /app/docker-entry.sh
 
-USER root
 WORKDIR /app
 
 EXPOSE 80 443
