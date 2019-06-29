@@ -1900,13 +1900,15 @@ def define_pattern(configuration, client_id, vgrid, pattern):
             try:
                 # FIXME, local scope conflict,
                 # Are you trying to check against the passed in 'pattern' parameter?
-                # Also, why wouldn't you allow a pattern to use the same variable names?
+                # Also, why wouldn't you allow a pattern to use the same variable values across patterns?
                 if pattern['variables'][variable] \
                         != pattern['variables'][variable]:
                     pattern_matches = False
             except KeyError:
                 pattern_matches = False
         if pattern_matches:
+            # FIXME, as a response to the user, this doesn't really tell what you
+            # need to do to fix it
             _logger.error("An identical pattern already exists")
             msg = 'You already have a workflow pattern with identical ' \
                   'characteristics to %s' % pattern['name']
