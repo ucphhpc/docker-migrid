@@ -1,5 +1,7 @@
 
-DEFAULT_JOB_NAME = 'wf_job.ipynb'
+DEFAULT_JOB_FILE_INPUT = 'wf_job.ipynb'
+DEFAULT_JOB_FILE_OUTPUT = 'wf_job_output.ipynb'
+
 
 class Pattern:
     # Could make name optional, but I think its clearer to make it mandatory
@@ -13,11 +15,28 @@ class Pattern:
 
     def integrity_check(self):
         warning = ''
+        # NOTE, you shouldn't do an identity comparison for 'None' valued in logical comparisons
+        # Use the fact that in logical comparisons None is evaluated the same as False.
+        # So "if not variable:" gives the same behaviour and have a wider coverage.
         if self.input_file is None:
             return (False, "An input file must be defined. This is the file "
                            "that is used to trigger any processing and can be "
                            "defined using the methods '.add_single_input' or "
                            "'add_multiple_input")
+        # NOTE, as per https://pep8.org/
+            # For sequences, (strings, lists, tuples), use the fact that empty sequences are false:
+
+            # Yes:
+
+            # if not seq:
+            # if seq:
+
+            # No:
+
+            # if len(seq):
+            # if not len(seq):
+        # Therefore you should simply these and the related ones to
+        # if not self.trigger_paths:
         if len(self.trigger_paths) == 0:
             return (False, "At least one input path must be defined. This is "
                            "the path to the file that is used to trigger any "
@@ -43,10 +62,14 @@ class Pattern:
             raise Exception('Could not create single input %s, as input '
                             'already defined' % input_file)
 
-    def add_gathering_input(self, input_file, common_path, starting_index, number_of_files, output_path=None):
+    def add_gathering_input(self, input_file, common_path, starting_index,
+                            number_of_files, output_path=None):
         if len(self.trigger_paths) == 0:
             star_count = common_path.count('*')
             if star_count == 0:
+                # NOTE, Not really an exception case, since it is just
+                # regular control flow. Consider using 'asserts' when validating
+                # user API inputs
                 raise Exception("common_path must contain a '*' character.")
             if star_count > 1:
                 raise Exception("common_path should only contain one '*' character.")
@@ -71,7 +94,7 @@ class Pattern:
                             % output_name)
 
     def return_notebook(self, output_location):
-        self.add_output(DEFAULT_JOB_NAME, output_location)
+        self.add_output(DEFAULT_JOB_FILE_INPUT, output_location)
 
     def add_recipe(self, recipe):
         self.recipes.append(recipe)

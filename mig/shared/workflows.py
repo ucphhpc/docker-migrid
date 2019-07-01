@@ -56,7 +56,7 @@ from shared.job import new_job, fields_to_mrsl, \
 from shared.fileio import delete_file, send_message_to_grid_script, unpickle, \
     unpickle_and_change_status
 from shared.mrslkeywords import get_keywords_dict
-from shared.pattern import Pattern, DEFAULT_JOB_NAME
+from shared.pattern import Pattern, DEFAULT_JOB_FILE_INPUT, DEFAULT_JOB_FILE_OUTPUT
 
 WRITE_LOCK = 'write.lock'
 CELL_TYPE, CODE, SOURCE = 'cell_type', 'code', 'source'
@@ -1390,6 +1390,7 @@ def delete_trigger(configuration, client_id, vgrid_name, trigger_id):
     this trigger"""
 
     logger = configuration.logger
+    # FIXME, Do string interpolation instead of concatenation
     logger.info('delete_trigger client_id: ' + client_id + ' vgrid_name: '
                  + vgrid_name + ' trigger_id: ' + trigger_id)
 
@@ -1518,7 +1519,7 @@ def create_single_input_trigger(configuration, _logger, vgrid, client_id,
     input_file_path = pattern['trigger_paths'][0]
 
     execute_string = 'papermill %s %s -p' \
-                     % (DEFAULT_JOB_NAME, DEFAULT_JOB_NAME)
+                     % (DEFAULT_JOB_FILE_INPUT, DEFAULT_JOB_FILE_OUTPUT)
     for variable, value in pattern['variables'].items():
         execute_string += ' %s %s' % (variable, value)
     arguments_dict = {
@@ -1535,6 +1536,8 @@ def create_single_input_trigger(configuration, _logger, vgrid, client_id,
         'DISK': [
             "1"
         ],
+        # TODO, this is too low,
+        # Possibly have to think of a better solution
         'CPUTIME': [
             "30"
         ],
@@ -1548,7 +1551,7 @@ def create_single_input_trigger(configuration, _logger, vgrid, client_id,
             output_files_string
         ],
         'EXECUTABLES': [
-            task_path + " " + DEFAULT_JOB_NAME
+            task_path + " " + DEFAULT_JOB_FILE_INPUT
         ]
     }
 
@@ -1572,6 +1575,9 @@ def create_single_input_trigger(configuration, _logger, vgrid, client_id,
     mrsl_file.close()
 
     trigger_id = "%d" % (time.time() * 1E8)
+    # NOTE, for now set the settle_time to 1s
+    # To avoid double schedulling of triggered create/modified
+    # events on the same operation (E.g. copy a file into the dir)
     rule_dict = {
         'rule_id': trigger_id,
         'vgrid_name': vgrid,
@@ -1583,7 +1589,7 @@ def create_single_input_trigger(configuration, _logger, vgrid, client_id,
         'arguments': [],
         'path': input_file_path,
         'rate_limit': '',
-        'settle_time': '',
+        'settle_time': '1s',
         'match_files': True,
         'match_dirs': False,
         # possibly should be False instead. Investigate
@@ -1894,27 +1900,48 @@ def define_pattern(configuration, client_id, vgrid, pattern):
 
     _logger.debug('clients_patterns: ' + str(clients_patterns))
     _logger.debug('pattern: ' + str(pattern))
+
+    # NOTE, Not really sure what your trying to do here.
+    # Why wouldn't you allow a pattern to use the same variable values across patterns?
+    # Also there seems to be a local scope conflict on the pattern variable
+    # between the passed in 'pattern' parameter and the following declaration
     for pattern in clients_patterns:
         pattern_matches = True
         for variable in pattern['variables'].keys():
             try:
-                # FIXME, local scope conflict,
-                # Are you trying to check against the passed in 'pattern' parameter?
-                # Also, why wouldn't you allow a pattern to use the same variable values across patterns?
                 if pattern['variables'][variable] \
                         != pattern['variables'][variable]:
                     pattern_matches = False
             except KeyError:
                 pattern_matches = False
         if pattern_matches:
-            # FIXME, as a response to the user, this doesn't really tell what you
-            # need to do to fix it
             _logger.error("An identical pattern already exists")
             msg = 'You already have a workflow pattern with identical ' \
                   'characteristics to %s' % pattern['name']
             return False, msg
         else:
             _logger.debug('patterns are not identical')
+
+    # TODO, apply possible fix
+    # for existing_pattern in clients_patterns:
+    #     pattern_matches = True
+    #     for variable in existing_pattern['variables'].keys():
+    #         try:
+    #             # Also, why wouldn't you allow a pattern to use the same variable values across patterns?
+    #             if pattern['variables'][variable] \
+    #                     != existing_pattern['variables'][variable]:
+    #                 pattern_matches = False
+    #         except KeyError:
+    #             pattern_matches = False
+    #     if pattern_matches:
+    #         # FIXME, as a response to the user, this doesn't really tell what you
+    #         # need to do to fix it
+    #         _logger.error("An identical pattern already exists")
+    #         msg = 'You already have a workflow pattern with identical ' \
+    #               'characteristics to %s' % pattern['name']
+    #         return False, msg
+    #     else:
+    #         _logger.debug('patterns are not identical')
 
     status, creation_msg = __create_workflow_pattern(
         configuration, client_id, vgrid, pattern)
