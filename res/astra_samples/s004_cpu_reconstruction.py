@@ -69,9 +69,12 @@ astra.algorithm.run(alg_id, 20)
 
 # Get the result
 rec = astra.data2d.get(rec_id)
+print(type(rec))
 pylab.figure(3)
 pylab.imshow(rec)
 pylab.show()
+
+pylab.imsave('result_image.tiff', rec)
 
 # Clean up.
 astra.algorithm.delete(alg_id)

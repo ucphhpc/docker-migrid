@@ -60,7 +60,9 @@ astra.data2d.store(v2, A)
 # Retrieve data
 R = astra.data2d.get(v2)
 
-np.save('output_filename', R)
+from matplotlib import pyplot
+
+pyplot.imsave('002_data.tiff', R)
 
 # Free memory
 astra.data2d.delete(v0)
