@@ -48,7 +48,6 @@ services:
       - ./res/BASH-ANY-1:/home/mig/state/re_home/BASH-ANY-1
       - ./res/migrid.test.0:/home/mig/state/resource_home/migrid.test.0
       - ./res/astra_samples:/home/mig/state/user_home/+C=dk+ST=dk+L=NA+O=org+OU=NA+CN=devuser+emailAddress=dev@dev.dk/astra_samples
-      - ./res/test_job.py:/home/mig/state/user_home/+C=dk+ST=dk+L=NA+O=org+OU=NA+CN=devuser+emailAddress=dev@dev.dk/test_job.py
       - ./example_notebooks:/home/mig/state/user_home/+C=dk+ST=dk+L=NA+O=org+OU=NA+CN=devuser+emailAddress=dev@dev.dk/example_notebooks
     command: /app/docker-entry.sh -u dev@dev.dk -p Passw0rd123
 
@@ -110,16 +109,8 @@ volumes:
       o: bind
 
   state:
-<<<<<<< HEAD
-      # Volume used to contain the migrid state (provided by migrid)
-      driver_opts:
-        type: none
-        device: $PWD/state
-        o: bind
-=======
     # Volume used to contain the migrid state (provided by migrid)
     driver_opts:
       type: none
       device: $PWD/state
       o: bind
->>>>>>> ae8cc615db00d3bfaf0134377f21bd63eade76b2

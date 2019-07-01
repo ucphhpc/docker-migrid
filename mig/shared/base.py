@@ -4,11 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # base - shared base helper functions
-<<<<<<< HEAD
-# Copyright (C) 2003-2018  The MiG Project lead by Brian Vinter
-=======
 # Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
->>>>>>> ae8cc615db00d3bfaf0134377f21bd63eade76b2
 #
 # This file is part of MiG.
 #
@@ -36,12 +32,8 @@ import os
 
 # IMPORTANT: do not import any other MiG modules here - to avoid import loops
 from shared.defaults import sandbox_names, _user_invisible_files, \
-<<<<<<< HEAD
-    _user_invisible_dirs, _vgrid_xgi_scripts, cert_field_order
-=======
     _user_invisible_dirs, _vgrid_xgi_scripts, cert_field_order, \
     valid_gdp_auth_scripts, valid_gdp_anon_scripts
->>>>>>> ae8cc615db00d3bfaf0134377f21bd63eade76b2
 
 _id_sep, _dir_sep, _id_space, _dir_space = '/', '+', ' ', '_'
 _key_val_sep = '='
@@ -324,8 +316,6 @@ def valid_dir_input(base, variable):
     return True
 
 
-<<<<<<< HEAD
-=======
 def allow_script(configuration, script_name, client_id):
     """Helper to detect if script_name is allowed to run or not based on site
     configuration. I.e. GDP-mode disables a number of functionalities.
@@ -366,7 +356,6 @@ def brief_list(full_list, max_entries=10):
     return full_list[:half_entries] + [' ... shortened ... '] + full_list[-half_entries:]
 
 
->>>>>>> ae8cc615db00d3bfaf0134377f21bd63eade76b2
 if __name__ == '__main__':
     orig_id = '/X=ab/Y=cdef ghi/Z=klmn'
     client_dir = client_id_dir(orig_id)

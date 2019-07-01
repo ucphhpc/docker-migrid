@@ -34,7 +34,8 @@ RUN yum install -y \
     python2-devel \
     python2-pip \
     python36-devel \
-    python36-pip
+    python36-pip \
+    conda
 
 RUN python2 -m pip install --upgrade pip \
     && python3 -m pip install --upgrade pip
@@ -58,6 +59,18 @@ ARG DOMAIN=migrid.test
 ENV MIG_ROOT=/home/$USER
 ENV WEB_DIR=/etc/httpd
 ENV CERT_DIR=$WEB_DIR/MiG-certificates
+
+# Optional astra and matplotlib support for Resource jobs
+USER $USER
+WORKDIR $MIG_ROOT
+
+# Install astra kernel
+ENV CONDA_ENV_ASTRA=$MIG_ROOT/.conda/envs/astra
+RUN conda create -n astra -y -c astra-toolbox astra-toolbox
+
+RUN $CONDA_ENV_ASTRA/bin/pip install ipykernel --user \
+    && $CONDA_ENV_ASTRA/bin/python -m ipykernel install --name astra --user \
+    && $CONDA_ENV_ASTRA/bin/pip install matplotlib
 
 USER root
 
@@ -343,20 +356,6 @@ RUN yum install openssh-clients -y \
     && chmod 700 .ssh \
     && chown mig:mig .ssh
 
-RUN yum install -y conda
-
-USER $USER
-WORKDIR $MIG_ROOT
-
-# Install astra kernel
-ENV CONDA_ENV_ASTRA=$MIG_ROOT/.conda/envs/astra
-RUN conda create -n astra -y -c astra-toolbox astra-toolbox
-
-RUN $CONDA_ENV_ASTRA/bin/pip install ipykernel --user \
-    && $CONDA_ENV_ASTRA/bin/python -m ipykernel install --name astra --user \
-    && $CONDA_ENV_ASTRA/bin/pip install matplotlib
-
-USER root
 WORKDIR /
 
 # Reap defuncted/orphaned processes

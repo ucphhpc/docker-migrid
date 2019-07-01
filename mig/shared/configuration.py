@@ -717,7 +717,7 @@ location.""" % self.config_file
             self.twofactor_home = config.get('GLOBAL', 'twofactor_home')
         if config.has_option('GLOBAL', 'gdp_home'):
             self.gdp_home = config.get('GLOBAL', 'gdp_home')
-         if config.has_option('GLOBAL', 'notify_home'):
+        if config.has_option('GLOBAL', 'notify_home'):
             self.notify_home = config.get('GLOBAL', 'notify_home')
         if config.has_option('GLOBAL', 'vm_home'):
             self.vm_home = config.get('GLOBAL', 'vm_home')

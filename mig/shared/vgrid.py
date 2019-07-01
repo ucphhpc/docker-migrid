@@ -30,16 +30,6 @@
 import fnmatch
 import os
 import re
-<<<<<<< HEAD
-import time
-
-from shared.base import valid_dir_input
-from shared.defaults import default_vgrid, keyword_owners, keyword_members, \
-     keyword_all, keyword_auto, keyword_never, keyword_any, keyword_none, \
-     csrf_field, default_vgrid_settings_limit, vgrid_nest_sep, _dot_vgrid
-from fileio import make_symlink, move, check_readonly, check_writable, \
-     check_write_access
-=======
 
 from shared.base import valid_dir_input
 from shared.defaults import default_vgrid, keyword_owners, keyword_members, \
@@ -47,7 +37,6 @@ from shared.defaults import default_vgrid, keyword_owners, keyword_members, \
     csrf_field, default_vgrid_settings_limit, vgrid_nest_sep, _dot_vgrid
 from fileio import make_symlink, move, check_readonly, check_writable, \
     check_write_access
->>>>>>> ae8cc615db00d3bfaf0134377f21bd63eade76b2
 from shared.findtype import is_user, is_resource
 from shared.handlers import get_csrf_limit, make_csrf_token
 from shared.html import html_post_helper

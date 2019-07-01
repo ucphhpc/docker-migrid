@@ -3,7 +3,6 @@
 # Launches the MiG web interface and the underlying services
 # Continuously checks for whether the services are still alive
 
-
 while getopts u:p: option
 do
 case "${option}" in
@@ -19,7 +18,6 @@ if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
     su - $USER -c "$MIG_ROOT/mig/server/migrateusers.py"
     # createuser.py Usage:
     # [OPTIONS] [FULL_NAME ORGANIZATION STATE COUNTRY EMAIL COMMENT PASSWORD]
-    su - $USER -c "$MIG_ROOT/mig/server/deleteuser.py -i /C=dk/ST=dk/L=NA/O=org/OU=NA/CN=devuser/emailAddress=$USERNAME"
     su - $USER -c "$MIG_ROOT/mig/server/createuser.py -r devuser org dk dk $USERNAME foo $PASSWORD"
     echo "Ensure correct permissions for $USERNAME"
     chown $USER:$USER $MIG_ROOT/mig/server/MiG-users.db
@@ -83,33 +81,34 @@ while sleep 60; do
     HTTPD_STATUS=$?
     if [ $HTTPD_STATUS -ne 0 ]; then
         echo "Httpd service failed."
-        exit 1
+        exit $HTTPD_STATUS
     fi
 
     ps aux | grep openid | grep -q -v grep
     OPENID_STATUS=$?
-    
     if [ $OPENID_STATUS -ne 0 ]; then
         echo "OpenID service failed."
-        exit 1
+        exit $OPENID_STATUS
     fi
 
     ps aux | grep grid_sftp.py | grep -v -q grep
     SFTP_STATUS=$?
     if [ $SFTP_STATUS -ne 0 ]; then
         echo "sshd service failed."
+        exit $SFTP_STATUS
+    fi
     
     ps aux | grep script | grep -q -v grep
     SCRIPT_STATUS=$?
     if [ $SCRIPT_STATUS -ne 0 ]; then
         echo "Script service failed."
-        exit 1
+        exit $SCRIPT_STATUS
     fi
 
     ps aux | grep events | grep -q -v grep
     EVENTS_STATUS=$?
     if [ $EVENTS_STATUS -ne 0 ]; then
         echo "Events service failed."
-        exit 1
+        exit $EVENTS_STATUS
     fi
 done
