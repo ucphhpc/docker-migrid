@@ -36,13 +36,14 @@ import socket
 import time
 import threading
 
+from shared.auth import active_twofactor_session
 from shared.base import client_dir_id, client_id_dir, client_alias, \
     invisible_path, force_utf8
-from shared.defaults import dav_domain, io_session_timeout, \
-    twofactor_cookie_ttl
+from shared.defaults import dav_domain, io_session_timeout
 from shared.fileio import unpickle
 from shared.gdp import get_client_id_from_project_client_id, \
     get_project_from_user_id
+from shared.notification import send_system_notification
 from shared.safeinput import valid_path
 from shared.settings import load_twofactor
 from shared.sharelinks import extract_mode_id
@@ -137,9 +138,6 @@ class Login(object):
         self.home = home
         if self.home is None:
             self.home = self.username
-        if configuration.site_enable_gdp:
-            project_name = get_project_from_user_id(configuration, username)
-            self.home = os.path.join(self.home, project_name)
 
     def __str__(self):
         """Byte string formater - username is already forced to utf8 so other
@@ -697,6 +695,15 @@ def refresh_user_creds(configuration, protocol, username):
             # Allow both raw alias field value and asciified alias
             # logger.debug("find short_alias for %s" % short_id)
             short_alias = client_alias(short_id)
+        # In GDP-mode user must be chrooted to project home for IO daemons
+        # but obviously not for the OpenID login prior to project login.
+        if configuration.site_enable_gdp and private_auth_file and \
+                protocol != 'openid':
+            project_name = get_project_from_user_id(configuration, user_id)
+            if not project_name:
+                logger.warning("Skipping invalid GDP user %s" % user_id)
+                continue
+            user_dir = os.path.join(user_dir, project_name)
         user_vars = (user_id, user_alias, user_dir, short_id, short_alias)
         update_user_objects(configuration,
                             auth_file,
@@ -792,6 +799,12 @@ def refresh_users(configuration, protocol):
             cur_usernames.append(short_alias)
         if last_update >= os.path.getmtime(path):
             continue
+        # In GDP-mode user must be chrooted to project home for IO daemons
+        # but obviously not for the OpenID login prior to project login.
+        if configuration.site_enable_gdp and private_auth_file and \
+                protocol != 'openid':
+            project_name = get_project_from_user_id(configuration, user_id)
+            user_dir = os.path.join(user_dir, project_name)
         user_vars = (user_id, user_alias, user_dir, short_id, short_alias)
         update_user_objects(configuration,
                             auth_file,
@@ -1340,7 +1353,7 @@ def hit_rate_limit(configuration, proto, client_address, client_id,
     now = time.time()
 
     # Early refuse on invalid username: eases filter of 'root', 'admin', etc.
-    if not username_validator(configuration, client_id):
+    if callable(username_validator) and not username_validator(configuration, client_id):
         logger.warning("hit rate limit on invalid username %s from %s" %
                        (client_id, client_address))
         return True
@@ -1372,10 +1385,10 @@ def hit_rate_limit(configuration, proto, client_address, client_id,
 
 
 def update_rate_limit(configuration, proto, client_address, client_id,
-                      login_success, secret=None):
+                      login_success, group=None):
     """Update rate limit database after proto login from client_address with
     client_id and boolean login_success status.
-    The optional secret can be used to save the hash or similar so that
+    The optional group can be used to save the hash or similar so that
     repeated failures with the same credentials only count as one error.
     Otherwise some clients will retry on failure and hit the limit easily.
     The rate limit database is a dictionary with client_address as key and
@@ -1391,6 +1404,9 @@ def update_rate_limit(configuration, proto, client_address, client_id,
     cur = {}
     failed_count, cache_fails = 0, 0
     status = {True: "success", False: "failure"}
+    timestamp = time.time()
+    if not group:
+        group = timestamp
 
     _rate_limits_lock.acquire()
     try:
@@ -1404,7 +1420,7 @@ def update_rate_limit(configuration, proto, client_address, client_id,
             _failed = [i for i in _failed if i[1] != client_id]
             failed_count = 0
         else:
-            fail_entry = (time.time(), client_id, secret)
+            fail_entry = (timestamp, client_id, group)
             # Remove any matching tuple first to effectively update time stamp
             _failed = [i for i in _failed if i[1:] != fail_entry[1:]]
             _failed.append(fail_entry)
@@ -1446,12 +1462,12 @@ def expire_rate_limit(configuration, proto='*', fail_cache=default_fail_cache):
                     continue
                 _failed = _rate_limits[_client_address][_proto]
                 _keep = []
-                for (time_stamp, client_id, secret) in _failed:
+                for (time_stamp, client_id, group) in _failed:
                     if time_stamp + fail_cache < now:
                         expired.append((_client_address, _proto, time_stamp,
                                         client_id))
                     else:
-                        _keep.append((time_stamp, client_id, secret))
+                        _keep.append((time_stamp, client_id, group))
                 cur[proto] = _keep
             _rate_limits[_client_address] = cur
     except Exception, exc:
@@ -1707,7 +1723,7 @@ def active_sessions(configuration,
     return result
 
 
-def valid_twofactor_session(configuration, client_id):
+def valid_twofactor_session(configuration, client_id, addr=None):
     """Check if *client_id* has a valid 2FA session.
     NOTE:
     1) In this first version 2FA sessions are solely activated
@@ -1718,29 +1734,17 @@ def valid_twofactor_session(configuration, client_id):
        and merge this function with the existing 'refresh_X_creds' framework
     """
     logger = configuration.logger
-    client_dir = client_id_dir(client_id)
-    client_link_path = os.path.join(configuration.twofactor_home, client_dir)
-    current_timestamp = time.time()
-    if os.path.exists(client_link_path):
-        twofa_session_key_path = os.path.realpath(client_link_path)
-        if os.path.exists(twofa_session_key_path):
-            twofa_session_key_timestamp = os.path.getmtime(
-                twofa_session_key_path)
-            if twofa_session_key_timestamp \
-                    > current_timestamp - twofactor_cookie_ttl:
-                return True
-            else:
-                expired_time = current_timestamp \
-                    - twofa_session_key_timestamp - twofactor_cookie_ttl
-                logger.warning(
-                    "2FA session_key for %s expired %s seconds ago"
-                    % (client_id, expired_time))
-        else:
-            logger.warning("no 2FA session_key found for %s" % client_id)
-    return False
+    session_data = active_twofactor_session(configuration, client_id, addr)
+    if session_data is None:
+        logger.warning("no 2FA session found for %s (%s)" % (client_id, addr))
+        return False
+    else:
+        logger.debug("valid 2FA session found for %s (%s): %s" %
+                     (client_id, addr, session_data))
+        return True
 
 
-def check_twofactor_session(configuration, username, proto):
+def check_twofactor_session(configuration, username, addr, proto):
     """Run any required 2-factor authentication checks for given username and
     proto.
     First check if site enables twofactor at all and in that case if the user
@@ -1757,10 +1761,10 @@ def check_twofactor_session(configuration, username, proto):
             configuration, client_id)
     twofactor_dict = load_twofactor(client_id, configuration,
                                     allow_missing=True)
-    logger.debug("found twofactor_dict for %s : %s" %
-                 (client_id, twofactor_dict))
+    # logger.debug("found twofactor_dict for %s : %s" %
+    #              (client_id, twofactor_dict))
     if not twofactor_dict:
-        logger.debug("fall back to twofactor defaults for %s" % client_id)
+        # logger.debug("fall back to twofactor defaults for %s" % client_id)
         twofactor_dict = dict([(i, j['Value']) for (i, j) in
                                twofactor_defaults(configuration).items()])
 
@@ -1777,11 +1781,67 @@ def check_twofactor_session(configuration, username, proto):
         return False
     proto_field += "_TWOFACTOR"
     if not twofactor_dict.get(proto_field, False):
-        logger.debug("user %s does not require twofactor for %s" % (client_id,
-                                                                    proto))
-        return True
-    logger.debug("check required 2FA session in %s for %s" % (proto, username))
-    return valid_twofactor_session(configuration, client_id)
+        if configuration.site_enable_gdp:
+
+            # GDP require twofactor settings for all protocols
+
+            msg = "Missing GDP twofactor settings for user: %s, protocol: %s" \
+                % (client_id, proto)
+            logger.error(msg)
+            return False
+        else:
+            # logger.debug("user %s does not require twofactor for %s" \
+            #   % (client_id, proto))
+            return True
+    # logger.debug("check required 2FA session in %s for %s" % (proto, username))
+    return valid_twofactor_session(configuration, client_id, addr)
+
+
+def authlog(configuration,
+            log_lvl,
+            proto,
+            user_id,
+            user_addr,
+            log_msg,
+            notify=True):
+    """Log auth messages to auth logger. 
+    Notify user when log_lvl != 'DEBUG'"""
+    logger = configuration.logger
+    auth_logger = configuration.auth_logger
+    status = True
+    category = None
+
+    if log_lvl == 'INFO':
+        category = [proto.upper(), log_lvl]
+        _auth_logger = auth_logger.info
+    elif log_lvl == 'WARNING':
+        category = [proto.upper(), log_lvl]
+        _auth_logger = auth_logger.warning
+    elif log_lvl == 'ERROR':
+        category = [proto.upper(), log_lvl]
+        _auth_logger = auth_logger.error
+    elif log_lvl == 'CRITICAL':
+        category = [proto.upper(), log_lvl]
+        _auth_logger = auth_logger.critical
+    elif log_lvl == 'DEBUG':
+        _auth_logger = auth_logger.debug
+    else:
+        logger.error("Invalid authlog level: %s" % log_lvl)
+        return False
+
+    if notify and category:
+        user_msg = "IP: %s, User: %s, Message: %s" % \
+            (user_addr, user_id, log_msg)
+        status = send_system_notification(user_id, category,
+                                          user_msg, configuration)
+        if not status:
+            logger.error("Failed to send notification to: %s" % user_id)
+
+    log_message = "IP: %s, Protocol: %s, User: %s, Message: %s" \
+        % (user_addr, proto, user_id, log_msg)
+    _auth_logger(log_message)
+
+    return status
 
 
 if __name__ == "__main__":
@@ -1791,7 +1851,8 @@ if __name__ == "__main__":
                         format="%(asctime)s %(levelname)s %(message)s")
     conf.logger = logging
     test_proto, test_address, test_port, test_id, test_session_id = \
-        'DUMMY', '127.0.0.42', 42000, 'user@some-domain.org', 'DUMMY_SESSION_ID'
+        'DUMMY', '127.0.0.42', 42000, \
+        'user@some-domain.org', 'DUMMY_SESSION_ID'
     test_pw = "T3stp4ss"
     invalid_id = 'root'
     print "Running unit test on rate limit functions"

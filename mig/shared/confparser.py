@@ -76,8 +76,6 @@ def run(configuration, localfile_spaces, unique_resource_name,
     if not configuration:
         configuration = get_configuration_object()
 
-    logger = configuration.logger
-
     (status, msg, conf) = get_resource_config_dict(configuration,
                                                    localfile_spaces)
 

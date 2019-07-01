@@ -1,5 +1,0 @@
-print('start')
-
-file = open('something', 'w')
-
-print('opened')

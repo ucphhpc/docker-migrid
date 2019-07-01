@@ -34,9 +34,7 @@ but completely rewritten to fit our infrastructure and on-disk layout.
 """
 
 import Cookie
-import base64
 import os
-import re
 import sys
 import time
 import urllib
@@ -44,36 +42,17 @@ import urlparse
 
 import shared.returnvalues as returnvalues
 from shared.auth import twofactor_available, load_twofactor_key, \
-    get_twofactor_token, verify_twofactor_token
+    get_twofactor_token, verify_twofactor_token, generate_session_key, \
+    load_twofactor_session, save_twofactor_session, expire_twofactor_session
 from shared.base import force_utf8
 from shared.defaults import twofactor_cookie_bytes, twofactor_cookie_ttl
-from shared.fileio import delete_file, make_symlink, write_file
+from shared.fileio import delete_file, write_file
 from shared.functional import validate_input
 from shared.init import initialize_main_variables
+from shared.html import twofactor_token_html
 from shared.settings import load_twofactor
 from shared.useradm import client_id_dir
 from shared.twofactorkeywords import get_keywords_dict as twofactor_defaults
-
-
-def html_tmpl(configuration):
-    """Render html for 2FA token input - similar to the template used in the
-    apache_2fa example but with a few custumizations to include our own logo
-    and force input focus on load.
-    """
-    html = '''<!-- make sure content div covers any background pattern -->
-<div class="twofactorbg">
-<div id="twofactorbox" class="staticpage">
-<img class="sitelogo" src="%(skin_base)s/logo-left.png"><br/>
-<img class="authlogo" src="https://lh3.googleusercontent.com/HPc5gptPzRw3wFhJE1ZCnTqlvEvuVFBAsV9etfouOhdRbkp-zNtYTzKUmUVPERSZ_lAL=w300"><br/>
-  <form method="POST">
-    <input class="tokeninput" type="text" id="token" name="token"
-        placeholder="Authentication Token" autocomplete="off" autofocus><br/>
-    <input class="submit" type="submit" value="Submit">
-  </form>
-</div>
-</div>
-''' % {'skin_base': configuration.site_skin_base}
-    return html
 
 
 def signature():
@@ -202,24 +181,28 @@ def main(client_id, user_arguments_dict, environ=None):
                 {'object_type': 'title', 'text': '2-Factor Authentication',
                  'skipmenu': True})
             output_objects.append({'object_type': 'html_form', 'text':
-                                   html_tmpl(configuration)})
+                                   twofactor_token_html(configuration)})
             if token:
                 logger.warning('Invalid token for %s (%s vs %s) - try again' %
                                (client_id, token,
                                 get_twofactor_token(configuration, client_id,
                                                     b32_secret)))
+                # NOTE: we keep actual result in plain text for json extract
                 output_objects.append({'object_type': 'html_form', 'text': '''
 <div class="twofactorstatus">
-<span class="error leftpad errortext">
-Incorrect token provided - please try again
-</span></div>'''})
+<div class="error leftpad errortext">
+'''})
+                output_objects.append({'object_type': 'text', 'text':
+                                       'Incorrect token provided - please try again'})
+                output_objects.append({'object_type': 'html_form', 'text': '''
+</div>
+</div>'''})
                 # TODO: proper rate limit source / user here?
                 time.sleep(3)
             return (output_objects, status)
     else:
         logger.info("no 2FA requirement for %s on %s" % (client_id,
                                                          request_url))
-        session_key = 'DISABLED'
 
     # If we get here we either got correct token or verified 2FA to be disabled
 
@@ -227,28 +210,34 @@ Incorrect token provided - please try again
         logger.info("skip session init in setup check for %s" % client_id)
     else:
         cookie = Cookie.SimpleCookie()
+        # TODO: reuse any existing session?
         # create a secure session cookie
-        session_key = os.urandom(twofactor_cookie_bytes)
-        session_key = re.sub(r'[=+/]+', '', base64.b64encode(session_key))
+        session_key = generate_session_key(configuration, client_id)
+        session_start = time.time()
         cookie['2FA_Auth'] = session_key
         cookie['2FA_Auth']['path'] = '/'
+        # NOTE: SimpleCookie translates expires ttl to actual date from now
         cookie['2FA_Auth']['expires'] = twofactor_cookie_ttl
         cookie['2FA_Auth']['secure'] = True
         cookie['2FA_Auth']['httponly'] = True
 
+        # GDP only allow one active 2FA-session
+        if configuration.site_enable_gdp:
+            if not expire_twofactor_session(configuration,
+                                            client_id,
+                                            environ,
+                                            allow_missing=True):
+                logger.error("could not expire old 2FA sessions for %s"
+                             % client_id)
+                output_objects.append(
+                    {'object_type': 'error_text', 'text':
+                     "Internal error: could not expire old 2FA sessions!"})
+                return (output_objects, returnvalues.ERROR)
+
         # Create the state file to inform apache (rewrite) about auth
-        session_path = os.path.join(configuration.twofactor_home, session_key)
-        client_link_path = os.path.join(
-            configuration.twofactor_home, client_dir)
-        # We save user info just to be able to monitor and expire active
-        # sessions
-        session_data = '''%s
-%s
-%s
-''' % (user_agent, user_addr, client_id)
-        write_status = True
-        if not write_file(session_data, session_path, configuration.logger):
-            delete_file(session_data, logger, allow_missing=True)
+        # We save user info to be able to monitor and expire active sessions
+        if not save_twofactor_session(configuration, client_id, session_key,
+                                      user_addr, user_agent, session_start):
             logger.error("could not create 2FA session for %s"
                          % client_id)
             output_objects.append(
@@ -257,18 +246,7 @@ Incorrect token provided - please try again
             return (output_objects, returnvalues.ERROR)
 
         logger.info("saved 2FA session for %s in %s"
-                    % (client_id, session_path))
-
-        # NOTE: this make_symlink call may result in a race if non-2FA clients
-        #       issue multiple parallel requests to trigger concurrent 2FA init.
-        #       Missing clean-up may also cause error in creation on next login.
-        # We only need the symlink to 2FA log out so we ignore all such errors.
-        if make_symlink(session_key, client_link_path, logger, force=True):
-            logger.info("created 2FA session symlink %s -> %s"
-                        % (session_path, client_link_path))
-        else:
-            logger.error("2FA session symlink create %s -> %s failed" %
-                         (session_path, client_link_path))
+                    % (client_id, session_key))
 
     if redirect_url:
         headers.append(tuple(str(cookie).split(': ', 1)))
@@ -277,15 +255,17 @@ Incorrect token provided - please try again
     else:
         output_objects.append(
             {'object_type': 'title', 'text': '2FA', 'skipmenu': True})
+        # NOTE: we keep actual result in plain text for json extract
         output_objects.append({'object_type': 'html_form', 'text': '''
 <!-- Keep similar spacing -->
 <div class="twofactorbg">
 <div class="twofactorstatus">
-<p class="centertext">
-<span class="ok leftpad">
-Correct token provided!
-</span>
-</p>
+<div class="ok leftpad">
+'''})
+        output_objects.append({'object_type': 'text', 'text':
+                               'Correct token provided!'})
+        output_objects.append({'object_type': 'html_form', 'text': '''        
+</div>
 <p>
 <a href="">Test again</a> or <a href="javascript:close();">close</a> this
 tab/window and proceed.

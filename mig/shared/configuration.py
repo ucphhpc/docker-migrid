@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # configuration - configuration wrapper
-# Copyright (C) 2003-2018  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -41,6 +41,7 @@ from shared.defaults import CSRF_MINIMAL, CSRF_WARN, CSRF_MEDIUM, CSRF_FULL, \
     freeze_flavors, duplicati_protocol_choices
 from shared.logger import Logger, SYSLOG_GDP
 from shared.html import menu_items, vgrid_items
+from shared.fileio import read_file, load_json
 
 
 def fix_missing(config_file, verbose=True):
@@ -110,8 +111,10 @@ def fix_missing(config_file, verbose=True):
         'workflow_recipes_home': '/workflow_recipes_home',
         'workflow_tasks_home': '/.workflow_tasks_home',
         'workflow_buffer_home': '/.workflow_buffer_home',
+        'notify_home': '~/state/notify_home',
         'site_vgrid_links': 'files web tracker workflows monitor',
         'site_vgrid_creators': 'distinguished_name:.*',
+        'site_vgrid_managers': 'distinguished_name:.*',
         'site_vgrid_label': 'VGrid',
         'site_signup_methods': '',
         'site_login_methods': '',
@@ -136,6 +139,7 @@ def fix_missing(config_file, verbose=True):
         'user_sftp_key_pub': '~/certs/server.pub',
         'user_sftp_key_md5': '',
         'user_sftp_key_sha256': '',
+        'user_sftp_key_from_dns': '',
         'user_sftp_auth': ['publickey', 'password'],
         'user_sftp_alias': '',
         'user_sftp_log': 'sftp.log',
@@ -175,6 +179,7 @@ def fix_missing(config_file, verbose=True):
         'user_openid_auth': ['password'],
         'user_openid_alias': '',
         'user_openid_log': 'openid.log',
+        'user_openid_enforce_expire': True,
         'user_mig_oid_title': '',
         'user_ext_oid_title': '',
         'user_mig_oid_provider': '',
@@ -190,6 +195,8 @@ def fix_missing(config_file, verbose=True):
         'user_events_log': 'events.log',
         'user_cron_log': 'cron.log',
         'user_transfers_log': 'transfers.log',
+        'user_notify_log': 'notify.log',
+        'user_auth_log': 'auth.log',
         'user_shared_dhparams': '~/certs/dhparams.pem',
         'logfile': 'server.log',
         'loglevel': 'info',
@@ -307,6 +314,7 @@ class Configuration:
     workflow_recipes_home = ''
     workflow_tasks_home = ''
     workflow_buffer_home = ''
+    notify_home = ''
     seafile_mount = ''
     openid_store = ''
     paraview_home = ''
@@ -317,6 +325,7 @@ class Configuration:
     site_default_vgrid_links = []
     site_advanced_vgrid_links = []
     site_vgrid_creators = [('distinguished_name', '.*')]
+    site_vgrid_managers = [('distinguished_name', '.*')]
     site_vgrid_label = 'VGrid'
     # Allowed signup and login methods in prioritized order
     site_signup_methods = ['extcert']
@@ -344,6 +353,7 @@ class Configuration:
     user_sftp_key_pub = ''
     user_sftp_key_md5 = ''
     user_sftp_key_sha256 = ''
+    user_sftp_key_from_dns = False
     user_sftp_auth = ['publickey', 'password']
     user_sftp_alias = ''
     user_sftp_log = 'sftp.log'
@@ -385,6 +395,7 @@ class Configuration:
     user_openid_auth = ['password']
     user_openid_alias = ''
     user_openid_log = 'openid.log'
+    user_openid_enforce_expire = True
     user_mig_oid_title = ''
     user_ext_oid_title = ''
     user_mig_oid_provider = ''
@@ -400,6 +411,8 @@ class Configuration:
     user_events_log = 'events.log'
     user_cron_log = 'cron.log'
     user_transfers_log = 'transfers.log'
+    user_notify_log = 'notify.log'
+    user_auth_log = 'auth.log'
     user_shared_dhparams = ''
     user_imnotify_address = ''
     user_imnotify_port = 6667
@@ -421,8 +434,6 @@ class Configuration:
     migserver_https_mig_oid_url = ''
     migserver_https_ext_oid_url = ''
     migserver_https_sid_url = ''
-    jupyter_hosts = ''
-    jupyter_base_url = ''
     sleep_period_for_empty_jobs = ''
     min_seconds_between_live_update_requests = 0
     cputime_for_empty_jobs = 0
@@ -460,6 +471,9 @@ class Configuration:
     logger = None
     gdp_logger_obj = None
     gdp_logger = None
+    auth_logger_obj = None
+    auth_logger = None
+    gdp_ref_map = {}
     peers = None
 
     # feasibility
@@ -510,7 +524,7 @@ class Configuration:
         """Re-read and parse configuration file. Optional skip_log
         initializes default logger to use the NullHandler in order to avoid
         uninitialized log while not really touching log files or causing stdio
-        output. 
+        output.
         """
 
         try:
@@ -701,10 +715,12 @@ location.""" % self.config_file
             self.events_home = config.get('GLOBAL', 'events_home')
         if config.has_option('GLOBAL', 'twofactor_home'):
             self.twofactor_home = config.get('GLOBAL', 'twofactor_home')
-        if config.has_option('GLOBAL', 'vm_home'):
-            self.vm_home = config.get('GLOBAL', 'vm_home')
         if config.has_option('GLOBAL', 'gdp_home'):
             self.gdp_home = config.get('GLOBAL', 'gdp_home')
+         if config.has_option('GLOBAL', 'notify_home'):
+            self.notify_home = config.get('GLOBAL', 'notify_home')
+        if config.has_option('GLOBAL', 'vm_home'):
+            self.vm_home = config.get('GLOBAL', 'vm_home')
         if config.has_option('GLOBAL', 'workflow_patterns_home'):
             self.workflow_patterns_home = config.get('GLOBAL',
                                                      'workflow_patterns_home')
@@ -745,6 +761,11 @@ location.""" % self.config_file
             self.site_enable_jobs = config.getboolean('SITE', 'enable_jobs')
         else:
             self.site_enable_jobs = True
+        if config.has_option('SITE', 'enable_resources'):
+            self.site_enable_resources = config.getboolean('SITE',
+                                                           'enable_resources')
+        else:
+            self.site_enable_resources = True
         if config.has_option('GLOBAL', 'user_monitor_log'):
             self.user_monitor_log = config.get('GLOBAL', 'user_monitor_log')
         if config.has_option('SITE', 'enable_events'):
@@ -798,6 +819,9 @@ location.""" % self.config_file
         if config.has_option('GLOBAL', 'user_sftp_key_sha256'):
             fingerprint = config.get('GLOBAL', 'user_sftp_key_sha256')
             self.user_sftp_key_sha256 = fingerprint
+        if config.has_option('GLOBAL', 'user_sftp_key_from_dns'):
+            self.user_sftp_key_from_dns = config.getboolean(
+                'GLOBAL', 'user_sftp_key_from_dns')
         if config.has_option('GLOBAL', 'user_sftp_auth'):
             self.user_sftp_auth = config.get('GLOBAL',
                                              'user_sftp_auth').split()
@@ -950,6 +974,11 @@ location.""" % self.config_file
                 'SITE', 'enable_twofactor')
         else:
             self.site_enable_twofactor = False
+        if config.has_option('SITE', 'twofactor_strict_address'):
+            self.site_twofactor_strict_address = config.getboolean(
+                'SITE', 'twofactor_strict_address')
+        else:
+            self.site_twofactor_strict_address = False
         if config.has_option('SITE', 'enable_crontab'):
             self.site_enable_crontab = config.getboolean(
                 'SITE', 'enable_crontab')
@@ -957,6 +986,11 @@ location.""" % self.config_file
             self.site_enable_crontab = False
         if config.has_option('GLOBAL', 'user_cron_log'):
             self.user_cron_log = config.get('GLOBAL', 'user_cron_log')
+        if config.has_option('SITE', 'enable_notify'):
+            self.site_enable_notify = config.getboolean(
+                'SITE', 'enable_notify')
+        else:
+            self.site_enable_notify = False
         if config.has_option('SITE', 'enable_imnotify'):
             self.site_enable_imnotify = config.getboolean(
                 'SITE', 'enable_imnotify')
@@ -1020,6 +1054,9 @@ location.""" % self.config_file
                                                 'user_openid_alias')
         if config.has_option('GLOBAL', 'user_openid_log'):
             self.user_openid_log = config.get('GLOBAL', 'user_openid_log')
+        if config.has_option('GLOBAL', 'user_openid_enforce_expire'):
+            self.user_openid_enforce_expire = config.getboolean(
+                'GLOBAL', 'user_openid_enforce_expire')
         if config.has_option('GLOBAL', 'user_mig_oid_title'):
             self.user_mig_oid_title = config.get('GLOBAL',
                                                  'user_mig_oid_title')
@@ -1119,11 +1156,24 @@ location.""" % self.config_file
                 'SITE', 'enable_jupyter')
         else:
             self.site_enable_jupyter = False
-        if config.has_option('GLOBAL', 'jupyter_hosts'):
-            self.jupyter_hosts = config.get('GLOBAL', 'jupyter_hosts')
 
-        if config.has_option('GLOBAL', 'jupyter_base_url'):
-            self.jupyter_base_url = config.get('GLOBAL', 'jupyter_base_url')
+        self.jupyter_services = []
+        # Load generated jupyter sections
+        for section in config.sections():
+            if 'JUPYTER_' in section:
+                # Allow service_desc to be a file that should be read
+                if config.has_option(section, 'service_desc'):
+                    service_desc = config.get(section, 'service_desc')
+                    if os.path.exists(service_desc) \
+                            and os.path.isfile(service_desc):
+                        content = read_file(service_desc, logger)
+                        if content:
+                            config.set(section, 'service_desc', content)
+
+                self.jupyter_services.append({option: config.get(section,
+                                                                 option)
+                                              for option in
+                                              config.options(section)})
 
         if config.has_option('GLOBAL', 'vgrid_owners'):
             self.vgrid_owners = config.get('GLOBAL', 'vgrid_owners')
@@ -1363,6 +1413,9 @@ location.""" % self.config_file
         if config.has_option('SITE', 'vgrid_creators'):
             req = config.get('SITE', 'vgrid_creators').split()
             self.site_vgrid_creators = [i.split(':', 2) for i in req]
+        if config.has_option('SITE', 'vgrid_managers'):
+            req = config.get('SITE', 'vgrid_managers').split()
+            self.site_vgrid_managers = [i.split(':', 2) for i in req]
         if config.has_option('SITE', 'vgrid_label'):
             self.site_vgrid_label = config.get('SITE', 'vgrid_label').strip()
         if config.has_option('SITE', 'signup_methods'):
@@ -1482,6 +1535,11 @@ location.""" % self.config_file
         if config.has_option('GLOBAL', 'user_transfers_log'):
             self.user_transfers_log = config.get(
                 'GLOBAL', 'user_transfers_log')
+        if config.has_option('GLOBAL', 'user_notify_log'):
+            self.user_transfers_log = config.get(
+                'GLOBAL', 'user_notify_log')
+        if config.has_option('GLOBAL', 'user_auth_log'):
+            self.user_auth_log = config.get('GLOBAL', 'user_auth_log')
         syslog_gdp = None
         if config.has_option('SITE', 'enable_gdp'):
             self.site_enable_gdp = config.getboolean('SITE', 'enable_gdp')
@@ -1494,8 +1552,16 @@ location.""" % self.config_file
             self.gdp_logger_obj.reopen()
         else:
             self.gdp_logger_obj = Logger(
-                "INFO", syslog=syslog_gdp, app='main-gdp')
+                self.loglevel, syslog=syslog_gdp, app='main-gdp')
         self.gdp_logger = self.gdp_logger_obj.logger
+
+        self.gdp_data_categories = []
+        if config.has_option('GLOBAL', 'gdp_data_categories'):
+            load_path = config.get('GLOBAL', 'gdp_data_categories')
+            data_categories = load_json(load_path, logger)
+            if data_categories:
+                self.gdp_data_categories = data_categories
+
         if config.has_option('SITE', 'transfers_from'):
             transfers_from_str = config.get('SITE', 'transfers_from')
             unique_transfers_from = []
@@ -1686,13 +1752,24 @@ location.""" % self.config_file
                          'user_openid_log', 'user_monitor_log',
                          'user_sshmux_log', 'user_vmproxy_log',
                          'user_events_log', 'user_cron_log',
-                         'user_transfers_log', 'user_imnotify_log',
+                         'user_transfers_log', 'user_notify_log',
+                         'user_imnotify_log', 'user_auth_log',
                          'user_chkuserroot_log', 'user_chksidroot_log'):
             _log_path = getattr(self, _log_var)
             if not os.path.isabs(_log_path):
                 setattr(self, _log_var, os.path.join(self.log_dir, _log_path))
 
-        # cert and key for generating a default proxy for nordugrid/ARC resources
+        # Init auth logger
+
+        if self.auth_logger_obj:
+            self.auth_logger_obj.reopen()
+        else:
+            self.auth_logger_obj = Logger(
+                self.loglevel, logfile=self.user_auth_log, app='main-auth')
+        self.auth_logger = self.auth_logger_obj.logger
+
+        # cert and key for generating a default proxy for nordugrid/ARC
+        # resources
 
         if config.has_option('GLOBAL', 'nordugrid_cert'):
             self.nordugrid_cert = config.get('GLOBAL', 'nordugrid_cert')
@@ -1724,6 +1801,10 @@ location.""" % self.config_file
         if config.has_option('ARC', 'arc_clusters'):
             self.arc_clusters = config.get('ARC',
                                            'arc_clusters').split()
+
+        # Force same 2FA address for IO logins in GDP mode
+        if self.site_enable_gdp:
+            self.site_twofactor_strict_address = True
 
     def parse_peers(self, peerfile):
 

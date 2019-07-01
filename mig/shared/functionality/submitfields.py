@@ -63,7 +63,6 @@ def main(client_id, user_arguments_dict):
 
     (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(client_id)
-
     client_dir = client_id_dir(client_id)
     status = returnvalues.OK
     defaults = signature()[1]
@@ -80,7 +79,6 @@ def main(client_id, user_arguments_dict):
 
     save_as_default = (accepted['save_as_default'][-1] != 'False')
     external_dict = get_keywords_dict(configuration)
-
     mrsl = fields_to_mrsl(configuration, user_arguments_dict, external_dict)
 
     tmpfile = None
@@ -123,13 +121,9 @@ CSRF-filtered POST requests to prevent unintended updates'''
     submitstatuslist = []
     submitstatus = {'object_type': 'submitstatus',
                     'name': relative_path}
-
     try:
         (job_status, newmsg, job_id) = new_job(real_path,
-                                               client_id,
-                                               configuration,
-                                               False,
-                                               True)
+                                               client_id, configuration, False, True)
     except Exception, exc:
         logger.error("%s: failed on '%s': %s" % (op_name,
                                                  relative_path, exc))

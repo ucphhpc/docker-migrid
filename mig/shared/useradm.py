@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # useradm - user administration functions
-# Copyright (C) 2003-2018  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -46,7 +46,8 @@ from shared.defaults import user_db_filename, keyword_auto, ssh_conf_dir, \
     widgets_filename, seafile_ro_dirname, authkeys_filename, \
     authpasswords_filename, authdigests_filename, cert_field_order, \
     davs_conf_dir, twofactor_filename
-from shared.fileio import filter_pickled_list, filter_pickled_dict
+from shared.fileio import filter_pickled_list, filter_pickled_dict, \
+    make_symlink, delete_symlink
 from shared.modified import mark_user_modified
 from shared.refunctions import list_runtime_environments, \
     update_runtimeenv_owner
@@ -56,8 +57,11 @@ from shared.pwhash import make_hash, check_hash, make_digest, check_digest, \
 from shared.resource import resource_add_owners, resource_remove_owners
 from shared.serial import load, dump
 from shared.settings import update_settings, update_profile, update_widgets
+from shared.sharelinks import load_share_links, update_share_link, \
+    get_share_link, mode_chars_map
 from shared.vgrid import vgrid_add_owners, vgrid_remove_owners, \
-    vgrid_add_members, vgrid_remove_members
+    vgrid_add_members, vgrid_remove_members, in_vgrid_share, \
+    vgrid_sharelinks, vgrid_add_sharelinks
 from shared.vgridaccess import get_resource_map, get_vgrid_map, \
     refresh_user_map, refresh_resource_map, refresh_vgrid_map, VGRIDS, \
     OWNERS, MEMBERS
@@ -234,14 +238,16 @@ def create_user(
 
     if verbose:
         print 'User ID: %s\n' % client_id
-    if os.path.exists(db_path):
+    if not os.path.exists(db_path):
+        raise Exception("Missing user DB: '%s'" % db_path)
+    else:
         try:
             user_db = load(db_path)
             if verbose:
                 print 'Loaded existing user DB from: %s' % db_path
         except Exception, err:
             if not force:
-                raise Exception('Failed to load user DB!')
+                raise Exception("Failed to load user DB: '%s'" % db_path)
 
         # Prevent alias clashes by preventing addition of new users with same
         # alias. We only allow renew of existing user.
@@ -454,7 +460,7 @@ SSLRequire (%%{SSL_CLIENT_S_DN} eq "%(distinguished_name)s")
             access += '''
 SSLRequire (%%{SSL_CLIENT_S_DN} eq "%(distinguished_name_enc)s")
 '''
-        access += '''    
+        access += '''
 # We prepare for future require user format with cert here in the hope that
 # we can eventually disable the above SSLRequire check and access_compat.
 require user "%(distinguished_name)s"
@@ -481,7 +487,7 @@ require user "%(distinguished_name)s"
     <IfModule mod_access_compat.c>
         Satisfy any
     </IfModule>
-</IfVersion>  
+</IfVersion>
 '''
 
         filehandle.write(access % info)
@@ -584,6 +590,118 @@ The %(short_title)s admins
     return user
 
 
+def fix_user_sharelinks(old_id, client_id, conf_path, db_path, verbose=False):
+    """Update sharelinks left-over from legacy version of edit_user"""
+    user_db = {}
+    if conf_path:
+        if isinstance(conf_path, basestring):
+            configuration = Configuration(conf_path)
+        else:
+            configuration = conf_path
+    else:
+        configuration = get_configuration_object()
+    _logger = configuration.logger
+
+    if verbose:
+        print 'User ID: %s\n' % client_id
+
+    if os.path.exists(db_path):
+        try:
+            if isinstance(db_path, dict):
+                user_db = db_path
+            else:
+                user_db = load_user_db(db_path)
+                if verbose:
+                    print 'Loaded existing user DB from: %s' % db_path
+        except Exception, err:
+            raise Exception('Failed to load user DB: %s' % err)
+
+    if not user_db.has_key(client_id):
+        raise Exception("User DB entry '%s' doesn't exist!" % client_id)
+
+    # Loop through moved sharelinks map pickle and update fs paths
+
+    (load_status, sharelinks) = load_share_links(configuration, client_id)
+    if verbose:
+        print 'Update %d sharelinks' % len(sharelinks)
+    if load_status:
+        for (share_id, share_dict) in sharelinks.items():
+            # Update owner and use generic update helper to replace symlink
+            share_dict['owner'] = client_id
+            (mod_status, err) = update_share_link(share_dict, client_id,
+                                                  configuration, sharelinks)
+            if verbose:
+                if mod_status:
+                    print 'Updated sharelink %s from %s to %s' % (share_id,
+                                                                  old_id,
+                                                                  client_id)
+                elif err:
+                    print 'Could not update owner of %s: %s' % (share_id, err)
+    else:
+        if verbose:
+            print 'Could not load sharelinks: %s' % sharelinks
+
+
+def fix_vgrid_sharelinks(conf_path, db_path, verbose=False, force=False):
+    """Update vgrid sharelinks to include any missing ones due to the bug fixed
+    in rev4168+4169.
+    """
+    user_db = {}
+    if conf_path:
+        if isinstance(conf_path, basestring):
+            configuration = Configuration(conf_path)
+        else:
+            configuration = conf_path
+    else:
+        configuration = get_configuration_object()
+    _logger = configuration.logger
+
+    # Loop through sharelinks and check that the vgrid ones are registered
+
+    for mode_sub in mode_chars_map.keys():
+        sharelink_base = os.path.join(configuration.sharelink_home, mode_sub)
+        for share_id in os.listdir(sharelink_base):
+            if share_id.startswith('.'):
+                # skip dot dirs
+                continue
+            sharelink_path = os.path.join(sharelink_base, share_id)
+            sharelink_realpath = os.path.realpath(sharelink_path)
+            vgrid_name = in_vgrid_share(configuration, sharelink_realpath)
+            if not vgrid_name:
+                continue
+
+            (load_status, links_list) = vgrid_sharelinks(vgrid_name,
+                                                         configuration,
+                                                         recursive=False)
+            if load_status:
+                links_dict = dict([(i['share_id'], i) for i in links_list])
+            else:
+                links_dict = {}
+
+            if not share_id in links_dict.keys():
+                user_path = os.readlink(sharelink_path)
+                if verbose:
+                    print 'Handle missing vgrid %s sharelink %s to %s (%s)' % \
+                        (vgrid_name, share_id, sharelink_realpath, user_path)
+                client_dir = user_path.replace(configuration.user_home, '')
+                client_dir = client_dir.split(os.sep)[0]
+                client_id = client_dir_id(client_dir)
+                (get_status, share_dict) = get_share_link(share_id, client_id,
+                                                          configuration)
+                if not get_status:
+                    print 'Error loading sharelink dict for %s of %s' % \
+                        (share_id, client_id)
+                    continue
+
+                print 'Add missing sharelink %s to vgrid %s' % (share_id,
+                                                                vgrid_name)
+
+                (add_status, add_msg) = vgrid_add_sharelinks(
+                    configuration, vgrid_name, [share_dict])
+                if not add_status:
+                    print 'ERROR: add missing sharelink failed: %s' % add_msg
+
+
 def edit_user(
     client_id,
     changes,
@@ -591,6 +709,7 @@ def edit_user(
     db_path,
     force=False,
     verbose=False,
+    meta_only=False,
 ):
     """Edit user"""
 
@@ -637,12 +756,20 @@ def edit_user(
         del user_dict["distinguished_name"]
         fill_distinguished_name(user_dict)
         new_id = user_dict["distinguished_name"]
-        if user_db.has_key(new_id):
-            raise Exception("Edit aborted: new user already exists!")
-        _logger.info("Force old user renew to fix missing files")
-        create_user(old_user, conf_path, db_path, force, verbose,
-                    ask_renew=False, default_renew=True)
-        del user_db[client_id]
+        if not meta_only:
+            if user_db.has_key(new_id):
+                raise Exception("Edit aborted: new user already exists!")
+            _logger.info("Force old user renew to fix missing files")
+            create_user(old_user, conf_path, db_path, force, verbose,
+                        ask_renew=False, default_renew=True)
+            del user_db[client_id]
+        elif new_id != client_id:
+            raise Exception("Edit aborted: illegal meta_only ID change! %s %s"
+                            % (client_id, new_id))
+        else:
+            _logger.info("Only updating metadata for %s: %s" % (client_id,
+                                                                changes))
+
         user_db[new_id] = user_dict
         save_user_db(user_db, db_path)
         if verbose:
@@ -655,7 +782,23 @@ def edit_user(
             raise Exception('Failed to edit %s with %s in user DB: %s'
                             % (client_id, changes, err))
 
+    if meta_only:
+        return user_dict
+
     new_client_dir = client_id_dir(new_id)
+
+    # NOTE: published archives are linked to a hash based on creator ID.
+    # We first remove any conflicting symlink from previous renames before
+    # renaming user archive dir and creating the new legacy alias afterwards.
+
+    old_arch_home = os.path.join(configuration.freeze_home, client_dir)
+    new_arch_home = os.path.join(configuration.freeze_home, new_client_dir)
+    # Make sure (lazy created) freeze home exists
+    try:
+        os.makedirs(old_arch_home)
+    except Exception, exc:
+        pass
+    delete_symlink(new_arch_home, _logger, allow_missing=True)
 
     # Rename user dirs recursively
 
@@ -663,6 +806,7 @@ def edit_user(
                      configuration.user_settings,
                      configuration.user_cache,
                      configuration.mrsl_files_dir,
+                     configuration.freeze_home,
                      configuration.resource_pending):
 
         old_path = os.path.join(base_dir, client_dir)
@@ -676,6 +820,10 @@ def edit_user(
     if verbose:
         print 'User dirs for %s was successfully renamed!'\
             % client_id
+
+    # Now create freeze_home alias to preserve access to published archives
+
+    make_symlink(new_arch_home, old_arch_home, _logger)
 
     # Update any OpenID symlinks
 
@@ -774,11 +922,34 @@ def edit_user(
         if verbose:
             print 'Could not load runtime env list: %s' % re_list
 
+    # Loop through moved sharelinks map pickle and update fs paths
+
+    (load_status, sharelinks) = load_share_links(configuration, new_id)
+    if verbose:
+        print 'Update %d sharelinks' % len(sharelinks)
+    if load_status:
+        for (share_id, share_dict) in sharelinks.items():
+            # Update owner and use generic update helper to replace symlink
+            share_dict['owner'] = new_id
+            (mod_status, err) = update_share_link(share_dict, new_id,
+                                                  configuration, sharelinks)
+            if verbose:
+                if mod_status:
+                    print 'Updated sharelink %s from %s to %s' % (share_id,
+                                                                  client_id,
+                                                                  new_id)
+                elif err:
+                    print 'Could not update owner of %s: %s' % (share_id, err)
+    else:
+        if verbose:
+            print 'Could not load sharelinks: %s' % sharelinks
+
     # TODO: update remaining user credentials in various locations?
     # * queued and active jobs (tricky due to races)
     # * user settings files?
     # * mrsl files?
     # * user stats?
+    # * triggers?
 
     _logger.info("Renamed user %s to %s" % (client_id, new_id))
     mark_user_modified(configuration, new_id)
@@ -1464,22 +1635,23 @@ def user_password_reminder(user_id, targets, conf_path, db_path,
     return (configuration, fields['password'], addresses, errors)
 
 
-def user_migoid_intro(user_id, targets, conf_path, db_path, verbose=False):
+def user_migoid_notify(user_id, targets, conf_path, db_path, verbose=False,
+                       admin_copy=False):
     """Find notification addresses for user_id and targets"""
     (configuration, fields, addresses, errors) = _user_general_notify(
         user_id, targets, conf_path, db_path, verbose, ['username',
                                                         'full_name'])
-    # Send a copy to site admins
-    admin_addresses = []
-    if configuration.admin_email and \
+    # Optionally send a copy to site admins
+    if admin_copy and configuration.admin_email and \
             isinstance(configuration.admin_email, basestring):
+        admin_addresses = []
         # NOTE: Explicitly separated by ', ' to distinguish Name <abc> form
         parts = configuration.admin_email.split(', ')
         for addr in parts:
             (real_name, plain_addr) = parseaddr(addr.strip())
             if plain_addr:
                 admin_addresses.append(plain_addr)
-    addresses['email'] += admin_addresses
+        addresses['email'] += admin_addresses
     return (configuration, fields['username'], fields['full_name'], addresses,
             errors)
 

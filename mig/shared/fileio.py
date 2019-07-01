@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # fileio - wrappers to keep file I/O in a single replaceable module
-# Copyright (C) 2003-2018  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -36,6 +36,7 @@ import tempfile
 import time
 import zipfile
 
+from shared.base import force_utf8_rec
 from shared.defaults import default_chunk_size, default_max_chunks
 from shared.serial import dump, load
 
@@ -288,6 +289,21 @@ def pickle(data_object, path, logger):
         return False
 
 
+def load_json(path, logger, allow_missing=False, convert_utf8=True):
+    """Unpack json object in path"""
+    try:
+        data_object = load(path, serializer='json')
+        logger.debug('%s was loaded successfully' % path)
+        if convert_utf8:
+            data_object = force_utf8_rec(data_object)
+        return data_object
+    except Exception, err:
+        if not allow_missing:
+            logger.error('%s could not be opened/loaded! %s'
+                         % (path, err))
+        return False
+
+
 def send_message_to_grid_script(message, logger, configuration):
     """Write an instruction to the grid_script name pipe input"""
     try:
@@ -303,7 +319,31 @@ def send_message_to_grid_script(message, logger, configuration):
         return False
 
 
-def touch(filepath, timestamp=None):
+def send_message_to_grid_notify(message, logger, configuration):
+    """Write message to notify home"""
+    try:
+        (filedescriptor, filepath) = make_temp_file(
+            suffix='.%s' % time.time(),
+            prefix='',
+            dir=configuration.notify_home)
+        filehandle = os.fdopen(filedescriptor, 'a')
+        filehandle.write(message)
+        filehandle.close()
+        return True
+    except Exception, err:
+        logger.error("Failed to send_message_to_grid_notify: %s" % err)
+        try:
+            filehandle.close()
+        except Exception, err:
+            pass
+        try:
+            os.remove(filepath)
+        except Exception, err:
+            pass
+        return False
+
+
+def touch(filepath, configuration, timestamp=None):
     """Create or update timestamp for filepath"""
     try:
         if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
@@ -314,16 +354,15 @@ def touch(filepath, timestamp=None):
             filehandle.close()
         else:
             open(filepath, 'w').close()
-
         if timestamp != None:
-
             # set timestamp to supplied value
-
             os.utime(filepath, (timestamp, timestamp))
     except Exception, err:
-
-        print "could not touch file: '%s', Error: %s" % (filepath, err)
+        configuration.logger.error("could not touch file: '%s'" % filepath
+                                   + ": %s" % err)
         return False
+
+    return True
 
 
 def remove_rec(dir_path, configuration):
@@ -394,12 +433,15 @@ def makedirs_rec(dir_path, configuration, accept_existing=True):
     accept_existing argument can be used to turn off the default behaviour of
     ignoring if dir_path already exists.
     """
+    _logger = configuration.logger
     try:
+        if os.path.exists(dir_path) and not os.path.isdir(dir_path):
+            _logger.error("Non-directory in the way: %s" % dir_path)
+            return False
         os.makedirs(dir_path)
     except OSError, err:
         if not accept_existing or err.errno != errno.EEXIST:
-            configuration.logger.error("Could not makedirs_rec %s: %s" %
-                                       (dir_path, err))
+            _logger.error("Could not makedirs_rec %s: %s" % (dir_path, err))
             return False
     return True
 

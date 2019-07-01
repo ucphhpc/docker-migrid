@@ -23,6 +23,7 @@ alias ll='ls -l'
 alias la='ls -al'
 
 alias emacs='emacs -nw'
+alias vi='vim'
 alias vdo='vimdiff -o'
 alias pylintchanged="svn status | egrep -v '^\?' | egrep '.py$' | sed 's/.* //' | xargs -r -t pylint -E"
 
@@ -31,7 +32,7 @@ setenv() { typeset -x "${1}${1:+=}${(@)argv[2,$#]}" }  # csh compatibility
 freload() { while (( $# )); do; unfunction $1; autoload -U $1; shift; done }
 
 vdocond() {
-    test ! -e ${@: -1} || diff -q $@ | grep -q differ && vdo $@
+    diff -q $@ 2>&1 | egrep -q 'differ|No such file' && vdo $@
 }
 
 # Where to look for autoloaded function definitions

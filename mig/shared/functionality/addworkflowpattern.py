@@ -33,7 +33,6 @@ optional uploaded recipes to the pattern.
 
 TODO finish description
 """
-import json
 
 import re
 import shared.returnvalues as returnvalues
@@ -112,6 +111,7 @@ def main(client_id, user_arguments_dict):
     # convert recipes into list of entries
 
     listable = ['wp_recipes', 'wp_variables', 'wp_output', 'wp_inputs']
+    # NOTE, 'list' is a python specific keyword, use other name
     for list in listable:
         seperated_listable = []
         for entry in user_arguments_dict[list]:

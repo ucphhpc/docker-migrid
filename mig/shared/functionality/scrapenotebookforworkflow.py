@@ -42,7 +42,9 @@ def main(client_id, user_arguments_dict):
     vgrid = accepted[vgrid_name][-1]
     name = accepted[note_book_name][-1]
 
-    # TODO get this loading in proper strings, not unicode
+    # TODO get this loading in proper strings, not unicode,
+    # NOTE, in the future use the shared.serial.load/dump functions for json
+    # IO operations
     notebook = json.loads(accepted["wf_notebook"][-1])
     if not isinstance(notebook, dict):
         output_objects.append({'object_type': 'error_text', 'text':

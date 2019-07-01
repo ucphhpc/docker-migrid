@@ -642,6 +642,10 @@ def valid_archive_name(
     __valid_contents(archive_name, valid_chars, min_length, max_length)
 
 
+# NOTE, I suspect that allowing '.' will allow you to pass paths 
+# external to your allowed vgrids as the 'mig' user
+# via the '..' (parent directory) command.
+# Investigate this before merge
 def valid_path_pattern(
     pattern,
     min_length=1,
@@ -656,6 +660,9 @@ def valid_path_pattern(
     valid_path(pattern, min_length, max_length, extra_chars)
 
 
+# NOTE, also allowing escape character might also cause problems
+# where users can escape illegal characters
+# Investigate this before merge
 def valid_path_patterns(
     pattern_list,
     min_length=1,
@@ -768,11 +775,32 @@ def is_valid_simple_email(addr):
         return False
 
 
-def valid_gdp_workzone_id(workzone_id):
-    """Verify that supplied workzone_id only contains characters that
-    we consider valid in workzone id's.
+def __valid_gdp_var(gdp_var):
+    """Verify that supplied gdp_var only contains characters that
+    we consider valid in various gdp variable names.
     """
-    __valid_contents(workzone_id, digits + '-/')
+    __valid_contents(gdp_var, letters + '_')
+
+
+def valid_gdp_category_id(category_id):
+    """Verify that supplied category_id only contains characters that
+    we consider valid in GDP categories.
+    """
+    __valid_gdp_var(category_id)
+
+
+def valid_gdp_ref_id(ref_id):
+    """Verify that supplied ref_id only contains characters that
+    we consider valid in GDP ref IDs.
+    """
+    __valid_gdp_var(ref_id)
+
+
+def valid_gdp_ref_value(ref_value):
+    """Verify that supplied ref_value only contains characters that
+    we consider valid in GDP ref values.
+    """
+    __valid_contents(ref_value, letters + digits + '+-=/.:_')
 
 
 def filter_ascii(contents):
@@ -1232,10 +1260,13 @@ def guess_type(name):
             __type_map[key] = lambda x: valid_fqdn(x, min_length=0)
         for key in ('execution_user', 'storage_user'):
             __type_map[key] = lambda x: valid_job_id(x, min_length=0)
-        for key in ('freeze_author', 'freeze_department',
-                    'freeze_organization',
+        for key in ('freeze_department', 'freeze_organization',
                     ):
             __type_map[key] = lambda x: valid_commonname(x, min_length=0)
+        # author may be empty or a comma-separated list
+        for key in ('freeze_author', ):
+            __type_map[key] = lambda x: valid_commonname(x, min_length=0,
+                                                         extra_chars=',')
         # EXECONFIG vgrid field which may be empty or a comma-separated list
         for key in ('vgrid', ):
             __type_map[key] = lambda x: valid_vgrid_name(x, min_length=0,
@@ -1364,8 +1395,12 @@ def guess_type(name):
 
         # GDP
 
-        for key in ('gdp_workzone_id', ):
-            __type_map[key] = valid_gdp_workzone_id
+        for key in ('gdp_category_id', ):
+            __type_map[key] = valid_gdp_category_id
+        for key in ('gdp_ref_id', ):
+            __type_map[key] = valid_gdp_ref_id
+        for key in ('gdp_ref_value', ):
+            __type_map[key] = valid_gdp_ref_value
 
         # Workflow Pattern
 

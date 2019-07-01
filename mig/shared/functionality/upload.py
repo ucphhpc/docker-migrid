@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # upload - Plain and efficient file upload back end
-# Copyright (C) 2003-2016  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -46,10 +46,11 @@ def signature():
     defaults = {
         'flags': [''],
         'path': REJECT_UNSET,
-        'fileupload': REJECT_UNSET, 
+        'fileupload': REJECT_UNSET,
         'restrict': [False],
-        }
+    }
     return ['html_form', defaults]
+
 
 def write_chunks(path, file_obj, restrict):
     """Write file_obj bytes to path and set strict permissions if restrict
@@ -87,7 +88,7 @@ def main(client_id, user_arguments_dict):
     # Most likely because of Apache SSL renegotiations which have
     # no other way of storing input
 
-    extract_input = user_arguments_dict['__DELAYED_INPUT__']
+    extract_input = user_arguments_dict.get('__DELAYED_INPUT__', dict)
     logger.info('Extracting input in %s' % op_name)
     form = extract_input()
     logger.info('After extracting input in %s' % op_name)
@@ -108,7 +109,6 @@ def main(client_id, user_arguments_dict):
     logger.info('Filtered input is: %s' % user_arguments_dict)
 
     # Now validate parts as usual
-    
     (validate_status, accepted) = validate_input_and_cert(
         user_arguments_dict,
         defaults,
@@ -116,7 +116,7 @@ def main(client_id, user_arguments_dict):
         client_id,
         configuration,
         allow_rejects=False,
-        )
+    )
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
 
@@ -145,16 +145,14 @@ Please contact the site admins %s if you think they should be enabled.
     # user dirs when own name is a prefix of another user name
 
     base_dir = os.path.abspath(os.path.join(configuration.user_home,
-                               client_dir)) + os.sep
+                                            client_dir)) + os.sep
 
     if verbose(flags):
         for flag in flags:
-            output_objects.append({'object_type': 'text', 'text'
-                                  : '%s using flag: %s' % (op_name,
-                                  flag)})
+            output_objects.append({'object_type': 'text', 'text': '%s using flag: %s' % (op_name,
+                                                                                         flag)})
 
-    output_objects.append({'object_type': 'header', 'text'
-                          : 'Uploading file'})
+    output_objects.append({'object_type': 'header', 'text': 'Uploading file'})
 
     # Check directory traversal attempts before actual handling to avoid
     # leaking information about file system layout while allowing consistent
@@ -201,15 +199,15 @@ Please contact the site admins %s if you think they should be enabled.
                 os.chdir('/')
                 os.umask(0)
                 for fno in range(3):
-                    try: 
+                    try:
                         os.close(fno)
                     except OSError:
                         pass
             else:
                 os._exit(0)
     except OSError, ose:
-        output_objects.append({'object_type': 'error_text', 'text'
-                               : '%s upload could not background! (%s)'
+        output_objects.append({'object_type': 'error_text',
+                               'text': '%s upload could not background! (%s)'
                                % (path, str(ose).replace(base_dir, ''
                                                          ))})
         return (output_objects, returnvalues.SYSTEM_ERROR)
@@ -223,11 +221,10 @@ Please contact the site admins %s if you think they should be enabled.
         except Exception, exc:
             pass
     else:
-        output_objects.append({'object_type': 'text', 'text'
-                               : 'Upload of %s in progress' % path})
+        output_objects.append({'object_type': 'text',
+                               'text': 'Upload of %s in progress' % path})
         progress_link = {'object_type': 'link', 'text': 'show progress',
                          'destination': 'uploadprogress.py?path=%s;size=%d'
                          % (path, total_size)}
         output_objects.append(progress_link)
-                        
     return (output_objects, status)

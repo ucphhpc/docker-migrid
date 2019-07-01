@@ -31,9 +31,9 @@ import datetime
 
 import shared.returnvalues as returnvalues
 from shared.defaults import upload_tmp_dir, trash_linkname, csrf_field, \
-    freeze_flavors, keyword_final, keyword_pending, keyword_auto, \
-    public_archive_index
-from shared.freezefunctions import get_frozen_archive
+    freeze_flavors, keyword_final, keyword_pending, keyword_updating, \
+    keyword_auto, public_archive_index
+from shared.freezefunctions import get_frozen_archive, brief_freeze
 from shared.functional import validate_input_and_cert
 from shared.handlers import get_csrf_limit, make_csrf_token
 from shared.html import jquery_ui_js, man_base_js, man_base_html, \
@@ -94,23 +94,50 @@ Please contact the site admins %s if you think it should be enabled.
                                                         checksum_list=[])
         if not load_status:
             logger.error("%s: load failed for '%s': %s" %
-                         (op_name, freeze_id, freeze_dict))
+                         (op_name, freeze_id, brief_freeze(freeze_dict)))
             output_objects.append({'object_type': 'error_text', 'text':
                                    'Could not read details for "%s"' %
                                    freeze_id})
             return (output_objects, returnvalues.SYSTEM_ERROR)
 
-        logger.debug("%s: loaded freeze: %s" % (op_name, freeze_dict))
+        logger.debug("%s: loaded freeze: %s" %
+                     (op_name, brief_freeze(freeze_dict)))
 
         # Preserve already saved flavor
         flavor = freeze_dict.get('FLAVOR', 'freeze')
 
-        if freeze_dict.get('STATE', keyword_final) != keyword_pending:
-            logger.error("%s: frozen archive %s attempted edited by %s: %s" %
-                         (op_name, freeze_id, client_id, freeze_dict))
-            output_objects.append({'object_type': 'error_text', 'text':
-                                   'You cannot edit frozen archive %s' %
-                                   freeze_id})
+        freeze_state = freeze_dict.get('STATE', keyword_final)
+        if freeze_state == keyword_final:
+            logger.error("%s tried to edit finalized %s archive %s" %
+                         (client_id, flavor, freeze_id))
+            output_objects.append(
+                {'object_type': 'error_text', 'text':
+                 'You cannot edit finalized %s archive %s' % (flavor,
+                                                              freeze_id)})
+            output_objects.append({
+                'object_type': 'link',
+                'destination': 'showfreeze.py?freeze_id=%s;flavor=%s' %
+                (freeze_id, flavor),
+                'class': 'viewarchivelink iconspace genericbutton',
+                'title': 'View details about your %s archive' % flavor,
+                'text': 'View details',
+            })
+            return (output_objects, returnvalues.CLIENT_ERROR)
+        elif freeze_state == keyword_updating:
+            logger.error("%s tried to edit %s archive %s under update" %
+                         (client_id, flavor, freeze_id))
+            output_objects.append(
+                {'object_type': 'error_text', 'text':
+                 'You cannot edit %s archive %s until active update completes'
+                 % (flavor, freeze_id)})
+            output_objects.append({
+                'object_type': 'link',
+                'destination': 'showfreeze.py?freeze_id=%s;flavor=%s' %
+                (freeze_id, flavor),
+                'class': 'viewarchivelink iconspace genericbutton',
+                'title': 'View details about your %s archive' % flavor,
+                'text': 'View details',
+            })
             return (output_objects, returnvalues.CLIENT_ERROR)
 
     form_method = 'post'
@@ -122,6 +149,7 @@ Please contact the site admins %s if you think it should be enabled.
                                  client_id, csrf_limit)
     fill_helpers.update({'target_op': target_op, 'csrf_token': csrf_token})
     lookup_map = {'freeze_id': 'ID', 'freeze_name': 'NAME',
+                  'freeze_author': 'AUTHOR',
                   'freeze_description': 'DESCRIPTION'}
     for (key, val) in lookup_map.items():
         fill_helpers[key] = freeze_dict.get(val, '')
@@ -232,7 +260,6 @@ function upload_callback() {
         });
     console.log("callback done");
 }
-        
 function add_upload() {
     openFancyUpload("Upload Files", upload_callback, "", remote_path, true,
                     "", "%s");
@@ -287,8 +314,7 @@ the archive.
 """
     elif flavor == 'phd':
         fill_helpers['freeze_name'] = fill_helpers.get('freeze_name', '')
-        fill_helpers["archive_header"] = \
-            "Thesis and Associated Files to Archive"
+        fill_helpers["archive_header"] = "Thesis and Associated Files to Archive"
         fill_helpers["button_label"] = "Save and Preview"
         intro_text = """
 Please enter your PhD details below and select any files associated with your
@@ -360,7 +386,7 @@ so please be careful when filling in the details.
             <tbody>
                 <!-- this is a placeholder for contents: do not remove! -->
             </tbody>
-         </table>     
+         </table>
     </div>
     <div id='fm_statusbar'>
         <div id='fm_statusprogress'><div class='progress-label'>Loading...</div></div>
@@ -385,36 +411,38 @@ so please be careful when filling in the details.
     freeze_form = """
 <form enctype='multipart/form-data' method='%(form_method)s' action='%(target_op)s.py'>
 <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
-<b>Name:</b><br />
 <input type='hidden' name='flavor' value='%(flavor)s' />
 <input type='hidden' name='freeze_id' value='%(freeze_id)s' />
+<b>Name:</b><br />
 <input class='fillwidth padspace' type='text' name='freeze_name'
     value='%(freeze_name)s' autofocus required pattern='[a-zA-Z0-9_. -]+'
-    title='unique name for the freeze archive. I.e. letters and digits separated only by underscores, periods and hyphens' />
+    title='unique name for the freeze archive. I.e. letters and digits separated only by spaces, underscores, periods and hyphens' />
 """
     if flavor != 'backup':
         # TODO: do these make sense to have here or just forced in backend?
         freeze_form += """
-<input type='hidden' name='freeze_author' value='' />
 <input type='hidden' name='freeze_department' value='' />
 <input type='hidden' name='freeze_organization' value='' />
+<br><b>Author(s):</b><br />
+<input class='fillwidth padspace' type='text' name='freeze_author'
+    value='%(freeze_author)s' title='optional archive author(s) in case archive is created on behalf of one or more people' />
 <br /><b>Description:</b><br />
 <textarea class='fillwidth padspace' rows='20' name='freeze_description'>%(freeze_description)s</textarea>
 <br />
 """
-    freeze_form += """    
+    freeze_form += """
 <br />
 <div id='freezefiles'>
 <b>%(archive_header)s:</b><br/>
 """
-    freeze_form += """    
+    freeze_form += """
 <input type='button' id='addfilebutton' value='Add file/directory' />
 """
     if flavor != 'backup':
         freeze_form += """
 <input type='button' id='adduploadbutton' value='Add upload' />
 """
-    freeze_form += """    
+    freeze_form += """
 <div id='copyfiles'>
 <!-- Dynamically filled -->
 </div>
@@ -425,7 +453,7 @@ so please be careful when filling in the details.
 <!-- Dynamically filled -->
 </div>
 """
-    freeze_form += """    
+    freeze_form += """
 </div>
 <br />
 """
@@ -445,7 +473,7 @@ so please be careful when filling in the details.
 </div>
 <br />
 """
-    freeze_form += """    
+    freeze_form += """
 <input type='submit' value='%(button_label)s' />
 </form>
 """

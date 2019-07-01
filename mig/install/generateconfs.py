@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # generateconfs - create custom MiG server configuration files
-# Copyright (C) 2003-2018  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -61,8 +61,8 @@ if '__main__' == __name__:
         'ext_oid_fqdn',
         'sid_fqdn',
         'io_fqdn',
-        'jupyter_hosts',
-        'jupyter_base_url',
+        'jupyter_services',
+        'jupyter_services_desc',
         'user',
         'group',
         'apache_version',
@@ -70,17 +70,20 @@ if '__main__' == __name__:
         'apache_run',
         'apache_lock',
         'apache_log',
+        'apache_worker_procs',
         'openssh_version',
         'mig_code',
         'mig_state',
         'mig_certs',
         'enable_sftp',
         'enable_sftp_subsys',
+        'sftp_subsys_auth_procs',
         'enable_davs',
         'enable_ftps',
         'enable_wsgi',
         'wsgi_procs',
         'enable_jobs',
+        'enable_resources',
         'enable_events',
         'enable_sharelinks',
         'enable_transfers',
@@ -96,6 +99,7 @@ if '__main__' == __name__:
         'enable_seafile',
         'enable_duplicati',
         'enable_crontab',
+        'enable_notify',
         'enable_imnotify',
         'enable_dev_accounts',
         'enable_twofactor',
@@ -106,6 +110,7 @@ if '__main__' == __name__:
         'dhparams_path',
         'daemon_keycert',
         'daemon_pubkey',
+        'daemon_pubkey_from_dns',
         'daemon_show_address',
         'alias_field',
         'signup_methods',
@@ -148,9 +153,6 @@ if '__main__' == __name__:
         if opt in ('-h', '--help'):
             usage(names)
             sys.exit(0)
-        # Concatenate multiple jupyter host args
-        elif opt_name == 'jupyter_hosts' and settings[opt_name] != default_val:
-            settings[opt_name] += ' %s' % val
         elif opt_name in names:
             settings[opt_name] = val
         else:

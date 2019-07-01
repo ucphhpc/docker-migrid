@@ -1,31 +1,29 @@
 version: '3.7'
 
 services:
-  devdns:
-    image: ruudud/devdns
-    container_name: devdns
-    ports: ["53:53/udp"]
-    volumes:
-    - /var/run/docker.sock:/var/run/docker.sock:ro
-    environment:
-      TZ: Europe/Copenhagen
-      EXTRA_HOSTS: "migrid.test=127.0.0.1"
-
   migrid:
     image: nielsbohr/migrid:edge
-    container_name: migrid
+    hostname: migrid
     environment:
       TZ: Europe/Copenhagen
-    depends_on:
-      - devdns
+    ports:
+      - "2222:2222"
     networks:
       default:
         aliases:
+          - migrid
           - migrid.test
           - io.migrid.test
           - www.migrid.test
           - oid.migrid.test
           - sid.migrid.test
+    # Hack to make httpd bind to 0.0.0.0 across services
+    # instead of 127.0.0.1
+    extra_hosts:
+      - "io.migrid.test:0.0.0.0"
+      - "www.migrid.test:0.0.0.0"
+      - "oid.migrid.test:0.0.0.0"
+      - "sid.migrid.test:0.0.0.0"
     volumes:
       - type: volume
         source: httpd
@@ -39,31 +37,55 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: bind
+        source: ./docker-entry.sh
+        target: /app/docker-entry.sh
+      # To support subsys_sshd in the future
+      - ./res/libnss_mig.conf:/etc/libnss_mig.conf
+      - ./res/nsswitch.conf:/etc/nsswitch.conf
+      - ./res/sshd:/etc/pam.d/sshd
       # Mount the BASH runtime env & migrid.test.0 resource
       - ./res/BASH-ANY-1:/home/mig/state/re_home/BASH-ANY-1
       - ./res/migrid.test.0:/home/mig/state/resource_home/migrid.test.0
       - ./res/astra_samples:/home/mig/state/user_home/+C=dk+ST=dk+L=NA+O=org+OU=NA+CN=devuser+emailAddress=dev@dev.dk/astra_samples
       - ./res/test_job.py:/home/mig/state/user_home/+C=dk+ST=dk+L=NA+O=org+OU=NA+CN=devuser+emailAddress=dev@dev.dk/test_job.py
       - ./example_notebooks:/home/mig/state/user_home/+C=dk+ST=dk+L=NA+O=org+OU=NA+CN=devuser+emailAddress=dev@dev.dk/example_notebooks
-    env_file:
-      - migrid-httpd.env
     command: /app/docker-entry.sh -u dev@dev.dk -p Passw0rd123
+
+  dag:
+    image: nielsbohr/jupyterhub:latest
+    hostname: dag
+    depends_on:
+      - migrid
+    environment:
+      - JUPYTERHUB_CRYPT_KEY=${JUPYTERHUB_CRYPT_KEY}
+    networks:
+      default:
+        aliases:
+          - dag
+          - dag.test
+    volumes:
+      - ./hub/jupyterhub_dag_config.py:/srv/jupyterhub/jupyter_config.py:ro
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+    command: jupyterhub --debug -f /srv/jupyterhub/jupyter_config.py
 
   nginx-proxy:
     image: jwilder/nginx-proxy
-    container_name: nginx-proxy
+    hostname: nginx-proxy
     depends_on:
       - migrid
+      - dag
     ports:
-    - "80:80"
-    - "443:443"
+      - "80:80"
+      - "443:443"
     volumes:
-    - /var/run/docker.sock:/tmp/docker.sock:ro
-    - ./nginx-proxy.conf:/etc/nginx/conf.d/migrid.conf
-    - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/oid.migrid.test.crt
-    - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/sid.migrid.test.crt
-    - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/oid.migrid.test.key
-    - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/sid.migrid.test.key
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./nginx-proxy/migrid.conf:/etc/nginx/conf.d/migrid.conf:ro
+      - ./nginx-proxy/dag.conf:/etc/nginx/conf.d/dag.conf:ro
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/oid.migrid.test.crt:ro
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/sid.migrid.test.crt:ro
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/oid.migrid.test.key:ro
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/sid.migrid.test.key:ro
 
 volumes:
   certs:
@@ -88,8 +110,16 @@ volumes:
       o: bind
 
   state:
+<<<<<<< HEAD
       # Volume used to contain the migrid state (provided by migrid)
       driver_opts:
         type: none
         device: $PWD/state
         o: bind
+=======
+    # Volume used to contain the migrid state (provided by migrid)
+    driver_opts:
+      type: none
+      device: $PWD/state
+      o: bind
+>>>>>>> ae8cc615db00d3bfaf0134377f21bd63eade76b2

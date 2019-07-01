@@ -799,12 +799,9 @@ def empty_resource_config(configuration):
 def write_resource_config(configuration, resource_conf, conf_path):
     """Write resource_conf dictionary settings into conf_path on disk"""
 
-    logger = configuration.logger
-
     lines = []
     for (field, __) in resconfkeywords.get_resource_specs(configuration):
         value = resource_conf.get(field, None)
-
         if value:
             if 'RUNTIMEENVIRONMENT' == field:
                 lines.append('::%s::' % field)

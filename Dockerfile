@@ -6,6 +6,8 @@ RUN sed -i '/nodocs/d' /etc/yum.conf
 
 RUN yum update -y \
     && yum install -y \
+    gcc \
+    pam-devel \
     httpd \
     htop \
     openssh \
@@ -23,7 +25,10 @@ RUN yum update -y \
     net-tools \
     telnet \
     ca-certificates \
-    mercurial
+    mercurial \
+    openssh-server \
+    rsyslog \
+    openssh-clients
 
 RUN yum install -y \
     python2-devel \
@@ -42,7 +47,11 @@ RUN yum install -y mod_auth_openid
 
 # Setup user
 ENV USER=mig
-RUN useradd -ms /bin/bash $USER
+ENV UID=1000
+ENV GID=1000
+
+RUN groupadd -g $GID $USER
+RUN useradd -u $UID -g $GID -ms /bin/bash $USER
 
 ARG DOMAIN=migrid.test
 # MiG environment
@@ -83,7 +92,7 @@ RUN touch /etc/pki/CA/index.txt \
 
 # Daemon keys
 RUN cat server.{key,crt} > combined.pem \
-    && chown mig:mig combined.pem \
+    && chown $USER:$USER combined.pem \
     && ssh-keygen -y -f combined.pem > combined.pub \
     && chown 0:0 *.key server.crt ca.pem \
     && chmod 400 *.key server.crt ca.pem combined.pem
@@ -103,7 +112,8 @@ RUN ln -s MiG/*.$DOMAIN/server.crt server.crt \
     && ln -s MiG/*.$DOMAIN/crl.pem crl.pem \
     && ln -s MiG/*.$DOMAIN/cacert.pem cacert.pem \
     && ln -s MiG/*.$DOMAIN/combined.pem combined.pem \
-    && ln -s MiG/*.$DOMAIN/combined.pub combined.pub
+    && ln -s MiG/*.$DOMAIN/combined.pub combined.pub \
+    && ln -s MiG/*.$DOMAIN io.migrid.test
 
 WORKDIR $MIG_ROOT
 USER $USER
@@ -115,10 +125,6 @@ RUN mkdir -p MiG-certificates \
     && ln -s $CERT_DIR/combined.pem combined.pem \
     && ln -s $CERT_DIR/combined.pub combined.pub \
     && ln -s $CERT_DIR/dhparams.pem dhparams.pem
-
-# Install and configure MiG
-ARG MIG_CHECKOUT=4032
-RUN svn checkout -r $MIG_CHECKOUT https://svn.code.sf.net/p/migrid/code/trunk .
 
 # Prepare OpenID
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
@@ -157,6 +163,31 @@ RUN pip2 install --user \
 RUN pip2 install --user \
     pyftpdlib
 
+# Modules required by jupyter
+RUN pip install --user \
+    requests
+
+# Install and configure MiG
+ARG MIG_CHECKOUT=4199
+RUN svn checkout -r $MIG_CHECKOUT https://svn.code.sf.net/p/migrid/code/trunk .
+
+ADD mig $MIG_ROOT/mig
+
+USER root
+RUN chown -R $USER:$USER $MIG_ROOT/mig
+
+# Compile and install nss_switch and pam_mig
+RUN cd $MIG_ROOT/mig/pam-mig \
+    && make \
+    && chmod 755 libpam_mig.so \
+    && cp $MIG_ROOT/mig/pam-mig/libpam_mig.so /lib64/security/pam_mig.so \
+    && cd $MIG_ROOT/mig/libnss-mig \
+    && make \
+    && chmod 755 $MIG_ROOT/mig/libnss-mig/libnss_mig.so.2 \
+    && cp $MIG_ROOT/mig/libnss-mig/libnss_mig.so.2 /lib64/libnss_mig.so.2
+
+USER $USER
+
 WORKDIR $MIG_ROOT/mig/install
 
 RUN ./generateconfs.py \
@@ -173,6 +204,12 @@ RUN ./generateconfs.py \
     --enable_events=True \
     --enable_crontab=True \
     --enable_imnotify=True \
+    --enable_hsts=True \
+    --enable_jupyter=True \
+    --enable_sftp=True \
+    --enable_sftp_subsys=False \
+    --jupyter_services="dag.http://dag" \
+    --jupyter_services_desc="{'dag': 'Hello from dag'}" \
     --base_fqdn=$DOMAIN \
     --public_fqdn=www.$DOMAIN \
     --public_port=80 \
@@ -211,12 +248,20 @@ RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/static-skin.css $MIG_ROOT/mig/images/ \
     && cp generated-confs/index.html $MIG_ROOT/state/user_home/
 
+# Enable jupyter menu
+RUN sed -i -e 's/#user_menu =/user_menu = jupyter/g' $MIG_ROOT/mig/server/MiGserver.conf \
+    && sed -i -e 's/loglevel = info/loglevel = debug/g' $MIG_ROOT/mig/server/MiGserver.conf
+
 # Prepare oiddiscover for httpd
 RUN cd $MIG_ROOT/mig \
     && python shared/httpsclient.py | grep -A 80 "xml version" \
     > $MIG_ROOT/state/wwwpublic/oiddiscover.xml
 
 USER root
+
+# Sftp subsys config
+RUN cp generated-confs/sshd_config-MiG-sftp-subsys /etc/ssh/ \
+    && chown 0:0 /etc/ssh/sshd_config-MiG-sftp-subsys
 
 RUN chmod 755 generated-confs/envvars \
     && chmod 755 generated-confs/httpd.conf
@@ -231,9 +276,14 @@ RUN cp generated-confs/MiG.conf $WEB_DIR/conf.d/ \
 # Root confs
 RUN cp generated-confs/apache2.conf $WEB_DIR/ \
     && cp generated-confs/ports.conf $WEB_DIR/ \
-    && cp generated-confs/MiG-jupyter.conf $WEB_DIR/ \
-    && cp generated-confs/MiG-jupyter-def.conf $WEB_DIR/ \
     && cp generated-confs/envvars $WEB_DIR/
+
+# Jupyter apache confs
+RUN mkdir -p $WEB_DIR/conf.extras.d \
+    && cp generated-confs/MiG-jupyter-def.conf $WEB_DIR/conf.extras.d \
+    && cp generated-confs/MiG-jupyter-openid.conf $WEB_DIR/conf.extras.d \
+    && cp generated-confs/MiG-jupyter-proxy.conf $WEB_DIR/conf.extras.d/ \
+    && cp generated-confs/MiG-jupyter-rewrite.conf $WEB_DIR/conf.extras.d/
 
 # Disable certificate check for OID
 RUN sed -i '/\/server.ca.pem/ a SSLProxyCheckPeerName off' $WEB_DIR/conf.d/MiG.conf \

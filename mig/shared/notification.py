@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # notification - instant message and email notification helpers
-# Copyright (C) 2003-2018  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -27,9 +27,12 @@
 
 """Notification functions"""
 
+import datetime
 import os
+import pickle
 import smtplib
 import threading
+import time
 from email import Encoders
 from email.MIMEBase import MIMEBase
 from email.MIMEMultipart import MIMEMultipart
@@ -37,11 +40,13 @@ from email.mime.text import MIMEText
 from email.Utils import formatdate
 from urllib import quote
 
-from shared.base import force_utf8, generate_https_urls
+from shared.base import force_utf8, generate_https_urls, extract_field
 from shared.defaults import email_keyword_list, job_output_dir, \
     transfer_output_dir
+from shared.fileio import send_message_to_grid_notify
 from shared.safeinput import is_valid_simple_email
 from shared.settings import load_settings
+from shared.useradm import expand_openid_alias
 
 # might be python 2.4, without xml.etree
 # ...in which case: better not configure usage_record_dir
@@ -287,7 +292,7 @@ documentation.
         migoid_url = configuration.migserver_https_mig_oid_url
         header = 'Re: %s OpenID request for %s' % (short_title, user_name)
         txt += """This is an auto-generated intro message from %s to inform
-about the creation or renewal of your %s user OpenID account.
+about the creation or renewal of your user account with OpenID login.
 
 You can log in with username %s and your chosen password at
 %s
@@ -298,8 +303,51 @@ hold of your login.
 
 Regards,
 The %s Admins
-""" % (short_title, migoid_title, user_email, migoid_url, short_title,
-            short_title)
+""" % (short_title, user_email, migoid_url, short_title, short_title)
+    elif status == 'ACCOUNTEXPIRE':
+        from_id = args_list[0]
+        user_email = args_list[1]
+        user_name = args_list[2]
+        user_dict = args_list[3]
+        short_title = configuration.short_title
+        migoid_title = configuration.user_mig_oid_title
+        auth_migoid_url = configuration.migserver_https_mig_oid_url
+        anon_migoid_url = configuration.migserver_https_sid_url
+        expire = datetime.datetime.fromtimestamp(user_dict['expire'])
+        id_lines = """Full name: %(full_name)s
+Email address: %(email)s
+Organization: %(organization)s
+Two letter country-code: %(country)s
+State: %(state)s""" % user_dict
+        header = '%s OpenID login expire for %s' % (short_title, user_name)
+        txt += """This is an automatic account access expire warning from %s.
+Basically you need to renew your OpenID login before %s
+if you want to preserve that account access method.
+
+Until that date you can always simply login with your username %s and request
+semi-automatic renewal, only filling the password and comment fields at
+%s/cgi-bin/reqoid.py
+In that way you can also choose a new password if you like.
+
+After account access expiry you can only manually renew by opening the basic
+account request page at
+%s/cgi-sid/reqoid.py
+and entering the values you're signed up with, namely:
+%s
+Importantly you then have to use your EXISTING password!
+
+In either case please enter a few lines of comment including why you (still)
+need access. Mentioning names of project and main collaboration partners
+on-site may also be helpful to speed up our verification and renewal process.
+
+Please contact the %s admins in case you should ever loose or forget your
+password. The same applies if you suspect or know that someone may have gotten
+hold of your login.
+
+Regards,
+The %s Admins
+""" % (short_title, expire, user_email, auth_migoid_url, anon_migoid_url,
+            id_lines, short_title, short_title)
     elif status == 'FORUMUPDATE':
         vgrid_name = args_list[0]
         author = args_list[1]
@@ -675,3 +723,31 @@ def parse_im_relay(path):
         status += 'IM relay parsing failed: %s' % err
 
     return (status, protocol, address, header, msg)
+
+
+def send_system_notification(user_id, category, message, configuration):
+    """Send system notification to *user_id* through grid_notify"""
+    logger = configuration.logger
+    if not configuration.site_enable_notify:
+        logger.warning("System notify helper is disabled in configuration!")
+        return False
+    if not user_id:
+        logger.error("Invalid user_id: %s" % user_id)
+        return False
+    client_id = expand_openid_alias(user_id, configuration)
+    if not client_id or not extract_field(client_id, 'email'):
+        logger.error("send_system_notification: Invalid user_id: %s" % user_id)
+        return False
+    if not isinstance(category, list):
+        logger.error("send_system_notification: category must be a list")
+        return False
+    notification = {'category': category,
+                    'user_id': user_id,
+                    'message': message,
+                    'timestamp': time.time(),
+                    }
+    pickled_notification = pickle.dumps(notification)
+
+    return send_message_to_grid_notify(pickled_notification,
+                                       configuration.logger,
+                                       configuration)

@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # grid_webdavs - secure WebDAV server providing access to MiG user homes
-# Copyright (C) 2003-2018  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -36,11 +36,11 @@ per-user subdir chrooting inside root_dir.
 """
 
 import os
-import signal
 import sys
 import threading
 import time
 import traceback
+from functools import wraps
 
 try:
     from wsgidav.wsgidav_app import DEFAULT_CONFIG, WsgiDAVApp
@@ -63,7 +63,7 @@ from shared.base import invisible_path, force_unicode
 from shared.conf import get_configuration_object
 from shared.defaults import dav_domain, litmus_id, io_session_timeout
 from shared.fileio import check_write_access, user_chroot_exceptions
-from shared.gdp import project_open, project_log
+from shared.gdp import project_open, project_close, project_log
 from shared.griddaemons import get_fs_path, acceptable_chmod, \
     refresh_user_creds, refresh_share_creds, update_login_map, \
     login_map_lookup, hit_rate_limit, update_rate_limit, expire_rate_limit, \
@@ -71,7 +71,8 @@ from shared.griddaemons import get_fs_path, acceptable_chmod, \
     track_close_expired_sessions, get_active_session, check_twofactor_session
 from shared.sslsession import ssl_session_token
 from shared.tlsserver import hardened_ssl_context
-from shared.logger import daemon_logger, daemon_gdp_logger, reopen_log
+from shared.logger import daemon_logger, daemon_gdp_logger, \
+    register_hangup_handler
 from shared.pwhash import unscramble_digest, assure_password_strength
 from shared.useradm import check_password_hash, generate_password_hash, \
     check_password_digest, generate_password_digest
@@ -79,13 +80,6 @@ from shared.validstring import possible_user_id, possible_sharelink_id
 
 
 configuration, logger = None, None
-
-
-def hangup_handler(signal, frame):
-    """A simple signal handler to force log reopening on SIGHUP"""
-    logger.info("reopening log in reaction to hangup signal")
-    reopen_log(configuration)
-    logger.info("reopened log after hangup signal")
 
 
 def _handle_allowed(request, abs_path):
@@ -350,6 +344,12 @@ class MiGWsgiDAVDomainController(WsgiDAVDomainController):
         tcp_port = _get_port(environ)
         session_id = _get_ssl_session_token(environ)
         # logger.debug("session_id: %s" % session_id)
+        # For e.g. GDP we require all logins to match active 2FA session IP,
+        # but otherwise user may freely switch net during 2FA lifetime.
+        if configuration.site_twofactor_strict_address:
+            enforce_address = ip_addr
+        else:
+            enforce_address = None
         success = False
         if session_id \
                 and is_authorized_session(configuration,
@@ -369,7 +369,8 @@ class MiGWsgiDAVDomainController(WsgiDAVDomainController):
                 logger.warning("Rate limiting login from %s" % ip_addr)
             elif self._check_auth_password(
                     ip_addr, realmname, username, password) and \
-                    check_twofactor_session(configuration, username, 'davs'):
+                    check_twofactor_session(configuration, username,
+                                            enforce_address, 'davs'):
                 logger.info("Accepted password login for %s from %s" %
                             (username, ip_addr))
                 success = True
@@ -386,10 +387,10 @@ class MiGWsgiDAVDomainController(WsgiDAVDomainController):
                                 failed_count)
 
             if success and configuration.site_enable_gdp:
-                success = project_open(configuration,
-                                       'davs',
-                                       ip_addr,
-                                       username)
+                (success, _) = project_open(configuration,
+                                            'davs',
+                                            ip_addr,
+                                            username)
 
             # Track newly authorized session
 
@@ -422,6 +423,12 @@ class MiGWsgiDAVDomainController(WsgiDAVDomainController):
         ip_addr = _get_addr(environ)
         tcp_port = _get_port(environ)
         session_id = _get_ssl_session_token(environ)
+        # For e.g. GDP we require all logins to match active 2FA session IP,
+        # but otherwise user may freely switch net during 2FA lifetime.
+        if configuration.site_twofactor_strict_address:
+            enforce_address = ip_addr
+        else:
+            enforce_address = None
         # logger.debug("session_id: %s" % session_id)
         success = False
         if session_id \
@@ -437,7 +444,8 @@ class MiGWsgiDAVDomainController(WsgiDAVDomainController):
             update_users(configuration, self.user_map, username)
 
             if self._get_user_digests(ip_addr, realmname, username) and \
-                    check_twofactor_session(configuration, username, 'davs'):
+                    check_twofactor_session(configuration, username,
+                                            enforce_address, 'davs'):
                 # logger.debug("valid digest user %s from %s:%s" %
                 #              (username, ip_addr, tcp_port))
                 success = True
@@ -446,10 +454,10 @@ class MiGWsgiDAVDomainController(WsgiDAVDomainController):
                                (username, ip_addr, tcp_port))
 
             if success and configuration.site_enable_gdp:
-                success = project_open(configuration,
-                                       'davs',
-                                       ip_addr,
-                                       username)
+                (success, _) = project_open(configuration,
+                                            'davs',
+                                            ip_addr,
+                                            username)
 
             # Track newly authorized session
 
@@ -544,54 +552,115 @@ class MiGFileResource(FileResource):
         if invisible_path(path):
             raise DAVError(HTTP_FORBIDDEN)
 
+    def __allow_handle(method):
+        """Decorator wrapper for _handle_allowed"""
+        @wraps(method)
+        def _impl(self, *method_args, **method_kwargs):
+            if method.__name__ == 'handleCopy':
+                _handle_allowed("copy", self._filePath)
+            elif method.__name__ == 'handleMove':
+                _handle_allowed("move", self._filePath)
+            elif method.__name__ == 'handleDelete':
+                _handle_allowed("delete", self._filePath)
+            else:
+                _handle_allowed("unknown", self._filePath)
+            return method(self, *method_args, **method_kwargs)
+        return _impl
+
+    def __gdp_log(method):
+        """Decorator used for GDP logging"""
+        @wraps(method)
+        def _impl(self, *method_args, **method_kwargs):
+            if not configuration.site_enable_gdp:
+                return method(self, *method_args, **method_kwargs)
+            operation = method.__name__
+            src_path = self.path
+            dst_path = None
+            log_src_path = None
+            log_dst_path = None
+            if operation == "handleCopy":
+                dst_path = method_args[0]
+                log_action = "copied"
+                log_src_path = src_path.strip('/')
+                log_dst_path = dst_path.strip('/')
+            elif operation == "handleMove":
+                dst_path = method_args[0]
+                log_action = "moved"
+                log_src_path = src_path.strip('/')
+                log_dst_path = dst_path.strip('/')
+            elif operation == "handleDelete":
+                log_action = "deleted"
+                log_src_path = src_path.strip('/')
+            elif operation == "getContent":
+                log_action = "accessed"
+                log_src_path = src_path.strip('/')
+            elif operation == "beginWrite":
+                log_action = "modified"
+                log_src_path = src_path.strip('/')
+            else:
+                logger.warning("GDP log for '%s' _NOT_ implemented"
+                               % operation)
+                raise DAVError(HTTP_FORBIDDEN)
+            if not project_log(configuration,
+                               'davs',
+                               self.username,
+                               self.ip_addr,
+                               log_action,
+                               path=log_src_path,
+                               dst_path=log_dst_path,
+                               ):
+                raise DAVError(HTTP_FORBIDDEN)
+            try:
+                result = method(self, *method_args, **method_kwargs)
+            except Exception, exc:
+                result = None
+                logger_msg = "%s failed: '%s'" % (operation, src_path)
+                if dst_path is not None:
+                    logger_msg += " -> '%s'" % dst_path
+                logger_msg += ": %s" % exc
+                logger.error(logger_msg)
+                project_log(configuration,
+                            'davs',
+                            self.username,
+                            self.ip_addr,
+                            log_action,
+                            failed=True,
+                            path=log_src_path,
+                            dst_path=log_dst_path,
+                            details=exc,
+                            )
+                raise
+            return result
+        return _impl
+
+    @__allow_handle
+    @__gdp_log
     def handleCopy(self, destPath, depthInfinity):
         """Handle a COPY request natively, but with our restrictions"""
-        _handle_allowed("copy", self._filePath)
-        result = super(MiGFileResource, self).handleCopy(
+        return super(MiGFileResource, self).handleCopy(
             destPath, depthInfinity)
-        if configuration.site_enable_gdp:
-            msg = "'%s' -> '%s'" % (self.path.strip('/'), destPath.strip('/'))
-            project_log(configuration, 'davs', self.username, 'copied',
-                        msg, user_addr=self.ip_addr)
-        return result
 
+    @__allow_handle
+    @__gdp_log
     def handleMove(self, destPath):
         """Handle a MOVE request natively, but with our restrictions"""
-        _handle_allowed("move", self._filePath)
-        result = super(MiGFileResource, self).handleMove(destPath)
-        if configuration.site_enable_gdp:
-            msg = "'%s' -> '%s'" % (self.path.strip('/'), destPath.strip('/'))
-            project_log(configuration, 'davs', self.username, 'moved',
-                        msg, user_addr=self.ip_addr)
-        return result
+        return super(MiGFileResource, self).handleMove(destPath)
 
+    @__allow_handle
+    @__gdp_log
     def handleDelete(self):
         """Handle a DELETE request natively, but with our restrictions"""
-        _handle_allowed("delete", self._filePath)
-        result = super(MiGFileResource, self).handleDelete()
-        if configuration.site_enable_gdp:
-            msg = "'%s'" % self.path.strip('/')
-            project_log(configuration, 'davs', self.username, 'deleted',
-                        msg, user_addr=self.ip_addr)
-        return result
+        return super(MiGFileResource, self).handleDelete()
 
+    @__gdp_log
     def getContent(self):
         """Handle a GET request natively and log for GDP"""
-        result = super(MiGFileResource, self).getContent()
-        if configuration.site_enable_gdp:
-            msg = "'%s'" % self.path.strip('/')
-            project_log(configuration, 'davs', self.username, 'accessed',
-                        msg, user_addr=self.ip_addr)
-        return result
+        return super(MiGFileResource, self).getContent()
 
+    @__gdp_log
     def beginWrite(self, contentType=None):
         """Handle a PUT request natively and log for GDP"""
-        result = super(MiGFileResource, self).beginWrite()
-        if configuration.site_enable_gdp:
-            msg = "'%s'" % self.path.strip('/')
-            project_log(configuration, 'davs', self.username, 'wrote',
-                        msg, user_addr=self.ip_addr)
-        return result
+        return super(MiGFileResource, self).beginWrite()
 
 
 class MiGFolderResource(FolderResource):
@@ -610,46 +679,126 @@ class MiGFolderResource(FolderResource):
         if invisible_path(path):
             raise DAVError(HTTP_FORBIDDEN)
 
+    def __allow_handle(method):
+        """Decorator wrapper for _handle_allowed"""
+        @wraps(method)
+        def _impl(self, *method_args, **method_kwargs):
+            if method.__name__ == 'handleCopy':
+                _handle_allowed("copy", self._filePath)
+            elif method.__name__ == 'handleMove':
+                _handle_allowed("move", self._filePath)
+            elif method.__name__ == 'handleDelete':
+                _handle_allowed("delete", self._filePath)
+            else:
+                _handle_allowed("unknown", self._filePath)
+            return method(self, *method_args, **method_kwargs)
+        return _impl
+
+    def __gdp_log(method):
+        """Decorator used for GDP logging"""
+        @wraps(method)
+        def _impl(self, *method_args, **method_kwargs):
+            if not configuration.site_enable_gdp:
+                return method(self, *method_args, **method_kwargs)
+            operation = method.__name__
+            src_path = self.path
+            dst_path = None
+            log_src_path = None
+            log_dst_path = None
+            if operation == "handleCopy":
+                dst_path = method_args[0]
+                log_action = "copied"
+                log_src_path = src_path.strip('/')
+                log_dst_path = dst_path.strip('/')
+            elif operation == "handleMove":
+                dst_path = method_args[0]
+                log_action = "moved"
+                log_src_path = src_path.strip('/')
+                log_dst_path = dst_path.strip('/')
+            elif operation == "handleDelete":
+                log_action = "deleted"
+                log_src_path = src_path.strip('/')
+            elif operation == "createCollection":
+                log_action = "created"
+                dst_path = method_args[0]
+                relpath = "%s%s" % (src_path, dst_path)
+                log_src_path = relpath.strip('/')
+            elif operation == "createEmptyResource":
+                log_action = "created"
+                dst_path = method_args[0]
+                relpath = "%s%s" % (src_path, dst_path)
+                log_src_path = relpath.strip('/')
+            elif operation == "getMemberNames":
+                log_action = "accessed"
+                log_src_path = src_path.strip('/')
+            else:
+                logger.warning("GDP log for '%s' _NOT_ implemented"
+                               % operation)
+                raise DAVError(HTTP_FORBIDDEN)
+            if not log_src_path:
+                log_src_path = '.'
+            if not project_log(configuration,
+                               'davs',
+                               self.username,
+                               self.ip_addr,
+                               log_action,
+                               path=log_src_path,
+                               dst_path=log_dst_path,
+                               ):
+                raise DAVError(HTTP_FORBIDDEN)
+            try:
+                result = method(self, *method_args, **method_kwargs)
+            except Exception, exc:
+                result = None
+                logger_msg = "%s failed: '%s'" % (operation, src_path)
+                if dst_path is not None:
+                    logger_msg += " -> '%s'" % dst_path
+                logger_msg += ": %s" % exc
+                logger.error(logger_msg)
+                project_log(configuration,
+                            'davs',
+                            self.username,
+                            self.ip_addr,
+                            log_action,
+                            failed=True,
+                            path=log_src_path,
+                            dst_path=log_dst_path,
+                            details=exc,
+                            )
+                raise
+            return result
+        return _impl
+
+    @__allow_handle
+    @__gdp_log
     def handleCopy(self, destPath, depthInfinity):
         """Handle a COPY request natively, but with our restrictions"""
-        _handle_allowed("copy", self._filePath)
-        result = super(MiGFolderResource, self).handleCopy(
+        return super(MiGFolderResource, self).handleCopy(
             destPath, depthInfinity)
-        if configuration.site_enable_gdp:
-            msg = "'%s' -> '%s'" % (self.path.strip('/'), destPath.strip('/'))
-            project_log(configuration, 'davs', self.username, 'copied',
-                        msg, user_addr=self.ip_addr)
-        return result
 
+    @__allow_handle
+    @__gdp_log
     def handleMove(self, destPath):
         """Handle a MOVE request natively, but with our restrictions"""
-        _handle_allowed("move", self._filePath)
-        result = super(MiGFolderResource, self).handleMove(destPath)
-        if configuration.site_enable_gdp:
-            msg = "'%s' -> '%s'" % (self.path.strip('/'), destPath.strip('/'))
-            project_log(configuration, 'davs', self.username, 'moved',
-                        msg, user_addr=self.ip_addr)
-        return result
+        return super(MiGFolderResource, self).handleMove(destPath)
 
+    @__allow_handle
+    @__gdp_log
     def handleDelete(self):
         """Handle a DELETE request natively, but with our restrictions"""
-        _handle_allowed("delete", self._filePath)
-        result = super(MiGFolderResource, self).handleDelete()
-        if configuration.site_enable_gdp:
-            msg = "'%s'" % self.path.strip('/')
-            project_log(configuration, 'davs', self.username, 'deleted',
-                        msg, user_addr=self.ip_addr)
-        return result
+        return super(MiGFolderResource, self).handleDelete()
 
+    @__gdp_log
     def createCollection(self, name):
-        result = super(MiGFolderResource, self).createCollection(name)
-        if configuration.site_enable_gdp:
-            relpath = "%s%s" % (self.path, name)
-            msg = "'%s'" % relpath.strip('/')
-            project_log(configuration, 'davs', self.username, 'created',
-                        msg, user_addr=self.ip_addr)
-        return result
+        """Handle a MKCOL request natively, but with our restrictions"""
+        return super(MiGFolderResource, self).createCollection(name)
 
+    @__gdp_log
+    def createEmptyResource(self, name):
+        """Handle operation of same name, but with our restrictions"""
+        return super(MiGFolderResource, self).createEmptyResource(name)
+
+    @__gdp_log
     def getMemberNames(self):
         """Return list of direct collection member names (utf-8 encoded).
 
@@ -657,6 +806,7 @@ class MiGFolderResource(FolderResource):
 
         Use parent version and filter out any invisible file names.
         """
+        # logger.debug("in getMemberNames: %s" % self.path)
         return [i for i in super(MiGFolderResource, self).getMemberNames() if
                 not invisible_path(i)]
 
@@ -672,7 +822,7 @@ class MiGFolderResource(FolderResource):
         Call parent version, filter invisible and mangle to our own
         MiGFileResource and MiGFolderResource objects.
         """
-        # logger.debug("in getMember")
+        # logger.debug("in getMember: %s" % name)
         res = FolderResource.getMember(self, name)
         if invisible_path(res.name):
             res = None
@@ -1020,7 +1170,7 @@ if __name__ == "__main__":
         configuration.gdp_logger = gdp_logger
 
     # Allow e.g. logrotate to force log re-open after rotates
-    signal.signal(signal.SIGHUP, hangup_handler)
+    register_hangup_handler(configuration)
 
     # Allow configuration overrides on command line
     litmus_password = None
@@ -1100,7 +1250,10 @@ unless it is available in mig/server/MiGserver.conf
     daemon_conf['acceptdigest'] = daemon_conf['allow_digest']
     # Keep order of auth methods (please note the 2GB+ upload bug with digest)
     daemon_conf['defaultdigest'] = 'digest' in configuration.user_davs_auth[:1]
-
+    if configuration.site_enable_gdp:
+        # Close projects marked as open due to NON-clean exits
+        project_close(configuration, 'davs',
+                      address, user_id=None)
     logger.info("Starting WebDAV server")
     info_msg = "Listening on address '%s' and port %d" % (address, port)
     logger.info(info_msg)

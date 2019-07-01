@@ -184,6 +184,8 @@ def __load_wp(configuration, wp_path):
 
     try:
         wp = None
+        # NOTE, in the future use the shared.serial.load/dump functions for json
+        # IO operations
         with open(wp_path, 'r') as _wp_path:
             wp = json.load(_wp_path)
     except Exception, err:
@@ -210,6 +212,8 @@ def __load_wr(configuration, wr_path):
     try:
         wr = None
         with open(wr_path, 'r') as _wr_path:
+            # NOTE, in the future use the shared.serial.load/dump functions for json
+            # IO operations
             wr = json.load(_wr_path)
     except Exception, err:
         configuration.logger.error('WR: could not open workflow recipe %s %s'
@@ -800,6 +804,8 @@ def __create_workflow_pattern(configuration, client_id, vgrid, wp):
     wrote = False
     msg = ''
     try:
+        # NOTE, in the future use the shared.serial.load/dump functions for json
+        # IO operations
         with open(wp_file_path, 'w') as j_file:
             json.dump(wp, j_file, indent=0)
 
@@ -875,6 +881,8 @@ def __create_workflow_recipe(configuration, client_id, vgrid, wr):
     wrote = False
     msg = ''
     try:
+        # NOTE, in the future use the shared.serial.load/dump functions for json
+        # IO operations
         with open(wr_file_path, 'w') as j_file:
             json.dump(wr, j_file, indent=0)
 
@@ -962,6 +970,8 @@ def __update_workflow_pattern(configuration, client_id, vgrid,
     wrote = False
     msg = ''
     try:
+        # NOTE, in the future use the shared.serial.load/dump functions for json
+        # IO operations
         with open(wp_file_path, 'w') as j_file:
             json.dump(pattern, j_file, indent=0)
 
@@ -1044,6 +1054,8 @@ def __update_workflow_recipe(configuration, client_id, vgrid,
 
     msg = ''
     try:
+        # NOTE, in the future use the shared.serial.load/dump functions for json
+        # IO operations
         with open(wr_file_path, 'w') as j_file:
             json.dump(recipe, j_file, indent=0)
 
@@ -1300,7 +1312,8 @@ def create_workflow_task_file(configuration, client_id, vgrid, notebook,
     while os.path.exists(task_file_path):
         file_name = generate_random_ascii(wr_id_length, charset=wr_id_charset)
         task_file_path = os.path.join(task_home, file_name)
-
+    # NOTE, in the future use the shared.serial.load/dump functions for json
+    # IO operations
     notebook_json = json.dumps(notebook)
     wrote = write_file(notebook_json, task_file_path, _logger, make_parent=False)
 
@@ -1774,7 +1787,7 @@ def scrape_for_workflow_objects(configuration, client_id, vgrid, notebook,
 
     try:
         _logger.debug("starting source inspection")
-        # FIXME, Don't do this, eventhough it's executed as the mig user and not root
+        # HACK, Don't do this, eventhough it's executed as the mig user and not root
         # It still has a ton of permissions.
         # It's okay for the job engine to execute 'code' since it is sandboxed in terms of 
         # syscall it can make
@@ -1901,7 +1914,7 @@ def define_pattern(configuration, client_id, vgrid, pattern):
     _logger.debug('clients_patterns: ' + str(clients_patterns))
     _logger.debug('pattern: ' + str(pattern))
 
-    # NOTE, Not really sure what your trying to do here.
+    # ??? Not really sure what your trying to do here.
     # Why wouldn't you allow a pattern to use the same variable values across patterns?
     # Also there seems to be a local scope conflict on the pattern variable
     # between the passed in 'pattern' parameter and the following declaration

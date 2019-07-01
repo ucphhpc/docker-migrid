@@ -66,7 +66,6 @@ def get_job_id(configuration):
     """
 
     logger = configuration.logger
-
     filehandle = None
     job_id_counter_path = os.path.join(configuration.mig_system_files,
             'job_id_counter')
@@ -117,7 +116,6 @@ def fill_mrsl_template(
     Please note that mrsl_fd_or_path may be a path or a file-like object.
     """
     logger = configuration.logger
-
     logger.debug("fill template based on trigger for %s : %s and rule %s" % \
                  (trigger_path, state_change, rule))
     if isinstance(mrsl_fd_or_path, basestring):
@@ -157,8 +155,6 @@ def new_job(
     model can get job_id seperately (instead of the return message string)
     """
 
-    logger = configuration.logger
-
     mig_server_id = configuration.mig_server_id
 
     counter = get_job_id(configuration)
@@ -197,8 +193,6 @@ def failed_restart(
     ):
     """Helper for notifying grid_script when a exe restart failed"""
 
-    logger = configuration.logger
-
     # returns a tuple (bool status, str msg)
 
     send_message = 'RESTARTEXEFAILED %s %s %s\n'\
@@ -220,8 +214,6 @@ def finished_job(
     ):
     """Helper for notifying grid_script when a job finishes"""
 
-    logger = configuration.logger
-
     # returns a tuple (bool status, str msg)
 
     send_message = 'RESOURCEFINISHEDJOB %s %s %s %s\n'\
@@ -237,7 +229,6 @@ def finished_job(
 def create_job_object_from_pickled_mrsl(filepath, logger,
         external_dict):
     """Helper for submit from pickled mRSL"""
-
     job_dict = unpickle(filepath, logger)
     if not job_dict:
         return (False, 'could not unpickle mrsl file %s' % filepath)
@@ -330,8 +321,6 @@ def get_job_ids_with_task_file_in_contents(
 def fields_to_mrsl(configuration, user_arguments_dict, external_dict):
     """Generate mRSL from fields"""
 
-    logger = configuration.logger
-
     spec = []
     for key in external_dict.keys():
         attr_name = key
@@ -340,7 +329,7 @@ def fields_to_mrsl(configuration, user_arguments_dict, external_dict):
             attr = user_arguments_dict[attr_name]
 
             # FIXME: this type check is not perfect... I should be
-            #  able to extend on any sequence...
+            # able to extend on any sequence...
 
             if isinstance(attr, list):
                 spec.extend(attr)

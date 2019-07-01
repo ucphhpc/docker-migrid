@@ -713,6 +713,7 @@ script_ops_two_args.append(['rmvgridowner', 'cert_id', 'vgrid_name'])
 script_ops_two_args.append(['rmvgridres', 'unique_resource_name',
                             'vgrid_name'])
 script_ops_two_args.append(['rmvgridtrigger', 'rule_id', 'vgrid_name'])
+# TODO, need to be in or not?
 # script_ops_two_args.append(['rmworkflowpattern', 'persistence_id', 'vgrid_name'])
 
 

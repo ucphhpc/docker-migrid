@@ -997,7 +997,11 @@ for job input and output.
                        share_readme, logger, make_parent=False)
 
         # Create ipynb used to define workflows
+        # NOTE, preferable get it the same way workflow_home and recipe homes,
+        # I.e. via a function that workflows.py defines
         pattern_notebook = os.path.join(vgrid_files_dir, "%s.ipynb" % vgrid_name)
+        # NOTE! IF its a default format, it should really be defined in either
+        # workflows.py, or defaults.py
         default_notebook = {
             "cells":
             [
@@ -1025,10 +1029,16 @@ for job input and output.
             "nbformat_minor": 2
         }
         if not os.path.exists(pattern_notebook):
+            # NOTE, in the future use the shared.serial.load/dump functions for json
+            # IO operations
             notebook_json = json.dumps(default_notebook)
             write_file(notebook_json, pattern_notebook, logger, make_parent=False)
         # Also create pattern and recipe folders as they are required for some mig_meow functionality
         wp_home = get_workflow_pattern_home(configuration, vgrid_name)
+        # NOTE, For new code that interacts with the storage,
+        # use the shared migrid functions defined for this, such as,
+        # shared.fileio.makedirs_rec and shared.fileio.write_file for creating directories and files.
+        # Thereby we get universal error handling and common logging
         if not os.path.exists(wp_home):
             try:
                 os.makedirs(wp_home)

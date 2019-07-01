@@ -2,17 +2,15 @@ OWNER=nielsbohr
 IMAGE=migrid
 TAG=edge
 
-all: build
+CHECKOUT=4207
+
+all: init build
 
 init:
 	mkdir -p ./{certs,httpd,mig,state}
 
 build:
-	mkdir -p ./certs
-	mkdir -p ./httpd
-	mkdir -p ./mig
-	mkdir -p ./state
-	docker build -t ${OWNER}/${IMAGE}:${TAG} .
+	docker build -t ${OWNER}/${IMAGE}:${TAG} --build-arg MIG_CHECKOUT=${CHECKOUT} .
 
 clean:
 	rm -rf ./certs
@@ -33,3 +31,5 @@ reset:
 
 push:
 	docker push ${OWNER}/${IMAGE}:${TAG}
+
+all: clean build

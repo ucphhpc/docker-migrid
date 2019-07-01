@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # vgridworkflows - data-driven workflows for owners and members
-# Copyright (C) 2003-2018  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -202,8 +202,8 @@ access the workflows.'''
                                                'pending_states')
         trigger_job_final_dir = os.path.join(trigger_job_dir, 'final_states')
 
-        if makedirs_rec(trigger_job_pending_dir, logger) \
-                and makedirs_rec(trigger_job_final_dir, logger):
+        if makedirs_rec(trigger_job_pending_dir, configuration) \
+                and makedirs_rec(trigger_job_final_dir, configuration):
             abs_vgrid_dir = '%s/' \
                 % os.path.abspath(os.path.join(configuration.vgrid_files_home,
                                                vgrid_name))

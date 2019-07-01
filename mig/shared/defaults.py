@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # defaults - default constant values used in many locations
-# Copyright (C) 2003-2018  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -43,6 +43,7 @@ keyword_none = 'NONE'
 keyword_unchanged = 'UNCHANGED'
 keyword_final = 'FINAL'
 keyword_pending = 'PENDING'
+keyword_updating = 'UPDATING'
 keyword_owners = 'OWNERS'
 keyword_members = 'MEMBERS'
 
@@ -148,6 +149,7 @@ profile_filename = 'userprofile'
 twofactor_filename = 'twofactor'
 duplicati_filename = 'duplicati'
 freeze_meta_filename = 'meta.pck'
+freeze_lock_filename = 'freeze.lock'
 datatransfers_filename = 'transfers'
 user_keys_dir = 'keys'
 sharelinks_filename = 'sharelinks'
@@ -200,6 +202,8 @@ download_block_size = 268435456
 wwwpublic_alias = 'public'
 public_archive_dir = 'archives'
 public_archive_index = 'published-archive.html'
+public_archive_files = 'published-files.json'
+public_archive_doi = 'published-doi.json'
 
 edit_lock_suffix = '.editor_lock__'
 edit_lock_timeout = 600
@@ -270,17 +274,17 @@ freeze_flavors = {
                'createfreeze_title': 'Create Freeze Archive',
                'showfreeze_title': 'Show Freeze Archive Details',
                'deletefreeze_title': 'Delete Freeze Archive',
-               'states': [keyword_pending, keyword_final]},
+               'states': [keyword_pending, keyword_updating, keyword_final]},
     'phd': {'adminfreeze_title': 'PhD Thesis Archival',
             'createfreeze_title': 'Create Thesis Archive',
             'showfreeze_title': 'Show Thesis Archive Details',
             'deletefreeze_title': 'Delete Thesis Archive',
-            'states': [keyword_pending, keyword_final]},
+            'states': [keyword_pending, keyword_updating, keyword_final]},
     'backup': {'adminfreeze_title': 'Backup Archival',
                'createfreeze_title': 'Create Backup Archive',
                'showfreeze_title': 'Show Backup Archive Details',
                'deletefreeze_title': 'Delete Backup Archive',
-               'states': [keyword_pending, keyword_final]}
+               'states': [keyword_pending, keyword_updating, keyword_final]}
 }
 
 # Default value for ALL integer limits in vgrid settings
@@ -358,4 +362,35 @@ SAFE_SSH_LEGACY_MACS = "hmac-sha2-512,hmac-sha2-256"
 STRONG_SSH_LEGACY_MACS = ",".join([BEST_SSH_LEGACY_MACS, SAFE_SSH_LEGACY_MACS])
 
 # A pattern to match usernames unambiguously identifying cracking attempts
-CRACK_USERNAME_REGEX = '(root|bin|daemon|adm|admin|administrator|superadmin|lp|operator|ftp|irc|nobody|sys|pi|guest|www|www-data|mysql|postgres|oracle|mongodb|redis|hadoop|cpanel|plesk|tomcat|exim|postfix|sendmail|mailnull|postmaster|mail|uucp|news|teamspeak|git|svn|cvs|user|ftpuser|ubuntu|ubnt|supervisor|csgoserver|device|deploy|support|info|test[0-9]*|user[0-9]*|[0-9]+)'
+CRACK_USERNAME_REGEX = '(root|bin|daemon|adm|admin|administrator|superadmin|lp|operator|controller|ftp|irc|nobody|sys|pi|guest|www|www-data|mysql|postgres|oracle|mongodb|sybase|redis|hadoop|zimbra|cpanel|plesk|openhabian|tomcat|exim|postfix|sendmail|mailnull|postmaster|mail|uucp|news|teamspeak|git|svn|cvs|user|ftpuser|ubuntu|ubnt|supervisor|csgoserver|device|laboratory|deploy|support|info|test[0-9]*|user[0-9]*|[0-9]+|root;[a-z0-9]+)'
+
+# GDP mode settings
+# NOTE: these are Xgi-bin scripts to allow
+valid_gdp_auth_scripts = [
+    'autocreate.py',
+    'autologout.py',
+    'cat.py',
+    'cp.py',
+    'fileman.py',
+    'gdpman.py',
+    'logout.py',
+    'ls.py',
+    'mkdir.py',
+    'mv.py',
+    'rm.py',
+    'settings.py',
+    'settingsaction.py',
+    'twofactor.py',
+    'uploadchunked.py',
+]
+# NOTE: these are cgi-sid scripts to allow
+valid_gdp_anon_scripts = [
+    'reqoid.py',
+    'reqoidaction.py',
+    'reqcert.py',
+    'reqcertaction.py',
+    'oiddiscover.py',
+    'oidping.py',
+    'login.py',
+    'signup.py',
+]

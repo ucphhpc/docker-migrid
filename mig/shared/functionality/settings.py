@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # settings - back end for the settings page
-# Copyright (C) 2003-2018  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -44,7 +44,7 @@ from shared.functional import validate_input_and_cert
 from shared.handlers import get_csrf_limit, make_csrf_token
 from shared.html import jquery_ui_js, man_base_js, man_base_html, \
     themed_styles, console_log_javascript, twofactor_wizard_html, \
-    twofactor_wizard_js
+    twofactor_wizard_js, twofactor_token_html
 from shared.init import initialize_main_variables, find_entry, extract_menu
 from shared.settings import load_settings, load_widgets, load_profile, \
     load_ssh, load_davs, load_ftps, load_seafile, load_duplicati, \
@@ -770,14 +770,17 @@ so you may have to avoid blank lines in your text below.
         default_authpassword = current_ssh_dict.get('authpassword', '')
         username = client_alias(client_id)
         if configuration.user_sftp_alias:
-            username = extract_field(client_id, configuration.user_sftp_alias)
+            username = get_short_id(configuration, client_id,
+                                    configuration.user_sftp_alias)
             create_alias_link(username, client_id, configuration.user_home)
         sftp_server = configuration.user_sftp_show_address
         sftp_port = configuration.user_sftp_show_port
         fingerprint_info = ''
         sftp_md5 = configuration.user_sftp_key_md5
         sftp_sha256 = configuration.user_sftp_key_sha256
+        sftp_trust_dns = configuration.user_sftp_key_from_dns
         fingerprints = []
+        hostkey_from_dns = 'ask'
         if sftp_md5:
             fingerprints.append("%s (MD5)" % sftp_md5)
         if sftp_sha256:
@@ -785,6 +788,8 @@ so you may have to avoid blank lines in your text below.
         if fingerprints:
             fingerprint_info = '''You may be asked to verify the server key
 fingerprint <tt>%s</tt> first time you connect.''' % ' or '.join(fingerprints)
+        if sftp_trust_dns:
+            hostkey_from_dns = 'yes'
         target_op = 'settingsaction'
         csrf_token = make_csrf_token(configuration, form_method, target_op,
                                      client_id, csrf_limit)
@@ -839,6 +844,7 @@ to avoid typing the full login details every time:<br />
 <pre>
 Host %(sftp_server)s
 Hostname %(sftp_server)s
+VerifyHostKeyDNS %(hostkey_from_dns)s
 User %(username)s
 Port %(sftp_port)s
 # Assuming you have your private key in ~/.mig/id_rsa
@@ -927,6 +933,7 @@ value="%(default_authpassword)s" />
             'username': username,
             'sftp_server': sftp_server,
             'sftp_port': sftp_port,
+            'hostkey_from_dns': hostkey_from_dns,
             'max_sessions': configuration.user_sftp_max_sessions,
             'fingerprint_info': fingerprint_info,
             'auth_methods': ' / '.join(configuration.user_sftp_auth).title(),
@@ -1710,16 +1717,20 @@ client versions from the link above.<br/>
         csrf_token = make_csrf_token(configuration, form_method, target_op,
                                      client_id, csrf_limit)
         fill_helpers.update({'target_op': target_op, 'csrf_token': csrf_token})
-        html = '''
+        html = """
+<div id='otp_verify_dialog' title='Verify Authenticator App Token'
+   class='centertext hidden'>
+"""
+        # NOTE: wizard needs dialog with form outside the main settings form
+        # because nested forms cause problems
+        html += twofactor_token_html(configuration)
+        html += '''</div>
 <div id="twofactor">
 <form method="%(form_method)s" action="%(target_op)s.py">
 <input type="hidden" name="%(csrf_field)s" value="%(csrf_token)s" />
 <table class="twofactor fixedlayout">
 <tr class="title"><td class="centertext">
 2-Factor Authentication
-</td></tr>
-<tr><td>
-It is possible to tweak some of the two factor authentication here.
 </td></tr>
 '''
 
@@ -1730,11 +1741,6 @@ It is possible to tweak some of the two factor authentication here.
 
             # TODO: we might want to protect QR code with repeat basic login
             #       or a simple timeout since last login (cookie age).
-            html += """
-<tr><td>
-<h4>2-Factor Authentication</h4>
-</td></tr>
-"""
             html += twofactor_wizard_html(configuration)
             check_url = '/%s/twofactor.py' % get_xgi_bin(configuration)
             fill_helpers.update({'otp_uri': otp_uri, 'b32_key': b32_key,

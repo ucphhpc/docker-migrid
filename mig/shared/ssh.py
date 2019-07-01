@@ -108,10 +108,6 @@ def copy_file_to_resource(
     using scp.
     """
 
-    text_file = open(local_path, 'r')
-    file_text = text_file.read()
-    text_file.close()
-
     configuration = get_configuration_object()
     local_filename = os.path.basename(local_path)
     multiplex = '0'
@@ -166,11 +162,6 @@ def copy_file_to_resource(
                        ['%s@%s:%s' % (user, host, abs_dest_path)]
     scp_command = ' '.join(scp_command_list)
     logger.debug('running command: %s' % scp_command)
-
-    text_file = open(local_path, 'r')
-    file_text = text_file.read()
-    text_file.close()
-
     # NOTE: we use scp command list here to avoid shell requirement
     scp_proc = subprocess_popen(scp_command_list,
                                 stdin=open("/dev/null", "r"),
@@ -364,12 +355,17 @@ def execute_on_resource(
         x_fwd = True
 
     options = default_ssh_options(close_stdin=True, x_forward=x_fwd)
+<<<<<<< HEAD
     # TODO This has been changed for simpler setup of a development enviroment
     #  change this back, or resolve it properly later
     # options += ['-o', 'Port=%s' % port, '-o', 'CheckHostIP=yes',
     #             '-o', 'StrictHostKeyChecking=yes']
     options += ['-o', 'Port=%s' % port, '-o', 'CheckHostIP=yes',
                 '-o', 'StrictHostKeyChecking=no']
+=======
+    options += ['-o', 'Port=%s' % port, '-o', 'CheckHostIP=yes',
+                '-o', 'StrictHostKeyChecking=yes']
+>>>>>>> ae8cc615db00d3bfaf0134377f21bd63eade76b2
 
     if hostkey:
         options += ['-o', 'UserKnownHostsFile=%s' % key_path]
@@ -399,7 +395,10 @@ def execute_on_resource(
     ssh_command = ' '.join(ssh_command_list)
     logger.debug('running command: %s' % ssh_command_list)
     # NOTE: we use ssh command list here to avoid shell requirement
+<<<<<<< HEAD
 
+=======
+>>>>>>> ae8cc615db00d3bfaf0134377f21bd63eade76b2
     ssh_proc = subprocess_popen(ssh_command_list,
                                 stdin=open("/dev/null", "r"),
                                 stdout=subprocess_pipe,
@@ -408,7 +407,10 @@ def execute_on_resource(
     status = ssh_proc.wait()
     out_msg, err_msg = ssh_proc.communicate()
 
+<<<<<<< HEAD
     logger.debug('command status: %s' % str(status))
+=======
+>>>>>>> ae8cc615db00d3bfaf0134377f21bd63eade76b2
     logger.debug('command out: %s' % out_msg)
     logger.debug('command err: %s' % err_msg)
 
@@ -519,7 +521,10 @@ def tighten_key_perms(configuration, client_id, keys_dirname=ssh_conf_dir):
     enforced all the way up to first root owned parent dir.
     """
     _logger = configuration.logger
+<<<<<<< HEAD
 
+=======
+>>>>>>> ae8cc615db00d3bfaf0134377f21bd63eade76b2
     client_dir = client_id_dir(client_id)
     # NOTE: first remove any trailing slashes for dirname to be consistent
     user_base_dir = configuration.user_home.rstrip(os.sep)

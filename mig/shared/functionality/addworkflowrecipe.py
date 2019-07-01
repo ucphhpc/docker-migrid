@@ -33,7 +33,6 @@ optional uploaded recipes to the pattern.
 
 TODO finish description
 """
-import json
 
 import shared.returnvalues as returnvalues
 

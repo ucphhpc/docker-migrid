@@ -112,6 +112,8 @@ def main(client_id, user_arguments_dict):
     formatted = user_arguments_dict[upload_key][0]
     json_nb = None
     try:
+        # NOTE, in the future use the shared.serial.load/dump functions for json
+        # IO operations
         json_nb = json.loads(formatted, encoding='utf-8')
     except Exception, err:
         logger.error("Failed to json load %s for %s uploaded by %s" %

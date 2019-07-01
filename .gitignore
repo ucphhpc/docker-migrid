@@ -93,6 +93,8 @@ env.bak/
 venv.bak/
 venv2.bak/
 
+venv2.7/
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -115,6 +117,8 @@ state/
 
 # Dont store current config and db
 mig/server/MiG-users.db
+
+mig/install/generated-confs*
 
 # Dont store job queue
 mig/server/server.stdin

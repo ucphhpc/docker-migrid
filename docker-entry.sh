@@ -27,24 +27,35 @@ if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
     chown -R $USER:$USER $MIG_ROOT/state
 fi
 
+# Start rsyslog
+#/usr/sbin/rsyslogd
+
 # Load required httpd environment vars
 source migrid-httpd.env
 
 /usr/sbin/httpd -k start
-status=$?
-if [ $status -ne 0 ]; then
-    echo "Failed to start httpd: $status"
-    exit $status
+HTTPD_STATUS=$?
+if [ $HTTPD_STATUS -ne 0 ]; then
+    echo "Failed to start httpd: $HTTPD_STATUS"
+    exit $HTTPD_STATUS
 fi
 
 # Start every service for now
 # TODO make individual checks for each service
 /etc/init.d/migrid start openid
 ps aux | grep openid | grep -q -v grep
-status=$?
-if [ $status -ne 0 ]; then
-    echo "Failed to start openid: $status"
-    exit $status
+OPENID_STATUS=$?
+if [ $OPENID_STATUS -ne 0 ]; then
+    echo "Failed to start openid: $OPENID_STATUS"
+    exit $OPENID_STATUS
+fi
+
+/etc/init.d/migrid start sftp
+ps aux | grep grid_sftp.py | grep -v -q grep
+SFTP_STATUS=$?
+if [ $SFTP_STATUS -ne 0 ]; then
+    echo "Failed to start sshd: $SFTP_STATUS"
+    exit $SFTP_STATUS
 fi
 
 # Start every service for now
@@ -67,11 +78,14 @@ if [ $status -ne 0 ]; then
     exit $status
 fi
 
-# Start ssh connections
-# TODO expand this to check service still running
-/usr/sbin/sshd
-
 while sleep 60; do
+    ps aux | grep httpd | grep -q -v grep
+    HTTPD_STATUS=$?
+    if [ $HTTPD_STATUS -ne 0 ]; then
+        echo "Httpd service failed."
+        exit 1
+    fi
+
     ps aux | grep openid | grep -q -v grep
     OPENID_STATUS=$?
     
@@ -80,9 +94,13 @@ while sleep 60; do
         exit 1
     fi
 
+    ps aux | grep grid_sftp.py | grep -v -q grep
+    SFTP_STATUS=$?
+    if [ $SFTP_STATUS -ne 0 ]; then
+        echo "sshd service failed."
+    
     ps aux | grep script | grep -q -v grep
     SCRIPT_STATUS=$?
-
     if [ $SCRIPT_STATUS -ne 0 ]; then
         echo "Script service failed."
         exit 1
@@ -90,17 +108,8 @@ while sleep 60; do
 
     ps aux | grep events | grep -q -v grep
     EVENTS_STATUS=$?
-
     if [ $EVENTS_STATUS -ne 0 ]; then
         echo "Events service failed."
-        exit 1
-    fi
-
-    ps aux | grep httpd | grep -q -v grep
-    HTTPD_STATUS=$?
-
-    if [ $HTTPD_STATUS -ne 0 ]; then
-        echo "Httpd service failed."
         exit 1
     fi
 done

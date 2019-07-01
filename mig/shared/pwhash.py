@@ -115,7 +115,7 @@ def check_hash(configuration, service, username, password, hashed,
                             % (service, username, exc))
             return False
     else:
-        _logger.debug("password policy check disabled for %s login as %s" % \
+        _logger.debug("password policy check disabled for %s login as %s" %
                       (service, username))
     algorithm, hash_function, cost_factor, salt, hash_a = hashed.split('$')
     assert algorithm == 'PBKDF2'

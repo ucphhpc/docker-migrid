@@ -915,12 +915,12 @@ div.archive pre {
   background: url('/images/icons/hourglass_go.png') no-repeat;
   padding-left: 18px;
 }
-.createarchivelink {
+.createarchivelink, .doishowdetails {
   background-image: url('/images/icons/book_add.png');
   background-repeat: no-repeat;
   padding-left: 18px;
 }
-.viewarchivelink {
+.viewarchivelink, .doisearchlink {
   background-image: url('/images/icons/book_open.png');
   background-repeat: no-repeat;
   padding-left: 18px;
@@ -930,7 +930,7 @@ div.archive pre {
   background-repeat: no-repeat;
   padding-left: 18px;
 }
-.deletearchivelink {
+.deletearchivelink, .doihidedetails {
   background-image: url('/images/icons/book_delete.png');
   background-repeat: no-repeat;
   padding-left: 18px;
@@ -945,7 +945,7 @@ div.archive pre {
   background-repeat: no-repeat;
   padding-left: 18px;
 }
-.previewarchivelink {
+.previewarchivelink, .doilink {
   background-image: url('/images/icons/book_link.png');
   background-repeat: no-repeat;
   padding-left: 18px;
@@ -1217,6 +1217,9 @@ a:hover.genericbutton {
   width: -moz-available;
   width: -webkit-fill-available;
 }
+.dbllineheight {
+  line-height: 2.0;
+}
 
 fieldset label {
     float: left;
@@ -1279,6 +1282,10 @@ fieldset .singlefield {
     background-position: left center;
     background-repeat: no-repeat;
 }
+/* link in systemwarn flies around in chrome */
+.systemwarn a, .systemnote a {
+    vertical-align: top;
+}
 
 /* Simple centered layout for grid_openid login page */
 div.openidlogin {
@@ -1289,7 +1296,11 @@ div.openidlogin {
     margin-bottom: 40px;
 }
 
-/* Layout for 2FA token entry page */
+/* Layout for 2FA token entry page and verification popup */
+div.twofactorbg {
+    min-height: 360px;
+    min-width: 360px;
+}
 #content div.twofactorbg {
     min-height: 600px;
 }
@@ -1320,9 +1331,8 @@ div.openidlogin {
     width: 260px;
     height: 260px;
     left: 50%;
-    /* Footer has static position based on min-height: adjust */ 
-    /* top: 50%; */
-    top: 300px;
+    /* For popup default relative offset is fine */
+    top: 50%;
     margin-top: -150px;
     margin-left: -150px;
     border-radius: 5px;
@@ -1330,11 +1340,15 @@ div.openidlogin {
     padding: 20px;
     text-align: center;
 }
+#content #twofactorbox {
+    /* Adjust to fit page footer with static position based on min-height: adjust */ 
+    top: 300px;
+}
 #twofactorbox img.authlogo {
     width: 120px;
     height: 120px;
 }
-#content div.twofactorstatus {
+div.twofactorstatus {
     position: absolute;
     left: 50%;
     top: 100px;
@@ -1349,6 +1363,17 @@ span.fakelink:hover {
   color: #999;
   cursor: pointer;
 }
+
+/* Layout boxes for archive landing pages */
+.standardfonts {
+  font-family: verdana, helvetica, serif, times;
+}
+.archive-box {
+  border: solid #ccc 1px;
+  border-radius: 4px; 
+  padding: 2px;
+}
+
 
 /* 
 *************************************************************************

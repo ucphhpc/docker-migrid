@@ -334,7 +334,7 @@ fi
 while [ 1 ]; do
     # Send leader PGIDs (leaders don't request jobs, so no givejob)
     for pgidfile in *.leader_pgid; do
-        # No matching expansion results in raw pattern value - just
+        # No matching expansion results in raw pattern value - just 
         # ignore
         if [ "$pgidfile" = '*.leader_pgid' ]; then
             continue
@@ -352,7 +352,7 @@ while [ 1 ]; do
     
     # SEND OUTPUTFILES
     for jobdone in *.jobdone; do
-        # No matching expansion results in raw pattern value - just
+        # No matching expansion results in raw pattern value - just 
         # ignore
         if [ "$jobdone" = '*.jobdone' ]; then
             continue
@@ -399,7 +399,7 @@ while [ 1 ]; do
     
     # Send updatefiles
     for runrequest in *.runsendupdate; do
-        # No matching expansion results in raw pattern value - just
+        # No matching expansion results in raw pattern value - just 
         # ignore
         if [ "$runrequest" = '*.runsendupdate' ]; then
             continue
@@ -471,7 +471,7 @@ while [ 1 ]; do
     
     # Get updatefiles
     for runrequest in *.rungetupdate; do
-        # No matching expansion results in raw pattern value - just
+        # No matching expansion results in raw pattern value - just 
         # ignore
         if [ "$runrequest" = '*.rungetupdate' ]; then
             continue
@@ -554,7 +554,7 @@ while [ 1 ]; do
     
     # Forward update requests to exe
     for updaterequest in *.sendupdate *.getupdate; do
-        # No matching expansion results in raw pattern value - just
+        # No matching expansion results in raw pattern value - just 
         # ignore
         if [ "$updaterequest" = '*.sendupdate' -o "$updaterequest" = '*.getupdate' ]; then
             continue
@@ -602,7 +602,7 @@ while [ 1 ]; do
     # if givejob exists, we must request a new job (and delete 
     # "givejob")
     for givejobrequest in *.givejob; do
-        # No matching expansion results in raw pattern value - just
+        # No matching expansion results in raw pattern value - just 
         # ignore
         if [ "$givejobrequest" = '*.givejob' ]; then
             continue
@@ -682,9 +682,7 @@ while [ 1 ]; do
 
         echo "cd to job-dir_$localjobname" 1>> $frontendlog 2>> $frontendlog
         cd job-dir_$localjobname 1>> $frontendlog 2>> $frontendlog
-
-        ls -la 1>> $frontendlog 2>> $frontendlog
-
+        
         # Write exe
         
         # Request job from MiG server. Loop until it has arrived

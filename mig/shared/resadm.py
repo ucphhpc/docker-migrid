@@ -590,7 +590,6 @@ def check_mounted(target, logger):
     latter happens for sshfs mounts if sshfs somehow died and then fusermount
     is still required to clean up before a remount works.
     """
-
     if os.path.ismount(target):
         return True
     mount_line = ' on %s type fuse.sshfs '% target
@@ -670,7 +669,6 @@ def start_resource_exe(
         if lock_pgid_file:
             fcntl.flock(pgid_file, fcntl.LOCK_UN)
         pgid_file.close()
-
     except Exception, err:
         err_msg = "File: '%s' could not be accessed: %s" % (pgid_path,
                 err)
@@ -739,7 +737,6 @@ def start_resource_exe(
         return (False, msg)
 
     exe_node_script_name = '%s_node_script_%s.sh' % (exe_kind, exe_name)
-
     (copy_status, copy_msg) = copy_file_to_exe(local_filename,
             exe_node_script_name, resource_config, exe_name, logger)
     if not copy_status:
@@ -990,7 +987,6 @@ def start_resource(
             return (False, msg)
         os.close(filehandle)
         logger.debug('wrote frontend script %s' % local_filename)
-
     except Exception, err:
         logger.error('could not write frontend script (%s)', err)
         return (False, msg)
@@ -998,7 +994,6 @@ def start_resource(
     # create needed dirs on resource frontend
 
     create_dirs = 'mkdir -p %s' % resource_config['RESOURCEHOME']
-
     (create_status, executed_command) = \
         execute_on_resource(create_dirs, False, resource_config, logger)
 
@@ -1024,10 +1019,8 @@ def start_resource(
         msg += 'copy of frontend_script.sh was NOT successful!\n'
         return (False, msg)
 
-
     command = 'cd %s; chmod +x frontend_script.sh; ./frontend_script.sh'\
          % resource_config['RESOURCEHOME']
-
     (exit_code, executed_command) = execute_on_resource(command, True,
             resource_config, logger)
 
