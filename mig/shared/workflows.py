@@ -1918,22 +1918,22 @@ def define_pattern(configuration, client_id, vgrid, pattern):
     # Why wouldn't you allow a pattern to use the same variable values across patterns?
     # Also there seems to be a local scope conflict on the pattern variable
     # between the passed in 'pattern' parameter and the following declaration
-    for pattern in clients_patterns:
-        pattern_matches = True
-        for variable in pattern['variables'].keys():
-            try:
-                if pattern['variables'][variable] \
-                        != pattern['variables'][variable]:
-                    pattern_matches = False
-            except KeyError:
-                pattern_matches = False
-        if pattern_matches:
-            _logger.error("An identical pattern already exists")
-            msg = 'You already have a workflow pattern with identical ' \
-                  'characteristics to %s' % pattern['name']
-            return False, msg
-        else:
-            _logger.debug('patterns are not identical')
+    # for pattern in clients_patterns:
+    #     pattern_matches = True
+    #     for variable in pattern['variables'].keys():
+    #         try:
+    #             if pattern['variables'][variable] \
+    #                     != pattern['variables'][variable]:
+    #                 pattern_matches = False
+    #         except KeyError:
+    #             pattern_matches = False
+    #     if pattern_matches:
+    #         _logger.error("An identical pattern already exists")
+    #         msg = 'You already have a workflow pattern with identical ' \
+    #               'characteristics to %s' % pattern['name']
+    #         return False, msg
+    #     else:
+    #         _logger.debug('patterns are not identical')
 
     # TODO, apply possible fix
     # for existing_pattern in clients_patterns:
