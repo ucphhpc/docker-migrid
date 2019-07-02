@@ -70,7 +70,7 @@ RUN conda create -n astra -y -c astra-toolbox astra-toolbox
 
 RUN $CONDA_ENV_ASTRA/bin/pip install ipykernel --user \
     && $CONDA_ENV_ASTRA/bin/python -m ipykernel install --name astra --user \
-    && $CONDA_ENV_ASTRA/bin/pip install matplotlib
+    && $CONDA_ENV_ASTRA/bin/pip install matplotlib pillow
 
 USER root
 
