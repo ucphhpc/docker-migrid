@@ -25,8 +25,13 @@ if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
     chown -R $USER:$USER $MIG_ROOT/state
 fi
 
-# Start rsyslog
-#/usr/sbin/rsyslogd
+# Launch internal sshd for resource connection
+/usr/sbin/sshd
+SSHD_STATUS=$?
+if [ $SSHD_STATUS -ne 0 ]; then
+    echo "Failed to start sshd: $SSHD_STATUS"
+    exit $SSHD_STATUS
+fi
 
 # Load required httpd environment vars
 source migrid-httpd.env
@@ -77,6 +82,14 @@ if [ $status -ne 0 ]; then
 fi
 
 while sleep 60; do
+
+    ps aux | grep sshd | grep -q -v grep
+    SSHD_STATUS=$?
+    if [ $SSHD_STATUS -ne 0 ]; then
+        echo "Failed to start sshd: $SSHD_STATUS"
+        exit $SSHD_STATUS
+    fi
+
     ps aux | grep httpd | grep -q -v grep
     HTTPD_STATUS=$?
     if [ $HTTPD_STATUS -ne 0 ]; then
