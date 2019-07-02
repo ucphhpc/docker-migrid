@@ -31,5 +31,3 @@ reset:
 
 push:
 	docker push ${OWNER}/${IMAGE}:${TAG}
-
-all: clean build
