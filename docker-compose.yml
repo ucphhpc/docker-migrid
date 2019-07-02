@@ -24,6 +24,7 @@ services:
       - "www.migrid.test:0.0.0.0"
       - "oid.migrid.test:0.0.0.0"
       - "sid.migrid.test:0.0.0.0"
+      - "migrid.test:127.0.0.1"
     volumes:
       - type: volume
         source: httpd
