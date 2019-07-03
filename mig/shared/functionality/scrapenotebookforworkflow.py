@@ -1,5 +1,4 @@
 import ast
-import json
 
 import shared.returnvalues as returnvalues
 
@@ -7,6 +6,7 @@ from shared.init import initialize_main_variables
 from shared.functional import validate_input_and_cert
 from shared.safeinput import REJECT_UNSET
 from shared.workflows import scrape_for_workflow_objects
+from shared.serial import loads
 
 CELL_TYPE, CODE, SOURCE = 'cell_type', 'code', 'source'
 
@@ -45,7 +45,7 @@ def main(client_id, user_arguments_dict):
     # TODO get this loading in proper strings, not unicode,
     # NOTE, in the future use the shared.serial.load/dump functions for json
     # IO operations
-    notebook = json.loads(accepted["wf_notebook"][-1])
+    notebook = loads(accepted["wf_notebook"][-1], serializer='json')
     if not isinstance(notebook, dict):
         output_objects.append({'object_type': 'error_text', 'text':
             'Notebook is not formatted correctly'})

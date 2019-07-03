@@ -31,7 +31,6 @@
 
 import copy
 import fcntl
-import json
 import os
 import time
 import tempfile
@@ -48,7 +47,7 @@ from shared.modified import check_workflow_p_modified, \
 from shared.pwhash import generate_random_ascii
 from shared.defaults import wp_id_charset, wp_id_length, wr_id_charset, \
     wr_id_length
-from shared.serial import dump
+from shared.serial import dump, load, dumps
 from shared.vgrid import vgrid_add_triggers, vgrid_remove_triggers, \
     vgrid_triggers
 from shared.job import new_job, fields_to_mrsl, \
@@ -183,11 +182,7 @@ def __load_wp(configuration, wp_path):
         return {}
 
     try:
-        wp = None
-        # NOTE, in the future use the shared.serial.load/dump functions for json
-        # IO operations
-        with open(wp_path, 'r') as _wp_path:
-            wp = json.load(_wp_path)
+        wp = load(wp_path, serializer='json')
     except Exception, err:
         configuration.logger.error('WP: could not open workflow pattern %s %s'
                                    %(wp_path, err))
@@ -210,11 +205,7 @@ def __load_wr(configuration, wr_path):
         return {}
 
     try:
-        wr = None
-        with open(wr_path, 'r') as _wr_path:
-            # NOTE, in the future use the shared.serial.load/dump functions for json
-            # IO operations
-            wr = json.load(_wr_path)
+        wr = load(wr_path, serializer='json')
     except Exception, err:
         configuration.logger.error('WR: could not open workflow recipe %s %s'
                                    %(wr_path, err))
@@ -804,10 +795,7 @@ def __create_workflow_pattern(configuration, client_id, vgrid, wp):
     wrote = False
     msg = ''
     try:
-        # NOTE, in the future use the shared.serial.load/dump functions for json
-        # IO operations
-        with open(wp_file_path, 'w') as j_file:
-            json.dump(wp, j_file, indent=0)
+        dump(wp, wp_file_path, serializer='json')
 
         # Mark as modified
         mark_workflow_p_modified(configuration, wp['persistence_id'])
@@ -881,10 +869,7 @@ def __create_workflow_recipe(configuration, client_id, vgrid, wr):
     wrote = False
     msg = ''
     try:
-        # NOTE, in the future use the shared.serial.load/dump functions for json
-        # IO operations
-        with open(wr_file_path, 'w') as j_file:
-            json.dump(wr, j_file, indent=0)
+        dump(wr, wr_file_path, serializer='json')
 
         # Mark as modified
         mark_workflow_r_modified(configuration, wr['persistence_id'])
@@ -970,10 +955,7 @@ def __update_workflow_pattern(configuration, client_id, vgrid,
     wrote = False
     msg = ''
     try:
-        # NOTE, in the future use the shared.serial.load/dump functions for json
-        # IO operations
-        with open(wp_file_path, 'w') as j_file:
-            json.dump(pattern, j_file, indent=0)
+        dump(pattern, wp_file_path, serializer='json')
 
         # Mark as modified
         mark_workflow_p_modified(configuration, pattern['persistence_id'])
@@ -1054,10 +1036,7 @@ def __update_workflow_recipe(configuration, client_id, vgrid,
 
     msg = ''
     try:
-        # NOTE, in the future use the shared.serial.load/dump functions for json
-        # IO operations
-        with open(wr_file_path, 'w') as j_file:
-            json.dump(recipe, j_file, indent=0)
+        dump(recipe, wr_file_path, serializer='json')
 
         # Mark as modified
         mark_workflow_r_modified(configuration, recipe['persistence_id'])
@@ -1312,9 +1291,7 @@ def create_workflow_task_file(configuration, client_id, vgrid, notebook,
     while os.path.exists(task_file_path):
         file_name = generate_random_ascii(wr_id_length, charset=wr_id_charset)
         task_file_path = os.path.join(task_home, file_name)
-    # NOTE, in the future use the shared.serial.load/dump functions for json
-    # IO operations
-    notebook_json = json.dumps(notebook)
+    notebook_json = dumps(notebook, serializer='json')
     wrote = write_file(notebook_json, task_file_path, _logger, make_parent=False)
 
     if not wrote:
@@ -1502,9 +1479,32 @@ def create_single_input_trigger(configuration, _logger, vgrid, client_id,
     # This field is required by papermill for it to parameterize the
     # notebook correctly
     _logger.info("WP: recipe_list %s before complete_notebook" % recipe_list)
+
+    # TODO This is a horrible hack but I'm leaving in 10 mins so it'll do for
+    #  now :p DO NOT DEPLOY THIS
+    metadata_hack = {
+        "kernelspec": {
+            "display_name": "Python 3",
+            "language": "python",
+            "name": "astra"
+        },
+        "language_info": {
+            "codemirror_mode": {
+                "name": "ipython",
+                "version": 3
+            },
+            "file_extension": ".py",
+            "mimetype": "text/x-python",
+            "name": "python",
+            "nbconvert_exporter": "python",
+            "pygments_lexer": "ipython3",
+            "version": "3.6.7"
+        }
+    }
     complete_notebook = {
         "cells": cells,
-        "metadata": recipe_list[-1]['recipe']['metadata'],
+#        "metadata": recipe_list[-1]['recipe']['metadata'],
+        "metadata": metadata_hack,
         "nbformat": 4,
         "nbformat_minor": 2
     }
@@ -1531,10 +1531,10 @@ def create_single_input_trigger(configuration, _logger, vgrid, client_id,
     input_file_name = pattern['input_file']
     input_file_path = pattern['trigger_paths'][0]
 
-    execute_string = 'papermill %s %s -p' \
+    execute_string = 'papermill %s %s' \
                      % (DEFAULT_JOB_FILE_INPUT, DEFAULT_JOB_FILE_OUTPUT)
     for variable, value in pattern['variables'].items():
-        execute_string += ' %s %s' % (variable, value)
+        execute_string += ' -p %s %s' % (variable, value)
     arguments_dict = {
         'EXECUTE': [
             execute_string,
@@ -1640,6 +1640,10 @@ def create_single_input_trigger(configuration, _logger, vgrid, client_id,
 
     # TODO investigate why things only update properly if we don't immediately
     #  refresh
+    _logger.info("DELETE ME - getting maps")
+    get_wp_map(configuration)
+    get_wr_map(configuration)
+    _logger.info("DELETE ME - refreshing maps")
     __refresh_map(configuration, 'pattern')
     __refresh_map(configuration, 'recipe')
 
@@ -1914,47 +1918,28 @@ def define_pattern(configuration, client_id, vgrid, pattern):
     _logger.debug('clients_patterns: ' + str(clients_patterns))
     _logger.debug('pattern: ' + str(pattern))
 
-    # ??? Not really sure what your trying to do here.
-    # Why wouldn't you allow a pattern to use the same variable values across patterns?
-    # Also there seems to be a local scope conflict on the pattern variable
-    # between the passed in 'pattern' parameter and the following declaration
-    # for pattern in clients_patterns:
-    #     pattern_matches = True
-    #     for variable in pattern['variables'].keys():
-    #         try:
-    #             if pattern['variables'][variable] \
-    #                     != pattern['variables'][variable]:
-    #                 pattern_matches = False
-    #         except KeyError:
-    #             pattern_matches = False
-    #     if pattern_matches:
-    #         _logger.error("An identical pattern already exists")
-    #         msg = 'You already have a workflow pattern with identical ' \
-    #               'characteristics to %s' % pattern['name']
-    #         return False, msg
-    #     else:
-    #         _logger.debug('patterns are not identical')
-
-    # TODO, apply possible fix
-    # for existing_pattern in clients_patterns:
-    #     pattern_matches = True
-    #     for variable in existing_pattern['variables'].keys():
-    #         try:
-    #             # Also, why wouldn't you allow a pattern to use the same variable values across patterns?
-    #             if pattern['variables'][variable] \
-    #                     != existing_pattern['variables'][variable]:
-    #                 pattern_matches = False
-    #         except KeyError:
-    #             pattern_matches = False
-    #     if pattern_matches:
-    #         # FIXME, as a response to the user, this doesn't really tell what you
-    #         # need to do to fix it
-    #         _logger.error("An identical pattern already exists")
-    #         msg = 'You already have a workflow pattern with identical ' \
-    #               'characteristics to %s' % pattern['name']
-    #         return False, msg
-    #     else:
-    #         _logger.debug('patterns are not identical')
+    for client_pattern in clients_patterns:
+        pattern_matches = True
+        try:
+            if client_pattern['input_file'] != pattern['input_file']:
+                pattern_matches = False
+            if client_pattern['trigger_paths'] != pattern['trigger_paths']:
+                pattern_matches = False
+            if client_pattern['outputs'] != pattern['outputs']:
+                pattern_matches = False
+            if client_pattern['recipes'] != pattern['recipes']:
+                pattern_matches = False
+            if client_pattern['variables'] != pattern['variables']:
+                pattern_matches = False
+        except KeyError:
+            pattern_matches = False
+        if pattern_matches:
+            _logger.error("An identical pattern already exists")
+            msg = 'You already have a workflow pattern with identical ' \
+                  'characteristics to %s' % pattern['name']
+            return False, msg
+        else:
+            _logger.debug('patterns are not identical')
 
     status, creation_msg = __create_workflow_pattern(
         configuration, client_id, vgrid, pattern)

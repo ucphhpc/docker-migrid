@@ -30,7 +30,6 @@
 import os
 import traceback
 import ConfigParser
-import json
 from email.utils import parseaddr
 from tempfile import NamedTemporaryFile
 
@@ -45,6 +44,7 @@ from shared.handlers import safe_handler, get_csrf_limit
 from shared.init import initialize_main_variables, find_entry
 from shared.safeeval import subprocess_call, subprocess_popen, \
      subprocess_stdout, subprocess_pipe
+from shared.serial import dumps
 from shared.useradm import get_full_user_map
 from shared.vgrid import vgrid_is_owner, vgrid_set_owners, vgrid_set_members, \
      vgrid_set_resources, vgrid_set_triggers, vgrid_set_settings, \
@@ -1031,7 +1031,7 @@ for job input and output.
         if not os.path.exists(pattern_notebook):
             # NOTE, in the future use the shared.serial.load/dump functions for json
             # IO operations
-            notebook_json = json.dumps(default_notebook)
+            notebook_json = dumps(default_notebook, serializer='json')
             write_file(notebook_json, pattern_notebook, logger, make_parent=False)
         # Also create pattern and recipe folders as they are required for some mig_meow functionality
         wp_home = get_workflow_pattern_home(configuration, vgrid_name)

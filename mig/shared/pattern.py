@@ -1,5 +1,5 @@
 
-DEFAULT_JOB_FILE_INPUT = 'wf_job.ipynb'
+DEFAULT_JOB_FILE_INPUT = 'wf_job'
 DEFAULT_JOB_FILE_OUTPUT = 'wf_job_output.ipynb'
 
 
@@ -13,40 +13,43 @@ class Pattern:
         self.recipes = []
         self.variables = {}
 
+    def properties_are_equal(self, pattern):
+        # TODO improve this so it is a bit more specific
+        if not isinstance(pattern, Pattern):
+            raise Exception('Provided object is a %s. Should be a %s'
+                            % (type(pattern), Pattern))
+        if self.input_file != pattern.input_file:
+            return False
+        if self.trigger_paths != pattern.trigger_paths:
+            return False
+        if self.outputs != pattern.outputs:
+            return False
+        if self.recipes != pattern.recipes:
+            return False
+        if self.variables != pattern.variables:
+            return False
+        return True
+
     def integrity_check(self):
         warning = ''
-        # NOTE, you shouldn't do an identity comparison for 'None' valued in logical comparisons
-        # Use the fact that in logical comparisons None is evaluated the same as False.
-        # So "if not variable:" gives the same behaviour and have a wider coverage.
-        if self.input_file is None:
+        if not self.input_file:
             return (False, "An input file must be defined. This is the file "
                            "that is used to trigger any processing and can be "
                            "defined using the methods '.add_single_input' or "
                            "'add_multiple_input")
-        # NOTE, as per https://pep8.org/
-            # For sequences, (strings, lists, tuples), use the fact that empty sequences are false:
 
-            # Yes:
-
-            # if not seq:
-            # if seq:
-
-            # No:
-
-            # if len(seq):
-            # if not len(seq):
         # Therefore you should simply these and the related ones to
         # if not self.trigger_paths:
-        if len(self.trigger_paths) == 0:
+        if not self.trigger_paths:
             return (False, "At least one input path must be defined. This is "
                            "the path to the file that is used to trigger any "
                            "processing and can be defined using the methods "
                            "'.add_single_input' or 'add_multiple_input")
-        if len(self.outputs) == 0:
+        if not self.outputs:
             warning += '\n No output has been set, meaning no resulting ' \
                        'data will be copied back into the vgrid. ANY OUTPUT ' \
                        'WILL BE LOST.'
-        if len(self.recipes) == 0:
+        if not self.recipes:
             return (False, "No recipes have been defined")
         return (True, warning)
 
