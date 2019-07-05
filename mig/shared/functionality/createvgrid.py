@@ -1001,7 +1001,9 @@ for job input and output.
         # I.e. via a function that workflows.py defines
         pattern_notebook = os.path.join(vgrid_files_dir, "%s.ipynb" % vgrid_name)
         # NOTE! IF its a default format, it should really be defined in either
-        # workflows.py, or defaults.py
+        # workflows.py, or defaults.py. However, it dosen't really much sense to create a "default"
+        # notebook format, since it is out of our control and is something that is always
+        # submittet to the system.
         default_notebook = {
             "cells":
             [
