@@ -1315,6 +1315,10 @@ def create_workflow_buffer_file(configuration, client_id, vgrid,
 
     _logger = configuration.logger
 
+    _logger.debug("Creating buffer file. client_id: %s, vgrid: %s, "
+                  "trigger_paths: %s, apply_retroactive: %s"
+                  % (client_id, vgrid, trigger_paths, apply_retroactive))
+
     buffer_home = get_workflow_buffer_home(configuration, vgrid)
     if not os.path.exists(buffer_home):
         try:
@@ -1330,25 +1334,36 @@ def create_workflow_buffer_file(configuration, client_id, vgrid,
     # placeholder for unique name generation.
     file_name = generate_random_ascii(
         wr_id_length, charset=wr_id_charset) + ".hdf5"
+
     buffer_file_path = os.path.join(buffer_home, file_name)
     while os.path.exists(buffer_file_path):
         file_name = generate_random_ascii(wr_id_length, charset=wr_id_charset)
         buffer_file_path = os.path.join(buffer_home, file_name)
 
+    _logger.debug("Creating buffer file called %s" % file_name)
+
     wrote = False
     try:
         with h5py.File(buffer_file_path, 'w') as h5_buffer_file:
+            _logger.debug("Creating h5py file")
             for path in trigger_paths:
+                _logger.debug("Addressing path: %s" % path)
                 h5_buffer_file.create_group(path)
                 if apply_retroactive:
                     file_path = os.path.join(
                         configuration.vgrid_files_home, vgrid, path)
+                    _logger.debug("file_path: %s" % file_path)
                     file_extension = file_path[file_path.rfind('.'):]
+                    _logger.debug("file_extension: %s" % file_extension)
+
                     if os.path.isfile(file_path) and file_extension == '.hdf5':
+                        _logger.debug("file %s is present and correct"
+                                      % file_path)
                         with h5py.File(file_path, 'r') as h5_data_file:
-                            print("Opened %s, which has keys: %s"
+                            _logger.debug("Opened %s, which has keys: %s"
                                   % (file_path, h5_data_file.keys()))
                             for data_key in h5_data_file.keys():
+                                _logger.debug("Copying: %s" % data_key)
                                 h5_buffer_file.copy(
                                     h5_data_file[data_key],
                                     path + "/" + data_key)
