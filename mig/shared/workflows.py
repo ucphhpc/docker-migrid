@@ -67,6 +67,8 @@ last_load = {WORKFLOW_PATTERNS: 0, WORKFLOW_RECIPES: 0}
 last_refresh = {WORKFLOW_PATTERNS: 0, WORKFLOW_RECIPES: 0}
 last_map = {WORKFLOW_PATTERNS: {}, WORKFLOW_RECIPES: {}}
 
+BUFFER_FLAG = 'BUFFER_FLAG'
+
 VALID_PATTERN = {
     'object_type': str,
     'persistence_id': str,
@@ -1349,6 +1351,7 @@ def create_workflow_buffer_file(configuration, client_id, vgrid,
             for path in trigger_paths:
                 _logger.debug("Addressing path: %s" % path)
                 h5_buffer_file.create_group(path)
+                h5_buffer_file.get(path).attrs[BUFFER_FLAG] = 0
                 if apply_retroactive:
                     file_path = os.path.join(
                         configuration.vgrid_files_home, vgrid, path)
@@ -1473,6 +1476,21 @@ def create_trigger(configuration, logger, vgrid, client_id, pattern,
             apply_retroactive)
 
     return add_status, add_msg
+
+
+# TODO move this to a buffer module
+def get_buffer_paths(h5_file, root, paths):
+        if BUFFER_FLAG in h5_file.attrs.keys():
+            paths.append(str(root))
+            if len(h5_file.keys() == 0):
+                return
+
+        for key in h5_file:
+            # print('key: %s' % key)
+            path = os.path.join(root, key)
+            # print('path: %s' % path)
+            get_buffer_paths(h5_file[key], path, paths)
+
 
 
 def create_single_input_trigger(configuration, _logger, vgrid, client_id,
@@ -1684,10 +1702,16 @@ def create_single_input_trigger(configuration, _logger, vgrid, client_id,
 
                     # If we have a buffer file, only schedule a job if its full
                     if re.match(buffer_home, file_path):
-                        with h5py.File(file_path, 'a') as buffer_file:
-                            expected_data_files = buffer_file
-                            for key in expected_data_files:
-                                if len(expected_data_files[key].keys()) == 0:
+                        _logger.debug('is a buffer file')
+                        with h5py.File(file_path, 'r') as buffer_file:
+
+                            # TODO check this
+                            buffer_paths = []
+                            get_buffer_paths(buffer_file, '', buffer_paths)
+                            _logger.debug('buffer_paths: %s' % buffer_paths)
+
+                            for path in buffer_paths:
+                                if len(buffer_file.get(path).keys()) == 0:
                                     _logger.debug('skipping new job creation '
                                                   'as buffer is not complete')
                                     return add_status, add_msg
