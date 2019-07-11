@@ -37,9 +37,6 @@ class Pattern:
                            "that is used to trigger any processing and can be "
                            "defined using the methods '.add_single_input' or "
                            "'add_multiple_input")
-
-        # Therefore you should simply these and the related ones to
-        # if not self.trigger_paths:
         if not self.trigger_paths:
             return (False, "At least one input path must be defined. This is "
                            "the path to the file that is used to trigger any "
@@ -96,6 +93,8 @@ class Pattern:
             raise Exception('Could not create output %s as already defined'
                             % output_name)
 
+    # TODO, prob add description of what this is intended to do
+    # might be misinterpreted to mean that it returns a notebook
     def return_notebook(self, output_location):
         self.add_output(DEFAULT_JOB_FILE_INPUT, output_location)
 

@@ -46,6 +46,8 @@ from shared.workflows import define_pattern
 from shared.safeinput import REJECT_UNSET
 from shared.pwhash import generate_random_ascii
 
+
+# TODO, regexes are usually defined in shared.defaults
 NUM_REGEX = "[0123456789]+"
 TEXT_REGEX = "[A-z_]+"
 SPACE_REGEX = "[ \n\t]*"
@@ -60,8 +62,13 @@ MULTI_REGEX = "<" + NUM_REGEX \
               + TEXT_REGEX \
               + ">"
 
+PATTERN_NAME, INPUTS_NAME, OUTPUT_NAME, RECIPE_NAME, VARIABLES_NAME, \
+    VGRID_NAME = 'wp_name', 'wp_inputs', 'wp_output', 'wp_recipes', \
+                 'wp_variables', 'vgrid_name'
+
+
 def signature():
-    """Signaure of the main function"""
+    """Signature of the main function"""
 
     defaults = {
         'vgrid_name': REJECT_UNSET,
@@ -84,12 +91,12 @@ def get_tags_from_cell(cell):
 
 
 def get_declarations_dict(configuration, code):
-    """Returns a dictionary with the variable declartions in the list
+    """Returns a dictionary with the variable declarations in the list
     Expects that code is a list of strings"""
     declarations = {}
     _logger = configuration.logger
     for line in code:
-        if isinstance(line, unicode) or isinstance(line, str):
+        if isinstance(line, (unicode, str)):
             line = line.replace(" ", "")
             lines = line.split("=")
             if len(lines) == 2:
@@ -109,30 +116,24 @@ def main(client_id, user_arguments_dict):
     # TODO probably do this somewhere else? seems like this might have come up
     #  by now
     # convert recipes into list of entries
+    sequences = [INPUTS_NAME, OUTPUT_NAME, RECIPE_NAME, VARIABLES_NAME]
 
-    listable = ['wp_recipes', 'wp_variables', 'wp_output', 'wp_inputs']
-    # NOTE, 'list' is a python specific keyword, use other name
-    for list in listable:
-        seperated_listable = []
-        for entry in user_arguments_dict[list]:
+    for sec in sequences:
+        seperated_collection = []
+        for entry in user_arguments_dict[sec]:
             # TODO change this to regex to account for spaces etc
             if ';' in entry:
                 split_entry = entry.split(';')
                 for split in split_entry:
-                    seperated_listable.append(split)
+                    seperated_collection.append(split)
             else:
-                seperated_listable.append(entry)
-        user_arguments_dict[list] = seperated_listable
+                seperated_collection.append(entry)
+        user_arguments_dict[sec] = seperated_collection
 
     logger.debug("addworkflowpattern, user_arguments_dict: " +
                  str(user_arguments_dict))
 
     # Extract inputs, output and type-filter
-    PATTERN_NAME, INPUTS_NAME, OUTOUT_NAME, RECIPE_NAME, VARIABLES_NAME, \
-    VGRID_NAME = 'wp_name', 'wp_inputs', 'wp_output', 'wp_recipes', \
-                 'wp_variables', 'vgrid_name'
-
-
     # TODO, ask Jonas about recipe content validation
     #  skipping validation on recipe uploads for now
 
@@ -195,7 +196,7 @@ def main(client_id, user_arguments_dict):
     logger.debug("addworkflowpattern, accepted: " + str(accepted))
 
     inputs_list = accepted[INPUTS_NAME]
-    output_list = accepted[OUTOUT_NAME]
+    output_list = accepted[OUTPUT_NAME]
     recipes = accepted[RECIPE_NAME]
     variables_list = accepted[VARIABLES_NAME]
     name = accepted[PATTERN_NAME][-1]
@@ -204,8 +205,6 @@ def main(client_id, user_arguments_dict):
     logger.debug('pattern name: ' + str(name))
     if name == '':
         name = generate_random_ascii(wp_id_length, charset=wp_id_charset)
-
-    paths = []
 
     if not safe_handler(configuration, 'post', op_name, client_id,
                         get_csrf_limit(configuration), accepted):
@@ -235,12 +234,13 @@ def main(client_id, user_arguments_dict):
                     assignment of the form a=1''' % variable})
                 return (output_objects, returnvalues.CLIENT_ERROR)
 
+    paths = []
     output_dict = {}
     if output_list != ['']:
         for output in output_list:
             try:
-                tuple = output.split('=')
-                key, value = tuple[0], tuple[1]
+                split = output.split('=')
+                key, value = split[0], split[1]
 
                 if key in variables_dict.keys():
                     output_objects.append({'object_type': 'error_text', 'text':
@@ -268,8 +268,8 @@ def main(client_id, user_arguments_dict):
     if inputs_list != ['']:
         for input in inputs_list:
             # try:
-            tuple = input.split('=')
-            key, value = tuple[0], tuple[1]
+            split = input.split('=')
+            key, value = split[0], split[1]
 
             if key in variables_dict.keys():
                 output_objects.append({'object_type': 'error_text', 'text':
