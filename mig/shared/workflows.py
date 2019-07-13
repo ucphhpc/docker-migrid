@@ -362,8 +362,8 @@ def __list_path(configuration, to_get):
                 if os.path.isfile(os.path.join(client_home, entry)):
                     objects.append((client_home, entry))
                 else:
-                    _logger.warning('WP: %s in %s is not a plain file,\move it?' %
-                                    (entry, client_home))
+                    _logger.warning('WP: %s in %s is not a plain file, '
+                                    'move it?' % (entry, client_home))
     return (True, objects)
 
 
@@ -1101,12 +1101,12 @@ def __rule_identification_from_pattern(configuration, client_id,
         return (False, 'Could not find all required recipes. Missing: %s'
                 % missed_recipes)
 
-    logger.info('All recipes found within trying to create trigger '
+    _logger.info('All recipes found within trying to create trigger '
                  'for pattern ' + workflow_pattern['name'] + ' and inputs '
                  'at ' + str(workflow_pattern['trigger_paths']))
 
     (trigger_status, trigger_msg) = create_trigger(
-        configuration, logger, vgrid, client_id, workflow_pattern, recipe_list,
+        configuration, _logger, vgrid, client_id, workflow_pattern, recipe_list,
         apply_retroactive)
 
     if not trigger_status:
@@ -1118,8 +1118,8 @@ def __rule_identification_from_recipe(configuration, client_id,
                                       workflow_recipe, apply_retroactive):
     """Identifies if a task can be created, given a stated recipe"""
 
-    logger = configuration.logger
-    logger.info('%s is identifying any possible tasks from recipe creation '
+    _logger = configuration.logger
+    _logger.info('%s is identifying any possible tasks from recipe creation '
                 '%s' % (client_id, workflow_recipe['name']))
     vgrid = workflow_recipe['vgrids']
     matching_patterns = []
@@ -1153,13 +1153,13 @@ def __rule_identification_from_recipe(configuration, client_id,
             else:
                 missed_recipes.append(recipe_name)
         if not missed_recipes:
-            logger.info(
+            _logger.info(
                 'All recipes found within trying to create trigger for recipe '
                 + pattern['name'] + ' and inputs at '
                 + str(pattern['trigger_paths']))
 
             (trigger_status, trigger_msg) = create_trigger(
-                configuration, logger, vgrid, client_id, pattern, recipe_list,
+                configuration, _logger, vgrid, client_id, pattern, recipe_list,
                 apply_retroactive)
 
             if not trigger_status:
@@ -1392,15 +1392,15 @@ def delete_trigger(configuration, client_id, vgrid_name, trigger_id):
     """Deletes a trigger and any jobs currently queued that were scheduled by
     this trigger"""
 
-    logger = configuration.logger
+    _logger = configuration.logger
     # FIXME, Do string interpolation instead of concatenation
-    logger.info('delete_trigger client_id: ' + client_id + ' vgrid_name: '
+    _logger.info('delete_trigger client_id: ' + client_id + ' vgrid_name: '
                  + vgrid_name + ' trigger_id: ' + trigger_id)
 
     (got_triggers, all_triggers) = vgrid_triggers(vgrid_name, configuration)
 
     if not got_triggers:
-        logger.debug('Could not load triggers')
+        _logger.debug('Could not load triggers')
 
     trigger_to_delete = None
     for trigger in all_triggers:
@@ -1411,29 +1411,29 @@ def delete_trigger(configuration, client_id, vgrid_name, trigger_id):
         task_file = trigger_to_delete['task_file']
         mrsl_dir = configuration.mrsl_files_dir
         matching_jobs = get_job_ids_with_task_file_in_contents(
-            client_id, task_file, mrsl_dir, logger)
+            client_id, task_file, mrsl_dir, _logger)
 
         new_state = 'CANCELED'
         client_dir = client_id_dir(client_id)
         for job_id in matching_jobs:
             file_path = os.path.join(
                 configuration.mrsl_files_dir, client_dir, job_id + '.mRSL')
-            job = unpickle(file_path, logger)
+            job = unpickle(file_path, _logger)
 
             if not job:
-                logger.error('Could not open job file')
+                _logger.error('Could not open job file')
                 continue
 
             possible_cancel_states = ['PARSE', 'QUEUED', 'RETRY', 'EXECUTING',
                                       'FROZEN']
 
             if not job['STATUS'] in possible_cancel_states:
-                logger.error('Could not cancel job with status '
+                _logger.error('Could not cancel job with status '
                              + job['STATUS'])
                 continue
 
-            if not unpickle_and_change_status(file_path, new_state, logger):
-                logger.error('%s could not cancel job: %s' %
+            if not unpickle_and_change_status(file_path, new_state, _logger):
+                _logger.error('%s could not cancel job: %s' %
                              (client_id, job_id))
 
             if not job.has_key('UNIQUE_RESOURCE_NAME'):
@@ -1445,13 +1445,13 @@ def delete_trigger(configuration, client_id, vgrid_name, trigger_id):
                       + job['STATUS'] + ' ' + new_state + ' ' \
                       + job['UNIQUE_RESOURCE_NAME'] + ' ' \
                       + job['EXE'] + '\n'
-            if not send_message_to_grid_script(message, logger, configuration):
-                logger.error('%s failed to send message to grid script: %s' %
+            if not send_message_to_grid_script(message, _logger, configuration):
+                _logger.error('%s failed to send message to grid script: %s' %
                              (client_id, message))
     (rm_status, rm_msg) = vgrid_remove_triggers(
         configuration, vgrid_name, [trigger_id])
     if not rm_status:
-        logger.error('%s failed to remove trigger: %s' % (client_id, rm_msg))
+        _logger.error('%s failed to remove trigger: %s' % (client_id, rm_msg))
 
 
 def create_trigger(configuration, logger, vgrid, client_id, pattern,
