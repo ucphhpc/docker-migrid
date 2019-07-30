@@ -1,4 +1,3 @@
-
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
@@ -358,14 +357,8 @@ def main(client_id, user_arguments_dict):
                                'text': 'Back to Jupyter services overview'})
         return (output_objects, returnvalues.SYSTEM_ERROR)
 
-    username = unescape(os.environ.get('REMOTE_USER', '')).strip()
-    # TODO, activate admin info
-    # remote_user = {'USER': username, 'IS_ADMIN': is_admin(client_id,
-    #                                                      configuration,
-    # logger)}
-
-    remote_user = username
-    if remote_user == '':
+    remote_user = unescape(os.environ.get('REMOTE_USER', '')).strip()
+    if not remote_user:
         logger.error("Can't connect to jupyter with an empty REMOTE_USER "
                      "environment variable")
         output_objects.append(
@@ -374,6 +367,11 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.CLIENT_ERROR)
     # Ensure the remote_user dict can be http posted
     remote_user = str(remote_user)
+
+    # TODO, activate admin info
+    # remote_user = {'USER': username, 'IS_ADMIN': is_admin(client_id,
+    #                                                      configuration,
+    # logger)}
 
     # Regular sftp path
     mnt_path = os.path.join(configuration.jupyter_mount_files_dir, client_dir)

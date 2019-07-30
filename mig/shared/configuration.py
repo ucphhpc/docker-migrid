@@ -107,10 +107,14 @@ def fix_missing(config_file, verbose=True):
         'events_home': '~/state/events_home/',
         'twofactor_home': '~/state/twofactor_home/',
         'gdp_home': '~/state/gdp_home/',
-        'workflow_patterns_home': '/.workflow_patterns_home',
-        'workflow_recipes_home': '/workflow_recipes_home',
-        'workflow_tasks_home': '/.workflow_tasks_home',
-        'workflow_buffer_home': '/.workflow_buffer_home',
+        'vgrid_workflow_patterns_home': '.workflow_patterns_home/',
+        'vgrid_workflow_recipes_home': '.workflow_recipes_home/',
+        'vgrid_workflow_tasks_home': '.workflow_tasks_home/',
+        'vgrid_workflow_buffer_home': '.workflow_buffer_home/',
+        'workflows_home': '~/state/workflows_home/',
+        'workflows_db_home': '~/state/workflows_home/workflows_db_home/',
+        'workflows_db': '~/state/workflows_home/workflows_db_home/workflows_db.pickle',
+        'workflows_sessid_home': '~/state/workflows_home/workflow_sessid_home/',
         'notify_home': '~/state/notify_home',
         'site_vgrid_links': 'files web tracker workflows monitor',
         'site_vgrid_creators': 'distinguished_name:.*',
@@ -310,10 +314,14 @@ class Configuration:
     events_home = ''
     twofactor_home = ''
     gdp_home = ''
-    workflow_patterns_home = ''
-    workflow_recipes_home = ''
-    workflow_tasks_home = ''
-    workflow_buffer_home = ''
+    vgrid_workflow_patterns_home = ''
+    vgrid_workflow_recipes_home = ''
+    vgrid_workflow_tasks_home = ''
+    vgrid_workflow_buffer_home = ''
+    workflows_home = ''
+    workflows_db_home = ''
+    workflows_db = ''
+    workflows_sessid_home = ''
     notify_home = ''
     seafile_mount = ''
     openid_store = ''
@@ -717,22 +725,32 @@ location.""" % self.config_file
             self.twofactor_home = config.get('GLOBAL', 'twofactor_home')
         if config.has_option('GLOBAL', 'gdp_home'):
             self.gdp_home = config.get('GLOBAL', 'gdp_home')
+        # TODO, move to own WORKFLOWS section
+        if config.has_option('GLOBAL', 'vgrid_workflow_patterns_home'):
+            self.vgrid_workflow_patterns_home = config.get(
+                'GLOBAL', 'vgrid_workflow_patterns_home')
+        if config.has_option('GLOBAL', 'vgrid_workflow_recipes_home'):
+            self.vgrid_workflow_recipes_home = config.get(
+                'GLOBAL', 'vgrid_workflow_recipes_home')
+        if config.has_option('GLOBAL', 'vgrid_workflow_tasks_home'):
+            self.vgrid_workflow_tasks_home = config.get(
+                'GLOBAL', 'vgrid_workflow_tasks_home')
+        if config.has_option('GLOBAL', 'vgrid_workflow_buffer_home'):
+            self.vgrid_workflow_buffer_home = config.get(
+                'GLOBAL', 'vgrid_workflow_buffer_home')
+        if config.has_option('GLOBAL', 'workflows_home'):
+            self.workflows_home = config.get('GLOBAL', 'workflows_home')
+        if config.has_option('GLOBAL', 'workflows_db_home'):
+            self.workflows_db_home = config.get('GLOBAL', 'workflows_db_home')
+        if config.has_option('GLOBAL', 'workflows_db'):
+            self.workflows_db = config.get('GLOBAL', 'workflows_db')
+        if config.has_option('GLOBAL', 'workflows_sessid_home'):
+            self.workflows_sessid_home = config.get('GLOBAL',
+                                                    'workflows_sessid_home')
         if config.has_option('GLOBAL', 'notify_home'):
             self.notify_home = config.get('GLOBAL', 'notify_home')
         if config.has_option('GLOBAL', 'vm_home'):
             self.vm_home = config.get('GLOBAL', 'vm_home')
-        if config.has_option('GLOBAL', 'workflow_patterns_home'):
-            self.workflow_patterns_home = config.get('GLOBAL',
-                                                     'workflow_patterns_home')
-        if config.has_option('GLOBAL', 'workflow_recipes_home'):
-            self.workflow_recipes_home = config.get('GLOBAL',
-                                                    'workflow_recipes_home')
-        if config.has_option('GLOBAL', 'workflow_tasks_home'):
-            self.workflow_tasks_home = config.get('GLOBAL',
-                                                  'workflow_tasks_home')
-        if config.has_option('GLOBAL', 'workflow_buffer_home'):
-            self.workflow_buffer_home = config.get('GLOBAL',
-                                                   'workflow_buffer_home')
         if config.has_option('GLOBAL', 'freeze_home'):
             self.freeze_home = config.get('GLOBAL', 'freeze_home')
         if config.has_option('GLOBAL', 'sharelink_home'):
@@ -768,6 +786,11 @@ location.""" % self.config_file
             self.site_enable_resources = True
         if config.has_option('GLOBAL', 'user_monitor_log'):
             self.user_monitor_log = config.get('GLOBAL', 'user_monitor_log')
+        if config.has_option('SITE', 'enable_workflows'):
+            self.site_enable_workflows = config.getboolean(
+                'SITE', 'enable_workflows')
+        else:
+            self.site_enable_workflows = True
         if config.has_option('SITE', 'enable_events'):
             self.site_enable_events = config.getboolean(
                 'SITE', 'enable_events')

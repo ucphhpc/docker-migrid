@@ -115,6 +115,12 @@ runtimeenvironment = {
                       'environment')],
     'optional': [],
     }
+# Used by workflowjsoninterface
+workflow = {
+    'object_type': 'workflow',
+    #'required': [],
+    #'optional': [workflowpattern, workflowrecipe]
+}
 workflowpattern = {
     'object_type': 'workflowpattern',
     #'required': [],
@@ -230,12 +236,13 @@ dir_listings = {'object_type': 'dir_listings',
 runtimeenvironments = {'object_type': 'runtimeenvironments',
                        'required_list': [('runtimeenvironments',
                        'runtimeenvironment')]}
+workflows = {'object_type': 'workflows'}
 workflowpatterns = {'object_type': 'workflowpatterns',
                     'required_list': [('workflowpatterns',
                                        'workflowpattern')]}
 workflowrecipes = {'object_type': 'workflowrecipes',
-                    'required_list': [('workflowrecipes',
-                                       'workflowrecipe')]}
+                   'required_list': [('workflowrecipes',
+                                      'workflowrecipe')]}
 frozenarchives = {'object_type': 'frozenarchives',
                   'required_list': [('frozenarchives', 'frozenarchive'
                   )]}
@@ -286,7 +293,7 @@ user_list = {'object_type': 'user_list', 'required_list': [('users',
 user_info = {'object_type': 'user_info', 'required': ['user_id',
              'fields']}
 vgrid_info = {'object_type': 'vgrid_info', 'required': ['vgrid_name',
-             'fields']}
+              'fields']}
 forum_threads = {'object_type': 'forum_threads', 'required': ['threads'
                  , 'status', 'vgrid_name']}
 forum_thread_messages = {'object_type': 'forum_thread_messages',
@@ -406,6 +413,8 @@ valid_types_list = [
     file_output,
     runtimeenvironment,
     runtimeenvironments,
+    workflow,
+    workflows,
     workflowpattern,
     workflowpatterns,
     workflowrecipe,

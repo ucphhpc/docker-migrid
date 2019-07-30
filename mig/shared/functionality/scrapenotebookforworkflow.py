@@ -1,7 +1,4 @@
-import ast
-
 import shared.returnvalues as returnvalues
-
 from shared.init import initialize_main_variables
 from shared.functional import validate_input_and_cert
 from shared.safeinput import REJECT_UNSET
@@ -12,7 +9,7 @@ CELL_TYPE, CODE, SOURCE = 'cell_type', 'code', 'source'
 
 
 def signature():
-    """Signaure of the main function"""
+    """Signature of the main function"""
 
     defaults = {
         'vgrid_name': REJECT_UNSET,
@@ -41,10 +38,12 @@ def main(client_id, user_arguments_dict):
 
     vgrid = accepted[vgrid_name][-1]
     name = accepted[note_book_name][-1]
+    # TODO, validate that the vgrid is actually accessible by the user
+    # I.e. that he is a member/owner and has write access to it.
+    # else we shouldn't allow that the creation of .workflow_patterns_home
+    # for instance.
 
     # TODO get this loading in proper strings, not unicode,
-    # NOTE, in the future use the shared.serial.load/dump functions for json
-    # IO operations
     notebook = loads(accepted["wf_notebook"][-1], serializer='json')
     if not isinstance(notebook, dict):
         output_objects.append({'object_type': 'error_text', 'text':

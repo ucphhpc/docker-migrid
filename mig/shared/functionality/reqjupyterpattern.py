@@ -73,7 +73,7 @@ def main(client_id, user_arguments_dict):
         validate_args,
         defaults,
         output_objects,
-    client_id,
+        client_id,
         configuration,
         allow_rejects=False,
     )

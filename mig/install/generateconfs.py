@@ -84,6 +84,7 @@ if '__main__' == __name__:
         'wsgi_procs',
         'enable_jobs',
         'enable_resources',
+        'enable_workflows',
         'enable_events',
         'enable_sharelinks',
         'enable_transfers',
