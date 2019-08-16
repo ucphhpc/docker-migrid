@@ -95,6 +95,9 @@ def workflow_api_create(configuration, workflow_session,
                         workflow_type=WORKFLOW_PATTERN, **workflow_attributes):
     """ """
     _logger = configuration.logger
+    _logger.debug("W_API: create: (%s, %s, %s)" % (workflow_session,
+                                                   workflow_type,
+                                                   workflow_attributes))
 
     # TODO, include as a basic part of workflow_attributes
     if 'vgrids' not in workflow_attributes:
@@ -109,6 +112,9 @@ def workflow_api_read(configuration, workflow_session,
                       workflow_type=WORKFLOW_PATTERN, **workflow_attributes):
     """ """
     _logger = configuration.logger
+    _logger.debug("W_API: search: (%s, %s, %s)" % (workflow_session,
+                                                   workflow_type,
+                                                   workflow_attributes))
 
     return get_workflow_with(configuration,
                              workflow_session['owner'],
@@ -121,6 +127,10 @@ def workflow_api_update(configuration, workflow_session,
                         workflow_type=WORKFLOW_PATTERN, **workflow_attributes):
     """ """
     _logger = configuration.logger
+    _logger.debug("W_API: update: (%s, %s, %s)" % (workflow_session,
+                                                   workflow_type,
+                                                   workflow_attributes))
+
     if 'vgrids' not in workflow_attributes:
         return (False, "Can't create workflow %s without 'vgrids' attribute"
                 % workflow_type)
@@ -134,6 +144,10 @@ def workflow_api_delete(configuration, workflow_session,
                         workflow_type=WORKFLOW_PATTERN, **workflow_attributes):
     """ """
     _logger = configuration.logger
+    _logger.debug("W_API: delete: (%s, %s, %s)" % (workflow_session,
+                                                   workflow_type,
+                                                   workflow_attributes))
+
     # TODO, include as a basic part of workflow_attributes
     if 'name' not in workflow_attributes:
         return (False, "Can't delete workflow without 'name' attribute"
@@ -156,13 +170,26 @@ def main(client_id, user_arguments_dict):
     (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(client_id, op_title=False, op_header=False,
                                   op_menu=False)
+    logger.debug("Output objects %s" % output_objects)
+    # Add allow Access-Control-Allow-Origin to headers
+    # Required to allow Jupyter Widget from localhost to request against the
+    # API
+    output_objects[0]['headers'].append(('Access-Control-Allow-Origin', '*'))
+    output_objects[0]['headers'].append(('Access-Control-Allow-Headers',
+                                         'Content-Type'))
+    output_objects[0]['headers'].append(('Access-Control-Max-Age', 600))
+    output_objects[0]['headers'].append(('Access-Control-Allow-Methods',
+                                         'POST, OPTIONS'))
+    output_objects[0]['headers'].append(('Content-Type', 'application/json'))
+
     # Input data
     data = sys.stdin.read()
+    logger.debug("Received data %s" % data)
     try:
         json_data = json.loads(data, object_pairs_hook=str_hook)
     except ValueError:
-        msg = 'An invalid format was supplied to %s, requires a JSON ' \
-              'valid format' % op_name
+        msg = "An invalid format was supplied to: '%s', requires a JSON " \
+              "compatible format" % op_name
         logger.error(msg)
         output_objects.append({'object_type': 'workflow',
                                'error_text': msg,
@@ -178,13 +205,14 @@ def main(client_id, user_arguments_dict):
         if key not in VALID_SIGNATURE_JSON_TYPES:
             output_objects.append(
                 {'object_type': 'error_text',
-                 'text': 'Invalid key supplied %s, allowed includes %s'
+                 'text': "Invalid key: '%s', was sent to workflows API,"
+                         " allowed are: '%s'"
                          % (key, ','.join(VALID_SIGNATURE_JSON_TYPES.keys()))})
             return (output_objects, returnvalues.CLIENT_ERROR)
         if not isinstance(value, VALID_SIGNATURE_JSON_TYPES.get(key)):
             output_objects.append(
                 {'object_type': 'error_text',
-                 'text': 'Invalid type: %s for key: %s, requires %s'
+                 'text': "Invalid type: '%s' for key: '%s', requires: '%s'"
                          % (type(value), key,
                             VALID_SIGNATURE_JSON_TYPES.get(key))})
             return (output_objects, returnvalues.CLIENT_ERROR)
@@ -196,7 +224,7 @@ def main(client_id, user_arguments_dict):
         if isinstance(_filter, (list, tuple)) and value not in _filter:
             output_objects.append(
                 {'object_type': 'error_text',
-                 'text': 'Invalid value: %s for key: %s, allowed includes: %s'
+                 'text': "Invalid value: '%s' for key: '%s', allowed are: '%s'"
                          % (value, key, ','.join(_filter))})
             return (output_objects, returnvalues.CLIENT_ERROR)
 
@@ -206,8 +234,8 @@ def main(client_id, user_arguments_dict):
             except InputException:
                 output_objects.append(
                     {'object_type': 'error_text',
-                     'text': 'Invalid value: %s for key: %s, failed on a '
-                             'preset filter for that attribute type'
+                     'text': "Invalid value: '%s' for key: '%s', failed on a "
+                             "preset filter for that attribute type"
                              % (value, key)})
                 return (output_objects, returnvalues.CLIENT_ERROR)
 
@@ -257,7 +285,6 @@ def main(client_id, user_arguments_dict):
     if operation == WORKFLOW_API_READ:
         workflows = workflow_api_read(configuration, workflow_session,
                                       workflow_type, **workflow_attributes)
-        logger.info("Read workflows %s" % workflows)
         if not workflows:
             output_objects.append(
                 {'object_type': 'error_text',

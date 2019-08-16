@@ -67,8 +67,8 @@ NOT_FOUND = 3
 WORKFLOWS_ERRORS = (NOT_ENABLED, INVALID_SESSION_ID, NOT_FOUND)
 
 WRITE_LOCK = 'write.lock'
-WORKFLOW_PATTERN = 'pattern'
-WORKFLOW_RECIPE = 'recipe'
+WORKFLOW_PATTERN = 'workflowpattern'
+WORKFLOW_RECIPE = 'workflowrecipe'
 WORKFLOW_API_DB_NAME = 'workflow_api_db'
 WORKFLOW_TYPES = [WORKFLOW_PATTERN, WORKFLOW_RECIPE]
 CELL_TYPE, CODE, SOURCE = 'cell_type', 'code', 'source'
@@ -594,8 +594,11 @@ def __query_workflow_map(configuration, client_id, first=False,
         if kwargs:
             all_match = True
             for k, v in kwargs.items():
+                # TODO, move v != "" to a search section that is intended
+                # for outside API search. I.e. will do expansive search beyond
+                # the exact value
                 if (k not in workflow_obj[workflow_type]) or \
-                        (workflow_obj[workflow_type][k] != v):
+                        (workflow_obj[workflow_type][k] != v and v != ""):
                     all_match = False
             if all_match:
                 matches.append(workflow_obj[workflow_type])
