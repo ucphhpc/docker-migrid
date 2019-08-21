@@ -345,7 +345,7 @@ def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN):
     NOTE: Save start time so that any concurrent updates get caught next time
     """
     _logger = configuration.logger
-    _logger.debug("WP: __refresh_map")
+    _logger.debug("WP: __refresh_map workflow_type: %s" % workflow_type)
 
     start_time = time.time()
     dirty = []
@@ -910,8 +910,10 @@ def create_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
     vgrid = kwargs.get('vgrids', None)
     if workflow_type == WORKFLOW_RECIPE:
         return define_recipe(configuration, client_id, vgrid, kwargs)
+        # return __create_workflow_recipe_entry(configuration, client_id, vgrid, kwargs)
 
     return define_pattern(configuration, client_id, vgrid, kwargs)
+    # return __create_workflow_pattern_entry(configuration, client_id, vgrid, kwargs)
 
 
 def delete_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
@@ -1953,8 +1955,8 @@ def create_single_input_trigger(configuration, _logger, vgrid, client_id,
     get_wp_map(configuration)
     get_wr_map(configuration)
     _logger.info("DELETE ME - refreshing maps")
-    __refresh_map(configuration, 'pattern')
-    __refresh_map(configuration, 'recipe')
+    __refresh_map(configuration, WORKFLOW_PATTERN)
+    __refresh_map(configuration, WORKFLOW_RECIPE)
 
     # probably do this somewhere else, but it'll do for now
     # check for pre-existing files that could trip the trigger
@@ -2208,6 +2210,9 @@ def define_pattern(configuration, client_id, vgrid, pattern):
         _logger.error("client_id was not set %s" % client_id)
         return (False, msg)
 
+    if 'owner' not in pattern:
+        pattern['owner'] = client_id
+
     correct, msg = __correct_wp(configuration, pattern)
     if not correct:
         return (correct, msg)
@@ -2290,6 +2295,9 @@ def define_recipe(configuration, client_id, vgrid, recipe):
         _logger.error('client_id was not set %s' % client_id)
         return (False, msg)
 
+    if 'owner' not in recipe:
+        recipe['owner'] = client_id
+
     correct, msg = __correct_wr(configuration, recipe)
     if not correct:
         return correct, msg
@@ -2342,8 +2350,8 @@ if __name__ == '__main__':
     if args:
         if args[0] == 'create_workflow_session_id':
             touch_workflow_sessions_db(conf)
-            user_name = "/C=DK/ST=NA/L=NA/O=NBI/OU=NA/CN=" \
-                        "Rasmus Munk/emailAddress=rasmus.munk@nbi.ku.dk"
+            user_name = "/C=dk/ST=dk/L=NA/O=org/OU=NA/CN=" \
+                        "devuser/emailAddress=dev@dev.dk"
             create_workflow_session_id(conf, user_name)
         if args[0] == 'workflow_sessions':
             sessions_db = load_workflow_sessions_db(conf)

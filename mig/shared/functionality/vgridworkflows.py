@@ -114,6 +114,7 @@ def main(client_id, user_arguments_dict):
 
     (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(client_id, op_header=False)
+    configuration.logger.debug('DELETE ME : stating vgridworkflows')
     client_dir = client_id_dir(client_id)
     defaults = signature()[1]
     title_entry = find_entry(output_objects, 'title')
@@ -193,6 +194,7 @@ access the workflows.'''
     trigger_jobs = []
     log_content = ''
 
+    configuration.logger.debug('DELETE ME : cp1')
     if operation in list_operations:
         trigger_job_dir = os.path.join(configuration.vgrid_home,
                                        os.path.join(
@@ -250,6 +252,7 @@ access the workflows.'''
 
         log_content = read_trigger_log(configuration, vgrid_name, flags)
 
+    configuration.logger.debug('DELETE ME : cp2')
     if operation in show_operations:
 
         # Always run as rule creator to avoid users being able to act on behalf
@@ -347,6 +350,7 @@ your disposal:<br/>
 
         output_objects.append({'object_type': 'sectionheader',
                                'text': 'Manage Triggers'})
+# -----------------------------
         output_objects.extend(oobjs)
         output_objects.append(
             {'object_type': 'html_form', 'text': helper_html})
@@ -362,6 +366,7 @@ your disposal:<br/>
 facilities in case you want to trigger flows at given times rather than only
 in reaction to file system events.</p>
 '''})
+        # -----------------------------
         output_objects.append({'object_type': 'html_form', 'text':  '''
 </div>
 '''})
@@ -377,14 +382,14 @@ in reaction to file system events.</p>
             {'object_type': 'table_pager', 'entry_name': 'job',
              'default_entries': default_pager_entries})
 
-        output_objects.append({'object_type': 'trigger_job_list', 'trigger_jobs':
-                               trigger_jobs})
+        # output_objects.append({'object_type': 'trigger_job_list', 'trigger_jobs':
+        #                        trigger_jobs})
 
         output_objects.append({'object_type': 'sectionheader',
                                'text': 'Trigger Log'})
 
-        output_objects.append({'object_type': 'trigger_log', 'log_content':
-                               log_content})
+        # output_objects.append({'object_type': 'trigger_log', 'log_content':
+        #                        log_content})
 
         output_objects.append({'object_type': 'html_form', 'text':  '''</div>'''})
 
@@ -444,10 +449,10 @@ in reaction to file system events.</p>
 
         output_objects.append({'object_type': 'html_form', 'text': """
                     <p>
-                    On this page you can register a JupyterLab notebook. Valid 
-                    patterns will be scraped from it and a workflow will be 
-                    formed, if possible If no patterns are present it is 
-                    assumed that the notebook is a recipe and is read in as 
+                    On this page you can register a JupyterLab notebook. Valid
+                    patterns will be scraped from it and a workflow will be
+                    formed, if possible If no patterns are present it is
+                    assumed that the notebook is a recipe and is read in as
                     such.
                     </p>"""})
 
@@ -466,6 +471,7 @@ in reaction to file system events.</p>
                      </div>
                      '''})
 
+    configuration.logger.debug('DELETE ME : cp3')
     if operation in show_operations:
         output_objects.append({'object_type': 'html_form', 'text':  '''</div>'''})
 
@@ -476,5 +482,9 @@ in reaction to file system events.</p>
     #
     # title_entry['javascript'] = jquery_ui_js(configuration, add_import,
     #                                          add_init, add_ready)
+
+    configuration.logger.debug('DELETE ME : finishing vgridworkflows')
+
+    # configuration.logger.debug(output_objects)
 
     return (output_objects, returnvalues.OK)
