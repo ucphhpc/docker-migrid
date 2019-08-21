@@ -143,7 +143,7 @@ def get_recipe_parameters(configuration, recipe):
 
 
 def get_declarations_dict(configuration, code):
-    """Returns a dictionary with the variable declartions in the list
+    """Returns a dictionary with the variable declarations in the list
     Expects that code is a list of strings"""
     declarations = {}
     _logger = configuration.logger

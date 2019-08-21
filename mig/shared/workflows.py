@@ -909,10 +909,9 @@ def create_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
     """ """
     vgrid = kwargs.get('vgrids', None)
     if workflow_type == WORKFLOW_RECIPE:
-        return __create_workflow_recipe(configuration, client_id, vgrid,
-                                        kwargs)
+        return define_recipe(configuration, client_id, vgrid, kwargs)
 
-    return __create_workflow_pattern(configuration, client_id, vgrid, kwargs)
+    return define_pattern(configuration, client_id, vgrid, kwargs)
 
 
 def delete_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
@@ -1015,7 +1014,7 @@ def delete_workflow_recipe(configuration, client_id, vgrid, name):
     return (True, 'Deleted recipe %s.' % wr['name'])
 
 
-def __create_workflow_pattern(configuration, client_id, vgrid, wp):
+def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
     """ Creates a workflow pattern based on the passed wp object.
     Requires the following keys and structure:
 
@@ -1099,10 +1098,10 @@ def __create_workflow_pattern(configuration, client_id, vgrid, wp):
 
     _logger.info('WP: %s created at: %s ' %
                  (client_id, wp_file_path))
-    return (True, 'Created pattern %s.' % wp['name'])
+    return (True, 'Created pattern %s. ' % wp['name'])
 
 
-def __create_workflow_recipe(configuration, client_id, vgrid, wr):
+def __create_workflow_recipe_entry(configuration, client_id, vgrid, wr):
     """Creates a workflow recipe based on the passed wr object.
         Requires the following keys and structure:
 
@@ -1171,7 +1170,7 @@ def __create_workflow_recipe(configuration, client_id, vgrid, wr):
 
     _logger.info('WR: %s created at: %s ' %
                  (client_id, wr_file_path))
-    return (True, 'Created recipe %s.' % wr['name'])
+    return (True, 'Created recipe %s. ' % wr['name'])
 
 
 def __update_workflow_pattern(configuration, client_id, vgrid, wp):
@@ -1217,7 +1216,7 @@ def __update_workflow_pattern(configuration, client_id, vgrid, wp):
             to_edit = True
     if not to_edit:
         return (False, 'Did not update pattern %s as contents '
-                       'are identical.' % pattern['name'])
+                       'are identical. ' % pattern['name'])
 
     _logger.debug('update_workflow_pattern, got pattern: %s' % pattern)
     _logger.debug('update_workflow_pattern, applying variables: %s' % wp)
@@ -1269,7 +1268,7 @@ def __update_workflow_pattern(configuration, client_id, vgrid, wp):
                 configuration, client_id, pattern, True)
 
     _logger.info('WP: %s updated at: %s ' % (client_id, wp_file_path))
-    return (True, 'Updated pattern %s.' % pattern['name'])
+    return (True, 'Updated pattern %s. ' % pattern['name'])
 
 
 def __update_workflow_recipe(configuration, client_id, vgrid, wr):
@@ -1303,7 +1302,7 @@ def __update_workflow_recipe(configuration, client_id, vgrid, wr):
         if recipe[variable] != wr[variable]:
             to_edit = True
     if not to_edit:
-        return (False, "Did not update recipe %s as contents are identical."
+        return (False, "Did not update recipe %s as contents are identical. "
                 % recipe['name'])
 
     for variable in wr.keys():
@@ -1348,7 +1347,7 @@ def __update_workflow_recipe(configuration, client_id, vgrid, wr):
 
     _logger.info('WR: %s updated at: %s ' %
                  (client_id, wr_file_path))
-    return (True, "Updated recipe %s." % recipe['name'])
+    return (True, "Updated recipe %s. " % recipe['name'])
 
 
 def __rule_identification_from_pattern(configuration, client_id,
@@ -1380,7 +1379,7 @@ def __rule_identification_from_pattern(configuration, client_id,
         else:
             missed_recipes.append(recipe_name)
     if missed_recipes:
-        return (False, 'Could not find all required recipes. Missing: %s'
+        return (True, 'Could not find all required recipes. Missing: %s'
                 % missed_recipes)
 
     _logger.info('All recipes found within trying to create trigger '
@@ -1393,7 +1392,7 @@ def __rule_identification_from_pattern(configuration, client_id,
 
     if not trigger_status:
         return False, 'Could not create trigger for pattern. ' + trigger_msg
-    return True, 'Trigger created from pattern %s.' % workflow_pattern['name']
+    return True, 'Trigger created from pattern %s. ' % workflow_pattern['name']
 
 
 def __rule_identification_from_recipe(configuration, client_id,
@@ -1448,7 +1447,7 @@ def __rule_identification_from_recipe(configuration, client_id,
                 incomplete_patterns.append(str(pattern['name']))
             else:
                 activatable_patterns.append(str(pattern['name']))
-    msg = " %d trigger(s) created from recipe %s." \
+    msg = " %d trigger(s) created from recipe %s. " \
           % (len(activatable_patterns), workflow_recipe['name'])
     if len(incomplete_patterns) > 0:
         msg += " There are %d additional patterns(s) recipes that use this " \
@@ -2189,9 +2188,9 @@ def scrape_for_workflow_objects(configuration, client_id, vgrid, notebook,
         if status:
             recipe_count += 1
 
-    count_msg = "%d patterns and %d recipes were found." % \
+    count_msg = "%d patterns and %d recipes were found. " % \
                 (pattern_count, recipe_count)
-    _logger.debug('Scraping complete.')
+    _logger.debug('Scraping complete. ')
 
     return (True, "%s\n%s" % (feedback, count_msg))
 
@@ -2262,7 +2261,7 @@ def define_pattern(configuration, client_id, vgrid, pattern):
         else:
             _logger.debug('patterns are not identical')
 
-    status, creation_msg = __create_workflow_pattern(
+    status, creation_msg = __create_workflow_pattern_entry(
         configuration, client_id, vgrid, pattern)
 
     if not status:
@@ -2309,7 +2308,7 @@ def define_recipe(configuration, client_id, vgrid, recipe):
 
             return True, msg
 
-    status, creation_msg = __create_workflow_recipe(
+    status, creation_msg = __create_workflow_recipe_entry(
         configuration, client_id, vgrid, recipe)
 
     if not status:
