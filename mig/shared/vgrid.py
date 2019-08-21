@@ -333,6 +333,13 @@ doubt, just let the user request access and accept it with the
           </tbody>
         </table>
         '''
+
+        # TODO this table appears to be sometimes in unicode. If so convert it
+        #  to bytes. Investigate further why it is sometimes in unicode,
+        #  seems to be if triggers are created from remote patterns or
+        #  recipes?
+        if isinstance(vgrid_table, unicode):
+            vgrid_table = vgrid_table.encode('latin-1')
         out.append({'object_type': 'html_form',
                     'text': vgrid_table % fill_helpers})
 
