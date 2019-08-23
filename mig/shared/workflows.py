@@ -69,8 +69,10 @@ WORKFLOWS_ERRORS = (NOT_ENABLED, INVALID_SESSION_ID, NOT_FOUND)
 WRITE_LOCK = 'write.lock'
 WORKFLOW_PATTERN = 'workflowpattern'
 WORKFLOW_RECIPE = 'workflowrecipe'
+WORKFLOW_ANY = 'any'
 WORKFLOW_API_DB_NAME = 'workflow_api_db'
-WORKFLOW_TYPES = [WORKFLOW_PATTERN, WORKFLOW_RECIPE]
+WORKFLOW_TYPES = [WORKFLOW_PATTERN, WORKFLOW_RECIPE, WORKFLOW_ANY]
+ATOMIC_WORKFLOW_TYPES = [WORKFLOW_PATTERN, WORKFLOW_RECIPE]
 CELL_TYPE, CODE, SOURCE = 'cell_type', 'code', 'source'
 WORKFLOW_PATTERNS, WORKFLOW_RECIPES, MODTIME, CONF = \
     ['__workflowpatterns__', '__workflow_recipes__', '__modtime__', '__conf__']
@@ -336,6 +338,15 @@ def __load_map(configuration, workflow_type=WORKFLOW_PATTERN, do_lock=True):
         return load_system_map(configuration, 'workflowpatterns', do_lock)
     elif workflow_type == WORKFLOW_RECIPE:
         return load_system_map(configuration, 'workflowrecipes', do_lock)
+    elif workflow_type == WORKFLOW_ANY:
+        return {
+            'patterns':
+                load_system_map(configuration, 'workflowpatterns', do_lock),
+            'recipes' :
+                load_system_map(configuration, 'workflowrecipes', do_lock)
+        }
+
+
 
 
 def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN):
@@ -552,7 +563,7 @@ def __query_workflow_map(configuration, client_id, first=False,
     _logger.debug('WP: __query_workflow_map, client_id: %s, '
                   'workflow_type: %s, kwargs: %s' % (client_id, workflow_type,
                                                      kwargs))
-    if workflow_type not in WORKFLOW_TYPES:
+    if workflow_type not in ATOMIC_WORKFLOW_TYPES:
         _logger.error('WP: __query_workflow_map, '
                       'invalid workflow_type: %s provided' % workflow_type)
         return None
@@ -680,7 +691,7 @@ def __query_map_for_first_recipes(configuration, client_id=None, **kwargs):
 def __build_workflow_object(configuration, display_safe=False,
                             workflow_type=WORKFLOW_PATTERN, **kwargs):
     _logger = configuration.logger
-    if workflow_type not in WORKFLOW_TYPES:
+    if workflow_type not in ATOMIC_WORKFLOW_TYPES:
         _logger.error('WP: __build_workflow_object, invalid workflow_type: %s '
                       'provided' % workflow_type)
         return None
@@ -858,8 +869,17 @@ def get_workflow_with(configuration, client_id, first=False,
         _logger.error('WP: wrong format supplied for %s', type(kwargs))
         return None
 
-    return __query_workflow_map(configuration, client_id, first, display_safe,
-                                workflow_type, **kwargs)
+    if workflow_type in ATOMIC_WORKFLOW_TYPES:
+        return __query_workflow_map(configuration, client_id, first,
+                                    display_safe, workflow_type, **kwargs)
+    elif workflow_type == WORKFLOW_ANY:
+        return {
+            'patterns': __query_workflow_map(configuration, client_id, first,
+                                    display_safe, workflow_type, **kwargs),
+            'recipes': __query_workflow_map(configuration, client_id, first,
+                                    display_safe, workflow_type, **kwargs)
+        }
+
 
 
 def get_wp_with(configuration, first=True, client_id=None, **kwargs):

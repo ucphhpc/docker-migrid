@@ -33,7 +33,7 @@ from shared.safeinput import valid_sid, InputException
 from shared.workflows import INVALID_SESSION_ID, NOT_ENABLED, NOT_FOUND, \
     WORKFLOW_TYPES, WORKFLOW_PATTERN, valid_session_id, get_workflow_with, \
     load_workflow_sessions_db, create_workflow, delete_workflow, \
-    update_workflow
+    update_workflow, WORKFLOW_ANY, WORKFLOW_RECIPE
 
 INVALID_FORMAT = 4
 
@@ -116,11 +116,33 @@ def workflow_api_read(configuration, workflow_session,
                                                    workflow_type,
                                                    workflow_attributes))
 
-    return get_workflow_with(configuration,
-                             workflow_session['owner'],
-                             display_safe=True,
-                             workflow_type=workflow_type,
-                             **workflow_attributes)
+    if workflow_type == WORKFLOW_ANY:
+        patterns = get_workflow_with(configuration,
+                                     workflow_session['owner'],
+                                     display_safe=True,
+                                     workflow_type=WORKFLOW_PATTERN,
+                                     **workflow_attributes)
+        recipes = get_workflow_with(configuration,
+                                    workflow_session['owner'],
+                                    display_safe=True,
+                                    workflow_type=WORKFLOW_RECIPE,
+                                    **workflow_attributes)
+        _logger.debug('workflow_api_read PATTERNS: %s' % patterns)
+        _logger.debug('workflow_api_read RECIPES: %s' % recipes)
+
+        if patterns and recipes:
+            return patterns + recipes
+        elif patterns:
+            return patterns
+        elif recipes:
+            return recipes
+        return []
+    elif workflow_type in WORKFLOW_TYPES:
+        return get_workflow_with(configuration,
+                                 workflow_session['owner'],
+                                 display_safe=True,
+                                 workflow_type=workflow_type,
+                                 **workflow_attributes)
 
 
 def workflow_api_update(configuration, workflow_session,
@@ -283,8 +305,10 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.OK)
     # Read
     if operation == WORKFLOW_API_READ:
+        logger.debug('DELETE ME: got API read request')
         workflows = workflow_api_read(configuration, workflow_session,
                                       workflow_type, **workflow_attributes)
+        logger.debug('DELETE ME: result was: %s' % workflows)
         if not workflows:
             output_objects.append(
                 {'object_type': 'error_text',
