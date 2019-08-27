@@ -106,6 +106,7 @@ VALID_RECIPE = {
     'name': str,
     'recipe': dict,
     'vgrids': str,
+    'source': str
 }
 
 # only update the triggers if these variables are changed in a pattern
@@ -760,7 +761,8 @@ def __build_wr_object(configuration, display_safe=False, **kwargs):
         'name': kwargs.get('name', VALID_RECIPE['name']()),
         'recipe': kwargs.get('recipe', VALID_RECIPE['recipe']()),
         'triggers': kwargs.get('triggers', VALID_RECIPE['triggers']()),
-        'vgrids': kwargs.get('vgrids', VALID_RECIPE['vgrids']())
+        'vgrids': kwargs.get('vgrids', VALID_RECIPE['vgrids']()),
+        'source': kwargs.get('source', VALID_RECIPE['source']())
     }
 
     if display_safe:
@@ -2341,7 +2343,7 @@ def define_recipe(configuration, client_id, vgrid, recipe):
         configuration, client_id, recipe, True)
 
     if not status:
-        return (False, "Could not identify rules from recipe. %s" \
+        return (False, "Could not identify rules from recipe. %s"
                 % identification_msg)
 
     return (True, "%s%s" % (creation_msg, identification_msg))
