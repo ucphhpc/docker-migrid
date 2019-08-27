@@ -347,8 +347,6 @@ def __load_map(configuration, workflow_type=WORKFLOW_PATTERN, do_lock=True):
         }
 
 
-
-
 def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN):
     """Refresh map of workflow objects. Uses a pickled dictionary for
     efficiency. Only update map for workflow objects that appeared or
@@ -881,7 +879,6 @@ def get_workflow_with(configuration, client_id, first=False,
         }
 
 
-
 def get_wp_with(configuration, first=True, client_id=None, **kwargs):
     """Returns a clients workflow pattern with a field_name"""
     _logger = configuration.logger
@@ -930,10 +927,8 @@ def create_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
     vgrid = kwargs.get('vgrids', None)
     if workflow_type == WORKFLOW_RECIPE:
         return define_recipe(configuration, client_id, vgrid, kwargs)
-        # return __create_workflow_recipe_entry(configuration, client_id, vgrid, kwargs)
-
-    return define_pattern(configuration, client_id, vgrid, kwargs)
-    # return __create_workflow_pattern_entry(configuration, client_id, vgrid, kwargs)
+    elif workflow_type == WORKFLOW_PATTERN:
+        return define_pattern(configuration, client_id, vgrid, kwargs)
 
 
 def delete_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,

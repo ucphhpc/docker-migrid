@@ -42,6 +42,9 @@ WORKFLOW_API_READ = 'read'
 WORKFLOW_API_UPDATE = 'update'
 WORKFLOW_API_DELETE = 'delete'
 
+PATTERN_LIST = 'pattern_list'
+RECIPE_LIST = 'recipe_list'
+
 VALID_OPERATIONS = [WORKFLOW_API_CREATE, WORKFLOW_API_READ,
                     WORKFLOW_API_UPDATE, WORKFLOW_API_DELETE]
 
@@ -99,13 +102,49 @@ def workflow_api_create(configuration, workflow_session,
                                                    workflow_type,
                                                    workflow_attributes))
 
-    # TODO, include as a basic part of workflow_attributes
-    if 'vgrids' not in workflow_attributes:
-        return (False, "Can't create workflow %s without 'vgrids' attribute"
-                % workflow_type)
+    if workflow_type == WORKFLOW_ANY:
+        if PATTERN_LIST in workflow_attributes \
+                and RECIPE_LIST in workflow_attributes:
+            feedback = ""
+            for pattern in workflow_attributes[PATTERN_LIST]:
+                try:
+                    _logger.debug("DELETE ME: attempting to create new pattern: %s" % pattern['name'])
+                    status, msg = create_workflow(configuration,
+                                                  workflow_session['owner'],
+                                                  workflow_type=WORKFLOW_PATTERN,
+                                                  vgrids=workflow_attributes['vgrids'],
+                                                  **pattern)
+                    _logger.debug("DELETE ME: response was: %s" % msg)
+                    feedback += '\n%s' % str(msg)
+                except Exception, exception:
+                    feedback += '\n%s' % str(exception)
+            for recipe in workflow_attributes[RECIPE_LIST]:
+                try:
+                    _logger.debug("DELETE ME: attempting to create new recipe: %s" % recipe['name'])
+                    status, msg = create_workflow(configuration,
+                                                  workflow_session['owner'],
+                                                  workflow_type=WORKFLOW_RECIPE,
+                                                  vgrids=workflow_attributes['vgrids'],
+                                                  **recipe)
+                    _logger.debug("DELETE ME: response was: %s" % msg)
+                    feedback += '\n%s' % str(msg)
+                except Exception, exception:
+                    feedback += '\n%s' % str(exception)
 
-    return create_workflow(configuration, workflow_session['owner'],
-                           workflow_type, **workflow_attributes)
+            _logger.debug("DELETE ME: final feedback was: %s" % feedback)
+            return (True, feedback)
+
+        else:
+            return (False, "Workflow creation of type '%s' is incorrectly "
+                           "formatted. Should contain keys %s and %s but "
+                           "contains :%s" % (workflow_type, PATTERN_LIST,
+                           RECIPE_LIST, workflow_attributes.keys()))
+
+    elif workflow_type in WORKFLOW_TYPES:
+        return create_workflow(configuration,
+                               workflow_session['owner'],
+                               workflow_type=workflow_type,
+                               **workflow_attributes)
 
 
 def workflow_api_read(configuration, workflow_session,
