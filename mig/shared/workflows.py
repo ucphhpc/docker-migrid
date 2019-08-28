@@ -730,7 +730,6 @@ def __build_wp_object(configuration, display_safe=False, **kwargs):
     }
 
     if display_safe:
-        wp_obj.pop('persistence_id', None)
         wp_obj.pop('owner', None)
 
     return wp_obj
@@ -757,7 +756,6 @@ def __build_wr_object(configuration, display_safe=False, **kwargs):
     }
 
     if display_safe:
-        wr_obj.pop('persistence_id', None)
         wr_obj.pop('owner', None)
 
     return wr_obj
