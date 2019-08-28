@@ -72,7 +72,7 @@ WORKFLOW_RECIPE = 'workflowrecipe'
 WORKFLOW_ANY = 'any'
 WORKFLOW_API_DB_NAME = 'workflow_api_db'
 WORKFLOW_TYPES = [WORKFLOW_PATTERN, WORKFLOW_RECIPE, WORKFLOW_ANY]
-ATOMIC_WORKFLOW_TYPES = [WORKFLOW_PATTERN, WORKFLOW_RECIPE]
+BASIC_WORKFLOW_TYPES = [WORKFLOW_PATTERN, WORKFLOW_RECIPE]
 CELL_TYPE, CODE, SOURCE = 'cell_type', 'code', 'source'
 WORKFLOW_PATTERNS, WORKFLOW_RECIPES, MODTIME, CONF = \
     ['__workflowpatterns__', '__workflow_recipes__', '__modtime__', '__conf__']
@@ -562,7 +562,7 @@ def __query_workflow_map(configuration, client_id, first=False,
     _logger.debug('WP: __query_workflow_map, client_id: %s, '
                   'workflow_type: %s, kwargs: %s' % (client_id, workflow_type,
                                                      kwargs))
-    if workflow_type not in ATOMIC_WORKFLOW_TYPES:
+    if workflow_type not in BASIC_WORKFLOW_TYPES:
         _logger.error('WP: __query_workflow_map, '
                       'invalid workflow_type: %s provided' % workflow_type)
         return None
@@ -690,7 +690,7 @@ def __query_map_for_first_recipes(configuration, client_id=None, **kwargs):
 def __build_workflow_object(configuration, display_safe=False,
                             workflow_type=WORKFLOW_PATTERN, **kwargs):
     _logger = configuration.logger
-    if workflow_type not in ATOMIC_WORKFLOW_TYPES:
+    if workflow_type not in BASIC_WORKFLOW_TYPES:
         _logger.error('WP: __build_workflow_object, invalid workflow_type: %s '
                       'provided' % workflow_type)
         return None
@@ -869,7 +869,7 @@ def get_workflow_with(configuration, client_id, first=False,
         _logger.error('WP: wrong format supplied for %s', type(kwargs))
         return None
 
-    if workflow_type in ATOMIC_WORKFLOW_TYPES:
+    if workflow_type in BASIC_WORKFLOW_TYPES:
         return __query_workflow_map(configuration, client_id, first,
                                     display_safe, workflow_type, **kwargs)
     elif workflow_type == WORKFLOW_ANY:
@@ -1205,26 +1205,30 @@ def __update_workflow_pattern(configuration, client_id, vgrid, wp):
                       client_id)
         return (False, msg)
 
-    if 'name' not in wp:
+    if 'persistence_id' not in wp:
         msg = "A workflow pattern update dependency was missing"
-        _logger.error("WP: update_workflow_pattern, name was not set %s" %
-                      client_id)
+        _logger.error("WP: update_workflow_pattern, persistence_id was not "
+                      "set %s" % client_id)
         return (False, msg)
 
-    pattern = get_workflow_with(configuration, client_id, first=True,
-                                name=wp['name'], vgrids=vgrid)
-    _logger.debug("WP: __update_workflow_pattern, found pattern %s to update"
-                  % pattern)
+    pattern = get_workflow_with(configuration,
+                                client_id,
+                                first=True,
+                                persistence_id=wp['persistence_id'],
+                                vgrids=vgrid)
 
     if not pattern:
         msg = 'Could not locate pattern'
         _logger.debug(msg)
         return (False, msg)
+    _logger.debug("WP: __update_workflow_pattern, found pattern %s to update"
+                  % pattern)
 
     if 'trigger' in pattern:
+        _logger.debug("WP: __update_workflow_pattern, prexisting trigger %s" % pattern['trigger'])
         preexisting_trigger = pattern['trigger']
     else:
-        preexisting_trigger = False
+        preexisting_trigger = {}
 
     # don't update if the pattern is the same
     # TODO, also don't allow say update of persistence_id
@@ -1234,6 +1238,7 @@ def __update_workflow_pattern(configuration, client_id, vgrid, wp):
         if pattern[variable] != wp[variable]:
             to_edit = True
     if not to_edit:
+        _logger.debug("Don't need to edit")
         return (False, 'Did not update pattern %s as contents '
                        'are identical. ' % pattern['name'])
 
@@ -1247,6 +1252,7 @@ def __update_workflow_pattern(configuration, client_id, vgrid, wp):
 
     correct, msg = __correct_wp(configuration, pattern)
     if not correct:
+        _logger.debug('update_workflow_pattern, is no longer a correct pattern')
         return (False, msg)
 
     wp_home = get_workflow_pattern_home(configuration, vgrid)
@@ -1256,6 +1262,7 @@ def __update_workflow_pattern(configuration, client_id, vgrid, wp):
     wrote = False
     msg = ''
     try:
+        _logger.debug('update_workflow_pattern, attempting to dump')
         dump(pattern, wp_file_path, serializer='json')
 
         # Mark as modified
@@ -1305,14 +1312,17 @@ def __update_workflow_recipe(configuration, client_id, vgrid, wr):
             "WR: update_workflow_recipe, client_id was not set %s" % client_id)
         return (False, msg)
 
-    if 'name' not in wr:
+    if 'persistence_id' not in wr:
         msg = "A workflow recipe update dependency was missing"
-        _logger.error("WP: __update_workflow_recipe, name was not set %s" %
-                      client_id)
+        _logger.error("WP: __update_workflow_recipe, persistence_id was not "
+                      "set %s" % client_id)
         return (False, msg)
 
-    recipe = get_workflow_with(configuration, client_id, first=True,
-                               workflow_type=WORKFLOW_RECIPE, name=wr['name'],
+    recipe = get_workflow_with(configuration,
+                               client_id,
+                               first=True,
+                               workflow_type=WORKFLOW_RECIPE,
+                               persistence_id=wr['persistence_id'],
                                vgrids=vgrid)
 
     # don't update if the recipe is the same
@@ -1956,12 +1966,12 @@ def create_single_input_trigger(configuration, _logger, vgrid, client_id,
 
     for recipe in recipe_list:
         new_recipe_variables = {
-            'triggers': recipe['triggers']
+            'triggers': recipe['triggers'],
+            'persistence_id': recipe['persistence_id']
         }
         new_recipe_variables['triggers'][str(vgrid + trigger_id)] = {
             'vgrid': vgrid,
-            'trigger_id': trigger_id,
-            'persistence_id': recipe['persistence_id']
+            'trigger_id': trigger_id
         }
         __update_workflow_recipe(
             configuration, client_id, vgrid, new_recipe_variables)
