@@ -288,15 +288,15 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.OK)
     # Read
     if operation == WORKFLOW_API_READ:
-        logger.debug('DELETE ME: got API read request')
         workflows = workflow_api_read(configuration, workflow_session,
                                       workflow_type, **workflow_attributes)
-        logger.debug('DELETE ME: result was: %s' % workflows)
+        # TODO change this to distinguish between incorrect attributes and
+        #  just empty vgrids
         if not workflows:
             output_objects.append(
                 {'object_type': 'error_text',
                  'text': 'Failed to find a workflow you own with '
-                         'attributes: %s ' % workflow_attributes,
+                         'attributes: %s' % workflow_attributes,
                  'error_code': NOT_FOUND})
             return (output_objects, returnvalues.OK)
 
