@@ -72,7 +72,7 @@ WORKFLOW_RECIPE = 'workflowrecipe'
 WORKFLOW_ANY = 'any'
 WORKFLOW_API_DB_NAME = 'workflow_api_db'
 WORKFLOW_TYPES = [WORKFLOW_PATTERN, WORKFLOW_RECIPE, WORKFLOW_ANY]
-ATOMIC_WORKFLOW_TYPES = [WORKFLOW_PATTERN, WORKFLOW_RECIPE]
+WORKFLOW_CONSTRUCT_TYPES = [WORKFLOW_PATTERN, WORKFLOW_RECIPE]
 CELL_TYPE, CODE, SOURCE = 'cell_type', 'code', 'source'
 WORKFLOW_PATTERNS, WORKFLOW_RECIPES, MODTIME, CONF = \
     ['__workflowpatterns__', '__workflow_recipes__', '__modtime__', '__conf__']
@@ -338,13 +338,6 @@ def __load_map(configuration, workflow_type=WORKFLOW_PATTERN, do_lock=True):
         return load_system_map(configuration, 'workflowpatterns', do_lock)
     elif workflow_type == WORKFLOW_RECIPE:
         return load_system_map(configuration, 'workflowrecipes', do_lock)
-    elif workflow_type == WORKFLOW_ANY:
-        return {
-            'patterns':
-                load_system_map(configuration, 'workflowpatterns', do_lock),
-            'recipes' :
-                load_system_map(configuration, 'workflowrecipes', do_lock)
-        }
 
 
 def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN):
@@ -436,7 +429,6 @@ def __list_path(configuration, workflow_type=WORKFLOW_PATTERN):
     _logger = configuration.logger
     _logger.debug("Workflows: __list_path")
 
-    # patterns = []
     objects = []
     # Note that this is currently listing all objects for all users. This
     # might want to be altered to only the current user and global? That might
@@ -561,16 +553,23 @@ def __query_workflow_map(configuration, client_id, first=False,
     _logger.debug('WP: __query_workflow_map, client_id: %s, '
                   'workflow_type: %s, kwargs: %s' % (client_id, workflow_type,
                                                      kwargs))
-    if workflow_type not in ATOMIC_WORKFLOW_TYPES:
-        _logger.error('WP: __query_workflow_map, '
-                      'invalid workflow_type: %s provided' % workflow_type)
-        return None
+    # if workflow_type not in ATOMIC_WORKFLOW_TYPES:
+    #     _logger.error('WP: __query_workflow_map, '
+    #                   'invalid workflow_type: %s provided' % workflow_type)
+    #     return None
     workflow_map = None
     if workflow_type == WORKFLOW_PATTERN:
         workflow_map = get_wp_map(configuration)
+        _logger.info("Workflow pattern map structure %s" % workflow_map)
 
     if workflow_type == WORKFLOW_RECIPE:
         workflow_map = get_wr_map(configuration)
+        _logger.info("Workflow recipe map structure %s" % workflow_map)
+
+    if workflow_type == WORKFLOW_ANY:
+        # Load every type into workflow_map
+        workflow_map = get_wr_map(configuration)
+        workflow_map.update(get_wp_map(configuration))
 
     if not workflow_map:
         _logger.error('WP: __query_workflow_map, workflow_map '
@@ -584,6 +583,7 @@ def __query_workflow_map(configuration, client_id, first=False,
 
     matches = []
     for _, workflow in workflow_map.items():
+        _logger.debug("WP: workflow map %s" % workflow)
         workflow_conf = workflow.get(CONF, None)
         if not workflow_conf:
             _logger.error('WP: __query_workflow_map, no configuration '
@@ -593,7 +593,7 @@ def __query_workflow_map(configuration, client_id, first=False,
 
         workflow_obj = __build_workflow_object(configuration,
                                                display_safe,
-                                               workflow_type,
+                                               workflow_conf['object_type'],
                                                **workflow_conf)
 
         _logger.debug('WP: workflow_obj: %s' % workflow_obj)
@@ -606,13 +606,14 @@ def __query_workflow_map(configuration, client_id, first=False,
                 # TODO, move v != "" to a search section that is intended
                 # for outside API search. I.e. will do expansive search beyond
                 # the exact value
-                if (k not in workflow_obj[workflow_type]) or \
-                        (workflow_obj[workflow_type][k] != v and v != ""):
+                if (k not in workflow_obj[workflow_conf['object_type']]) or \
+                        (workflow_obj[workflow_conf['object_type']][k] != v
+                         and v != ""):
                     all_match = False
             if all_match:
-                matches.append(workflow_obj[workflow_type])
+                matches.append(workflow_obj[workflow_conf['object_type']])
         else:
-            matches.append(workflow_obj[workflow_type])
+            matches.append(workflow_obj[workflow_conf['object_type']])
 
     if matches:
         if first:
@@ -632,7 +633,6 @@ def __query_map_for_first_patterns(configuration, client_id=None, **kwargs):
         wp_map = {k: v for k, v in wp_map.items()
                   if CONF in v and 'owner' in v[CONF]
                   and client_id == v[CONF]['owner']}
-
     for _, wp_content in wp_map.items():
         if CONF in wp_content:
             wp_obj = __build_wp_object(configuration, **wp_content[CONF])
@@ -689,10 +689,6 @@ def __query_map_for_first_recipes(configuration, client_id=None, **kwargs):
 def __build_workflow_object(configuration, display_safe=False,
                             workflow_type=WORKFLOW_PATTERN, **kwargs):
     _logger = configuration.logger
-    if workflow_type not in ATOMIC_WORKFLOW_TYPES:
-        _logger.error('WP: __build_workflow_object, invalid workflow_type: %s '
-                      'provided' % workflow_type)
-        return None
 
     workflow = {}
     if workflow_type == WORKFLOW_PATTERN:
@@ -721,7 +717,7 @@ def __build_wp_object(configuration, display_safe=False, **kwargs):
         return None
 
     wp_obj = {
-        'object_type': 'workflowpattern',
+        'object_type': kwargs.get('object_type', WORKFLOW_PATTERN),
         'persistence_id': kwargs.get('persistence_id',
                                      VALID_PATTERN['persistence_id']()),
         'owner': kwargs.get('owner', VALID_PATTERN['owner']()),
@@ -753,7 +749,7 @@ def __build_wr_object(configuration, display_safe=False, **kwargs):
         return None
 
     wr_obj = {
-        'object_type': 'workflowrecipe',
+        'object_type': kwargs.get('object_type', WORKFLOW_RECIPE),
         'persistence_id': kwargs.get('persistence_id',
                                      VALID_RECIPE['persistence_id']()),
         'owner': kwargs.get('owner', VALID_RECIPE['owner']()),
@@ -867,16 +863,8 @@ def get_workflow_with(configuration, client_id, first=False,
         _logger.error('WP: wrong format supplied for %s', type(kwargs))
         return None
 
-    if workflow_type in ATOMIC_WORKFLOW_TYPES:
-        return __query_workflow_map(configuration, client_id, first,
-                                    display_safe, workflow_type, **kwargs)
-    elif workflow_type == WORKFLOW_ANY:
-        return {
-            'patterns': __query_workflow_map(configuration, client_id, first,
-                                    display_safe, workflow_type, **kwargs),
-            'recipes': __query_workflow_map(configuration, client_id, first,
-                                    display_safe, workflow_type, **kwargs)
-        }
+    return __query_workflow_map(configuration, client_id, first,
+                                display_safe, workflow_type, **kwargs)
 
 
 def get_wp_with(configuration, first=True, client_id=None, **kwargs):
@@ -1139,6 +1127,8 @@ def __create_workflow_recipe_entry(configuration, client_id, vgrid, wr):
     if 'name' not in wr:
         wr['name'] = generate_random_ascii(
             wr_id_length, charset=wr_id_charset)
+
+    wr['object_type'] = WORKFLOW_RECIPE
 
     wr_home = get_workflow_recipe_home(configuration, vgrid)
     if not os.path.exists(wr_home):
@@ -2228,6 +2218,9 @@ def define_pattern(configuration, client_id, vgrid, pattern):
     if 'owner' not in pattern:
         pattern['owner'] = client_id
 
+    if 'object_type' not in pattern:
+        pattern['object_type'] = WORKFLOW_PATTERN
+
     correct, msg = __correct_wp(configuration, pattern)
     if not correct:
         return (correct, msg)
@@ -2240,7 +2233,6 @@ def define_pattern(configuration, client_id, vgrid, pattern):
             configuration, client_id=client_id, name=pattern['name'],
             vgrids=vgrid)
         if existing_pattern:
-            persistence_id = existing_pattern['persistence_id']
             pattern['persistence_id'] = existing_pattern['persistence_id']
             # TODO, Why do you need to update a pattern you just extracted
             status, msg = __update_workflow_pattern(
@@ -2312,6 +2304,9 @@ def define_recipe(configuration, client_id, vgrid, recipe):
 
     if 'owner' not in recipe:
         recipe['owner'] = client_id
+
+    if 'object_type' not in recipe:
+        recipe['object_type'] = WORKFLOW_RECIPE
 
     correct, msg = __correct_wr(configuration, recipe)
     if not correct:

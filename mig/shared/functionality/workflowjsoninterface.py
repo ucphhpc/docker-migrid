@@ -31,9 +31,9 @@ import shared.returnvalues as returnvalues
 from shared.init import initialize_main_variables
 from shared.safeinput import valid_sid, InputException
 from shared.workflows import INVALID_SESSION_ID, NOT_ENABLED, NOT_FOUND, \
-    WORKFLOW_TYPES, WORKFLOW_PATTERN, valid_session_id, get_workflow_with, \
-    load_workflow_sessions_db, create_workflow, delete_workflow, \
-    update_workflow, WORKFLOW_ANY, WORKFLOW_RECIPE
+    WORKFLOW_TYPES, WORKFLOW_CONSTRUCT_TYPES, WORKFLOW_PATTERN, \
+    valid_session_id, get_workflow_with, load_workflow_sessions_db,\
+    create_workflow, delete_workflow, update_workflow
 
 INVALID_FORMAT = 4
 
@@ -90,7 +90,7 @@ DEFAULT_SIGNATURE = {
 
 def str_hook(obj):
     return {k.encode('utf-8') if isinstance(k, unicode) else k:
-            v.encode('utf-8') if isinstance(v, unicode) else v
+                v.encode('utf-8') if isinstance(v, unicode) else v
             for k, v in obj}
 
 
@@ -101,50 +101,16 @@ def workflow_api_create(configuration, workflow_session,
     _logger.debug("W_API: create: (%s, %s, %s)" % (workflow_session,
                                                    workflow_type,
                                                    workflow_attributes))
+    if workflow_type not in WORKFLOW_CONSTRUCT_TYPES:
+        return (False, "Invalid workflow create api type: '%s', "
+                       "valid are: '%s'" % (workflow_type,
+                                            ', '.join(WORKFLOW_CONSTRUCT_TYPES)
+                                            ))
 
-    if workflow_type == WORKFLOW_ANY:
-        if PATTERN_LIST in workflow_attributes \
-                and RECIPE_LIST in workflow_attributes:
-            feedback = ""
-            for pattern in workflow_attributes[PATTERN_LIST]:
-                try:
-                    _logger.debug("DELETE ME: attempting to create new pattern: %s" % pattern['name'])
-                    status, msg = create_workflow(configuration,
-                                                  workflow_session['owner'],
-                                                  workflow_type=WORKFLOW_PATTERN,
-                                                  vgrids=workflow_attributes['vgrids'],
-                                                  **pattern)
-                    _logger.debug("DELETE ME: response was: %s" % msg)
-                    feedback += '\n%s' % str(msg)
-                except Exception, exception:
-                    feedback += '\n%s' % str(exception)
-            for recipe in workflow_attributes[RECIPE_LIST]:
-                try:
-                    _logger.debug("DELETE ME: attempting to create new recipe: %s" % recipe['name'])
-                    status, msg = create_workflow(configuration,
-                                                  workflow_session['owner'],
-                                                  workflow_type=WORKFLOW_RECIPE,
-                                                  vgrids=workflow_attributes['vgrids'],
-                                                  **recipe)
-                    _logger.debug("DELETE ME: response was: %s" % msg)
-                    feedback += '\n%s' % str(msg)
-                except Exception, exception:
-                    feedback += '\n%s' % str(exception)
-
-            _logger.debug("DELETE ME: final feedback was: %s" % feedback)
-            return (True, feedback)
-
-        else:
-            return (False, "Workflow creation of type '%s' is incorrectly "
-                           "formatted. Should contain keys %s and %s but "
-                           "contains :%s" % (workflow_type, PATTERN_LIST,
-                           RECIPE_LIST, workflow_attributes.keys()))
-
-    elif workflow_type in WORKFLOW_TYPES:
-        return create_workflow(configuration,
-                               workflow_session['owner'],
-                               workflow_type=workflow_type,
-                               **workflow_attributes)
+    return create_workflow(configuration,
+                           workflow_session['owner'],
+                           workflow_type=workflow_type,
+                           **workflow_attributes)
 
 
 def workflow_api_read(configuration, workflow_session,
@@ -155,33 +121,11 @@ def workflow_api_read(configuration, workflow_session,
                                                    workflow_type,
                                                    workflow_attributes))
 
-    if workflow_type == WORKFLOW_ANY:
-        patterns = get_workflow_with(configuration,
-                                     workflow_session['owner'],
-                                     display_safe=True,
-                                     workflow_type=WORKFLOW_PATTERN,
-                                     **workflow_attributes)
-        recipes = get_workflow_with(configuration,
-                                    workflow_session['owner'],
-                                    display_safe=True,
-                                    workflow_type=WORKFLOW_RECIPE,
-                                    **workflow_attributes)
-        _logger.debug('workflow_api_read PATTERNS: %s' % patterns)
-        _logger.debug('workflow_api_read RECIPES: %s' % recipes)
-
-        if patterns and recipes:
-            return patterns + recipes
-        elif patterns:
-            return patterns
-        elif recipes:
-            return recipes
-        return []
-    elif workflow_type in WORKFLOW_TYPES:
-        return get_workflow_with(configuration,
-                                 workflow_session['owner'],
-                                 display_safe=True,
-                                 workflow_type=workflow_type,
-                                 **workflow_attributes)
+    return get_workflow_with(configuration,
+                             workflow_session['owner'],
+                             display_safe=True,
+                             workflow_type=workflow_type,
+                             **workflow_attributes)
 
 
 def workflow_api_update(configuration, workflow_session,
@@ -259,7 +203,7 @@ def main(client_id, user_arguments_dict):
 
     # If key not present set default signature
     json_data.update({k: v for k, v in DEFAULT_SIGNATURE.items()
-                     if k not in json_data})
+                      if k not in json_data})
 
     # Ensure only valid keys and value types are present in json_data
     for key, value in json_data.items():
