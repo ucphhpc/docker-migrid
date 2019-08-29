@@ -596,6 +596,7 @@ def __query_workflow_map(configuration, client_id, first=False,
         _logger.debug('WP: workflow_obj: %s' % workflow_obj)
         if not workflow_obj:
             continue
+
         # Search with kwargs
         if kwargs:
             all_match = True
@@ -917,11 +918,25 @@ def create_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
 def delete_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
                     **kwargs):
     """ """
-    name = kwargs.get('name', None)
+    _logger = configuration.logger
+    persistence_id = kwargs.get('persistence_id', None)
+    if not persistence_id:
+        msg = "A workflow removal dependency was missing: 'persistence_id'"
+        _logger.error("delete_workflow: 'persistence_id' was not set %s" %
+                      persistence_id)
+        return (False, msg)
+
     vgrid = kwargs.get('vgrids', None)
+    if not vgrid:
+        msg = "A workflow removal dependency was missing: 'vgrid'"
+        _logger.error("delete_workflow: 'vgrid' was not set %s" % vgrid)
+        return (False, msg)
+
     if workflow_type == WORKFLOW_RECIPE:
-        return delete_workflow_recipe(configuration, client_id, vgrid, name)
-    return delete_workflow_pattern(configuration, client_id, vgrid, name)
+        return delete_workflow_recipe(configuration, client_id, vgrid,
+                                      persistence_id)
+    return delete_workflow_pattern(configuration, client_id, vgrid,
+                                   persistence_id)
 
 
 def update_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
@@ -934,84 +949,81 @@ def update_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
     return __update_workflow_pattern(configuration, client_id, vgrid, kwargs)
 
 
-def delete_workflow_pattern(configuration, client_id, vgrid, name):
+def delete_workflow_pattern(configuration, client_id, vgrid, persistence_id):
     """Delete a workflow pattern"""
 
     _logger = configuration.logger
-    _logger.debug("WP: delete_workflow_pattern, client_id: %s, name: %s"
-                  % (client_id, name))
-    if not client_id:
-        msg = "A workflow pattern removal dependency was missing"
-        _logger.error("WP: delete_workflow, cliend_id was not set %s" %
-                      client_id)
-        return (False, msg)
-    if not name:
-        msg = "A workflow pattern removal dependency was missing"
-        _logger.error("WP: delete_workflow, name was not set %s" % name)
-        return (False, msg)
+    _logger.debug("WP: delete_workflow_pattern, client_id: %s, persistence_id: %s"
+                  % (client_id, persistence_id))
 
-    wp = get_wp_with(
-        configuration, client_id=client_id, name=name, vgrids=vgrid)
-    persistence_id = wp['persistence_id']
-
-    if wp['trigger']:
-        __rule_deletion_from_pattern(configuration, client_id, vgrid, wp)
-
-    wp_path = os.path.join(
+    workflow = get_wp_with(
+        configuration, client_id=client_id, vgrids=vgrid,
+        persistence_id=persistence_id)
+    workflow_path = os.path.join(
         get_workflow_pattern_home(configuration, vgrid), persistence_id)
-    if not os.path.exists(wp_path):
-        msg = "The '%s' workflow pattern dosen't appear to exist" % name
-        _logger.error("WP: can't delete %s it dosen't exist" % wp_path)
+
+    if not workflow:
+        msg = "A pattern with persistence_id: '%s' was not found " \
+              % persistence_id
+        _logger.error("WR: delete_workflow_pattern: '%s' wasn't found"
+                      % persistence_id)
+        # Ensure that that the persistence file dosen't stay around
+        if os.path.exists(workflow_path):
+            _logger.error("WR: delete_workflow_pattern: '%s' is gone but '%s'"
+                          " still exist" % (persistence_id, workflow_path))
+            if not delete_file(workflow_path, _logger):
+                msg = "Internal deletion of '%s' failed" % persistence_id
+                return (False, msg)
         return (False, msg)
 
-    if not delete_file(wp_path, _logger):
-        msg = "Could not delete the '%s' workflow pattern"
-        return (False, msg)
+    if workflow['trigger']:
+        __rule_deletion_from_pattern(configuration, client_id, vgrid, workflow)
+
+    if os.path.exists(workflow_path) and not delete_file(workflow_path,
+                                                         _logger):
+            msg = "Could not delete the pattern: '%s'" % persistence_id
+            return (False, msg)
+
     mark_workflow_p_modified(configuration, persistence_id)
+    return (True, 'Deleted pattern %s.' % workflow['persistence_id'])
 
-    return (True, 'Deleted pattern %s.' % wp['name'])
 
-
-def delete_workflow_recipe(configuration, client_id, vgrid, name):
+def delete_workflow_recipe(configuration, client_id, vgrid, persistence_id):
     """Delete a workflow recipe"""
-
     _logger = configuration.logger
-    _logger.debug("WR: delete_workflow_recipe, client_id: %s, name: %s"
-                  % (client_id, name))
-    if not client_id:
-        msg = "A workflow recipe removal dependency was missing"
-        _logger.error("WR: delete_recipe, cliend_id was not set %s" %
-                      client_id)
-        return (False, msg)
-    if not name:
-        msg = "A workflow recipe removal dependency was missing"
-        _logger.error("WR: delete_recipe, name was not set %s" % name)
-        return (False, msg)
+    _logger.debug("WR: delete_workflow_recipe:, client_id: %s, "
+                  "persistence_id: %s" % (client_id, persistence_id))
 
-    wr = get_wr_with(
-        configuration, client_id=client_id, name=name, vgrids=vgrid)
-    persistence_id = wr['persistence_id']
-
-    if wr['triggers']:
-        __rule_deletion_from_recipe(configuration, client_id, vgrid, wr)
-
-    if not wr:
-        msg = "The '%s' workflow recipe dosen't appear to exist" % name
-        _logger.error("WR: can't delete %s it dosen't exist" % name)
+    workflow = get_workflow_with(configuration, client_id,
+                                 workflow_type=WORKFLOW_RECIPE,
+                                 vgrid=vgrid, persistence_id=persistence_id)
+    workflow_path = os.path.join(get_workflow_recipe_home(configuration, vgrid)
+                                 , persistence_id)
+    if not workflow:
+        msg = "A recipe with persistence_id: '%s' was not found " \
+              % persistence_id
+        _logger.error("WR: delete_workflow_recipe: '%s' wasn't found"
+                      % persistence_id)
+        # Ensure that that the persistence file dosen't stay around
+        if os.path.exists(workflow_path):
+            _logger.error("WR: delete_workflow_recipe: '%s' is gone but '%s'"
+                          " still exist" % (persistence_id, workflow_path))
+            if not delete_file(workflow_path, _logger):
+                msg = "Internal deletion of '%s' failed" % persistence_id
+                return (False, msg)
         return (False, msg)
 
-    wr_path = os.path.join(get_workflow_recipe_home(configuration, vgrid),
-                           persistence_id)
-    if not os.path.exists(wr_path):
-        msg = "The '%s' workflow recipe has been moved/deleted already" % name
-        _logger.error("WR: can't delete %s it no longer exists" % wr_path)
-        return (False, msg)
+    if workflow['triggers']:
+        __rule_deletion_from_recipe(configuration, client_id, vgrid,
+                                    workflow)
 
-    if not delete_file(wr_path, _logger):
-        msg = "Could not delete the '%s' workflow recipe"
-        return (False, msg)
+    if os.path.exists(workflow_path):
+        if not delete_file(workflow_path, _logger):
+            msg = "Could not delete the recipe: '%s'" % persistence_id
+            return (False, msg)
+
     mark_workflow_r_modified(configuration, persistence_id)
-    return (True, 'Deleted recipe %s.' % wr['name'])
+    return (True, "Deleted recipe '%s'." % workflow['persistence_id'])
 
 
 def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
@@ -1547,6 +1559,24 @@ def __rule_deletion_from_recipe(configuration, client_id, vgrid, wr):
                 new_recipe_variables['persistence_id'] = recipe['persistence_id']
                 __update_workflow_recipe(
                     configuration, client_id, vgrid, new_recipe_variables)
+
+
+def reset_user_workflows(configuration, client_id):
+    _logger = configuration.logger
+
+    workflows = get_workflow_with(configuration, client_id,
+                                  workflow_type=WORKFLOW_ANY)
+    _logger.debug("Resetting user: '%s' workflows, current: '%s'" %
+                  (client_id, workflows))
+    # No workflows for user, nothing to reset
+    if not workflows:
+        return True
+
+    for workflow in workflows:
+        if not delete_workflow(configuration, client_id,
+                               workflow['object_type'], **workflow):
+            return False
+    return True
 
 
 def create_workflow_task_file(configuration, client_id, vgrid, notebook,
