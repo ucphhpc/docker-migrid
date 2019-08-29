@@ -247,6 +247,12 @@ def __correct_wp(configuration, wp):
                           "%s, on key %s, valid is %s"
                           % (type(v), k, VALID_PATTERN[k]))
             return (False, msg)
+    for k, v in VALID_PATTERN:
+        if k not in wp:
+            _logger.error("WP: __correct_wp, wp did not provide enough "
+                          "parameters. Expected %s %s "
+                          % (VALID_PATTERN[k], k))
+            return (False, msg)
     return (True, "")
 
 
@@ -911,7 +917,23 @@ def create_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
     if workflow_type == WORKFLOW_RECIPE:
         return define_recipe(configuration, client_id, vgrid, kwargs)
     elif workflow_type == WORKFLOW_PATTERN:
-        return define_pattern(configuration, client_id, vgrid, kwargs)
+
+        if 'object_type' in kwargs \
+                and kwargs['object_type'] != WORKFLOW_PATTERN:
+            msg = "'object_type' was set incorrectly to %s when should be " \
+                  "%s. If you are unsure how to proceed leave blank. " \
+                  % (kwargs['object_type'], WORKFLOW_PATTERN)
+            return (False, msg)
+        kwargs['object_type'] = WORKFLOW_PATTERN
+
+        if 'persistence_id' in kwargs:
+            msg = "'persistence_id' cannot be manually set by a user. Are " \
+                  "you intending to update an existing pattern instead? "
+            return (False, msg)
+
+        # return define_pattern(configuration, client_id, vgrid, kwargs)
+        return __create_workflow_pattern_entry(
+            configuration, client_id, vgrid, kwargs)
 
 
 def delete_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
@@ -1036,14 +1058,17 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
     Additional keys/data are allowed and will be saved
     with the required information.
     """
-
     _logger = configuration.logger
+
     _logger.debug("WP: create_workflow_pattern, client_id: %s, wp: %s"
                   % (client_id, wp))
 
-    if 'name' not in wp:
-        wp['name'] = generate_random_ascii(
-            wp_id_length, charset=wp_id_charset)
+    if 'owner' not in wp:
+        wp['owner'] = client_id
+
+    correct, msg = __correct_wp(configuration, wp)
+    if not correct:
+        return (correct, msg)
 
     wp_home = get_workflow_pattern_home(configuration, vgrid)
     if not os.path.exists(wp_home):
@@ -1066,7 +1091,6 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
         'please try an resubmit the pattern'
         return (False, msg)
 
-    wp['owner'] = client_id
     wp['persistence_id'] = persistence_id
     wp['trigger'] = {}
     # Save the pattern
@@ -1096,9 +1120,15 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
             msg += '\n Failed to cleanup after a failed workflow creation'
         return (False, msg)
 
-    _logger.info('WP: %s created at: %s ' %
-                 (client_id, wp_file_path))
-    return (True, 'Created pattern %s. ' % wp['name'])
+    status, identification_msg = __rule_identification_from_pattern(
+        configuration, client_id, wp, True)
+
+    if not status:
+        return (False, "Could not identify rules from pattern. %s"
+                % identification_msg)
+
+    _logger.info('WP: %s created at: %s ' % (client_id, wp_file_path))
+    return (True, 'Created pattern %s. %s' % (wp['name'], identification_msg))
 
 
 def __create_workflow_recipe_entry(configuration, client_id, vgrid, wr):
@@ -1189,7 +1219,8 @@ def __update_workflow_pattern(configuration, client_id, vgrid, wp):
         return (False, msg)
 
     if 'persistence_id' not in wp:
-        msg = "A workflow pattern update dependency was missing"
+        msg = "A workflow pattern update dependency 'persistence_id' was " \
+              "missing"
         _logger.error("WP: update_workflow_pattern, persistence_id was not "
                       "set %s" % client_id)
         return (False, msg)
