@@ -910,9 +910,22 @@ def create_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
     """ """
     vgrid = kwargs.get('vgrids', None)
     if workflow_type == WORKFLOW_RECIPE:
-        return define_recipe(configuration, client_id, vgrid, kwargs)
-    elif workflow_type == WORKFLOW_PATTERN:
+        if 'object_type' in kwargs \
+                and kwargs['object_type'] != WORKFLOW_RECIPE:
+            msg = "'object_type' was set incorrectly to %s when should be " \
+                  "%s. If you are unsure how to proceed leave blank. " \
+                  % (kwargs['object_type'], WORKFLOW_RECIPE)
+            return (False, msg)
+        kwargs['object_type'] = WORKFLOW_RECIPE
 
+        if 'persistence_id' in kwargs:
+            msg = "'persistence_id' cannot be manually set by a user. Are " \
+                  "you intending to update an existing recipe instead? "
+            return (False, msg)
+        return __create_workflow_recipe_entry(
+            configuration, client_id, vgrid, kwargs)
+
+    elif workflow_type == WORKFLOW_PATTERN:
         if 'object_type' in kwargs \
                 and kwargs['object_type'] != WORKFLOW_PATTERN:
             msg = "'object_type' was set incorrectly to %s when should be " \
@@ -926,7 +939,6 @@ def create_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
                   "you intending to update an existing pattern instead? "
             return (False, msg)
 
-        # return define_pattern(configuration, client_id, vgrid, kwargs)
         return __create_workflow_pattern_entry(
             configuration, client_id, vgrid, kwargs)
 
@@ -1150,11 +1162,12 @@ def __create_workflow_recipe_entry(configuration, client_id, vgrid, wr):
     _logger.debug("WR: create_workflow_recipe, client_id: %s, wr: %s"
                   % (client_id, wr))
 
-    if 'name' not in wr:
-        wr['name'] = generate_random_ascii(
-            wr_id_length, charset=wr_id_charset)
+    if 'owner' not in wr:
+        wr['owner'] = client_id
 
-    wr['object_type'] = WORKFLOW_RECIPE
+    correct, msg = __correct_wr(configuration, wr)
+    if not correct:
+        return (correct, msg)
 
     wr_home = get_workflow_recipe_home(configuration, vgrid)
     if not os.path.exists(wr_home):
@@ -1173,7 +1186,6 @@ def __create_workflow_recipe_entry(configuration, client_id, vgrid, wr):
         'please try and resubmit the recipe'
         return (False, msg)
 
-    wr['owner'] = client_id
     wr['persistence_id'] = persistence_id
     wr['triggers'] = {}
 
@@ -1199,7 +1211,15 @@ def __create_workflow_recipe_entry(configuration, client_id, vgrid, wr):
 
     _logger.info('WR: %s created at: %s ' %
                  (client_id, wr_file_path))
-    return (True, 'Created recipe %s. ' % wr['name'])
+
+    status, identification_msg = __rule_identification_from_recipe(
+        configuration, client_id, wr, True)
+
+    if not status:
+        return (False, "Could not identify rules from recipe. %s"
+                % identification_msg)
+
+    return (True, "Created recipe %s. %s" % (wr['name'], identification_msg))
 
 
 def __update_workflow_pattern(configuration, client_id, vgrid, wp):
