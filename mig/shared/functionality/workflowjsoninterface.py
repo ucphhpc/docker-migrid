@@ -136,10 +136,6 @@ def workflow_api_update(configuration, workflow_session,
                                                    workflow_type,
                                                    workflow_attributes))
 
-    if 'vgrids' not in workflow_attributes:
-        return (False, "Can't create workflow %s without 'vgrids' attribute"
-                % workflow_type)
-
     return update_workflow(configuration, workflow_session['owner'],
                            workflow_type, **workflow_attributes)
 
@@ -152,11 +148,6 @@ def workflow_api_delete(configuration, workflow_session,
     _logger.debug("W_API: delete: (%s, %s, %s)" % (workflow_session,
                                                    workflow_type,
                                                    workflow_attributes))
-
-    # TODO, include as a basic part of workflow_attributes
-    if 'persistence_id' not in workflow_attributes:
-        return (False, "Can't delete workflow without 'name' attribute"
-                % workflow_attributes)
 
     return delete_workflow(configuration, workflow_session['owner'],
                            workflow_type, **workflow_attributes)
