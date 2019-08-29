@@ -165,6 +165,7 @@ def load_workflow_sessions_db(configuration):
     Format is {session_id: 'owner': client_id}
     """
     _db_path = configuration.workflows_db
+
     return load(_db_path)
 
 
@@ -247,7 +248,7 @@ def __correct_wp(configuration, wp):
                           "%s, on key %s, valid is %s"
                           % (type(v), k, VALID_PATTERN[k]))
             return (False, msg)
-    for k, v in VALID_PATTERN:
+    for k, v in VALID_PATTERN.items():
         if k not in wp:
             _logger.error("WP: __correct_wp, wp did not provide enough "
                           "parameters. Expected %s %s "
@@ -1099,17 +1100,12 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
     if 'owner' not in wp:
         wp['owner'] = client_id
 
-    correct, msg = __correct_wp(configuration, wp)
-    if not correct:
-        return (correct, msg)
-
     wp_home = get_workflow_pattern_home(configuration, vgrid)
     if not os.path.exists(wp_home):
         if not makedirs_rec(wp_home, configuration):
             msg = "Couldn't create the required dependencies for " \
                   "your workflow pattern"
             return (False, msg)
-
     persistence_id = generate_random_ascii(wp_id_length, charset=wp_id_charset)
     wp_file_path = os.path.join(wp_home, persistence_id)
 
@@ -1122,6 +1118,11 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
 
     wp['persistence_id'] = persistence_id
     wp['trigger'] = {}
+
+    correct, msg = __correct_wp(configuration, wp)
+    if not correct:
+        return (correct, msg)
+
     # Save the pattern
     wrote = False
     msg = ''
@@ -1177,10 +1178,6 @@ def __create_workflow_recipe_entry(configuration, client_id, vgrid, wr):
     if 'owner' not in wr:
         wr['owner'] = client_id
 
-    correct, msg = __correct_wr(configuration, wr)
-    if not correct:
-        return (correct, msg)
-
     wr_home = get_workflow_recipe_home(configuration, vgrid)
     if not os.path.exists(wr_home):
         if not makedirs_rec(wr_home, configuration):
@@ -1200,6 +1197,10 @@ def __create_workflow_recipe_entry(configuration, client_id, vgrid, wr):
 
     wr['persistence_id'] = persistence_id
     wr['triggers'] = {}
+
+    correct, msg = __correct_wr(configuration, wr)
+    if not correct:
+        return (correct, msg)
 
     wrote = False
     msg = ''
