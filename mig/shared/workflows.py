@@ -84,28 +84,50 @@ last_map = {WORKFLOW_PATTERNS: {}, WORKFLOW_RECIPES: {}}
 
 BUFFER_FLAG = 'BUFFER_FLAG'
 
+# a persistent correct pattern
 VALID_PATTERN = {
     'object_type': str,
     'persistence_id': str,
-    'trigger': dict,
     'owner': str,
+    'vgrids': str,
     'name': str,
     'input_file': str,
-    'trigger_paths': list,
     'output': dict,
+    'trigger': dict,
+    'trigger_paths': list,
     'recipes': list,
     'variables': dict,
-    'vgrids': str
 }
 
+# attributes that the user can externally provide
+VALID_USER_PATTERN = {
+    'vgrids': str,
+    'name': str,
+    'input_file': str,
+    'output': dict,
+    'trigger_paths': list,
+    'recipes': list,
+    'variables': dict
+}
+
+# a persistent correct recipe
 VALID_RECIPE = {
     'object_type': str,
     'persistence_id': str,
-    'triggers': dict,
     'owner': str,
-    'name': str,
-    'recipe': dict,
     'vgrids': str,
+    'name': str,
+    'triggers': dict,
+    'recipe': dict,
+    'source': str
+}
+
+# attributes that the user can externally provide
+VALID_USER_RECIPE = {
+    'vgrids': str,
+    'name': str,
+    'triggers': dict,
+    'recipe': dict,
     'source': str
 }
 
