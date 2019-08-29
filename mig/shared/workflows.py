@@ -1127,7 +1127,7 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
         _logger.error('WP: unique filename conflict: %s '
                       % wp_file_path)
         msg = 'A workflow pattern conflict was encountered, '
-        'please try an resubmit the pattern'
+        'please try and resubmit the pattern'
         return (False, msg)
 
     # Save the pattern
