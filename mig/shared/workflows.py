@@ -456,12 +456,7 @@ def __list_path(configuration, workflow_type=WORKFLOW_PATTERN):
             else:
                 return (False, "Invalid input. Must be 'pattern' or 'recipe'")
             if not os.path.exists(client_home):
-                try:
-                    os.makedirs(client_home)
-                    _logger.debug('create client dir: ' + client_home)
-                except Exception, err:
-                    _logger.error('WP: not able to create directory %s %s' %
-                                  (client_home, err))
+                if not makedirs_rec(client_home, configuration):
                     return (False,
                             "Failed to setup required directory "
                             "for workflow %s" % workflow_type)
@@ -953,7 +948,21 @@ def update_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
     if workflow_type == WORKFLOW_RECIPE:
         return __update_workflow_recipe(configuration, client_id, vgrid,
                                         kwargs)
-    return __update_workflow_pattern(configuration, client_id, vgrid, kwargs)
+    elif workflow_type == WORKFLOW_PATTERN:
+        if 'object_type' in kwargs \
+                and kwargs['object_type'] != WORKFLOW_PATTERN:
+            msg = "'object_type' was set incorrectly to %s when should be " \
+                  "%s. If you are unsure how to proceed leave blank. " \
+                  % (kwargs['object_type'], WORKFLOW_PATTERN)
+            return (False, msg)
+        kwargs['object_type'] = WORKFLOW_PATTERN
+
+        if 'persistence_id' not in kwargs:
+            msg = "'persistence_id' not provided. Are " \
+                  "you intending to create a new pattern instead? "
+            return (False, msg)
+
+        return __update_workflow_pattern(configuration, client_id, vgrid, kwargs)
 
 
 def delete_workflow_pattern(configuration, client_id, vgrid, name):
@@ -1072,11 +1081,7 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
 
     wp_home = get_workflow_pattern_home(configuration, vgrid)
     if not os.path.exists(wp_home):
-        try:
-            os.makedirs(wp_home)
-        except Exception, err:
-            _logger.error("WP: couldn't create directory %s %s" %
-                          (wp_home, err))
+        if not makedirs_rec(wp_home, configuration):
             msg = "Couldn't create the required dependencies for " \
                   "your workflow pattern"
             return (False, msg)
@@ -1112,11 +1117,7 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
 
     if not wrote:
         # Ensure that the failed write does not stick around
-        try:
-            os.remove(wp_file_path)
-        except Exception, err:
-            _logger.error('WP: failed to remove the dangling wp: %s %s'
-                          % (wp_file_path, err))
+        if not delete_file(wp_file_path, _logger):
             msg += '\n Failed to cleanup after a failed workflow creation'
         return (False, msg)
 
@@ -1157,11 +1158,7 @@ def __create_workflow_recipe_entry(configuration, client_id, vgrid, wr):
 
     wr_home = get_workflow_recipe_home(configuration, vgrid)
     if not os.path.exists(wr_home):
-        try:
-            os.makedirs(wr_home)
-        except Exception, err:
-            _logger.error("WR: couldn't create directory %s %s" %
-                          (wr_home, err))
+        if not makedirs_rec(wr_home, configuration):
             msg = "Couldn't create the required dependencies for " \
                   "your workflow recipe"
             return (False, msg)
@@ -1218,13 +1215,6 @@ def __update_workflow_pattern(configuration, client_id, vgrid, wp):
                       client_id)
         return (False, msg)
 
-    if 'persistence_id' not in wp:
-        msg = "A workflow pattern update dependency 'persistence_id' was " \
-              "missing"
-        _logger.error("WP: update_workflow_pattern, persistence_id was not "
-                      "set %s" % client_id)
-        return (False, msg)
-
     pattern = get_workflow_with(configuration,
                                 client_id,
                                 first=True,
@@ -1245,8 +1235,7 @@ def __update_workflow_pattern(configuration, client_id, vgrid, wp):
         preexisting_trigger = {}
 
     # don't update if the pattern is the same
-    # TODO, also don't allow say update of persistence_id
-    # owner
+    # TODO, also don't allow say update of persistence_id, owner
     to_edit = False
     for variable in wp.keys():
         if pattern[variable] != wp[variable]:
@@ -1593,11 +1582,7 @@ def create_workflow_task_file(configuration, client_id, vgrid, notebook,
 
     task_home = get_workflow_task_home(configuration, vgrid)
     if not os.path.exists(task_home):
-        try:
-            os.makedirs(task_home)
-        except Exception, err:
-            _logger.error("WT: couldn't create directory %s %s" %
-                          (task_home, err))
+        if not makedirs_rec(task_home, configuration):
             msg = "Couldn't create the required dependencies for " \
                   "your workflow task"
             return False, msg
@@ -1615,13 +1600,11 @@ def create_workflow_task_file(configuration, client_id, vgrid, notebook,
                        make_parent=False)
 
     if not wrote:
+        msg = "Failed to create task file. "
         # Ensure that the failed write does not stick around
-        try:
-            os.remove(task_file_path)
-        except Exception, err:
-            _logger.error('WT: failed to remove the dangling task file: %s %s'
-                          % (task_file_path, err))
-        return False, 'Failed to cleanup after a failed workflow creation'
+        if not delete_file(task_file_path, _logger):
+            msg += "Failed to cleanup after a failed workflow creation"
+        return False, msg
 
     _logger.info('WT: %s created at: %s ' % (client_id, task_file_path))
     return True, task_file_path
@@ -1641,11 +1624,7 @@ def create_workflow_buffer_file(configuration, client_id, vgrid,
 
     buffer_home = get_workflow_buffer_home(configuration, vgrid)
     if not os.path.exists(buffer_home):
-        try:
-            os.makedirs(buffer_home)
-        except Exception, err:
-            _logger.error("WT: couldn't create directory %s %s" %
-                          (buffer_home, err))
+        if not makedirs_rec(buffer_home, configuration):
             msg = "Couldn't create the required dependencies for " \
                   "your workflow task"
             return False, msg
@@ -1694,16 +1673,12 @@ def create_workflow_buffer_file(configuration, client_id, vgrid,
         _logger.error('WB: failed to write %s to disk %s'
                       % (buffer_file_path, err))
         msg = 'Failed to save your workflow buffer file, please try and ' \
-              'resubmit it'
+              'resubmit it. '
 
     if not wrote:
         # Ensure that the failed write does not stick around
-        try:
-            os.remove(buffer_file_path)
-        except Exception, err:
-            _logger.error('WB: failed to remove the dangling buffer file: %s '
-                          '%s' % (buffer_file_path, err))
-            msg = 'Failed to cleanup after a failed workflow creation'
+        if not delete_file(buffer_file_path, _logger):
+            msg += 'Failed to cleanup after a failed workflow creation. '
         return False, msg
 
     _logger.info('WB: %s created at: %s ' %
