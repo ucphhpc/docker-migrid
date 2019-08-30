@@ -170,7 +170,7 @@ def touch_workflow_sessions_db(configuration, force=False):
     _db_path = configuration.workflows_db
 
     if os.path.exists(_db_path) and not force:
-        _logger.debug('WP: touch_workflow_sessions_db, ',
+        _logger.debug('WP: touch_workflow_sessions_db, '
                       'db: %s already exists ' % _db_path)
         return False
 
@@ -245,6 +245,16 @@ def delete_workflow_session_id(configuration, workflow_session_id):
         return False
     db.pop(workflow_session_id, None)
     return save_workflow_sessions_db(configuration, db)
+
+
+def get_workflow_session_id(configuration, client_id):
+    """ """
+    _logger = configuration.logger
+    db = load_workflow_sessions_db(configuration)
+    for session_id, user_state in db.items():
+        if user_state.get('owner', '') == client_id:
+            return session_id
+    return None
 
 
 def new_workflow_session_id():
@@ -2496,9 +2506,12 @@ if __name__ == '__main__':
     if args:
         if args[0] == 'create_workflow_session_id':
             touch_workflow_sessions_db(conf)
-            user_name = "/C=dk/ST=dk/L=NA/O=org/OU=NA/CN=" \
+            client_id = "/C=dk/ST=dk/L=NA/O=org/OU=NA/CN=" \
                         "devuser/emailAddress=dev@dev.dk"
-            create_workflow_session_id(conf, user_name)
+            if not get_workflow_session_id(conf, client_id):
+                create_workflow_session_id(conf, client_id)
         if args[0] == 'workflow_sessions':
             sessions_db = load_workflow_sessions_db(conf)
             print(sessions_db)
+        if args[0] == 'delete_workflow_sessions':
+            delete_workflow_sessions_db(conf)
