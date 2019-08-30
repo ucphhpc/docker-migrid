@@ -61,7 +61,7 @@ def valid_attributes(attribute):
 # TODO, move to safeinput
 VALID_ATTRIBUTES_KEYS = (
     'name',
-    'vgrids'
+    'vgrid'
 )
 
 # List of recipe attribute options
@@ -136,8 +136,8 @@ def workflow_api_update(configuration, workflow_session,
                                                    workflow_type,
                                                    workflow_attributes))
 
-    if 'vgrids' not in workflow_attributes:
-        return (False, "Can't create workflow %s without 'vgrids' attribute"
+    if 'vgrid' not in workflow_attributes:
+        return (False, "Can't create workflow %s without 'vgrid' attribute"
                 % workflow_type)
 
     return update_workflow(configuration, workflow_session['owner'],
@@ -155,7 +155,8 @@ def workflow_api_delete(configuration, workflow_session,
 
     # TODO, include as a basic part of workflow_attributes
     if 'persistence_id' not in workflow_attributes:
-        return (False, "Can't delete workflow without 'name' attribute"
+        return (False, "Can't delete workflow without 'persistence_id' "
+                       "attribute"
                 % workflow_attributes)
 
     return delete_workflow(configuration, workflow_session['owner'],
