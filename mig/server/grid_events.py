@@ -44,7 +44,6 @@ import tempfile
 import time
 import threading
 import multiprocessing
-import json
 import h5py
 
 try:
@@ -85,7 +84,6 @@ from shared.logger import daemon_logger, register_hangup_handler
 from shared.serial import load
 from shared.vgrid import vgrid_valid_entities
 from shared.vgridaccess import check_vgrid_access
-from shared.workflows import import_notebook_as_recipe, define_pattern
 
 # Global trigger rule dictionaries with rules for all VGrids
 
