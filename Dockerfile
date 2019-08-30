@@ -180,6 +180,11 @@ RUN pip2 install --user \
 RUN pip install --user \
     requests
 
+# Module required to run pytests
+# 4.6 is the latest with python2 support
+RUN pip2 install --user \
+    pytest
+
 # Install and configure MiG
 ARG MIG_CHECKOUT=4199
 RUN svn checkout -r $MIG_CHECKOUT https://svn.code.sf.net/p/migrid/code/trunk .

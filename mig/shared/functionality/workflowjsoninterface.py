@@ -33,7 +33,8 @@ from shared.safeinput import valid_sid, InputException
 from shared.workflows import INVALID_SESSION_ID, NOT_ENABLED, NOT_FOUND, \
     WORKFLOW_TYPES, WORKFLOW_CONSTRUCT_TYPES, WORKFLOW_PATTERN, \
     valid_session_id, get_workflow_with, load_workflow_sessions_db,\
-    create_workflow, delete_workflow, update_workflow
+    create_workflow, delete_workflow, update_workflow, \
+    touch_workflow_sessions_db
 
 INVALID_FORMAT = 4
 
@@ -261,7 +262,21 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     # workflow_session_id symlink points to the vGrid it gives access to
-    workflow_sessions_db = load_workflow_sessions_db(configuration)
+    workflow_sessions_db = []
+    try:
+        workflow_sessions_db = load_workflow_sessions_db(configuration)
+    except IOError as err:
+        logger.debug("Workflow sessions db didn't load, creating new db")
+        if not touch_workflow_sessions_db(configuration, force=True):
+            output_objects.append(
+                {'object_type': 'workflow',
+                 'error_text': "Internal sessions db failure, please contact "
+                               "an admin to resolve this issue."})
+            return (output_objects, returnvalues.SYSTEM_ERROR)
+        else:
+            # Try reload
+            workflow_sessions_db = load_workflow_sessions_db(configuration)
+        
     if workflow_session_id not in workflow_sessions_db:
         output_objects.append({'object_type': 'workflow',
                                'error_text': 'Invalid workflowsessionid',

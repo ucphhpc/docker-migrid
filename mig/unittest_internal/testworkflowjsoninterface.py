@@ -7,10 +7,10 @@ from shared.workflows import touch_workflow_sessions_db, \
     load_workflow_sessions_db, create_workflow_session_id, \
     delete_workflow_sessions_db, new_workflow_session_id, \
     delete_workflow_session_id, reset_user_workflows, \
-    WORKFLOW_PATTERN, WORKFLOW_RECIPE, get_workflow_with, \
+    WORKFLOW_PATTERN, WORKFLOW_RECIPE, WORKFLOW_ANY, get_workflow_with, \
     reset_vgrid_workflows, delete_workflow
 from shared.functionality.workflowjsoninterface import workflow_api_create, \
-    workflow_api_delete, workflow_api_read
+    workflow_api_delete, workflow_api_read, workflow_api_update
 
 this_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -128,10 +128,17 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         self.assertTrue(created)
         workflow = get_workflow_with(self.configuration,
                                      client_id=self.username,
+                                     display_safe=True,
                                      **pattern_attributes)
         self.assertIsNotNone(workflow)
         self.assertEqual(len(workflow), 1)
+        # Strip internal attributes
+        workflow[0].pop('persistence_id')
+        workflow[0].pop('object_type')
+        workflow[0].pop('trigger')
+        self.assertDictEqual(workflow[0], pattern_attributes)
 
+        # Remove workflow
         self.assertTrue(reset_user_workflows(self.configuration,
                                              self.username))
 
@@ -149,103 +156,223 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         self.assertTrue(created)
         workflow = get_workflow_with(self.configuration,
                                      client_id=self.username,
+                                     display_safe=True,
                                      workflow_type=WORKFLOW_RECIPE,
                                      **recipe_attributes)
         self.assertIsNotNone(workflow)
         self.assertEqual(len(workflow), 1)
+        # Strip internal attributes
+        workflow[0].pop('persistence_id')
+        workflow[0].pop('object_type')
+        workflow[0].pop('triggers')
+        self.assertDictEqual(workflow[0], recipe_attributes)
 
         self.assertTrue(reset_user_workflows(self.configuration,
                                              self.username))
 
-    # def test_create_workflow_recipe(self):
-    #     recipe_attributes = {'name': 'my new pattern',
-    #                          'vgrids': 'P-Cubed',
-    #                          'trigger_paths': ['initial_data/*hdf5'],
-    #                          'output': {
-    #                              'processed_data': 'pattern_0_output/*.hdf5'},
-    #                          'recipes': ['recipe_0'],
-    #                          'variables': {'iterations': 20}}
-    #
-    #     created, msg = workflow_api_create(self.configuration,
-    #                                        self.workflow_session,
-    #                                        WORKFLOW_RECIPE,
-    #                                        **recipe_attributes)
-    #     self.assertTrue(created)
-    #     # Load created workflow
-    #     workflow, msg = workflow_api_read(self.configuration,
-    #                                       self.workflow_session,
-    #                                       WORKFLOW_RECIPE,
-    #                                       **recipe_attributes)
-    #     self.assertIsNot(workflow, False)
-    #     # TODO, validate it has the expected attributes
-    #
-    #     deleted, msg = workflow_api_delete(self.configuration,
-    #                                        self.workflow_session,
-    #                                        WORKFLOW_RECIPE,
-    #                                        **recipe_attributes)
-    #     self.assertTrue(deleted)
-    #     # TODO, assert the DB is empty and that the vgrid dosen't
-    #
-    # def test_create_workflow_recipe_name_conflict(self):
-    #     pass
+    def test_create_read_delete_pattern(self):
+        pattern_attributes = {'name': 'my new pattern',
+                              'vgrid': self.test_vgrid,
+                              'input_file': 'hdf5_input',
+                              'trigger_paths': ['initial_data/*hdf5'],
+                              'output': {
+                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                              'recipes': ['recipe_0'],
+                              'variables': {'iterations': 20}}
 
-    # def test_clear_user_worklows(self):
-    #     # Create dummy workflows
-    #     pattern_attributes = {'name': 'foobarpattern',
-    #                           'vgrid': 'P-Cubed',
-    #                           'input_file': 'hdf5_input',
-    #                           'trigger_paths': ['initial_data/*hdf5'],
-    #                           'output': {
-    #                               'processed_data': 'pattern_0_output/*.hdf5'},
-    #                           'recipes': ['recipe_0'],
-    #                           'variables': {'iterations': 20}}
-    #
-    #     recipe_attributes = {'name': 'myrecipe'}
-    #
-    #     created, msg = workflow_api_create(self.configuration,
-    #                                        self.workflow_session,
-    #                                        WORKFLOW_PATTERN,
-    #                                        **pattern_attributes)
-    #     self.assertTrue(created)
-    #
-    #     workflows = workflow_api_read(self.configuration,
-    #                                   self.workflow_session,
-    #                                   WORKFLOW_PATTERN,
-    #                                   **pattern_attributes)
-    #     self.logger.info("Got workflow %s" % workflows)
-    #     self.assertIsNotNone(workflows)
-    #     # Verify that the created pattern is in the read workflows
-    #     matches = []
-    #     for workflow in workflows:
-    #         self.assertIn('persistence_id', workflow)
-    #         self.assertIn('object_type', workflow)
-    #         self.assertEqual(workflow['object_type'], WORKFLOW_PATTERN)
-    #         workflow.pop('persistence_id')
-    #         workflow.pop('object_type')
-    #         workflow.pop('trigger')
-    #
-    #         equal = cmp(pattern_attributes, workflow)
-    #         self.logger.info("Pattern attributes: %s, workflow: %s" % (
-    #             pattern_attributes, workflow
-    #         ))
-    #         if equal == 0:
-    #             matches.append(equal)
-    #
-    #     self.assertTrue(len(matches) == len(workflows))
-    #     self.assertTrue(reset_user_workflows(self.configuration,
-    #                                          self.username))
+        created, msg = workflow_api_create(self.configuration,
+                                           self.workflow_session,
+                                           WORKFLOW_PATTERN,
+                                           **pattern_attributes)
+        self.assertTrue(created)
 
-    # def test_create_workflow_recipe(self):
-    #     workflow = create_workflow(self.configuration, self.username,
-    #                                )
-    # def test_read_workflow(self):
-    #     self.assertTrue(True)
-    #
-    # def test_update_workflow(self):
-    #     self.assertTrue(True)
-    #
-    # def test_delete_workflow(self):
-    #     self.assertTrue(True)
+        workflow = workflow_api_read(self.configuration,
+                                     self.workflow_session,
+                                     WORKFLOW_PATTERN,
+                                     **pattern_attributes)
+        self.assertIsNot(workflow, False)
+        self.assertEqual(len(workflow), 1)
+        # Strip internal attributes
+        persistence_id = workflow[0].pop('persistence_id')
+        workflow[0].pop('object_type')
+        workflow[0].pop('trigger')
+        self.assertDictEqual(workflow[0], pattern_attributes)
+
+        # TODO, validate it has the expected attributes
+        delete_attributes = {'vgrid': self.test_vgrid,
+                             'persistence_id': persistence_id}
+
+        deleted, msg = workflow_api_delete(self.configuration,
+                                           self.workflow_session,
+                                           WORKFLOW_PATTERN,
+                                           **delete_attributes)
+        self.assertTrue(deleted)
+
+        workflow = workflow_api_read(self.configuration,
+                                     self.workflow_session,
+                                     WORKFLOW_PATTERN,
+                                     **pattern_attributes)
+        self.assertIsNone(workflow)
+
+    def test_create_read_delete_recipe(self):
+        recipe_attributes = {'name': 'my new recipe',
+                             'vgrid': self.test_vgrid,
+                             'recipe': {'exec': 'code'},
+                             'source': 'print("Hello World")'}
+
+        created, msg = workflow_api_create(self.configuration,
+                                           self.workflow_session,
+                                           WORKFLOW_RECIPE,
+                                           **recipe_attributes)
+        self.assertTrue(created)
+
+        workflow = workflow_api_read(self.configuration,
+                                     self.workflow_session,
+                                     WORKFLOW_RECIPE,
+                                     **recipe_attributes)
+        self.assertIsNot(workflow, False)
+        self.assertEqual(len(workflow), 1)
+        # Strip internal attributes
+        persistence_id = workflow[0].pop('persistence_id')
+        workflow[0].pop('object_type')
+        workflow[0].pop('triggers')
+        self.assertDictEqual(workflow[0], recipe_attributes)
+
+        # TODO, validate it has the expected attributes
+        delete_attributes = {'vgrid': self.test_vgrid,
+                             'persistence_id': persistence_id}
+
+        deleted, msg = workflow_api_delete(self.configuration,
+                                           self.workflow_session,
+                                           WORKFLOW_RECIPE,
+                                           **delete_attributes)
+        self.assertTrue(deleted)
+
+        workflow = workflow_api_read(self.configuration,
+                                     self.workflow_session,
+                                     WORKFLOW_RECIPE,
+                                     **recipe_attributes)
+        self.assertIsNone(workflow)
+
+    def test_update_pattern(self):
+        pattern_attributes = {'name': 'my new pattern',
+                              'vgrid': self.test_vgrid,
+                              'input_file': 'hdf5_input',
+                              'trigger_paths': ['initial_data/*hdf5'],
+                              'output': {
+                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                              'recipes': ['recipe_0'],
+                              'variables': {'iterations': 20}}
+
+        created, msg = workflow_api_create(self.configuration,
+                                           self.workflow_session,
+                                           WORKFLOW_PATTERN,
+                                           **pattern_attributes)
+        self.assertTrue(created)
+        persistence_id = msg
+        new_attributes = {'name': 'Updated named',
+                          'vgrid': self.test_vgrid,
+                          'persistence_id': persistence_id}
+        # Try update without persistence_id
+        updated, msg = workflow_api_update(self.configuration,
+                                           self.workflow_session,
+                                           WORKFLOW_PATTERN,
+                                           **new_attributes)
+        self.assertTrue(updated)
+
+        workflow = workflow_api_read(self.configuration,
+                                     self.workflow_session,
+                                     WORKFLOW_PATTERN,
+                                     **{'persistence_id': persistence_id})
+        self.assertEqual(len(workflow), 1)
+        self.assertEqual(workflow[0]['name'], new_attributes['name'])
+
+    def test_update_recipe(self):
+        recipe_attributes = {'name': 'my new recipe',
+                             'vgrid': self.test_vgrid,
+                             'recipe': {'exec': 'code'},
+                             'source': 'print("Hello World")'}
+
+        created, msg = workflow_api_create(self.configuration,
+                                           self.workflow_session,
+                                           WORKFLOW_RECIPE,
+                                           **recipe_attributes)
+        self.assertTrue(created)
+        persistence_id = msg
+        new_attributes = {'name': 'Updated named',
+                          'vgrid': self.test_vgrid,
+                          'persistence_id': persistence_id}
+        # Try update without persistence_id
+        updated, msg = workflow_api_update(self.configuration,
+                                           self.workflow_session,
+                                           WORKFLOW_RECIPE,
+                                           **new_attributes)
+        self.logger.info(msg)
+        self.assertTrue(updated)
+
+        workflow = workflow_api_read(self.configuration,
+                                     self.workflow_session,
+                                     WORKFLOW_RECIPE,
+                                     **{'persistence_id': persistence_id})
+        self.assertEqual(len(workflow), 1)
+        self.assertEqual(workflow[0]['name'], new_attributes['name'])
+
+    def test_clear_user_worklows(self):
+        # Create dummy workflows
+        pattern_attributes = {'name': 'foobarpattern',
+                              'vgrid': self.test_vgrid,
+                              'input_file': 'hdf5_input',
+                              'trigger_paths': ['initial_data/*hdf5'],
+                              'output': {
+                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                              'recipes': ['recipe_0'],
+                              'variables': {'iterations': 20}}
+        created, msg = workflow_api_create(self.configuration,
+                                           self.workflow_session,
+                                           WORKFLOW_PATTERN,
+                                           **pattern_attributes)
+        self.assertTrue(created)
+
+        recipe_attributes = {'name': 'my new recipe',
+                             'vgrid': self.test_vgrid,
+                             'recipe': {'exec': 'code'},
+                             'source': 'print("Hello World")'}
+        created, msg = workflow_api_create(self.configuration,
+                                           self.workflow_session,
+                                           WORKFLOW_RECIPE,
+                                           **recipe_attributes)
+        self.assertTrue(created)
+
+        # Get every workflow in vgrid
+        workflows = workflow_api_read(self.configuration,
+                                      self.workflow_session,
+                                      WORKFLOW_ANY,
+                                      **{'vgrid': self.test_vgrid})
+        self.logger.info("Got workflow %s" % workflows)
+        self.assertIsNotNone(workflows)
+        # Verify that the created objects exist
+        self.assertEqual(len(workflows), 2)
+        for workflow in workflows:
+            workflow.pop('persistence_id')
+            if workflow['object_type'] == WORKFLOW_PATTERN:
+                workflow.pop('object_type')
+                workflow.pop('trigger')
+                self.assertDictEqual(workflow, pattern_attributes)
+                continue
+
+            if workflow['object_type'] == WORKFLOW_RECIPE:
+                workflow.pop('object_type')
+                workflow.pop('triggers')
+                self.assertDictEqual(workflow, recipe_attributes)
+
+        self.assertTrue(reset_user_workflows(self.configuration,
+                                             self.username))
+
+        no_workflows = workflow_api_read(self.configuration,
+                                         self.workflow_session,
+                                         WORKFLOW_ANY,
+                                         **{'vgrid': self.test_vgrid})
+        self.assertIsNone(no_workflows)
 
 
 if __name__ == '__main__':
