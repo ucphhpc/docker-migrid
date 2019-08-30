@@ -1306,17 +1306,21 @@ def __update_workflow_pattern(configuration, client_id, vgrid, wp):
 
     for key, value in wp.items():
         if key not in VALID_USER_UPDATE_PATTERN:
-            return (False, "key: '%s' is not allowed, valid includes '%s'" %
-                    (key, ', '.join(VALID_USER_UPDATE_PATTERN.keys())))
+            msg = "key: '%s' is not allowed, valid includes '%s'" \
+                  % (key, ', '.join(VALID_USER_UPDATE_PATTERN.keys()))
+            _logger.error(msg)
+            return (False, msg)
         if not isinstance(value, VALID_USER_UPDATE_PATTERN.get(key)):
-            return (False, "value: '%s' has an incorrect type: '%s', "
-                           "requires: '%s'" % (
-                        value, type(value), VALID_USER_UPDATE_PATTERN.get(key)))
+            msg = "value: '%s' has an incorrect type: '%s', requires: '%s'" \
+                  % (value, type(value), VALID_USER_UPDATE_PATTERN.get(key))
+            _logger.error(msg)
+            return (False, msg)
 
     persistence_id = wp.get('persistence_id', None)
     if not persistence_id:
         msg = "Missing 'persistence_id' must be provided to update " \
               "a workflow object."
+        _logger.error(msg)
         return (False, msg)
 
     pattern = get_workflow_with(configuration,
@@ -1510,7 +1514,6 @@ def __rule_identification_from_pattern(configuration, client_id,
                       "can be attached to pattern: '%s'" % (
             vgrid, workflow_pattern['persistence_id']))
 
-    _logger.info("DELETE ME - current recieps are: %s" % recipes)
     # If any recipes exist in that vgrid
     for recipe_name in workflow_pattern['recipes']:
         _logger.info("looking for recipe: %s" % recipe_name)
@@ -2230,7 +2233,7 @@ def import_notebook_as_recipe(configuration, client_id, vgrid, notebook, name):
         name = name.replace('.ipynb', '')
 
     # TODO, feels like a contradition that you define the
-    # recipe_dict with a 'recipe' key but
+    #  recipe_dict with a 'recipe' key but
     recipe_dict = {
         'name': name,
         'recipe': notebook}
