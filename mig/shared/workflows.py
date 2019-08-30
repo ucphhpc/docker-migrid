@@ -945,6 +945,10 @@ def create_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
         msg = "'persistence_id' cannot be manually set by a user. Are " \
               "you intending to update an existing pattern instead? "
         return (False, msg)
+    object_type = kwargs.get('object_type', None)
+    if object_type:
+        msg = "'object_type' cannot be manually set by a user. "
+        return (False, msg)
 
     if workflow_type == WORKFLOW_RECIPE:
         return __create_workflow_recipe_entry(configuration, client_id,
@@ -1129,6 +1133,14 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
     correct, msg = __correct_wp(configuration, wp)
     if not correct:
         return (correct, msg)
+
+    existing_pattern = get_workflow_with(configuration,
+                                         workflow_type=WORKFLOW_PATTERN,
+                                         vgrid=vgrid,
+                                         name=wp['name'])
+    if existing_pattern:
+        return (False, "An existing pattern in vgrid '%s'"
+                       " already exist with name '%s'" % (vgrid, wp['name']))
 
     wp_home = get_workflow_pattern_home(configuration, vgrid)
     if not os.path.exists(wp_home):
@@ -1498,23 +1510,28 @@ def __rule_identification_from_pattern(configuration, client_id,
                       "can be attached to pattern: '%s'" % (
             vgrid, workflow_pattern['persistence_id']))
 
+    _logger.info("DELETE ME - current recieps are: %s" % recipes)
     # If any recipes exist in that vgrid
     for recipe_name in workflow_pattern['recipes']:
         _logger.info("looking for recipe: %s" % recipe_name)
         recipe_list.extend([recipe for recipe in recipes
                        if recipe['name'] == recipe_name])
 
-        if recipe_name not in recipe_list:
+        if recipe_name not in [recipe['name'] for recipe in recipe_list]:
             missed_recipes.append(recipe_name)
 
     if not recipe_list:
-        return (True, "No recipes found that matches pattern: '%s'"
-                      " specified recipes: '%s'" % (
-            workflow_pattern['persistence_id'], workflow_pattern['recipes']))
+        msg = "No recipes found that matches pattern: '%s' specified " \
+              "recipes: '%s'" % (workflow_pattern['persistence_id'],
+                                 workflow_pattern['recipes'])
+        _logger.info(msg)
+        return (True, msg)
 
     if missed_recipes:
-        return (True, "Could not find all required recipes. Missing: 's'"
-                % missed_recipes)
+        msg = "Could not find all required recipes. Missing: 's'"\
+              % missed_recipes
+        _logger.info(msg)
+        return (True, msg)
 
     if recipe_list:
         (trigger_status, trigger_msg) = create_trigger(
@@ -2345,120 +2362,120 @@ def scrape_for_workflow_objects(configuration, client_id, vgrid, notebook,
     return (True, "%s\n%s" % (feedback, count_msg))
 
 
-def define_pattern(configuration, client_id, vgrid, pattern):
-    """Defines a workflow pattern. First this creates a pattern entry, then
-    any triggers are identified"""
-
-    _logger = configuration.logger
-    _logger.debug("WP: define_pattern, client_id: %s, pattern: %s"
-                  % (client_id, pattern))
-
-    if not client_id:
-        msg = "A workflow pattern create dependency was missing"
-        _logger.error("client_id was not set %s" % client_id)
-        return (False, msg)
-
-    if 'owner' not in pattern:
-        pattern['owner'] = client_id
-
-    if 'object_type' not in pattern:
-        pattern['object_type'] = WORKFLOW_PATTERN
-
-    correct, msg = __correct_wp(configuration, pattern)
-    if not correct:
-        return (correct, msg)
-
-    if 'name' not in pattern:
-        pattern['name'] = generate_random_ascii(
-            wp_id_length, charset=wp_id_charset)
-    else:
-        existing_pattern = get_wp_with(
-            configuration, client_id=client_id, name=pattern['name'],
-            vgrid=vgrid)
-        if existing_pattern:
-            pattern['persistence_id'] = existing_pattern['persistence_id']
-            # TODO, Why do you need to update a pattern you just extracted
-            status, msg = __update_workflow_pattern(
-                configuration, client_id, vgrid, pattern)
-            return (True, msg)
-
-    # TODO apply this to pattern as well
-    # need to still check variables as they might not match exactly
-    clients_patterns = get_wp_with(
-        configuration, client_id=client_id, first=False, owner=client_id,
-        trigger_paths=pattern['trigger_paths'], output=pattern['output'],
-        vgrid=pattern['vgrid'])
-
-    _logger.debug('clients_patterns: %s' % clients_patterns)
-    _logger.debug('pattern: %s' % pattern)
-
-    # TODO, rework this
-    for client_pattern in clients_patterns:
-        pattern_matches = True
-        try:
-            if client_pattern['input_file'] != pattern['input_file']:
-                pattern_matches = False
-            if client_pattern['trigger_paths'] != pattern['trigger_paths']:
-                pattern_matches = False
-            if client_pattern['outputs'] != pattern['outputs']:
-                pattern_matches = False
-            if client_pattern['recipes'] != pattern['recipes']:
-                pattern_matches = False
-            if client_pattern['variables'] != pattern['variables']:
-                pattern_matches = False
-        except KeyError:
-            pattern_matches = False
-        if pattern_matches:
-            _logger.error('An identical pattern already exists')
-            msg = "You already have a workflow pattern with identical " \
-                  "characteristics to %s" % pattern['name']
-            return (False, msg)
-        else:
-            _logger.debug('patterns are not identical')
-
-    status, creation_msg = __create_workflow_pattern_entry(
-        configuration, client_id, vgrid, pattern)
-
-    if not status:
-        return (False, "Could not create workflow pattern. %s" % creation_msg)
-
-    status, identification_msg = __rule_identification_from_pattern(
-        configuration, client_id, pattern, True)
-
-    if not status:
-        return (False, "Could not identify rules from pattern. %s"
-                % identification_msg)
-
-    return (True, "%s%s" % (creation_msg, identification_msg))
-
-
-def define_recipe(configuration, client_id, vgrid, recipe):
-    """Defines a workflow recipe. First this creates a recipe entry, then
-        any triggers are identified"""
-
-    _logger = configuration.logger
-    _logger.debug('WR: define_recipe, client_id: %s, recipe: %s'
-                  % (client_id, recipe))
-
-    if not client_id:
-        msg = "A workflow recipe creation dependency was missing"
-        _logger.error('client_id was not set %s' % client_id)
-        return (False, msg)
-
-    status, creation_msg = __create_workflow_recipe_entry(
-        configuration, client_id, vgrid, recipe)
-
-    if not status:
-        return (False, "Could not create workflow recipe. %s" % creation_msg)
-
-    status, identification_msg = __rule_identification_from_recipe(
-        configuration, client_id, recipe, True)
-
-    if not status:
-        return (False, "Could not identify rules from recipe. %s"
-                % identification_msg)
-
-    return (True, "%s%s" % (creation_msg, identification_msg))
+# def define_pattern(configuration, client_id, vgrid, pattern):
+#     """Defines a workflow pattern. First this creates a pattern entry, then
+#     any triggers are identified"""
+#
+#     _logger = configuration.logger
+#     _logger.debug("WP: define_pattern, client_id: %s, pattern: %s"
+#                   % (client_id, pattern))
+#
+#     if not client_id:
+#         msg = "A workflow pattern create dependency was missing"
+#         _logger.error("client_id was not set %s" % client_id)
+#         return (False, msg)
+#
+#     if 'owner' not in pattern:
+#         pattern['owner'] = client_id
+#
+#     if 'object_type' not in pattern:
+#         pattern['object_type'] = WORKFLOW_PATTERN
+#
+#     correct, msg = __correct_wp(configuration, pattern)
+#     if not correct:
+#         return (correct, msg)
+#
+#     if 'name' not in pattern:
+#         pattern['name'] = generate_random_ascii(
+#             wp_id_length, charset=wp_id_charset)
+#     else:
+#         existing_pattern = get_wp_with(
+#             configuration, client_id=client_id, name=pattern['name'],
+#             vgrid=vgrid)
+#         if existing_pattern:
+#             pattern['persistence_id'] = existing_pattern['persistence_id']
+#             # TODO, Why do you need to update a pattern you just extracted
+#             status, msg = __update_workflow_pattern(
+#                 configuration, client_id, vgrid, pattern)
+#             return (True, msg)
+#
+#     # TODO apply this to pattern as well
+#     # need to still check variables as they might not match exactly
+#     clients_patterns = get_wp_with(
+#         configuration, client_id=client_id, first=False, owner=client_id,
+#         trigger_paths=pattern['trigger_paths'], output=pattern['output'],
+#         vgrid=pattern['vgrid'])
+#
+#     _logger.debug('clients_patterns: %s' % clients_patterns)
+#     _logger.debug('pattern: %s' % pattern)
+#
+#     # TODO, rework this
+#     for client_pattern in clients_patterns:
+#         pattern_matches = True
+#         try:
+#             if client_pattern['input_file'] != pattern['input_file']:
+#                 pattern_matches = False
+#             if client_pattern['trigger_paths'] != pattern['trigger_paths']:
+#                 pattern_matches = False
+#             if client_pattern['outputs'] != pattern['outputs']:
+#                 pattern_matches = False
+#             if client_pattern['recipes'] != pattern['recipes']:
+#                 pattern_matches = False
+#             if client_pattern['variables'] != pattern['variables']:
+#                 pattern_matches = False
+#         except KeyError:
+#             pattern_matches = False
+#         if pattern_matches:
+#             _logger.error('An identical pattern already exists')
+#             msg = "You already have a workflow pattern with identical " \
+#                   "characteristics to %s" % pattern['name']
+#             return (False, msg)
+#         else:
+#             _logger.debug('patterns are not identical')
+#
+#     status, creation_msg = __create_workflow_pattern_entry(
+#         configuration, client_id, vgrid, pattern)
+#
+#     if not status:
+#         return (False, "Could not create workflow pattern. %s" % creation_msg)
+#
+#     status, identification_msg = __rule_identification_from_pattern(
+#         configuration, client_id, pattern, True)
+#
+#     if not status:
+#         return (False, "Could not identify rules from pattern. %s"
+#                 % identification_msg)
+#
+#     return (True, "%s%s" % (creation_msg, identification_msg))
+#
+#
+# def define_recipe(configuration, client_id, vgrid, recipe):
+#     """Defines a workflow recipe. First this creates a recipe entry, then
+#         any triggers are identified"""
+#
+#     _logger = configuration.logger
+#     _logger.debug('WR: define_recipe, client_id: %s, recipe: %s'
+#                   % (client_id, recipe))
+#
+#     if not client_id:
+#         msg = "A workflow recipe creation dependency was missing"
+#         _logger.error('client_id was not set %s' % client_id)
+#         return (False, msg)
+#
+#     status, creation_msg = __create_workflow_recipe_entry(
+#         configuration, client_id, vgrid, recipe)
+#
+#     if not status:
+#         return (False, "Could not create workflow recipe. %s" % creation_msg)
+#
+#     status, identification_msg = __rule_identification_from_recipe(
+#         configuration, client_id, recipe, True)
+#
+#     if not status:
+#         return (False, "Could not identify rules from recipe. %s"
+#                 % identification_msg)
+#
+#     return (True, "%s%s" % (creation_msg, identification_msg))
 
 
 def valid_session_id(configuration, workflow_session_id):
