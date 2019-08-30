@@ -70,8 +70,7 @@ def workflow_recipes_table(configuration,
     if vgrid:
         wrs = get_wr_with(configuration,
                           first=False,
-                          client_id=client_id,
-                          vgrids=vgrid)
+                          vgrid=vgrid)
     else:
         wrs = get_wr_with(configuration,
                           first=False,

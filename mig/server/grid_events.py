@@ -1206,7 +1206,7 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
         for (target_path, rule_list) in all_rules.items():
             # TODO compress this code once finalised
             # check to see if a buffer should be updated
-            if configuration.workflow_buffer_home in target_path:
+            if configuration.vgrid_workflow_buffer_home in target_path:
 
                 logger.debug('(%s) rule is waiting for buffer file %s'
                              % (pid, target_path))
@@ -1697,7 +1697,8 @@ def monitor(configuration, vgrid_name):
     # can easily get stuck in an infinite loop of events, where checking a
     # buffer file generates a modification event, which means we need to check
     # the file ...
-    ignore_patterns = [os.path.join(file_monitor_home, configuration.workflow_buffer_home)]
+    ignore_patterns = [os.path.join(file_monitor_home,
+                                    configuration.vgrid_workflow_buffer_home)]
 
     shared_state['file_handler'] = MiGFileEventHandler(
         patterns=file_patterns, ignore_patterns=ignore_patterns, ignore_directories=False, case_sensitive=True)

@@ -68,8 +68,7 @@ def workflow_patterns_table(configuration, client_id, output_objects,
     if vgrid:
         wps = get_wp_with(configuration,
                           first=False,
-                          client_id=client_id,
-                          vgrids=vgrid)
+                          vgrid=vgrid)
     else:
         wps = get_wp_with(configuration,
                           first=False,

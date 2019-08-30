@@ -1214,6 +1214,7 @@ def __create_workflow_recipe_entry(configuration, client_id, vgrid, wr):
     wr['object_type'] = WORKFLOW_RECIPE
     wr['persistence_id'] = persistence_id
     wr['owner'] = client_id
+    wr['vgrid'] = vgrid
 
     correct, msg = __correct_wr(configuration, wr)
     if not correct:
@@ -2213,13 +2214,9 @@ def import_notebook_as_recipe(configuration, client_id, vgrid, notebook, name):
 
     # TODO, feels like a contradition that you define the
     # recipe_dict with a 'recipe' key but
-
     recipe_dict = {
         'name': name,
-        'recipe': notebook,
-        'owner': client_id,
-        'vgrid': vgrid
-    }
+        'recipe': notebook}
     status, msg = define_recipe(
         configuration, client_id, vgrid, recipe_dict)
 
@@ -2447,30 +2444,6 @@ def define_recipe(configuration, client_id, vgrid, recipe):
         msg = "A workflow recipe creation dependency was missing"
         _logger.error('client_id was not set %s' % client_id)
         return (False, msg)
-
-    if 'owner' not in recipe:
-        recipe['owner'] = client_id
-
-    if 'object_type' not in recipe:
-        recipe['object_type'] = WORKFLOW_RECIPE
-
-    correct, msg = __correct_wr(configuration, recipe)
-    if not correct:
-        return correct, msg
-
-    if 'name' not in recipe:
-        recipe['name'] = generate_random_ascii(
-            wr_id_length, charset=wr_id_charset)
-    else:
-        existing_recipe = get_wr_with(
-            configuration, client_id=client_id, name=recipe['name'],
-            vgrid=vgrid)
-        if existing_recipe:
-            recipe['persistence_id'] = existing_recipe['persistence_id']
-            status, msg = __update_workflow_recipe(
-                configuration, client_id, vgrid, recipe)
-
-            return True, msg
 
     status, creation_msg = __create_workflow_recipe_entry(
         configuration, client_id, vgrid, recipe)
