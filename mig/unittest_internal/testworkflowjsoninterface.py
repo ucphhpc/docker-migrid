@@ -365,7 +365,6 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                 workflow.pop('triggers')
                 self.assertDictEqual(workflow, recipe_attributes)
 
-        self.assertDictEqual(workflows[0], pattern_attributes)
         self.assertTrue(reset_user_workflows(self.configuration,
                                              self.username))
 
