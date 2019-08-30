@@ -35,7 +35,7 @@ from shared.html import themed_styles, man_base_html, confirm_js, \
 from shared.handlers import get_csrf_limit, csrf_field
 from shared.pwhash import make_csrf_token
 from shared.functional import validate_input_and_cert
-from shared.workflows import get_wr_with, CONF
+from shared.workflows import get_workflow_with, WORKFLOW_RECIPE
 
 
 list_operations = ['list']
@@ -62,60 +62,49 @@ def workflow_recipes_table(configuration,
     csrf_token = make_csrf_token(configuration, form_method, target_op,
                                  client_id, csrf_limit)
     helper = html_post_helper(target_op, '%s.py' % target_op,
-                              {'wr_name': '__DYNAMIC__',
+                              {'persistence_id': '__DYNAMIC__',
                                'vgrid': '__DYNAMIC__',
                                csrf_field: csrf_token})
 
     workflow_recipes = []
     if vgrid:
-        wrs = get_wr_with(configuration,
-                          first=False,
-                          vgrid=vgrid)
+        wrs = get_workflow_with(configuration,
+                                display_safe=True,
+                                workflow_type=WORKFLOW_RECIPE,
+                                vgrid=vgrid)
     else:
-        wrs = get_wr_with(configuration,
-                          first=False,
-                          client_id=client_id)
+        wrs = get_workflow_with(configuration,
+                                display_safe=True,
+                                workflow_type=WORKFLOW_RECIPE,
+                                client_id=client_id)
     if wrs:
         output_objects.append({'object_type': 'html_form',
                                'text': helper})
-
-    for wr in wrs:
-        # TODO dont' type cast
-        #  add recipes and variables
-
-        if wr.get('owner'):
-            email = extract_field(wr['owner'], 'email')
-            if email:
-                wr['owner'] = email
-
-        # Prepare for display, cast to string
-        wr = {
-            'object_type': wr['object_type'],
-            'name': wr['name'],
-            'recipe': wr['recipe'],
-            'triggers': wr['triggers']
-        }
-
-        # Prepare name link
-        wr['namelink'] = {'object_type': 'link',
-                          'destination': 'showworkflowrecipe.py?wr_name=%s'
-                                         % wr['name'],
-                          'class': 'workflowlink',
-                          'title': 'Show Workflow Recipe',
-                          'text': '%s' % wr['name']}
-        # TODO add link to delete pattern
-        wr['delwrlink'] = {'object_type': 'link',
-                           'destination': "javascript: confirmDialog(%s, '%s', "
-                                          "%s, %s);" % (target_op, "Really "
-                                          "remove workflow recipe %s ?" %
-                                          wr['name'], 'undefined', {'wr_name':
-                                          wr['name'], 'vgrid': vgrid}),
-                                          'class': 'removelink '
-                                          'iconspace', 'title': 'Remove '
-                                          'workflow recipe %s' % wr['name'],
-                                          'text': ''}
-        if wr:
-            workflow_recipes.append(wr)
+        for wr in wrs:
+            # Prepare name link
+            wr['namelink'] = {
+                'object_type': 'link',
+                'destination': 'showworkflowrecipe.py?vgrid=%s&persistence_id=%s'
+                               % (wr['vgrid'], wr['persistence_id']),
+                'class': 'workflowlink',
+                'title': 'Show Workflow Recipe',
+                'text': '%s' % wr['name']
+            }
+            # TODO add link to delete pattern
+            wr['delwrlink'] = {
+                'object_type': 'link',
+                'destination': "javascript: confirmDialog(%s, '%s', %s, %s);"
+                               % (target_op,
+                                  "Really remove workflow recipe %s?" %
+                                  wr['name'], 'undefined',
+                                  {'persistence_id': wr['persistence_id'],
+                                   'vgrid': vgrid}),
+                'class': 'removelink iconspace',
+                'title': 'Remove workflow recipe %s' % wr['name'],
+                'text': ''
+            }
+            if wr:
+                workflow_recipes.append(wr)
 
     output_objects.append({'object_type': 'workflowrecipes',
                            'workflowrecipes': workflow_recipes})

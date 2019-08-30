@@ -65,7 +65,7 @@ def main(client_id, user_arguments_dict):
     status, msg = scrape_for_workflow_objects(
         configuration, client_id, vgrid, notebook, name)
 
-    output_objects.append({'object_type': 'text', 'text':msg})
+    output_objects.append({'object_type': 'text', 'text': msg})
 
     output_objects.append({'object_type': 'text', 'text':
         'Finished scraping notebook'})

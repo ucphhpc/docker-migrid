@@ -125,6 +125,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                                            self.workflow_session,
                                            WORKFLOW_PATTERN,
                                            **pattern_attributes)
+        self.logger.info(msg)
         self.assertTrue(created)
         workflow = get_workflow_with(self.configuration,
                                      client_id=self.username,
@@ -152,7 +153,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                                            self.workflow_session,
                                            WORKFLOW_RECIPE,
                                            **recipe_attributes)
-        self.configuration.logger.info(msg)
+        self.logger.info(msg)
         self.assertTrue(created)
         workflow = get_workflow_with(self.configuration,
                                      client_id=self.username,
@@ -184,6 +185,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                                            self.workflow_session,
                                            WORKFLOW_PATTERN,
                                            **pattern_attributes)
+        self.logger.info(msg)
         self.assertTrue(created)
 
         workflow = workflow_api_read(self.configuration,
@@ -206,6 +208,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                                            self.workflow_session,
                                            WORKFLOW_PATTERN,
                                            **delete_attributes)
+        self.logger.info(msg)
         self.assertTrue(deleted)
 
         workflow = workflow_api_read(self.configuration,
@@ -224,6 +227,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                                            self.workflow_session,
                                            WORKFLOW_RECIPE,
                                            **recipe_attributes)
+        self.logger.info(msg)
         self.assertTrue(created)
 
         workflow = workflow_api_read(self.configuration,
@@ -246,6 +250,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                                            self.workflow_session,
                                            WORKFLOW_RECIPE,
                                            **delete_attributes)
+        self.logger.info(msg)
         self.assertTrue(deleted)
 
         workflow = workflow_api_read(self.configuration,
@@ -264,12 +269,12 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                               'recipes': ['recipe_0'],
                               'variables': {'iterations': 20}}
 
-        created, msg = workflow_api_create(self.configuration,
+        created, persistence_id = workflow_api_create(self.configuration,
                                            self.workflow_session,
                                            WORKFLOW_PATTERN,
                                            **pattern_attributes)
+        self.logger.info(persistence_id)
         self.assertTrue(created)
-        persistence_id = msg
         new_attributes = {'name': 'Updated named',
                           'vgrid': self.test_vgrid,
                           'persistence_id': persistence_id}
@@ -278,6 +283,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                                            self.workflow_session,
                                            WORKFLOW_PATTERN,
                                            **new_attributes)
+        self.logger.info(msg)
         self.assertTrue(updated)
 
         workflow = workflow_api_read(self.configuration,
@@ -293,12 +299,11 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                              'recipe': {'exec': 'code'},
                              'source': 'print("Hello World")'}
 
-        created, msg = workflow_api_create(self.configuration,
+        created, persistence_id = workflow_api_create(self.configuration,
                                            self.workflow_session,
                                            WORKFLOW_RECIPE,
                                            **recipe_attributes)
         self.assertTrue(created)
-        persistence_id = msg
         new_attributes = {'name': 'Updated named',
                           'vgrid': self.test_vgrid,
                           'persistence_id': persistence_id}
