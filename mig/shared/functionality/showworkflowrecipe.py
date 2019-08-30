@@ -27,20 +27,18 @@
 #
 
 """Display information about a particular workflow recipe"""
-import os
 import shared.returnvalues as returnvalues
-
-from shared.base import valid_dir_input, force_utf8_rec
 from shared.functional import validate_input_and_cert, REJECT_UNSET
 from shared.html import themed_styles
 from shared.init import initialize_main_variables, find_entry
-from shared.workflows import get_wr_with
+from shared.workflows import get_workflow_with, WORKFLOW_RECIPE
 
 
 def signature():
     """Signature of the main function"""
 
-    defaults = {'wr_name': REJECT_UNSET}
+    defaults = {'persistence_id': REJECT_UNSET,
+                'vgrid': REJECT_UNSET}
     return ['workflowrecipe', defaults]
 
 
@@ -64,41 +62,27 @@ def main(client_id, user_arguments_dict):
 
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
-    wr_name = accepted['wr_name'][-1]
+    persistence_id = accepted['persistence_id'][-1]
+    vgrid = accepted['vgrid'][-1]
 
-    wr_client_home = os.path.join(configuration.workflow_recipes_home,
-                                  client_id)
-    if not valid_dir_input(wr_client_home, wr_name):
-        logger.warning(
-            "possible illegal directory traversal attempt '%s'"
-            % wr_name)
-        output_objects.append({'object_type': 'error_text',
-                               'text': 'Illegal workflow '
-                               'pattern name: "%s"' % wr_name})
-        return (output_objects, returnvalues.CLIENT_ERROR)
+    workflow = get_workflow_with(configuration, first=True,
+                                 display_safe=True,
+                                 workflow_type=WORKFLOW_RECIPE,
+                                 vgrid=vgrid,
+                                 persistence_id=persistence_id)
 
-    wr = get_wr_with(configuration, client_id=client_id, name=wr_name)
-
-    if not wr:
-        logger.warning("could not load workflow recipe with name %s" % wr_name)
+    if not workflow:
         output_objects.append({'object_type': 'error_text',
                                'text': 'Could not load the '
-                               'workflow recipe with name %s' % wr_name})
+                               'workflow recipe'})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     # Prepare for display
-    display_wr = {
-        'name': wr['name'],
-        'owner': wr['owner'],
-        'recipe': wr['recipe']
-    }
-    display_wr = force_utf8_rec(display_wr)
-
     title_entry['style'] = themed_styles(configuration)
     output_objects.append({'object_type': 'header',
-                           'text': "Show '%s' details" % wr['name']})
-    logger.info("showworkflowrecipe wr: %s" % display_wr)
+                           'text': "Show '%s' details" % workflow['name']})
+    logger.info("showworkflowrecipe wr: %s" % workflow)
     output_objects.append({'object_type': 'workflowrecipe',
-                           'workflowrecipe': display_wr})
+                           'workflowrecipe': workflow})
     logger.info("show workflowrecipe end as '%s'" % client_id)
     return (output_objects, returnvalues.OK)

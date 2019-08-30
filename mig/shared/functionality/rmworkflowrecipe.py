@@ -32,14 +32,15 @@
 import shared.returnvalues as returnvalues
 from shared.init import initialize_main_variables
 from shared.functional import validate_input_and_cert, REJECT_UNSET
-from shared.workflows import delete_workflow_recipe
+from shared.workflows import delete_workflow_recipe, get_workflow_with,\
+    WORKFLOW_RECIPE
 
 
 def signature():
     """Signature of the main function"""
 
     defaults = {
-        'wr_name': REJECT_UNSET,
+        'persistence_id': REJECT_UNSET,
         'vgrid': REJECT_UNSET
     }
     return ['', defaults]
@@ -64,21 +65,20 @@ def main(client_id, user_arguments_dict, environ=None):
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
 
-    wr_name = accepted['wr_name'][-1]
+    persistence_id = accepted['persistence_id'][-1]
     vgrid = accepted['vgrid'][-1]
 
     success, msg = delete_workflow_recipe(configuration,
                                           client_id,
                                           vgrid,
-                                          wr_name)
+                                          persistence_id)
     if not success:
         output_objects.append({'object_type': 'error_text',
                                'text': msg})
         return (output_objects, returnvalues.SYSTEM_ERROR)
 
     output_objects.append({'object_type': 'text',
-                           'text': "The workflow recipe '%s' has been "
-                           "successfully removed." % wr_name})
+                           'text': "%s" % msg})
     output_objects.append({'object_type': 'link',
                            'destination': 'workflowrecipes.py',
                            'text': "Back to the overview."})

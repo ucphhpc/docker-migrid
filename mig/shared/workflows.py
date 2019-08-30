@@ -1037,7 +1037,7 @@ def delete_workflow_pattern(configuration, client_id, vgrid, persistence_id):
             return (False, msg)
 
     mark_workflow_p_modified(configuration, persistence_id)
-    return (True, 'Deleted pattern %s.' % workflow['persistence_id'])
+    return (True, 'Deleted pattern %s.' % workflow['name'])
 
 
 def delete_workflow_recipe(configuration, client_id, vgrid, persistence_id):
@@ -1076,7 +1076,7 @@ def delete_workflow_recipe(configuration, client_id, vgrid, persistence_id):
             return (False, msg)
 
     mark_workflow_r_modified(configuration, persistence_id)
-    return (True, "Deleted recipe '%s'." % workflow['persistence_id'])
+    return (True, "Deleted recipe '%s'." % workflow['name'])
 
 
 def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
@@ -1175,7 +1175,7 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
                 % identification_msg)
 
     _logger.info('WP: %s created at: %s ' % (client_id, wp_file_path))
-    return (True, '%s' % wp['persistence_id'])
+    return (True, "%s" % wp['persistence_id'])
 
 
 def __create_workflow_recipe_entry(configuration, client_id, vgrid, wr):

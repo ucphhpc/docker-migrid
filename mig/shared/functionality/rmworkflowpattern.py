@@ -31,14 +31,14 @@
 import shared.returnvalues as returnvalues
 from shared.init import initialize_main_variables
 from shared.functional import validate_input_and_cert, REJECT_UNSET
-from shared.workflows import delete_workflow_pattern
+from shared.workflows import delete_workflow_pattern, get_workflow_with
 
 
 def signature():
     """Signature of the main function"""
 
     defaults = {
-        'wp_name': REJECT_UNSET,
+        'persistence_id': REJECT_UNSET,
         'vgrid': REJECT_UNSET
     }
     return ['', defaults]
@@ -63,21 +63,20 @@ def main(client_id, user_arguments_dict, environ=None):
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
 
-    wp_name = accepted['wp_name'][-1]
+    persistence_id = accepted['persistence_id'][-1]
     vgrid = accepted['vgrid'][-1]
 
     success, msg = delete_workflow_pattern(configuration,
                                            client_id,
                                            vgrid,
-                                           wp_name)
+                                           persistence_id)
     if not success:
         output_objects.append({'object_type': 'error_text',
                                'text': msg})
         return (output_objects, returnvalues.SYSTEM_ERROR)
 
     output_objects.append({'object_type': 'text',
-                           'text': "The workflow pattern '%s' has been "
-                           "successfully removed." % wp_name})
+                           'text': "%s" % msg})
     output_objects.append({'object_type': 'link',
                            'destination': 'workflowpatterns.py',
                            'text': "Back to the overview."})
