@@ -1162,9 +1162,13 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
     msg = ''
     try:
         dump(wp, wp_file_path, serializer='json')
-
+        mod_update_time = time.time()
         # Mark as modified
         mark_workflow_p_modified(configuration, wp['persistence_id'])
+        # Ensure that the modification time is set to a value after
+        # `start_time` defined by __refresh_map which is called by
+        # get_workflow_with
+        os.utime(wp_file_path, (mod_update_time, mod_update_time))
         wrote = True
         _logger.debug("WP: new pattern created: '%s'." % wp['persistence_id'])
     except Exception, err:
@@ -1261,9 +1265,13 @@ def __create_workflow_recipe_entry(configuration, client_id, vgrid, wr):
     msg = ''
     try:
         dump(wr, wr_file_path, serializer='json')
-
+        mod_update_time = time.time()
         # Mark as modified
         mark_workflow_r_modified(configuration, wr['persistence_id'])
+        # Ensure that the modification time is set to a value after
+        # `start_time` defined by __refresh_map which is called by
+        # get_workflow_with
+        os.utime(wr_file_path, (mod_update_time, mod_update_time))
         wrote = True
     except Exception, err:
         _logger.error('WR: failed to write %s to disk %s'
@@ -1376,9 +1384,13 @@ def __update_workflow_pattern(configuration, client_id, vgrid, wp):
     try:
         _logger.debug('update_workflow_pattern, attempting to dump')
         dump(pattern, wp_file_path, serializer='json')
-
+        mod_update_time = time.time()
         # Mark as modified
         mark_workflow_p_modified(configuration, pattern['persistence_id'])
+        # Ensure that the modification time is set to a value after
+        # `start_time` defined by __refresh_map which is called by
+        # get_workflow_with
+        os.utime(wp_file_path, (mod_update_time, mod_update_time))
         wrote = True
         _logger.debug('marking editted pattern %s as modified'
                       % pattern['persistence_id'])
@@ -1460,9 +1472,13 @@ def __update_workflow_recipe(configuration, client_id, vgrid, wr):
     msg = ''
     try:
         dump(recipe, wr_file_path, serializer='json')
-
+        mod_update_time = time.time()
         # Mark as modified
         mark_workflow_r_modified(configuration, recipe['persistence_id'])
+        # Ensure that the modification time is set to a value after
+        # `start_time` defined by __refresh_map which is called by
+        # get_workflow_with
+        os.utime(wr_file_path, (mod_update_time, mod_update_time))
         wrote = True
     except Exception, err:
         _logger.error('WR: failed to write %s to disk %s' % (
