@@ -1213,7 +1213,8 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
         return (False, "Could not identify rules from pattern. %s"
                 % identification_msg)
 
-    _logger.info('WP: %s created at: %s ' % (client_id, wp_file_path))
+    _logger.info('WP: %s created at: %s. %s'
+                 % (wp['persistence_id'], wp_file_path, identification_msg))
     return (True, "%s" % wp['persistence_id'])
 
 
@@ -1318,6 +1319,8 @@ def __create_workflow_recipe_entry(configuration, client_id, vgrid, wr):
         return (False, "Could not identify rules from recipe. %s"
                 % identification_msg)
 
+    _logger.info('WP: %s created at: %s. %s'
+                 % (wr['persistence_id'], wr_file_path, identification_msg))
     return (True, "%s" % wr['persistence_id'])
 
 
@@ -1558,9 +1561,10 @@ def __rule_identification_from_pattern(configuration, client_id,
                                 workflow_type=WORKFLOW_RECIPE)
 
     if not recipes:
-        return (True, "Vgrid '%s' has no existing recipes that "
-                      "can be attached to pattern: '%s'" % (
-            vgrid, workflow_pattern['persistence_id']))
+        msg = "Vgrid '%s' has no existing recipes that can be attached to " \
+              "pattern: '%s'" % (vgrid, workflow_pattern['persistence_id'])
+        _logger.info(msg)
+        return (True, msg)
 
     # If any recipes exist in that vgrid
     for recipe_name in workflow_pattern['recipes']:
@@ -1584,16 +1588,19 @@ def __rule_identification_from_pattern(configuration, client_id,
         _logger.info(msg)
         return (True, msg)
 
-    if recipe_list:
-        (trigger_status, trigger_msg) = create_trigger(
-            configuration, _logger, vgrid, client_id, workflow_pattern,
-            recipe_list, apply_retroactive)
+    (trigger_status, trigger_msg) = create_trigger(
+        configuration, _logger, vgrid, client_id, workflow_pattern,
+        recipe_list, apply_retroactive)
 
-        if not trigger_status:
-            return False, "Could not create trigger: '%s' for pattern: '%s'" %\
-            (trigger_msg, workflow_pattern['persistence_id'])
-        return True, "Trigger created from pattern: '%s'. " % \
-               workflow_pattern['persistence_id']
+    if not trigger_status:
+        msg = "Could not create trigger: '%s' for pattern: '%s'" \
+              % (trigger_msg, workflow_pattern['persistence_id'])
+        _logger.info(msg)
+        return False, msg
+    msg = "Trigger created from pattern: '%s'. " % \
+           workflow_pattern['persistence_id']
+    _logger.info(msg)
+    return True, msg
 
 
 def __rule_identification_from_recipe(configuration, client_id,
@@ -1602,17 +1609,19 @@ def __rule_identification_from_recipe(configuration, client_id,
 
     _logger = configuration.logger
     _logger.info('%s is identifying any possible tasks from recipe creation '
-                '%s' % (client_id, workflow_recipe['persistence_id']))
+                 'of %s' % (client_id, workflow_recipe['persistence_id']))
     vgrid = workflow_recipe['vgrid']
     matching_patterns = []
     # Get all patterns within the vgrid
-    patterns = get_workflow_with(configuration, vgrid=vgrid)
+    patterns = get_workflow_with(
+        configuration, workflow_type=WORKFLOW_PATTERN, vgrid=vgrid)
 
     # Check if patterns exist already within system that need this recipe
     if not patterns:
-        return (True, "Vgrid '%s' has no existing patterns that "
-                      "could contain recipe: '%s'" % (
-                        vgrid, workflow_recipe['name']))
+        msg = "Vgrid '%s' has no existing patterns that could contain " \
+              "recipe: '%s'" % (vgrid, workflow_recipe['name'])
+        _logger.info(msg)
+        return (True, msg)
     for pattern in patterns:
         if workflow_recipe['name'] in pattern['recipes']:
             matching_patterns.append(pattern)
@@ -1621,17 +1630,24 @@ def __rule_identification_from_recipe(configuration, client_id,
     incomplete_patterns = []
     # now check all matching patterns have all their recipes
     # Preload all recipes
-    recipes = get_workflow_with(configuration, vgrid=vgrid)
+    recipes = get_workflow_with(
+        configuration, workflow_type=WORKFLOW_RECIPE, vgrid=vgrid)
+    _logger.info("DELETE ME - recipes: %s" % recipes)
+    _logger.info("found matching patterns: %s" % matching_patterns)
     for pattern in matching_patterns:
         # Currently multiple recipes are crudely chained together. This will
         # need to be altered eventually.
         recipe_list = []
         missed_recipes = []
         # Check if defined recipes exist already within system
+
         for recipe_name in pattern['recipes']:
+            _logger.info("recipe_name: %s" % recipe_name)
             recipe_list = [recipe for recipe in recipes
                            if recipe['name'] == recipe_name]
-            if recipe_name not in recipe_list:
+            _logger.info("DELETE ME - recipe_list: %s" % recipe_list)
+            if recipe_name not in [recipe['name'] for recipe in recipe_list]:
+                _logger.info("DELETE ME - missed: %s" % recipe_name)
                 missed_recipes.append(recipe_name)
         if not missed_recipes:
             _logger.info(
@@ -1654,6 +1670,7 @@ def __rule_identification_from_recipe(configuration, client_id,
         msg += " There are %d additional patterns(s) recipes that use this " \
                "recipe, but are waiting for additional recipes before " \
                "activation" % len(incomplete_patterns)
+    _logger.info(msg)
     return True, msg
 
 
