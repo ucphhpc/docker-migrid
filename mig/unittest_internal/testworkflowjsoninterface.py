@@ -380,6 +380,85 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                                          **{'vgrid': self.test_vgrid})
         self.assertIsNone(no_workflows)
 
+    def test_delete_pattern(self):
+        pattern_attributes = {'name': 'pattern to delete',
+                              'vgrid': self.test_vgrid,
+                              'input_file': 'hdf5_input',
+                              'trigger_paths': ['initial_data/*hdf5'],
+                              'output': {
+                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                              'recipes': ['recipe_0'],
+                              'variables': {'iterations': 20}}
+
+        created, msg = workflow_api_create(self.configuration,
+                                           self.workflow_session,
+                                           WORKFLOW_PATTERN,
+                                           **pattern_attributes)
+        self.logger.info(msg)
+        self.assertTrue(created)
+        persistence_id = msg
+
+        deletion_attributes = {
+            'persistence_id': persistence_id,
+            'vgrid': self.test_vgrid
+        }
+
+        deleted, msg = workflow_api_delete(self.configuration,
+                                           self.workflow_session,
+                                           workflow_type=WORKFLOW_PATTERN,
+                                           **deletion_attributes)
+
+        self.logger.info(msg)
+        self.assertTrue(deleted)
+
+        workflow = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     display_safe=True,
+                                     **deletion_attributes)
+
+        self.assertIsNone(workflow)
+
+        # Remove workflow
+        self.assertTrue(reset_user_workflows(self.configuration,
+                                             self.username))
+
+    def test_delete_recipe(self):
+        recipe_attributes = {'name': 'recipe to delete',
+                             'vgrid': self.test_vgrid,
+                             'recipe': {'exec': 'code'},
+                             'source': 'print("Hello World")'}
+
+        created, msg = workflow_api_create(self.configuration,
+                                           self.workflow_session,
+                                           WORKFLOW_RECIPE,
+                                           **recipe_attributes)
+        self.logger.info(msg)
+        self.assertTrue(created)
+        persistence_id = msg
+
+        deletion_attributes = {
+            'persistence_id': persistence_id,
+            'vgrid': self.test_vgrid
+        }
+
+        deleted, msg = workflow_api_delete(self.configuration,
+                                           self.workflow_session,
+                                           workflow_type=WORKFLOW_RECIPE,
+                                           **deletion_attributes)
+
+        self.logger.info(msg)
+        self.assertTrue(deleted)
+
+        workflow = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     display_safe=True,
+                                     **deletion_attributes)
+
+        self.assertIsNone(workflow)
+
+        # Remove workflow
+        self.assertTrue(reset_user_workflows(self.configuration,
+                                             self.username))
 
 if __name__ == '__main__':
     unittest.main()
