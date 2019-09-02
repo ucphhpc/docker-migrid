@@ -7,7 +7,10 @@ CHECKOUT=4207
 all: init build
 
 init:
-	mkdir -p ./{certs,httpd,mig,state}
+	mkdir -p certs
+	mkdir -p httpd
+	mkdir -p mig
+	mkdir -p state
 
 build:
 	docker build -t ${OWNER}/${IMAGE}:${TAG} --build-arg MIG_CHECKOUT=${CHECKOUT} .

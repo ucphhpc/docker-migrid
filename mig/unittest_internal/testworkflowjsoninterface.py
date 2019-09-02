@@ -270,14 +270,15 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                               'variables': {'iterations': 20}}
 
         created, persistence_id = workflow_api_create(self.configuration,
-                                           self.workflow_session,
-                                           WORKFLOW_PATTERN,
-                                           **pattern_attributes)
+                                                      self.workflow_session,
+                                                      WORKFLOW_PATTERN,
+                                                      **pattern_attributes)
         self.logger.info(persistence_id)
         self.assertTrue(created)
         new_attributes = {'name': 'Updated named',
                           'vgrid': self.test_vgrid,
                           'persistence_id': persistence_id}
+
         # Try update without persistence_id
         updated, msg = workflow_api_update(self.configuration,
                                            self.workflow_session,
@@ -300,9 +301,9 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                              'source': 'print("Hello World")'}
 
         created, persistence_id = workflow_api_create(self.configuration,
-                                           self.workflow_session,
-                                           WORKFLOW_RECIPE,
-                                           **recipe_attributes)
+                                                      self.workflow_session,
+                                                      WORKFLOW_RECIPE,
+                                                      **recipe_attributes)
         self.assertTrue(created)
         new_attributes = {'name': 'Updated named',
                           'vgrid': self.test_vgrid,
