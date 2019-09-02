@@ -425,8 +425,21 @@ def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN):
         # overlap can occur. This has been changed to the new way shown below,
         # but the old method is left unless UNFORESEEN CONSEQUENCES OCCUR.
         wp_mtime = os.path.getmtime(os.path.join(workflow_dir, workflow_file))
-
+        _logger.info('DELETE ME - workflow_file: %s' % workflow_file)
+        _logger.info('DELETE ME - wp_mtime: %s' % wp_mtime)
+        _logger.info('DELETE ME - map_stamp: %s' % map_stamp)
+        if CONF not in workflow_map[workflow_file]:
+            _logger.info('DELETE ME - CONF not in %s' % workflow_map[workflow_file])
+        else:
+            _logger.info('DELETE ME - CONF in %s' % workflow_map[workflow_file])
+        if wp_mtime >= map_stamp:
+            _logger.info('DELETE ME - modification time later than last map load')
+        else:
+            _logger.info('DELETE ME - map loaded since last modification')
         if CONF not in workflow_map[workflow_file] or wp_mtime >= map_stamp:
+
+            _logger.info('DELETE ME - UPDATING %s' % workflow_file)
+
             workflow_object = ''
             if workflow_type == WORKFLOW_PATTERN:
                 workflow_object = __load_wp(configuration,

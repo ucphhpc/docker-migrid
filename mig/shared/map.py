@@ -41,9 +41,8 @@ def load_system_map(configuration, kind, do_lock):
         lock_handle = open(lock_path, 'a')
         fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
     try:
-        configuration.logger.info("map.py before %s map load" % kind)
         entity_map = load(map_path)
-        configuration.logger.info("map.py after %s map load" % kind)
+        configuration.logger.info("got %s entity_map %s" % (kind, entity_map))
 
         map_stamp = os.path.getmtime(map_path)
 
