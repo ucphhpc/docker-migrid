@@ -279,7 +279,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                           'vgrid': self.test_vgrid,
                           'persistence_id': persistence_id}
 
-        # Try update without persistence_id
+        # TODO Try update without persistence_id
         updated, msg = workflow_api_update(self.configuration,
                                            self.workflow_session,
                                            WORKFLOW_PATTERN,
@@ -308,7 +308,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         new_attributes = {'name': 'Updated named',
                           'vgrid': self.test_vgrid,
                           'persistence_id': persistence_id}
-        # Try update without persistence_id
+        # TODO Try update without persistence_id
         updated, msg = workflow_api_update(self.configuration,
                                            self.workflow_session,
                                            WORKFLOW_RECIPE,
@@ -459,118 +459,6 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         # Remove workflow
         self.assertTrue(reset_user_workflows(self.configuration,
                                              self.username))
-
-    def test_workflow_trigger_creation_from_pattern(self):
-        recipe_attributes = {'name': 'trigger creation from pattern recipe',
-                             'vgrid': self.test_vgrid,
-                             'recipe': {'exec': 'code'},
-                             'source': 'print("Hello World")'}
-
-        created, msg = workflow_api_create(self.configuration,
-                                           self.workflow_session,
-                                           WORKFLOW_RECIPE,
-                                           **recipe_attributes)
-        self.logger.info(msg)
-        self.assertTrue(created)
-
-        pattern_attributes = {'name': 'trigger creation from pattern pattern',
-                              'vgrid': self.test_vgrid,
-                              'input_file': 'hdf5_input',
-                              'trigger_paths': ['initial_data/*hdf5'],
-                              'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
-                              'recipes': [
-                                  'trigger creation from pattern recipe'],
-                              'variables': {'iterations': 20}}
-
-        created, msg = workflow_api_create(self.configuration,
-                                           self.workflow_session,
-                                           WORKFLOW_PATTERN,
-                                           **pattern_attributes)
-        self.logger.info(msg)
-        self.assertTrue(created)
-
-        recipes = get_workflow_with(self.configuration,
-                                    client_id=self.username,
-                                    display_safe=True,
-                                    **recipe_attributes)
-        self.assertIsNotNone(recipes)
-        self.assertEqual(len(recipes), 1)
-
-        patterns = get_workflow_with(self.configuration,
-                                     client_id=self.username,
-                                     display_safe=True,
-                                     **pattern_attributes)
-        self.assertIsNotNone(patterns)
-        self.assertEqual(len(patterns), 1)
-
-        self.assertIn('triggers', recipes[0])
-        self.assertIn('triggers', patterns[0])
-
-        pattern_triggers = patterns[0]['triggers']
-        recipe_triggers = recipes[0]['triggers']
-
-        self.assertIsNotNone(pattern_triggers)
-        self.assertIsNotNone(recipe_triggers)
-        self.assertDictEqual(pattern_triggers, recipe_triggers)
-
-        # Remove workflow
-        self.assertTrue(reset_user_workflows(self.configuration,
-                                             self.username))
-
-    def test_workflow_trigger_creation_from_recipe(self):
-        pattern_attributes = {'name': 'trigger creation from recipe pattern',
-                              'vgrid': self.test_vgrid,
-                              'input_file': 'hdf5_input',
-                              'trigger_paths': ['initial_data/*hdf5'],
-                              'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
-                              'recipes': [
-                                  'trigger creation from recipe recipe'],
-                              'variables': {'iterations': 20}}
-
-        created, msg = workflow_api_create(self.configuration,
-                                           self.workflow_session,
-                                           WORKFLOW_PATTERN,
-                                           **pattern_attributes)
-        self.logger.info(msg)
-        self.assertTrue(created)
-
-        recipe_attributes = {'name': 'trigger creation from recipe recipe',
-                             'vgrid': self.test_vgrid,
-                             'recipe': {'exec': 'code'},
-                             'source': 'print("Hello World")'}
-
-        created, msg = workflow_api_create(self.configuration,
-                                           self.workflow_session,
-                                           WORKFLOW_RECIPE,
-                                           **recipe_attributes)
-        self.logger.info(msg)
-        self.assertTrue(created)
-
-        recipes = get_workflow_with(self.configuration,
-                                    client_id=self.username,
-                                    display_safe=True,
-                                    **recipe_attributes)
-        self.assertIsNotNone(recipes)
-        self.assertEqual(len(recipes), 1)
-
-        patterns = get_workflow_with(self.configuration,
-                                     client_id=self.username,
-                                     display_safe=True,
-                                     **pattern_attributes)
-        self.assertIsNotNone(patterns)
-        self.assertEqual(len(patterns), 1)
-
-        self.assertIn('triggers', recipes[0])
-        self.assertIn('triggers', patterns[0])
-
-        pattern_triggers = patterns[0]['triggers']
-        recipe_triggers = recipes[0]['triggers']
-
-        self.assertIsNotNone(pattern_triggers)
-        self.assertIsNotNone(recipe_triggers)
-        self.assertDictEqual(pattern_triggers, recipe_triggers)
 
 if __name__ == '__main__':
     unittest.main()

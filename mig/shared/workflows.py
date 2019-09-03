@@ -425,21 +425,7 @@ def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN):
         # overlap can occur. This has been changed to the new way shown below,
         # but the old method is left unless UNFORESEEN CONSEQUENCES OCCUR.
         wp_mtime = os.path.getmtime(os.path.join(workflow_dir, workflow_file))
-        _logger.info('DELETE ME - workflow_file: %s' % workflow_file)
-        _logger.info('DELETE ME - wp_mtime: %s' % wp_mtime)
-        _logger.info('DELETE ME - map_stamp: %s' % map_stamp)
-        if CONF not in workflow_map[workflow_file]:
-            _logger.info('DELETE ME - CONF not in %s' % workflow_map[workflow_file])
-        else:
-            _logger.info('DELETE ME - CONF in %s' % workflow_map[workflow_file])
-        if wp_mtime >= map_stamp:
-            _logger.info('DELETE ME - modification time later than last map load')
-        else:
-            _logger.info('DELETE ME - map loaded since last modification')
         if CONF not in workflow_map[workflow_file] or wp_mtime >= map_stamp:
-
-            _logger.info('DELETE ME - UPDATING %s' % workflow_file)
-
             workflow_object = ''
             if workflow_type == WORKFLOW_PATTERN:
                 workflow_object = __load_wp(configuration,
@@ -856,9 +842,6 @@ def get_wp_map(configuration):
         map_stamp = time.time()
         workflow_p_map = __refresh_map(configuration)
         reset_workflow_p_modified(configuration)
-
-        _logger.info("DELETE ME map_stamp: %s " % map_stamp)
-        _logger.info("DELETE ME workflow_p_map: %s " % workflow_p_map)
     else:
         workflow_p_map, map_stamp = __load_map(configuration)
     last_map[WORKFLOW_PATTERNS] = workflow_p_map
@@ -967,10 +950,12 @@ def create_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
     if persistence_id:
         msg = "'persistence_id' cannot be manually set by a user. Are " \
               "you intending to update an existing pattern instead? "
+        _logger.info("persistence_id provided by user. Aborting creation")
         return (False, msg)
     object_type = kwargs.get('object_type', None)
     if object_type:
         msg = "'object_type' cannot be manually set by a user. "
+        _logger.info("object_type provided by user. Aborting creation")
         return (False, msg)
 
     if workflow_type == WORKFLOW_RECIPE:
@@ -1140,12 +1125,15 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
 
     for key, value in wp.items():
         if key not in VALID_USER_PATTERN:
-            return (False, "key: '%s' is not allowed, valid includes '%s'" %
-                    (key, ', '.join(VALID_USER_PATTERN.keys())))
+            msg = "key: '%s' is not allowed, valid includes '%s'" \
+                  % (key, ', '.join(VALID_USER_PATTERN.keys()))
+            _logger.debug(msg)
+            return (False, msg)
         if not isinstance(value, VALID_USER_PATTERN.get(key)):
-            return (False, "value: '%s' has an incorrect type: '%s', "
-                           "requires: '%s'" % (value, type(value),
-                                               VALID_USER_PATTERN.get(key)))
+            msg = "value: '%s' has an incorrect type: '%s', requires: '%s'" \
+                  % (value, type(value), VALID_USER_PATTERN.get(key))
+            _logger.info(msg)
+            return (False, msg)
 
     persistence_id = generate_random_ascii(wp_id_length, charset=wr_id_charset)
     wp['object_type'] = WORKFLOW_PATTERN
@@ -1155,6 +1143,7 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
 
     correct, msg = __correct_wp(configuration, wp)
     if not correct:
+        _logger.info(msg)
         return (correct, msg)
 
     existing_pattern = get_workflow_with(configuration,
@@ -1162,14 +1151,17 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
                                          vgrid=vgrid,
                                          name=wp['name'])
     if existing_pattern:
-        return (False, "An existing pattern in vgrid '%s'"
-                       " already exist with name '%s'" % (vgrid, wp['name']))
+        msg = "An existing pattern in vgrid '%s' already exist with name " \
+              "'%s'" % (vgrid, wp['name'])
+        _logger.info(msg)
+        return (False, msg)
 
     wp_home = get_workflow_pattern_home(configuration, vgrid)
     if not os.path.exists(wp_home):
         if not makedirs_rec(wp_home, configuration):
             msg = "Couldn't create the required dependencies for " \
                   "your workflow pattern"
+            _logger.error(msg)
             return (False, msg)
 
     wp_file_path = os.path.join(wp_home, persistence_id)
@@ -1204,6 +1196,7 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid, wp):
         # Ensure that the failed write does not stick around
         if not delete_file(wp_file_path, _logger):
             msg += '\n Failed to cleanup after a failed workflow creation'
+        _logger.error(msg)
         return (False, msg)
 
     status, identification_msg = __rule_identification_from_pattern(
@@ -1324,7 +1317,8 @@ def __create_workflow_recipe_entry(configuration, client_id, vgrid, wr):
     return (True, "%s" % wr['persistence_id'])
 
 
-def __update_workflow_pattern(configuration, client_id, vgrid, wp):
+def __update_workflow_pattern(configuration, client_id, vgrid, wp,
+                              valid_keys=VALID_USER_UPDATE_PATTERN):
     """Updates an already registered pattern with new variables. Only the
     variables to be updated are passed to the function
        """
@@ -1339,14 +1333,14 @@ def __update_workflow_pattern(configuration, client_id, vgrid, wp):
                        "structure")
 
     for key, value in wp.items():
-        if key not in VALID_USER_UPDATE_PATTERN:
+        if key not in valid_keys:
             msg = "key: '%s' is not allowed, valid includes '%s'" \
-                  % (key, ', '.join(VALID_USER_UPDATE_PATTERN.keys()))
+                  % (key, ', '.join(valid_keys.keys()))
             _logger.error(msg)
             return (False, msg)
-        if not isinstance(value, VALID_USER_UPDATE_PATTERN.get(key)):
+        if not isinstance(value, valid_keys.get(key)):
             msg = "value: '%s' has an incorrect type: '%s', requires: '%s'" \
-                  % (value, type(value), VALID_USER_UPDATE_PATTERN.get(key))
+                  % (value, type(value), valid_keys.get(key))
             _logger.error(msg)
             return (False, msg)
 
@@ -1452,7 +1446,8 @@ def __update_workflow_pattern(configuration, client_id, vgrid, wp):
     return (True, 'Updated pattern %s. ' % pattern['persistence_id'])
 
 
-def __update_workflow_recipe(configuration, client_id, vgrid, wr):
+def __update_workflow_recipe(configuration, client_id, vgrid, wr,
+                             valid_keys=VALID_USER_UPDATE_RECIPE):
     """Updates an already registered recipe with new variables. Only the
     variables to be updated are passed to the function
        """
@@ -1468,13 +1463,13 @@ def __update_workflow_recipe(configuration, client_id, vgrid, wr):
                        "structure")
 
     for key, value in wr.items():
-        if key not in VALID_USER_UPDATE_RECIPE:
+        if key not in valid_keys:
             return (False, "key: '%s' is not allowed, valid includes '%s'" %
-                    (key, ', '.join(VALID_USER_UPDATE_RECIPE.keys())))
-        if not isinstance(value, VALID_USER_UPDATE_RECIPE.get(key)):
+                    (key, ', '.join(valid_keys.keys())))
+        if not isinstance(value, valid_keys.get(key)):
             return (False, "value: '%s' has an incorrect type: '%s', "
                            "requires: '%s'" % (
-                        value, type(value), VALID_USER_UPDATE_RECIPE.get(key)))
+                        value, type(value), valid_keys.get(key)))
 
     persistence_id = wr.get('persistence_id', None)
     if not persistence_id:
@@ -2171,8 +2166,11 @@ def create_single_input_trigger(configuration, _logger, vgrid, client_id,
         'persistence_id': pattern['persistence_id']
     }
 
-    __update_workflow_pattern(configuration, client_id,
-                              vgrid, new_pattern_variables)
+    __update_workflow_pattern(configuration,
+                              client_id,
+                              vgrid,
+                              new_pattern_variables,
+                              valid_keys=VALID_PATTERN)
 
     for recipe in recipe_list:
         new_recipe_variables = {
@@ -2184,16 +2182,20 @@ def create_single_input_trigger(configuration, _logger, vgrid, client_id,
             'trigger_id': trigger_id
         }
         __update_workflow_recipe(
-            configuration, client_id, vgrid, new_recipe_variables)
+            configuration,
+            client_id,
+            vgrid,
+            new_recipe_variables,
+            valid_keys=VALID_RECIPE)
 
     # TODO investigate why things only update properly if we don't immediately
     #  refresh
-    _logger.info("DELETE ME - getting maps")
+    # _logger.info("DELETE ME - getting maps")
     get_wp_map(configuration)
     get_wr_map(configuration)
-    _logger.info("DELETE ME - refreshing maps")
-    __refresh_map(configuration, WORKFLOW_PATTERN)
-    __refresh_map(configuration, WORKFLOW_RECIPE)
+    # _logger.info("DELETE ME - refreshing maps")
+    # __refresh_map(configuration, WORKFLOW_PATTERN)
+    # __refresh_map(configuration, WORKFLOW_RECIPE)
 
     # probably do this somewhere else, but it'll do for now
     # check for pre-existing files that could trip the trigger
