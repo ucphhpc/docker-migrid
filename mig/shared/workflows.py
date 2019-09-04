@@ -145,7 +145,7 @@ VALID_USER_UPDATE_RECIPE.update(VALID_USER_RECIPE)
 # Only update the triggers if these variables are changed in a pattern
 UPDATE_TRIGGER_PATTERN = [
     'inputs',
-    'outputs',
+    'output',
     'recipes',
     'variables'
 ]
