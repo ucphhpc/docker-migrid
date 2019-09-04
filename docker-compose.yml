@@ -52,7 +52,6 @@ services:
       - ./example_notebooks:/home/mig/state/user_home/+C=dk+ST=dk+L=NA+O=org+OU=NA+CN=devuser+emailAddress=dev@dev.dk/example_notebooks
       - ./example_workflow:/home/mig/state/user_home/+C=dk+ST=dk+L=NA+O=org+OU=NA+CN=devuser+emailAddress=dev@dev.dk/example_workflow
     command: /app/docker-entry.sh -u dev@dev.dk -p Passw0rd123
-    command: /app/docker-entry.sh -u dev@dev.dk -p Passw0rd123
 
   dag:
     image: nielsbohr/jupyterhub:latest

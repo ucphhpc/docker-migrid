@@ -15,10 +15,10 @@ done
 if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
     echo "Creating $USERNAME"
     # Ensure the database is present
-    su - $USER -c "$MIG_ROOT/mig/server/migrateusers.py"
+    su - $USER -c "$MIG_ROOT/mig/server/migrateusers.py -f -v"
     # createuser.py Usage:
     # [OPTIONS] [FULL_NAME ORGANIZATION STATE COUNTRY EMAIL COMMENT PASSWORD]
-    su - $USER -c "$MIG_ROOT/mig/server/createuser.py -r devuser org dk dk $USERNAME foo $PASSWORD"
+    su - $USER -c "$MIG_ROOT/mig/server/createuser.py -f -v -r devuser org dk dk $USERNAME foo $PASSWORD"
     echo "Ensure correct permissions for $USERNAME"
     chown $USER:$USER $MIG_ROOT/mig/server/MiG-users.db
     chmod 644 $MIG_ROOT/mig/server/MiG-users.db
