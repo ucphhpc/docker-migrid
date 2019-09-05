@@ -62,24 +62,18 @@ class Pattern:
             raise Exception('Could not create single input %s, as input '
                             'already defined' % input_file)
 
-    def add_gathering_input(self, input_file, common_path, starting_index,
-                            number_of_files, output_path=None):
+    def add_gathering_input(self, input_file, paths_list, output_path=None):
         if len(self.trigger_paths) == 0:
-            star_count = common_path.count('*')
-            if star_count == 0:
-                # NOTE, Not really an exception case, since it is just
-                # regular control flow. Consider using 'asserts' when validating
-                # user API inputs
-                raise Exception("common_path must contain a '*' character.")
-            if star_count > 1:
-                raise Exception("common_path should only contain one '*' character.")
+            if not isinstance(paths_list, list):
+                raise Exception("paths_list must be a list, provided was %s "
+                                % type(paths_list))
+
             self.input_file = input_file
             if output_path:
                 self.add_output(input_file, output_path)
             else:
                 self.add_variable(input_file, input_file)
-            for index in range(0, number_of_files):
-                path = common_path.replace('*', str(index + starting_index))
+            for path in paths_list:
                 self.trigger_paths.append(path)
         else:
             raise Exception('Could not create gathering input %s, as input '
