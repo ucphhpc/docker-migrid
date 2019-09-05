@@ -34,7 +34,7 @@ from shared.workflows import INVALID_SESSION_ID, NOT_ENABLED, NOT_FOUND, \
     WORKFLOW_TYPES, WORKFLOW_CONSTRUCT_TYPES, WORKFLOW_PATTERN, \
     valid_session_id, get_workflow_with, load_workflow_sessions_db,\
     create_workflow, delete_workflow, update_workflow, \
-    touch_workflow_sessions_db
+    touch_workflow_sessions_db, WORKFLOW_ACTION_TYPES, workflow_action
 
 INVALID_FORMAT = 4
 
@@ -102,16 +102,21 @@ def workflow_api_create(configuration, workflow_session,
     _logger.debug("W_API: create: (%s, %s, %s)" % (workflow_session,
                                                    workflow_type,
                                                    workflow_attributes))
-    if workflow_type not in WORKFLOW_CONSTRUCT_TYPES:
-        return (False, "Invalid workflow create api type: '%s', "
-                       "valid are: '%s'" % (workflow_type,
-                                            ', '.join(WORKFLOW_CONSTRUCT_TYPES)
-                                            ))
 
-    return create_workflow(configuration,
-                           workflow_session['owner'],
-                           workflow_type=workflow_type,
-                           **workflow_attributes)
+    if workflow_type in WORKFLOW_CONSTRUCT_TYPES:
+        return create_workflow(configuration,
+                               workflow_session['owner'],
+                               workflow_type=workflow_type,
+                               **workflow_attributes)
+    elif workflow_type in WORKFLOW_ACTION_TYPES:
+        return workflow_action(configuration,
+                               workflow_session['owner'],
+                               workflow_type=workflow_type,
+                               **workflow_attributes)
+    return (False, "Invalid workflow create api type: '%s', "
+                   "valid are: '%s'" % (workflow_type,
+                                        ', '.join(WORKFLOW_CONSTRUCT_TYPES)
+                                        ))
 
 
 def workflow_api_read(configuration, workflow_session,
