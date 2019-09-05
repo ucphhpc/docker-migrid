@@ -1067,14 +1067,6 @@ def __manual_trigger(configuration, client_id, vgrid, action):
     persistence_id = action['persistence_id']
     object_type = action['object_type']
 
-    # TODO implement propperly once new trigger structure implemented
-    # trigger_recipes = {
-    #     'trigger_id':{
-    #             'recipe_id': {recipe_data},
-    #             'recipe_id': {recipe_data}
-    #     }
-    # }
-
     triggering_patterns = []
 
     if object_type == WORKFLOW_PATTERN:
@@ -1847,9 +1839,10 @@ def __rule_deletion_from_pattern(configuration, client_id, vgrid, wp):
             }
             new_recipe_variables['triggers'].pop(
                 str(vgrid_name + trigger_id), None)
-            new_recipe_variables['associated_patterns'].pop(
-                wp['persistence_id']
-            )
+            if wp['persistence_id'] in recipe['associated_patterns']:
+                new_recipe_variables['associated_patterns'].remove(
+                    wp['persistence_id']
+                )
             __update_workflow_recipe(
                 configuration, client_id, vgrid, new_recipe_variables)
 
