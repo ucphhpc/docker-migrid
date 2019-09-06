@@ -957,6 +957,168 @@ class WorkflowsFunctionsTest(unittest.TestCase):
             reset_user_workflows(self.configuration, self.username)
         )
 
+    def test_recipe_pattern_association_creation_pattern_first(self):
+        self.assertTrue(reset_user_workflows(self.configuration,
+                                             self.username))
+
+        pattern_attributes = {'name': 'association test pattern',
+                              'vgrid': self.test_vgrid,
+                              'input_file': 'hdf5_input',
+                              'trigger_paths': ['initial_data/*hdf5'],
+                              'output': {
+                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                              'recipes': ['association test recipe'],
+                              'variables': {'iterations': 20}}
+
+        created, pattern_id = create_workflow(self.configuration,
+                                              self.username,
+                                              workflow_type=WORKFLOW_PATTERN,
+                                              **pattern_attributes)
+        self.logger.info(pattern_id)
+        self.assertTrue(created)
+
+        recipe_attributes = {'name': 'association test recipe',
+                             'vgrid': self.test_vgrid,
+                             'recipe': dummy_notebook,
+                             'source': 'print("Hello World")'}
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_attributes)
+        self.logger.info(recipe_id)
+        self.assertTrue(created)
+
+        recipes = get_workflow_with(self.configuration,
+                                    client_id=self.username,
+                                    workflow_type=WORKFLOW_RECIPE,
+                                    **recipe_attributes)
+        self.assertIsNotNone(recipes)
+        self.assertEqual(len(recipes), 1)
+        self.assertIn('associated_patterns', recipes[0])
+        self.assertEqual(len(recipes[0]['associated_patterns']), 1)
+        self.assertEqual(recipes[0]['associated_patterns'][0], pattern_id)
+
+        # Remove workflow
+        self.assertTrue(
+            reset_user_workflows(self.configuration, self.username)
+        )
+
+    def test_recipe_pattern_association_creation_recipe_first(self):
+        self.assertTrue(reset_user_workflows(self.configuration,
+                                             self.username))
+
+        recipe_attributes = {'name': 'association test recipe',
+                             'vgrid': self.test_vgrid,
+                             'recipe': dummy_notebook,
+                             'source': 'print("Hello World")'}
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_attributes)
+        self.logger.info(recipe_id)
+        self.assertTrue(created)
+
+        pattern_attributes = {'name': 'association test pattern',
+                              'vgrid': self.test_vgrid,
+                              'input_file': 'hdf5_input',
+                              'trigger_paths': ['initial_data/*hdf5'],
+                              'output': {
+                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                              'recipes': ['association test recipe'],
+                              'variables': {'iterations': 20}}
+
+        created, pattern_id = create_workflow(self.configuration,
+                                              self.username,
+                                              workflow_type=WORKFLOW_PATTERN,
+                                              **pattern_attributes)
+        self.logger.info(pattern_id)
+        self.assertTrue(created)
+
+        recipes = get_workflow_with(self.configuration,
+                                    client_id=self.username,
+                                    workflow_type=WORKFLOW_RECIPE,
+                                    **recipe_attributes)
+        self.assertIsNotNone(recipes)
+        self.assertEqual(len(recipes), 1)
+        self.assertIn('associated_patterns', recipes[0])
+        self.assertEqual(len(recipes[0]['associated_patterns']), 1)
+        self.assertEqual(recipes[0]['associated_patterns'][0], pattern_id)
+
+        # Remove workflow
+        self.assertTrue(
+            reset_user_workflows(self.configuration, self.username)
+        )
+
+    def test_recipe_pattern_association_deletion(self):
+        self.assertTrue(reset_user_workflows(self.configuration,
+                                             self.username))
+
+        pattern_attributes = {'name': 'association test pattern',
+                              'vgrid': self.test_vgrid,
+                              'input_file': 'hdf5_input',
+                              'trigger_paths': ['initial_data/*hdf5'],
+                              'output': {
+                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                              'recipes': ['association test recipe'],
+                              'variables': {'iterations': 20}}
+
+        created, pattern_id = create_workflow(self.configuration,
+                                              self.username,
+                                              workflow_type=WORKFLOW_PATTERN,
+                                              **pattern_attributes)
+        self.logger.info(pattern_id)
+        self.assertTrue(created)
+
+        recipe_attributes = {'name': 'association test recipe',
+                             'vgrid': self.test_vgrid,
+                             'recipe': dummy_notebook,
+                             'source': 'print("Hello World")'}
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_attributes)
+        self.logger.info(recipe_id)
+        self.assertTrue(created)
+
+        recipes = get_workflow_with(self.configuration,
+                                    client_id=self.username,
+                                    workflow_type=WORKFLOW_RECIPE,
+                                    **recipe_attributes)
+        self.assertIsNotNone(recipes)
+        self.assertEqual(len(recipes), 1)
+        self.assertIn('associated_patterns', recipes[0])
+        self.assertEqual(len(recipes[0]['associated_patterns']), 1)
+        self.assertEqual(recipes[0]['associated_patterns'][0], pattern_id)
+
+        deletion_attributes = {
+            'persistence_id': pattern_id,
+            'vgrid': self.test_vgrid
+        }
+
+        deleted, msg = delete_workflow(self.configuration,
+                                       self.username,
+                                       workflow_type=WORKFLOW_PATTERN,
+                                       **deletion_attributes)
+
+        self.logger.info(msg)
+        self.assertTrue(deleted)
+
+        recipes = get_workflow_with(self.configuration,
+                                    client_id=self.username,
+                                    workflow_type=WORKFLOW_RECIPE,
+                                    **recipe_attributes)
+        self.assertIsNotNone(recipes)
+        self.assertEqual(len(recipes), 1)
+        self.assertIn('associated_patterns', recipes[0])
+        self.assertEqual(len(recipes[0]['associated_patterns']), 0)
+
+        # Remove workflow
+        self.assertTrue(
+            reset_user_workflows(self.configuration, self.username)
+        )
 
 if __name__ == '__main__':
     unittest.main()

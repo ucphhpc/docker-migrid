@@ -1590,7 +1590,7 @@ def __update_workflow_recipe(configuration, client_id, vgrid, wr,
        """
 
     _logger = configuration.logger
-    _logger.debug("WR: update_workflow_recipe, client_id: %s, recipe: %s"
+    _logger.info("WR: update_workflow_recipe, client_id: %s, recipe: %s"
                   % (client_id, wr))
 
     if not isinstance(wr, dict):
@@ -1601,17 +1601,22 @@ def __update_workflow_recipe(configuration, client_id, vgrid, wr,
 
     for key, value in wr.items():
         if key not in valid_keys:
-            return (False, "key: '%s' is not allowed, valid includes '%s'" %
-                    (key, ', '.join(valid_keys.keys())))
+            msg = "key: '%s' is not allowed, valid includes '%s'" % \
+                  (key, ', '.join(valid_keys.keys()))
+            _logger.error(msg)
+            return (False, msg)
+
         if not isinstance(value, valid_keys.get(key)):
-            return (False, "value: '%s' has an incorrect type: '%s', "
-                           "requires: '%s'" % (
-                        value, type(value), valid_keys.get(key)))
+            msg = "value: '%s' has an incorrect type: '%s', requires: '%s'" \
+                  % (value, type(value), valid_keys.get(key))
+            _logger.error(msg)
+            return (False, msg)
 
     persistence_id = wr.get('persistence_id', None)
     if not persistence_id:
         msg = "Missing 'persistence_id' must be provided to update " \
               "a workflow object."
+        _logger.error(msg)
         return (False, msg)
 
     recipe = get_workflow_with(configuration,
@@ -1630,6 +1635,7 @@ def __update_workflow_recipe(configuration, client_id, vgrid, wr,
 
     correct, msg = __correct_wr(configuration, recipe)
     if not correct:
+        _logger.info(msg)
         return (correct, msg)
 
     wr_home = get_workflow_recipe_home(configuration, vgrid)
@@ -1659,6 +1665,7 @@ def __update_workflow_recipe(configuration, client_id, vgrid, wr,
         # Ensure that the failed write does not stick around
         if not delete_file(wr_file_path, _logger):
             msg += "\n Failed to cleanup after a failed workflow update"
+        _logger.info(msg)
         return (False, msg)
 
     # if there is a trigger then delete the old one and start a new one.
@@ -1669,8 +1676,8 @@ def __update_workflow_recipe(configuration, client_id, vgrid, wr,
             __rule_identification_from_recipe(
                 configuration, client_id, recipe, True)
 
-    _logger.info('WR: %s updated at: %s ' %
-                 (client_id, wr_file_path))
+    _logger.info('WR: %s updated %s at: %s ' %
+                 (client_id, recipe, wr_file_path))
     return (True, "Updated recipe %s. " % recipe['persistence_id'])
 
 
@@ -1844,7 +1851,12 @@ def __rule_deletion_from_pattern(configuration, client_id, vgrid, wp):
                     wp['persistence_id']
                 )
             __update_workflow_recipe(
-                configuration, client_id, vgrid, new_recipe_variables)
+                configuration,
+                client_id,
+                vgrid,
+                new_recipe_variables,
+                valid_keys=VALID_RECIPE
+            )
 
 
 def __rule_deletion_from_recipe(configuration, client_id, vgrid, wr):
@@ -1887,8 +1899,14 @@ def __rule_deletion_from_recipe(configuration, client_id, vgrid, wr):
                 new_recipe_variables['triggers'].pop(
                     str(vgrid_name + trigger_id), None)
                 new_recipe_variables['persistence_id'] = recipe['persistence_id']
+
                 __update_workflow_recipe(
-                    configuration, client_id, vgrid, new_recipe_variables)
+                    configuration,
+                    client_id,
+                    vgrid,
+                    new_recipe_variables,
+                    valid_keys=VALID_RECIPE
+                )
 
 
 def reset_user_workflows(configuration, client_id):
