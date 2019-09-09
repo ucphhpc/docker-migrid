@@ -32,7 +32,12 @@ mounts = [SSHFSMounter({
 
 c.SwarmSpawner.container_spec = {
     'env': {'JUPYTER_ENABLE_LAB': '1',
-            'NOTEBOOK_DIR': work_path},
+            'NOTEBOOK_DIR': work_path,
+            'SESSION_ID': '{data[Session][Session_id]}',
+            'URL': '{data[Session][URL]}',
+            'TEST': '{data[SessionVariable]}',
+            'ANOTHERTEST': '{_service_owner}'
+            },
     'mounts': mounts
 }
 
