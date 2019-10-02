@@ -29,6 +29,7 @@ import sys
 import json
 import shared.returnvalues as returnvalues
 from shared.init import initialize_main_variables
+from shared.job import get_jobs_with, JOB_TYPES, JOB, QUEUE
 from shared.safeinput import valid_sid, InputException
 from shared.workflows import INVALID_SESSION_ID, NOT_ENABLED, NOT_FOUND, \
     WORKFLOW_TYPES, WORKFLOW_CONSTRUCT_TYPES, WORKFLOW_PATTERN, \
@@ -42,6 +43,7 @@ WORKFLOW_API_CREATE = 'create'
 WORKFLOW_API_READ = 'read'
 WORKFLOW_API_UPDATE = 'update'
 WORKFLOW_API_DELETE = 'delete'
+
 
 PATTERN_LIST = 'pattern_list'
 RECIPE_LIST = 'recipe_list'
@@ -76,7 +78,7 @@ VALID_SIGNATURE_JSON_TYPES = {
 
 VALID_SIGNATURE_FILTER_MAP = {
     'attributes': valid_attributes,
-    'type': WORKFLOW_TYPES,
+    'type': WORKFLOW_TYPES + WORKFLOW_ACTION_TYPES + JOB_TYPES,
     'operation': VALID_OPERATIONS,
     'workflowsessionid': valid_sid
 }
@@ -113,25 +115,38 @@ def workflow_api_create(configuration, workflow_session,
                                workflow_session['owner'],
                                workflow_type=workflow_type,
                                **workflow_attributes)
-    return (False, "Invalid workflow create api type: '%s', "
-                   "valid are: '%s'" % (workflow_type,
-                                        ', '.join(WORKFLOW_CONSTRUCT_TYPES)
-                                        ))
+    return (False, "Invalid workflow create api type: '%s', valid are: '%s'" %
+                   (workflow_type,
+                    ', '.join(WORKFLOW_CONSTRUCT_TYPES
+                              + WORKFLOW_ACTION_TYPES)))
 
 
 def workflow_api_read(configuration, workflow_session,
                       workflow_type=WORKFLOW_PATTERN, **workflow_attributes):
     """ """
-    _logger = configuration.logger
-    _logger.debug("W_API: search: (%s, %s, %s)" % (workflow_session,
+    logger = configuration.logger
+    logger.debug("W_API: search: (%s, %s, %s)" % (workflow_session,
                                                    workflow_type,
                                                    workflow_attributes))
 
-    return get_workflow_with(configuration,
-                             workflow_session['owner'],
-                             display_safe=True,
-                             workflow_type=workflow_type,
+    if workflow_type in JOB_TYPES:
+        first = False
+        if workflow_type == JOB:
+            first = True
+        return get_jobs_with(workflow_session['owner'],
+                             configuration.mrsl_files_dir,
+                             logger,
+                             first=first,
                              **workflow_attributes)
+
+    elif workflow_type in WORKFLOW_TYPES:
+        return get_workflow_with(configuration,
+                                 workflow_session['owner'],
+                                 display_safe=True,
+                                 workflow_type=workflow_type,
+                                 **workflow_attributes)
+    return (False, "Invalid workflow read api type: '%s', valid are: '%s'" %
+                   (workflow_type, ', '.join(WORKFLOW_TYPES + JOB_TYPES)))
 
 
 def workflow_api_update(configuration, workflow_session,
@@ -146,8 +161,12 @@ def workflow_api_update(configuration, workflow_session,
         return (False, "Can't create workflow %s without 'vgrid' attribute"
                 % workflow_type)
 
-    return update_workflow(configuration, workflow_session['owner'],
-                           workflow_type, **workflow_attributes)
+    if workflow_type in WORKFLOW_CONSTRUCT_TYPES:
+        return update_workflow(configuration, workflow_session['owner'],
+                               workflow_type, **workflow_attributes)
+
+    return (False, "Invalid workflow update api type: '%s', valid are: '%s'" %
+                   (workflow_type, ', '.join(WORKFLOW_CONSTRUCT_TYPES)))
 
 
 # TODO, support deleting every workflow in vgrid without name
@@ -159,14 +178,17 @@ def workflow_api_delete(configuration, workflow_session,
                                                    workflow_type,
                                                    workflow_attributes))
 
-    # TODO, include as a basic part of workflow_attributes
     if 'persistence_id' not in workflow_attributes:
         return (False, "Can't delete workflow without 'persistence_id' "
                        "attribute"
                 % workflow_attributes)
 
-    return delete_workflow(configuration, workflow_session['owner'],
-                           workflow_type, **workflow_attributes)
+    if workflow_type in WORKFLOW_CONSTRUCT_TYPES:
+        return delete_workflow(configuration, workflow_session['owner'],
+                               workflow_type, **workflow_attributes)
+
+    return (False, "Invalid workflow update api type: '%s', valid are: '%s'" %
+                       (workflow_type, ', '.join(WORKFLOW_CONSTRUCT_TYPES)))
 
 
 def main(client_id, user_arguments_dict):

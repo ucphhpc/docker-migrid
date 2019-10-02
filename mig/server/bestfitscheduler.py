@@ -116,14 +116,18 @@ class BestFitScheduler(Scheduler):
 
         for i in range(0, qlen):
             job = self.job_queue.get_job(i)
+            self.logger.info('DELETE ME considering job %s' % i)
 
             # Ignore job which don't match the filter requirements
 
             for (key, val) in must_match.items():
                 if not job.has_key(key) or val != job[key]:
+                    self.logger.info('DELETE ME ignoring job %s' % i)
                     continue
 
             # self.logger.debug("schedule treating job %d: %s", i, job['JOB_ID'])
+
+
 
             if 'GO' == job['SCHEDULE_HINT']\
                  and resource_conf['RESOURCE_ID']\
@@ -135,11 +139,14 @@ class BestFitScheduler(Scheduler):
 
                 # self.logger.info("schedule: job fitness: %s %f" % \
                 #                 (job['JOB_ID'], job_fitness))
+                self.logger.info('DELETE ME job %s fitness is %s' % (i, job_fitness))
 
                 if job_fitness > best_fitness:
                     best_job = job
                     best_i = i
                     best_fitness = job_fitness
+                    self.logger.info('DELETE ME got new best job %s' % i)
+
             else:
 
                     # self.logger.info("schedule: new best fit: %s %f" % \
@@ -147,6 +154,14 @@ class BestFitScheduler(Scheduler):
                 # self.logger.info("schedule: job %s marked %s" % \
                 #                  (job["JOB_ID"], job["SCHEDULE_HINT"]))
 
+                self.logger.info('DELETE ME passing on job %s' % i)
+                if 'GO' == job['SCHEDULE_HINT']:
+                    self.logger.info('Passed because GO is not job[SCHEDULE_HINT]. It is %s' % job['SCHEDULE_HINT'])
+                if resource_conf['RESOURCE_ID'] in job['SCHEDULE_TARGETS']:
+                    self.logger.info('Passed because resource_conf[RESOURCE_ID] is not in job[SCHEDULE_TARGETS]. '
+                                     'resource_conf[RESOURCE_ID] is %s '
+                                     'job[SCHEDULE_TARGETS] is %s'
+                                     % (resource_conf['RESOURCE_ID'], job['SCHEDULE_TARGETS']))
                 pass
 
         if not best_job:

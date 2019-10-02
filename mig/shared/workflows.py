@@ -72,8 +72,10 @@ WORKFLOW_ANY = 'any'
 WORKFLOW_API_DB_NAME = 'workflow_api_db'
 WORKFLOW_TYPES = [WORKFLOW_PATTERN, WORKFLOW_RECIPE, WORKFLOW_ANY]
 WORKFLOW_CONSTRUCT_TYPES = [WORKFLOW_PATTERN, WORKFLOW_RECIPE]
-MAUNAL_TRIGGER = 'manual_trigger'
-WORKFLOW_ACTION_TYPES = [MAUNAL_TRIGGER]
+MANUAL_TRIGGER = 'manual_trigger'
+CANCEL_JOB = 'cancel_job'
+RESUBMIT_JOB = 'resubmit_job'
+WORKFLOW_ACTION_TYPES = [MANUAL_TRIGGER, CANCEL_JOB, RESUBMIT_JOB]
 CELL_TYPE, CODE, SOURCE = 'cell_type', 'code', 'source'
 WORKFLOW_PATTERNS, WORKFLOW_RECIPES, MODTIME, CONF = \
     ['__workflowpatterns__', '__workflow_recipes__', '__modtime__', '__conf__']
@@ -643,8 +645,8 @@ def __query_workflow_map(configuration, client_id=None, first=False,
             all_match = True
             for k, v in kwargs.items():
                 # TODO, move v != "" to a search section that is intended
-                # for outside API search. I.e. will do expansive search beyond
-                # the exact value
+                #  for outside API search. I.e. will do expansive search beyond
+                #  the exact value
                 if (k not in workflow_obj[workflow_conf['object_type']]) or \
                         (workflow_obj[workflow_conf['object_type']][k] != v
                          and v != ""):
@@ -978,7 +980,7 @@ def create_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
                                            vgrid, kwargs)
 
 
-def workflow_action(configuration, client_id, workflow_type=MAUNAL_TRIGGER,
+def workflow_action(configuration, client_id, workflow_type=MANUAL_TRIGGER,
                     **kwargs):
     """ """
     _logger = configuration.logger
@@ -988,7 +990,20 @@ def workflow_action(configuration, client_id, workflow_type=MAUNAL_TRIGGER,
         _logger.error("create_workflow: 'vgrid' was not set: '%s'" % vgrid)
         return (False, msg)
 
-    return __manual_trigger(configuration, client_id, vgrid, kwargs)
+    if workflow_type == MANUAL_TRIGGER:
+        return __manual_trigger(configuration, client_id, vgrid, kwargs)
+    if workflow_type == CANCEL_JOB:
+        job_id = kwargs.get('JOB_ID', None)
+        if not job_id:
+            msg = "A job cancelation dependency was missing: 'JOB_ID'"
+            _logger.error(msg)
+            return (False, msg)
+
+        return __cancel_job_by_id(configuration, job_id, client_id)
+    if workflow_type == RESUBMIT_JOB:
+        # TODO implement
+        return (False, "Implementation under way")
+    return (False, "Unsupported action '%s'" % workflow_type)
 
 
 def delete_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
@@ -1771,8 +1786,6 @@ def __rule_identification_from_recipe(configuration, client_id,
     # Preload all recipes
     recipes = get_workflow_with(
         configuration, workflow_type=WORKFLOW_RECIPE, vgrid=vgrid)
-    _logger.info("DELETE ME - recipes: %s" % recipes)
-    _logger.info("found matching patterns: %s" % matching_patterns)
     for pattern in matching_patterns:
         # Currently multiple recipes are crudely chained together. This will
         # need to be altered eventually.
@@ -1781,12 +1794,9 @@ def __rule_identification_from_recipe(configuration, client_id,
         # Check if defined recipes exist already within system
 
         for recipe_name in pattern['recipes']:
-            _logger.info("recipe_name: %s" % recipe_name)
             recipe_list = [recipe for recipe in recipes
                            if recipe['name'] == recipe_name]
-            _logger.info("DELETE ME - recipe_list: %s" % recipe_list)
             if recipe_name not in [recipe['name'] for recipe in recipe_list]:
-                _logger.info("DELETE ME - missed: %s" % recipe_name)
                 missed_recipes.append(recipe_name)
         if not missed_recipes:
             _logger.info(
@@ -2086,46 +2096,59 @@ def delete_trigger(configuration, client_id, vgrid_name, trigger_id):
         matching_jobs = get_job_ids_with_task_file_in_contents(
             client_id, task_file, mrsl_dir, _logger)
 
-        new_state = 'CANCELED'
-        client_dir = client_id_dir(client_id)
         for job_id in matching_jobs:
-            file_path = os.path.join(
-                configuration.mrsl_files_dir, client_dir, job_id + '.mRSL')
-            job = unpickle(file_path, _logger)
-
-            if not job:
-                _logger.error('Could not open job file')
-                continue
-
-            possible_cancel_states = ['PARSE', 'QUEUED', 'RETRY', 'EXECUTING',
-                                      'FROZEN']
-
-            if not job['STATUS'] in possible_cancel_states:
-                _logger.error('Could not cancel job with status '
-                              + job['STATUS'])
-                continue
-
-            if not unpickle_and_change_status(file_path, new_state, _logger):
-                _logger.error('%s could not cancel job: %s'
-                              % (client_id, job_id))
-
-            if not job.has_key('UNIQUE_RESOURCE_NAME'):
-                job['UNIQUE_RESOURCE_NAME'] = 'UNIQUE_RESOURCE_NAME_NOT_FOUND'
-            if not job.has_key('EXE'):
-                job['EXE'] = 'EXE_NAME_NOT_FOUND'
-
-            message = 'JOBACTION ' + job_id + ' ' \
-                      + job['STATUS'] + ' ' + new_state + ' ' \
-                      + job['UNIQUE_RESOURCE_NAME'] + ' ' \
-                      + job['EXE'] + '\n'
-            if not send_message_to_grid_script(message, _logger,
-                                               configuration):
-                _logger.error('%s failed to send message to grid script: %s'
-                              % (client_id, message))
+            __cancel_job_by_id(configuration, job_id, client_id)
     (rm_status, rm_msg) = vgrid_remove_triggers(
         configuration, vgrid_name, [trigger_id])
     if not rm_status:
         _logger.error('%s failed to remove trigger: %s' % (client_id, rm_msg))
+
+
+def __cancel_job_by_id(configuration, job_id, client_id):
+    _logger = configuration.logger
+
+    new_state = 'CANCELED'
+    client_dir = client_id_dir(client_id)
+
+    file_path = os.path.join(
+        configuration.mrsl_files_dir, client_dir, job_id + '.mRSL')
+    job = unpickle(file_path, _logger)
+
+    if not job:
+        msg = 'Could not open job file'
+        _logger.error(msg)
+        return (False, msg)
+
+    possible_cancel_states = ['PARSE', 'QUEUED', 'RETRY', 'EXECUTING',
+                              'FROZEN']
+
+    if not job['STATUS'] in possible_cancel_states:
+        msg = 'Could not cancel job with status ' + job['STATUS']
+        _logger.error(msg)
+        return (False, msg)
+
+    if not unpickle_and_change_status(file_path, new_state, _logger):
+        _logger.error('%s could not cancel job: %s'
+                      % (client_id, job_id))
+        msg = 'Could not change status of job ' + job_id
+        _logger.error(msg)
+        return (False, msg)
+
+    if not job.has_key('UNIQUE_RESOURCE_NAME'):
+        job['UNIQUE_RESOURCE_NAME'] = 'UNIQUE_RESOURCE_NAME_NOT_FOUND'
+    if not job.has_key('EXE'):
+        job['EXE'] = 'EXE_NAME_NOT_FOUND'
+
+    message = 'JOBACTION ' + job_id + ' ' \
+              + job['STATUS'] + ' ' + new_state + ' ' \
+              + job['UNIQUE_RESOURCE_NAME'] + ' ' \
+              + job['EXE'] + '\n'
+    if not send_message_to_grid_script(message, _logger, configuration):
+        msg = '%s failed to send message to grid script: %s' \
+              % (client_id, message)
+        _logger.error(msg)
+        return (False, msg)
+    return (True, 'Job %s has been succesfully canceled' % job_id)
 
 
 def create_trigger(configuration, logger, vgrid, client_id, pattern,
@@ -2353,10 +2376,8 @@ def create_single_input_trigger(configuration, _logger, vgrid, client_id,
 
     # TODO investigate why things only update properly if we don't immediately
     #  refresh
-    # _logger.info("DELETE ME - getting maps")
     get_wp_map(configuration)
     get_wr_map(configuration)
-    # _logger.info("DELETE ME - refreshing maps")
     # __refresh_map(configuration, WORKFLOW_PATTERN)
     # __refresh_map(configuration, WORKFLOW_RECIPE)
 
