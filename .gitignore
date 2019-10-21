@@ -135,3 +135,6 @@ res/migrid.test.0/FE.PGID
 res/migrid.test.0/EXE_migrid.test.PGID
 res/migrid.test.0/empty_job_helper_dict.migrid.test
 res/migrid.test.0/last_request.migrid.test
+
+# Execution node volume
+MiG-exe/

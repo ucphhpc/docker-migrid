@@ -1,0 +1,30 @@
+version: "3.7"
+
+services:
+  migrid-exe-node:
+    image: nielsbohr/migrid-exe-node:datascience
+    hostname: migrid-exe-node
+    environment:
+      TZ: Europe/Copenhagen
+    privileged: True
+    shm_size: 1gb
+    networks:
+      default:
+        aliases:
+          - "migrid-exe-node.test"
+    volumes:
+      - type: volume
+        source: MiG
+        target: /home/mig/MiG
+
+volumes:
+  MiG:
+    driver_opts:
+      type: none
+      device: $PWD/MiG-exe
+      o: bind
+
+networks:
+  default:
+    external:
+      name: migrid-service_default
