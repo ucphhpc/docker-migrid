@@ -36,6 +36,7 @@ basis.
 """
 
 import cgi
+import copy
 from email.utils import parseaddr, formataddr
 from string import letters, digits, printable
 from unicodedata import category, normalize, name as unicode_name
@@ -1460,6 +1461,7 @@ def validated_input(
     defaults,
     type_override={},
     value_override={},
+    list_wrap=False
 ):
     """Intelligent input validation with fall back default values.
     Specifying a default value of REJECT_UNSET, results in the
@@ -1479,7 +1481,8 @@ def validated_input(
         else:
             value_checks[name] = guess_value(name)
     (accepted, rejected) = validate_helper(input_dict, defaults.keys(),
-                                           type_checks, value_checks)
+                                           type_checks, value_checks,
+                                           list_wrap)
 
     # Fall back to defaults when allowed and reject if required and unset
 
@@ -1499,6 +1502,7 @@ def validate_helper(
     fields,
     type_checks,
     value_checks,
+    list_wrap=False
 ):
     """This function takes a dictionary of user input as returned by
     fieldstorage_to_dict and validates all fields according to
@@ -1519,9 +1523,14 @@ def validate_helper(
     accepted = {}
     rejected = {}
     for (key, values) in input_dict.items():
+        # NOTE! Allow for values to be a dictionary instead of list
+        # Exception when we are not providing arguments via cgi (e.g. JSON)
+        inspect_values = values
+        if list_wrap:
+            inspect_values = [values]
         ok_values = []
         bad_values = []
-        for entry in values:
+        for entry in inspect_values:
             if not key in fields:
                 err = 'unexpected field: %s' % key
                 bad_values.append((html_escape(entry),

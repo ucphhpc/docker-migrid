@@ -1097,13 +1097,17 @@ class SimpleSSHServer(paramiko.ServerInterface):
                         and entry.public_key is not None:
                     key_enabled = True
                     key_allowed = entry.public_key.get_base64()
-                if (password_enabled or key_enabled) \
-                        and entry.ip_addr is not None \
-                        and entry.ip_addr != client_ip:
-                    self.logger.warning(
-                        "ignore login as %s with wrong IP: %s vs %s" %
-                        (username, entry.ip_addr, client_ip))
-                    continue
+                # NOTE!! Temp disable so that it doesn't complain that
+                # the docker exe node does not have the same entry.ip_addr
+                # and client_ip due to connection via the overlay network
+                # proxy load balancer
+                # if (password_enabled or key_enabled) \
+                #         and entry.ip_addr is not None \
+                #         and entry.ip_addr != client_ip:
+                #     self.logger.warning(
+                #         "ignore login as %s with wrong IP: %s vs %s" %
+                #         (username, entry.ip_addr, client_ip))
+                #     continue
                 if key_enabled and key_allowed == key_offered:
                     valid_key = True
                     break

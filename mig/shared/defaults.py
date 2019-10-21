@@ -90,15 +90,10 @@ session_id_bytes = 32
 session_id_length = session_id_bytes * 2
 session_id_charset = digits + 'abcdef'
 
-# Workflow pattern ID, is a 24 character random string
-wp_id_bytes = 12
-wp_id_length = wp_id_bytes * 2
-wp_id_charset = digits + 'abcdef'
-
-# Workflow recipe ID, is a 24 character random string
-wr_id_bytes = 12
-wr_id_length = wr_id_bytes * 2
-wr_id_charset = digits + 'abcdef'
+# Workflow IDs, is a 24 character random string
+w_id_bytes = 12
+w_id_length = w_id_bytes * 2
+w_id_charset = digits + 'abcdef'
 
 # 2FA secret tokens are 32 chars (implicitly from base32 charset)
 twofactor_key_bytes = 32

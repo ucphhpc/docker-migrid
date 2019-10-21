@@ -162,27 +162,6 @@ events in specified period''',
         'Value': [],
         'Required': False,
         }))
-    # TODO check that adding these here doesn't have unintended consequences
-    specs.append(('pattern', {
-        'Title': 'Pattern',
-        'Description': 'Only used if trigger is created dynamically. Used to '
-                       'record the pattern defining the trigger creation',
-        'Example': 'patternName',
-        'Type': 'string',
-        'Instance': basestring,
-        'Value': '',
-        'Required': False,
-    }))
-    specs.append(('recipes', {
-        'Title': 'Recipes',
-        'Description': 'Only used if trigger is created dynamically. Used to '
-                       'record the recipe(s) defining the trigger creation',
-        'Example': 'recipeName1, recipeName2',
-        'Type': 'multiplestrings',
-        'Instance': list,
-        'Value': [],
-        'Required': False,
-    }))
     return specs
 
 def get_trigger_keywords_dict(configuration):

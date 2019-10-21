@@ -29,6 +29,7 @@
 
 import cPickle as pickle
 import json
+import yaml
 
 
 def dumps(data, protocol=0, serializer='pickle'):
@@ -36,18 +37,24 @@ def dumps(data, protocol=0, serializer='pickle'):
     serial_helper = pickle.dumps
     if serializer == 'json':
         serial_helper = json.dumps
+    if serializer == 'yaml':
+        serial_helper = yaml.dump
     return serial_helper(data)
 
 
-def dump(data, path, protocol=0, serializer='pickle'):
+def dump(data, path, serializer='pickle', mode='wb', **kwargs):
     """Dump data to file given by path"""
 
-    serial_helper = pickle.dump
+    if serializer == 'pickle':
+        serial_helper = pickle.dump
+        if 'protocol' not in kwargs:
+            kwargs['protocol'] = 0
     if serializer == 'json':
         serial_helper = json.dump
-    filehandle = open(path, 'wb')
-    serial_helper(data, filehandle, 0)
-    filehandle.close()
+    if serializer == 'yaml':
+        serial_helper = yaml.dump
+    with open(path, mode) as fh:
+        serial_helper(data, fh, **kwargs)
 
 
 def loads(data, serializer='pickle'):
@@ -59,16 +66,16 @@ def loads(data, serializer='pickle'):
     return serial_helper(data)
 
 
-def load(path, serializer='pickle'):
+def load(path, serializer='pickle', mode='rb', **kwargs):
     """Load serialized data from file given by path"""
-
     serial_helper = pickle.load
     if serializer == 'json':
         serial_helper = json.load
-    filehandle = open(path, 'rb')
-    data = serial_helper(filehandle)
-    filehandle.close()
-    return data
+    if serializer == 'yaml':
+        serial_helper = yaml.load
+        kwargs['Loader'] = yaml.SafeLoader
+    with open(path, mode) as fh:
+        return serial_helper(fh, **kwargs)
 
 
 if "__main__" == __name__:

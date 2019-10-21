@@ -51,8 +51,6 @@ from shared.vgrid import vgrid_is_owner, vgrid_set_owners, vgrid_set_members, \
      vgrid_create_allowed, vgrid_restrict_write_support, vgrid_flat_name, \
      vgrid_settings
 from shared.vgridkeywords import get_settings_keywords_dict
-from shared.workflows import get_workflow_pattern_home, \
-    get_workflow_recipe_home
 
 
 def signature():
@@ -995,64 +993,6 @@ user home directory. Therefore it is also usable as source and destination
 for job input and output.
 """ % (vgrid_name, label, vgrid_name),
                        share_readme, logger, make_parent=False)
-
-        # Create ipynb used to define workflows
-        # NOTE, preferable get it the same way workflow_home and recipe homes,
-        # I.e. via a function that workflows.py defines
-        pattern_notebook = os.path.join(vgrid_files_dir, "%s.ipynb" % vgrid_name)
-        # NOTE! IF its a default format, it should really be defined in either
-        # workflows.py, or defaults.py. However, it dosen't really much sense to create a "default"
-        # notebook format, since it is out of our control and is something that is always
-        # submittet to the system.
-        default_notebook = {
-            "cells":
-            [
-                {
-                    "cell_type": "markdown",
-                    "metadata": {},
-                    "source": [
-                        "This notebook is used to define patterns and recipes for the %s vgrid." % vgrid_name
-                    ]
-                },
-                {
-                    "cell_type": "code",
-                    "execution_count": None,
-                    "metadata": {},
-                    "outputs": [],
-                    "source": [
-                        "import mig_meow",
-                        "",
-                        ""
-                    ]
-                }
-            ],
-            "metadata":{},
-            "nbformat": 4,
-            "nbformat_minor": 2
-        }
-        if not os.path.exists(pattern_notebook):
-            # NOTE, in the future use the shared.serial.load/dump functions for json
-            # IO operations
-            notebook_json = dumps(default_notebook, serializer='json')
-            write_file(notebook_json, pattern_notebook, logger, make_parent=False)
-        # Also create pattern and recipe folders as they are required for some mig_meow functionality
-        wp_home = get_workflow_pattern_home(configuration, vgrid_name)
-        # NOTE, For new code that interacts with the storage,
-        # use the shared migrid functions defined for this, such as,
-        # shared.fileio.makedirs_rec and shared.fileio.write_file for creating directories and files.
-        # Thereby we get universal error handling and common logging
-        if not os.path.exists(wp_home):
-            try:
-                os.makedirs(wp_home)
-            except Exception, err:
-                logger.error("Couldn't create directory %s %s" % (wp_home, err))
-        wr_home = get_workflow_recipe_home(configuration, vgrid_name)
-        if not os.path.exists(wr_home):
-            try:
-                os.makedirs(wr_home)
-            except Exception, err:
-                logger.error("Couldn't create directory %s %s" % (wr_home, err))
-
 
     except Exception, exc:
         logger.error('Could not create vgrid files directory: %s' % exc)
