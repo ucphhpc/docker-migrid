@@ -66,7 +66,7 @@ def main(client_id, user_arguments_dict):
     vgrid = accepted['vgrid'][-1]
 
     workflow = get_workflow_with(configuration, first=True,
-                                 display_safe=True,
+                                 user_query=True,
                                  workflow_type=WORKFLOW_RECIPE,
                                  vgrid=vgrid,
                                  persistence_id=persistence_id)

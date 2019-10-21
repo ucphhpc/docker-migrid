@@ -35,7 +35,7 @@ from shared.workflows import INVALID_SESSION_ID, NOT_ENABLED, NOT_FOUND, \
     WORKFLOW_TYPES, WORKFLOW_CONSTRUCT_TYPES, WORKFLOW_PATTERN, \
     valid_session_id, get_workflow_with, load_workflow_sessions_db,\
     create_workflow, delete_workflow, update_workflow, \
-    touch_workflow_sessions_db, WORKFLOW_ACTION_TYPES, workflow_action
+    touch_workflow_sessions_db, WORKFLOW_ACTION_TYPES
 
 INVALID_FORMAT = 4
 
@@ -110,15 +110,14 @@ def workflow_api_create(configuration, workflow_session,
                                workflow_session['owner'],
                                workflow_type=workflow_type,
                                **workflow_attributes)
-    elif workflow_type in WORKFLOW_ACTION_TYPES:
-        return workflow_action(configuration,
-                               workflow_session['owner'],
-                               workflow_type=workflow_type,
-                               **workflow_attributes)
+    # elif workflow_type in WORKFLOW_ACTION_TYPES:
+    #     return workflow_action(configuration,
+    #                            workflow_session['owner'],
+    #                            workflow_type=workflow_type,
+    #                            **workflow_attributes)
     return (False, "Invalid workflow create api type: '%s', valid are: '%s'" %
                    (workflow_type,
-                    ', '.join(WORKFLOW_CONSTRUCT_TYPES
-                              + WORKFLOW_ACTION_TYPES)))
+                    ', '.join(WORKFLOW_CONSTRUCT_TYPES)))
 
 
 def workflow_api_read(configuration, workflow_session,
@@ -128,7 +127,6 @@ def workflow_api_read(configuration, workflow_session,
     logger.debug("W_API: search: (%s, %s, %s)" % (workflow_session,
                                                    workflow_type,
                                                    workflow_attributes))
-
     if workflow_type in JOB_TYPES:
         first = False
         if workflow_type == JOB:
@@ -138,11 +136,10 @@ def workflow_api_read(configuration, workflow_session,
                              logger,
                              first=first,
                              **workflow_attributes)
-
     elif workflow_type in WORKFLOW_TYPES:
         return get_workflow_with(configuration,
                                  workflow_session['owner'],
-                                 display_safe=True,
+                                 user_query=True,
                                  workflow_type=workflow_type,
                                  **workflow_attributes)
     return (False, "Invalid workflow read api type: '%s', valid are: '%s'" %
@@ -214,7 +211,6 @@ def main(client_id, user_arguments_dict):
 
     # Input data
     data = sys.stdin.read()
-    logger.debug("Received data %s" % data)
     try:
         json_data = json.loads(data, object_pairs_hook=str_hook)
     except ValueError:
@@ -229,6 +225,10 @@ def main(client_id, user_arguments_dict):
     # If key not present set default signature
     json_data.update({k: v for k, v in DEFAULT_SIGNATURE.items()
                       if k not in json_data})
+
+    # TODO, evaluate json_data structure with core validated_input
+    # NOTE!! Do not access json_data input before validated_input has been
+    # called on the input
 
     # Ensure only valid keys and value types are present in json_data
     for key, value in json_data.items():

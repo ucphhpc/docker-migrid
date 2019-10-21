@@ -40,7 +40,7 @@ TODO finish description
 import json
 
 import shared.returnvalues as returnvalues
-from shared.defaults import csrf_field, wp_id_length, wp_id_charset
+from shared.defaults import csrf_field, w_id_length, w_id_charset
 from shared.pwhash import generate_random_ascii
 from shared.init import initialize_main_variables
 from shared.handlers import safe_handler, get_csrf_limit
@@ -204,7 +204,7 @@ def main(client_id, user_arguments_dict):
 
     # Generate checksum of pattern instead as an id
     # Unique workflow pattern id
-    wp_id = generate_random_ascii(wp_id_length, charset=wp_id_charset)
+    wp_id = generate_random_ascii(w_id_length, charset=w_id_charset)
 
     pattern_notebook = {
         'id': wp_id,

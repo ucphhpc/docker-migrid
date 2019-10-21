@@ -38,7 +38,7 @@ import re
 import shared.returnvalues as returnvalues
 
 from shared.base import valid_dir_input
-from shared.defaults import csrf_field, wp_id_charset, wp_id_length
+from shared.defaults import csrf_field, w_id_charset, w_id_length
 from shared.init import initialize_main_variables
 from shared.handlers import safe_handler, get_csrf_limit
 from shared.functional import validate_input_and_cert
@@ -204,7 +204,7 @@ def main(client_id, user_arguments_dict):
 
     logger.debug('pattern name: ' + str(name))
     if name == '':
-        name = generate_random_ascii(wp_id_length, charset=wp_id_charset)
+        name = generate_random_ascii(w_id_length, charset=w_id_charset)
 
     if not safe_handler(configuration, 'post', op_name, client_id,
                         get_csrf_limit(configuration), accepted):

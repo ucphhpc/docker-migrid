@@ -65,11 +65,11 @@ def workflow_patterns_table(configuration, client_id, output_objects,
 
     workflow_patterns = []
     if vgrid:
-        wps = get_workflow_with(configuration, display_safe=True,
+        wps = get_workflow_with(configuration, user_query=True,
                                 workflow_type=WORKFLOW_PATTERN, vgrid=vgrid)
     else:
         wps = get_workflow_with(configuration, client_id=client_id,
-                                display_safe=True,
+                                user_query=True,
                                 workflow_type=WORKFLOW_PATTERN)
     if wps:
         output_objects.append({'object_type': 'html_form',

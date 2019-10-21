@@ -69,12 +69,12 @@ def workflow_recipes_table(configuration,
     workflow_recipes = []
     if vgrid:
         wrs = get_workflow_with(configuration,
-                                display_safe=True,
+                                user_query=True,
                                 workflow_type=WORKFLOW_RECIPE,
                                 vgrid=vgrid)
     else:
         wrs = get_workflow_with(configuration,
-                                display_safe=True,
+                                user_query=True,
                                 workflow_type=WORKFLOW_RECIPE,
                                 client_id=client_id)
     if wrs:
