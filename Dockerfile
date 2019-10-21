@@ -28,7 +28,8 @@ RUN yum update -y \
     mercurial \
     openssh-server \
     rsyslog \
-    openssh-clients
+    openssh-clients \
+    lsof
 
 RUN yum install -y \
     python2-devel \
@@ -186,7 +187,7 @@ RUN pip2 install --user \
     pytest
 
 # Install and configure MiG
-ARG MIG_CHECKOUT=4199
+ARG MIG_CHECKOUT=4332
 RUN svn checkout -r $MIG_CHECKOUT https://svn.code.sf.net/p/migrid/code/trunk .
 
 ADD mig $MIG_ROOT/mig

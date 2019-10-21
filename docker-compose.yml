@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   migrid:
-    image: nielsbohr/migrid:edge
+    image: nielsbohr/migrid:workflow
     hostname: migrid
     environment:
       TZ: Europe/Copenhagen
@@ -116,3 +116,7 @@ volumes:
       type: none
       device: $PWD/state
       o: bind
+
+networks:
+  default:
+    attachable: True
