@@ -2222,7 +2222,7 @@ def get_workflow_trigger(configuration, vgrid, rule_id=None, recursive=False):
                                       recursive=recursive)
     if not status:
         msg = "Failed to find triggers in vgrid '%s', err '%s'" % (vgrid,
-                                                                  triggers)
+                                                                   triggers)
         _logger.warn(msg)
         return (False, msg)
 
