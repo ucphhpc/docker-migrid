@@ -21,7 +21,7 @@ RUN yum update -y \
     tzdata \
     initscripts \
     svn \
-    vimdiff \
+    vim \
     net-tools \
     telnet \
     ca-certificates \
@@ -42,7 +42,7 @@ RUN python2 -m pip install --upgrade pip \
     && python3 -m pip install --upgrade pip
 
 # Install systemwide papermill
-RUN python3 -m pip install papermill
+RUN python3 -m pip install papermill notebook_parameterizer
 
 # Apache OpenID (provided by epel)
 RUN yum install -y mod_auth_openid
