@@ -309,12 +309,18 @@ def valid_session_id(configuration, workflow_session_id):
     return possible_workflow_session_id(configuration, workflow_session_id)
 
 
-def __correct_user_input(configuration,  input, required_input={},
-                         allowed_input={}):
+def __correct_user_input(configuration,  input, required_input=None,
+                         allowed_input=None):
     """ """
     _logger = configuration.logger
     _logger.debug("WP: __correct_user_input verifying user input"
                   " '%s' type '%s'" % (input, type(input)))
+
+    if not required_input or not isinstance(required_input, dict):
+        required_input = {}
+
+    if not allowed_input or not isinstance(allowed_input, dict):
+        allowed_input = {}
 
     for key, value in input.items():
         if key not in allowed_input.keys():
@@ -530,9 +536,9 @@ def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN):
         # Remove any missing workflow patterns from map
         missing_workflow = [workflow_file for workflow_file in
                             workflow_map.keys()
-                            if workflow_file not in [_workflow_file for
-                                                     _workflow_path, _workflow_file
-                                                     in all_objects]]
+                            if workflow_file not in
+                            [_workflow_file for _workflow_path, _workflow_file
+                             in all_objects]]
 
         for workflow_file in missing_workflow:
             del workflow_map[workflow_file]
@@ -1589,13 +1595,17 @@ def __create_workflow_recipe_entry(configuration, client_id, vgrid,
 
 
 def __update_workflow_pattern(configuration, client_id, vgrid,
-                              workflow_pattern,
-                              required_input={'persistence_id': str},
-                              allowed_input=VALID_USER_UPDATE_PATTERN):
+                              workflow_pattern, required_input=None,
+                              allowed_input=None):
     """Updates an already registered pattern with new variables. Only the
-    variables to be updated are passed to the function
-       """
+    variables to be updated are passed to the function """
     _logger = configuration.logger
+    if not required_input or not isinstance(required_input, dict):
+        required_input = {'persistence_id': str}
+
+    if not allowed_input or not isinstance(allowed_input, dict):
+        allowed_input = VALID_USER_UPDATE_PATTERN
+
     if not isinstance(workflow_pattern, dict):
         _logger.error("WP: __update_workflow_pattern, incorrect "
                       "'workflow_pattern' structure '%s'"
@@ -1641,6 +1651,17 @@ def __update_workflow_pattern(configuration, client_id, vgrid,
 
     _logger.debug("__update_workflow_pattern, applying variables: %s"
                   % workflow_pattern)
+    # TODO, pattern has new paths definitions
+    # Remove existing triggers and recipes associated with that recipe
+    # Then create new triggers with recipe placeholder names
+    # if 'input_paths' in workflow_pattern:
+    #     existing_paths = [(rule_id, get_workflow_trigger(
+    #                                 configuration, vgrid, rule_id))
+    #                       for rule_id, recipes in
+    #                       pattern['trigger_recipes'].items()]
+    #
+    #     remove_paths = set( - existing_paths)
+    #     missing_paths = set()
 
     # TODO, if changed input paths, delete associated triggers and create new
     # ones and attach recipes
@@ -1699,8 +1720,8 @@ def __update_workflow_pattern(configuration, client_id, vgrid,
             updated, msg = update_workflow_trigger(configuration, vgrid,
                                                    trigger)
             if not updated:
-                _logger.warning("Failed to update recipe triggers to pattern: '%s'"
-                                % msg)
+                _logger.warning("Failed to update recipe triggers"
+                                " to pattern: '%s'" % msg)
                 return (False, "Failed to associate recipe to pattern")
 
     # Recipes have to be prepared in trigger_recipes before this point
@@ -1733,14 +1754,16 @@ def __update_workflow_pattern(configuration, client_id, vgrid,
 
 
 def __update_workflow_recipe(configuration, client_id, vgrid, workflow_recipe,
-                             valid_keys=VALID_USER_UPDATE_RECIPE):
+                             valid_keys=None):
     """Updates an already registered recipe with new variables. Only the
     variables to be updated are passed to the function
     """
-
     _logger = configuration.logger
     _logger.debug("WR: update_workflow_recipe, client_id: %s, recipe: %s"
                   % (client_id, workflow_recipe))
+
+    if not valid_keys or not isinstance(valid_keys, dict):
+        valid_keys = VALID_USER_UPDATE_RECIPE
 
     if not isinstance(workflow_recipe, dict):
         _logger.error(
