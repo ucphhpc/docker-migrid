@@ -108,7 +108,11 @@ VALID_PATTERN = {
     # inside the recipes.
     'variables': dict,
     # (Optional) Global parameters which the recipes will be executed over.
-    'parameterize_over': dict
+    'parameterize_over': dict,
+    # List of triggering paths. Only used for easy interaction with jupyter
+    # widgets and initial pattern creation. Should not be relied on as
+    # interal mig paths
+    'input_paths': list
 }
 
 # Attributes that a request must provide
@@ -811,7 +815,9 @@ def __build_wp_object(configuration, user_query=False, **kwargs):
                                       VALID_PATTERN['trigger_recipes']()),
         'variables': kwargs.get('variables', VALID_PATTERN['variables']()),
         'parameterize_over': kwargs.get('parameterize_over',
-                                        VALID_PATTERN['parameterize_over']())
+                                        VALID_PATTERN['parameterize_over']()),
+        'input_paths': kwargs.get('input_paths',
+                                  VALID_PATTERN['input_paths']())
     }
 
     if user_query:
