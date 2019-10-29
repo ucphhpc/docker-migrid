@@ -138,3 +138,5 @@ res/migrid.test.0/last_request.migrid.test
 
 # Execution node volume
 MiG-exe/
+
+*.DS_Store

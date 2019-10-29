@@ -982,7 +982,93 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertEqual(trigger['vgrid_name'], pattern_attributes['vgrid'])
         self.assertNotEqual(trigger['templates'], [])
 
-# Test that the pattern parameter file is correctly made and updated
+    # Test updated pattern with new input_paths and recipe.
+    def test_update_pattern_paths_recipe(self):
+        pattern_attributes = {'name': self.test_pattern_name,
+                              'vgrid': self.test_vgrid,
+                              'input_paths': ['input_dir/*.hdf5'],
+                              'input_file': 'hdf5_input',
+                              'output': {},
+                              'recipes': ['non_existing_recipe']}
+
+        created, pattern_id = create_workflow(self.configuration,
+                                              self.username,
+                                              workflow_type=WORKFLOW_PATTERN,
+                                              **pattern_attributes)
+        self.logger.info(pattern_id)
+        self.assertTrue(created)
+
+        patterns = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_PATTERN,
+                                     **pattern_attributes)
+
+        trigger_id = next(iter(patterns[0]['trigger_recipes']))
+        self.assertEqual(len(patterns[0]['trigger_recipes'].keys()), 1)
+        # Recipe didn't exist before pattern was created == placeholder name
+        # key is ready to be replaced with recipe_id
+        self.assertEqual(patterns[0]['trigger_recipes'][trigger_id],
+                         {'non_existing_recipe': {}})
+
+        # Test that the trigger is valid
+        trigger, msg = get_workflow_trigger(self.configuration,
+                                            self.test_vgrid,
+                                            trigger_id)
+        self.assertEqual(trigger['rule_id'], trigger_id)
+        self.assertEqual(trigger['path'], pattern_attributes['input_paths'][0])
+        self.assertEqual(trigger['vgrid_name'], pattern_attributes['vgrid'])
+        # Templates should contain an empty template since no
+        # recipe is associated
+        self.assertEqual(trigger['templates'], [])
+
+        # Create new recipe
+        notebook = nbformat.v4.new_notebook()
+        recipe_attributes = {'name': self.test_recipe_name,
+                             'vgrid': self.test_vgrid,
+                             'recipe': notebook,
+                             'source': 'notebook.ipynb'}
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_attributes)
+        self.logger.info(recipe_id)
+        self.assertTrue(created)
+
+        # Update pattern with new input paths and existing recipe
+        new_attributes = {'persistence_id': pattern_id,
+                          'vgrid': self.test_vgrid,
+                          'input_paths': ['new_input_path/*.hdf5'],
+                          'recipes': [self.test_recipe_name]}
+
+        # Result -> Delete trigger associated with old input_paths,
+        # then delete removed recipe reference from pattern
+        updated, u_pattern_id = update_workflow(self.configuration,
+                                                self.username,
+                                                WORKFLOW_PATTERN,
+                                                **new_attributes)
+        self.logger.info(u_pattern_id)
+        self.assertTrue(updated)
+        self.assertEqual(pattern_id, u_pattern_id)
+        # Ensure that the old trigger is deleted
+        u_trigger, u_msg = get_workflow_trigger(self.configuration,
+                                                self.test_vgrid,
+                                                trigger_id)
+        self.assertFalse(u_trigger)
+
+        u_patterns = get_workflow_with(self.configuration,
+                                       client_id=self.username,
+                                       user_query=True,
+                                       workflow_type=WORKFLOW_PATTERN,
+                                       **{'persistence_id': u_pattern_id})
+
+        trigger_id = next(iter(u_patterns[0]['trigger_recipes']))
+        self.assertEqual(len(u_patterns[0]['trigger_recipes'].keys()), 1)
+        # No recipe provided == None
+        self.assertEqual(u_patterns[0]['trigger_recipes'][trigger_id], {})
+
+    # Test that the pattern parameter file is correctly made and updated
     def test_create_pattern_parameter_file(self):
         pattern_attributes = {'name': self.test_pattern_name,
                               'vgrid': self.test_vgrid,
@@ -1145,6 +1231,9 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertTrue(deleted)
         self.assertEqual(pattern_id, msg)
         self.assertFalse(os.path.exists(parameter_path))
+
+
+
 
     # def test_recipe_pattern_association_creation_pattern_first(self):
     #     pattern_attributes = {'name': 'association test pattern',
