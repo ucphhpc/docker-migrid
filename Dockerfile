@@ -190,8 +190,6 @@ RUN pip2 install --user \
 ARG MIG_CHECKOUT=4332
 RUN svn checkout -r $MIG_CHECKOUT https://svn.code.sf.net/p/migrid/code/trunk .
 
-ADD mig $MIG_ROOT/mig
-
 USER root
 RUN chown -R $USER:$USER $MIG_ROOT/mig
 
@@ -233,13 +231,10 @@ RUN ./generateconfs.py \
     --public_fqdn=www.$DOMAIN \
     --public_port=80 \
     --mig_cert_fqdn= \
-    --mig_cert_port= \
     --ext_cert_fqdn= \
-    --ext_cert_port= \
     --mig_oid_fqdn=oid.$DOMAIN \
     --mig_oid_port=443 \
     --ext_oid_fqdn= \
-    --ext_oid_port= \
     --sid_fqdn=sid.$DOMAIN \
     --sid_port=444 \
     --io_fqdn=io.$DOMAIN \
