@@ -69,7 +69,9 @@ MANUAL_TRIGGER = 'manual_trigger'
 CANCEL_JOB = 'cancel_job'
 RESUBMIT_JOB = 'resubmit_job'
 WORKFLOW_ACTION_TYPES = [MANUAL_TRIGGER, CANCEL_JOB, RESUBMIT_JOB]
-CELL_TYPE, CODE, SOURCE = 'cell_type', 'code', 'source'
+PATTERN_GRAPH = 'pattern_graph'
+WORKFLOW_SEARCH_TYPES = [PATTERN_GRAPH]
+
 WORKFLOW_PATTERNS, WORKFLOW_RECIPES, MODTIME, CONF = \
     ['__workflowpatterns__', '__workflow_recipes__', '__modtime__', '__conf__']
 MAP_CACHE_SECONDS = 60
@@ -2341,6 +2343,41 @@ def convert_to(configuration, notebook, exporter='notebook',
         return (True, (body, resources))
 
     return (True, body)
+
+
+def search_workflow(configuration, client_id,
+                    workflow_search_type=PATTERN_GRAPH, **kwargs):
+    """ """
+    _logger = configuration.logger
+    vgrid = kwargs.get('vgrid', None)
+    if not vgrid:
+        msg = "A workflow create dependency was missing: 'vgrid'"
+        _logger.error("search_workflow: 'vgrid' was not set: '%s'" % vgrid)
+        return (False, msg)
+
+    # User is vgrid owner or member
+    if not vgrid_is_owner_or_member(vgrid, client_id, configuration):
+        return (False, "You are neither a member or owner of vgrid: '%s'"
+                % vgrid)
+
+    if workflow_search_type == PATTERN_GRAPH:
+        return __search_workflow_p_graph(configuration, vgrid)
+
+
+def __search_workflow_p_graph(configuration, vgrid):
+    """ """
+    _logger = configuration.logger
+    workflows = get_workflow_with(configuration, user_query=True,
+                                  workflow_type=WORKFLOW_PATTERN,
+                                  **{'vgrid': vgrid})
+    if not workflows:
+        return workflows
+
+    # input map (Not globally unique)
+    # output map (Not globally unique)
+
+    # Construct ID per node and per edge
+    # persistence_id (NodeID)
 
 
 if __name__ == '__main__':

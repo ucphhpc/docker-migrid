@@ -35,7 +35,7 @@ from shared.workflows import INVALID_SESSION_ID, NOT_ENABLED, NOT_FOUND, \
     WORKFLOW_TYPES, WORKFLOW_CONSTRUCT_TYPES, WORKFLOW_PATTERN, \
     valid_session_id, get_workflow_with, load_workflow_sessions_db,\
     create_workflow, delete_workflow, update_workflow, \
-    touch_workflow_sessions_db, WORKFLOW_ACTION_TYPES
+    touch_workflow_sessions_db, WORKFLOW_ACTION_TYPES, WORKFLOW_SEARCH_TYPES
 
 INVALID_FORMAT = 4
 
@@ -43,7 +43,6 @@ WORKFLOW_API_CREATE = 'create'
 WORKFLOW_API_READ = 'read'
 WORKFLOW_API_UPDATE = 'update'
 WORKFLOW_API_DELETE = 'delete'
-
 
 PATTERN_LIST = 'pattern_list'
 RECIPE_LIST = 'recipe_list'
@@ -142,6 +141,11 @@ def workflow_api_read(configuration, workflow_session,
                                  user_query=True,
                                  workflow_type=workflow_type,
                                  **workflow_attributes)
+    elif workflow_type in WORKFLOW_SEARCH_TYPES:
+        return search_workflow(configuration,
+                               workflow_session['owner'],
+                               workflow_type=workflow_type,
+                               **workflow_attributes)
     return (False, "Invalid workflow read api type: '%s', valid are: '%s'" %
                    (workflow_type, ', '.join(WORKFLOW_TYPES + JOB_TYPES)))
 
