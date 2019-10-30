@@ -2373,6 +2373,34 @@ def __search_workflow_p_graph(configuration, vgrid):
     if not workflows:
         return workflows
 
+    node_map = {}
+    for workflow in workflows:
+        w_id = workflow['persistence_id']
+        if workflow[w_id] not in node_map:
+            node_map[w_id] = {}
+            node_map[w_id]['edges'] = []
+            node_map[w_id]['neighbours'] = {}
+
+        for neighbour in workflows:
+            n_id = neighbour['persistence_id']
+            if w_id == n_id:
+                continue
+
+            # # If w_id output matches n_id input_path == neighbour
+            # if 'output' in workflow:
+            #     for output in workflow['output'].values():
+            #         if output in neighbour['input_paths']:
+            #         # Generate edge id
+            #         node_map[w_id]['edges'].append({'id': 0,
+            #                                         'from': w_id,
+            #                                         'to': n_id})
+            #         node_map[w_id]['neighbours'][n_id] = neighbour
+                    # Remove output from potential graph candidates
+
+            # if 'output' in neighbour:
+            #     if neighbour['output'].values() in workflow['input_paths']
+            # if n_id output matches w_id input_path == neighbour
+
     # input map (Not globally unique)
     # output map (Not globally unique)
 
