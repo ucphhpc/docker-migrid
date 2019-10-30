@@ -1065,8 +1065,17 @@ class WorkflowsFunctionsTest(unittest.TestCase):
 
         trigger_id = next(iter(u_patterns[0]['trigger_recipes']))
         self.assertEqual(len(u_patterns[0]['trigger_recipes'].keys()), 1)
-        # No recipe provided == None
-        self.assertEqual(u_patterns[0]['trigger_recipes'][trigger_id], {})
+        # Test that the new trigger is valid
+        n_trigger, msg = get_workflow_trigger(self.configuration,
+                                              self.test_vgrid,
+                                              trigger_id)
+
+        self.assertEqual(n_trigger['rule_id'], trigger_id)
+        self.assertEqual(n_trigger['path'], new_attributes['input_paths'][0])
+        self.assertEqual(n_trigger['vgrid_name'], new_attributes['vgrid'])
+        # Templates should not be empty since a recipe is now associated
+        self.assertNotEqual(n_trigger['templates'], [])
+        # TODO, validate that the template is the correct structure
 
     # Test that the pattern parameter file is correctly made and updated
     def test_create_pattern_parameter_file(self):

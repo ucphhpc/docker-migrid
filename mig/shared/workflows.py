@@ -1058,7 +1058,6 @@ def create_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
 #
 #         return __cancel_job_by_id(configuration, job_id, client_id)
 #     if workflow_type == RESUBMIT_JOB:
-#         # TODO implement
 #         return (False, "Implementation under way")
 #     return (False, "Unsupported action '%s'" % workflow_type)
 
@@ -1657,20 +1656,42 @@ def __update_workflow_pattern(configuration, client_id, vgrid,
 
     _logger.debug("__update_workflow_pattern, applying variables: %s"
                   % workflow_pattern)
-    # TODO, pattern has new paths definitions
-    # Remove existing triggers and recipes associated with that recipe
-    # Then create new triggers with recipe placeholder names
-    # if 'input_paths' in workflow_pattern:
-    #     existing_paths = [(rule_id, get_workflow_trigger(
-    #                                 configuration, vgrid, rule_id))
-    #                       for rule_id, recipes in
-    #                       pattern['trigger_recipes'].items()]
-    #
-    #     remove_paths = set( - existing_paths)
-    #     missing_paths = set()
 
-    # TODO, if changed input paths, delete associated triggers and create new
-    # ones and attach recipes
+    if 'input_paths' in workflow_pattern:
+        # Remove triggers and associate the newly specified
+        existing_paths = []
+        for rule_id, recipe in pattern['trigger_recipes'].items():
+            trigger, _ = get_workflow_trigger(configuration, vgrid, rule_id)
+            if trigger:
+                trigger_path = trigger['path']
+                existing_paths.append((rule_id, trigger_path))
+
+        # [(rule_id, path)]
+        remove_paths = [rule_path for rule_path in existing_paths
+                        if rule_path[1] not in workflow_pattern['input_paths']]
+
+        # [path1, path2]
+        ep = dict(map(lambda x: x, existing_paths))
+        missing_paths = [np for np in workflow_pattern['input_paths']
+                         if np not in ep.values()]
+
+        for rule_path in remove_paths:
+            deleted, msg = delete_workflow_trigger(configuration, vgrid,
+                                                   rule_path[0])
+            if not deleted:
+                return (False, msg)
+            pattern['trigger_recipes'].pop(rule_path[0])
+
+        # Create empty trigger for path
+        for path in missing_paths:
+            trigger, msg = create_workflow_trigger(configuration, client_id,
+                                                   vgrid, path)
+            if not trigger:
+                return (False, msg)
+
+            pattern['trigger_recipes'].update(
+                {trigger['rule_id']: {}})
+
     if 'recipes' in workflow_pattern:
         existing_recipes = [(recipe['name'], rule_id)
                             if 'name' in recipe
@@ -2184,9 +2205,15 @@ def __delete_task_parameter_file(configuration, vgrid, pattern):
 
 
 def create_workflow_trigger(configuration, client_id, vgrid, path,
-                            arguments=[], templates=[]):
+                            arguments=None, templates=None):
     """ """
     _logger = configuration.logger
+    if not arguments or not isinstance(arguments, list):
+        arguments = []
+
+    if not templates or not isinstance(templates, list):
+        templates = []
+
     rule_id = "%d" % (time.time() * 1E8)
     ret_val, msg, ret_variables = \
         init_vgrid_script_add_rem(vgrid, client_id, rule_id, 'trigger',
