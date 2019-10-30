@@ -23,7 +23,7 @@ clean:
 	rm -rf ./state
 	rm -fr ./MiG-exe
 	if [ "$$(docker volume ls -q -f 'name=migrid-service*')" != "" ]; then\
-		docker volume rm -f $$(docker volume ls -q -f 'name=migrid-service*');
+		docker volume rm -f $$(docker volume ls -q -f 'name=migrid-service*');\
 	fi
 	if [ "$$(docker volume ls -q -f 'name=_MiG')" != "" ]; then\
 		docker volume rm -f $$(docker volume ls -q -f 'name=_MiG');\
