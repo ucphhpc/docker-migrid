@@ -2373,6 +2373,32 @@ def __search_workflow_p_graph(configuration, vgrid):
     if not workflows:
         return workflows
 
+    wp_graph = {'nodes': {},
+                'edges': []}
+    for workflow in workflows:
+        w_id = workflow['persistence_id']
+        if w_id not in wp_graph['nodes']:
+            wp_graph['nodes'][w_id] = workflow
+
+        if 'output' not in workflow:
+            continue
+
+        for neighbour in workflows:
+            n_id = neighbour['persistence_id']
+            if w_id == n_id:
+                continue
+            # Have matching output/input paths?
+            if not bool(set(workflow['output'].values()) &
+                        set(neighbour['input_paths'])):
+                continue
+
+            for output in workflow['output'].values():
+                if output in neighbour['input_paths']:
+                    wp_graph['edges'].append({'from': w_id,
+                                              'to': n_id})
+
+    return wp_graph
+
 
 if __name__ == '__main__':
     conf = get_configuration_object()
