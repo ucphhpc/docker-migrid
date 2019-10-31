@@ -49,7 +49,7 @@ from shared.defaults import src_dst_sep, w_id_charset, \
 from shared.serial import dump, load
 from shared.vgrid import vgrid_list_vgrids, vgrid_add_triggers, \
     vgrid_remove_triggers, vgrid_triggers, vgrid_set_triggers, \
-    init_vgrid_script_add_rem, vgrid_is_owner_or_member
+    init_vgrid_script_add_rem, init_vgrid_script_list
 from shared.fileio import delete_file, write_file, makedirs_rec
 from shared.validstring import possible_workflow_session_id
 
@@ -1027,9 +1027,10 @@ def create_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
 
     if vgrid:
         # User is vgrid owner or member
-        if not vgrid_is_owner_or_member(vgrid, client_id, configuration):
-            return (False, "You are neither a member or owner of vgrid: '%s'"
-                    % vgrid)
+        success, msg, _ = init_vgrid_script_list(vgrid, client_id,
+                                                 configuration)
+        if not success:
+            return (False, msg)
 
     if workflow_type == WORKFLOW_RECIPE:
         return __create_workflow_recipe_entry(configuration, client_id,
@@ -1083,9 +1084,10 @@ def delete_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
 
     if vgrid:
         # User is vgrid owner or member
-        if not vgrid_is_owner_or_member(vgrid, client_id, configuration):
-            return (False, "You are neither a member or owner of vgrid: '%s'"
-                    % vgrid)
+        success, msg, _ = init_vgrid_script_list(vgrid, client_id,
+                                                 configuration)
+        if not success:
+            return (False, msg)
 
     if workflow_type == WORKFLOW_RECIPE:
         return delete_workflow_recipe(configuration, client_id, vgrid,
@@ -1112,9 +1114,10 @@ def update_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
 
     if vgrid:
         # User is vgrid owner or member
-        if not vgrid_is_owner_or_member(vgrid, client_id, configuration):
-            return (False, "You are neither a member or owner of vgrid: '%s'"
-                    % vgrid)
+        success, msg, _ = init_vgrid_script_list(vgrid, client_id,
+                                                 configuration)
+        if not success:
+            return (False, msg)
 
     if workflow_type == WORKFLOW_RECIPE:
         return __update_workflow_recipe(configuration, client_id, vgrid,
@@ -1408,10 +1411,9 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid,
     if not correct_input:
         return (False, msg)
 
-    # User is vgrid owner or member
-    if not vgrid_is_owner_or_member(vgrid, client_id, configuration):
-        return (False, "You are neither a member or owner of vgrid: '%s'"
-                % vgrid)
+    success, msg, _ = init_vgrid_script_list(vgrid, client_id, configuration)
+    if not success:
+        return (False, msg)
 
     # TODO, validate here that the user specified paths don't try to
     # go outside the vgrid, -> don't allow vgrid/../ on input_paths, output
@@ -1633,10 +1635,9 @@ def __update_workflow_pattern(configuration, client_id, vgrid,
     if not correct_input:
         return (False, msg)
 
-    # User is vgrid owner or member
-    if not vgrid_is_owner_or_member(vgrid, client_id, configuration):
-        return (False, "You are neither a member or owner of vgrid: '%s'"
-                % vgrid)
+    success, msg, _ = init_vgrid_script_list(vgrid, client_id, configuration)
+    if not success:
+        return (False, msg)
 
     # TODO, validate here that the user specified paths don't try to
     # go outside the vgrid, -> don't allow vgrid/../ on input_paths, output
@@ -2355,10 +2356,9 @@ def search_workflow(configuration, client_id,
         _logger.error("search_workflow: 'vgrid' was not set: '%s'" % vgrid)
         return (False, msg)
 
-    # User is vgrid owner or member
-    if not vgrid_is_owner_or_member(vgrid, client_id, configuration):
-        return (False, "You are neither a member or owner of vgrid: '%s'"
-                % vgrid)
+    success, msg, _ = init_vgrid_script_list(vgrid, client_id, configuration)
+    if not success:
+        return (False, msg)
 
     if workflow_search_type == PATTERN_GRAPH:
         return __search_workflow_p_graph(configuration, vgrid)
@@ -2372,12 +2372,6 @@ def __search_workflow_p_graph(configuration, vgrid):
                                   **{'vgrid': vgrid})
     if not workflows:
         return workflows
-
-    # input map (Not globally unique)
-    # output map (Not globally unique)
-
-    # Construct ID per node and per edge
-    # persistence_id (NodeID)
 
 
 if __name__ == '__main__':
