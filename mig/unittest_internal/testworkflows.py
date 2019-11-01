@@ -88,6 +88,34 @@ class WorkflowsFunctionsTest(unittest.TestCase):
             self.assertEqual(trigger['path'], path)
         self.assertEqual(trigger['templates'], [])
 
+    def test_vgrid_exists_create_workflow(self):
+        pattern_attributes = {'name': self.test_pattern_name,
+                              'vgrid': 'foobar',
+                              'input_paths': ['initial_data/*hdf5'],
+                              'input_file': 'hdf5_input',
+                              'output': {
+                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                              'recipes': [self.test_recipe_name],
+                              'variables': {'iterations': 20}}
+
+        created, pattern_id = create_workflow(self.configuration,
+                                              self.username,
+                                              WORKFLOW_PATTERN,
+                                              **pattern_attributes)
+        self.logger.info(pattern_id)
+        self.assertFalse(created)
+        notebook = nbformat.v4.new_notebook()
+        recipe_attributes = {'name': self.test_recipe_name,
+                             'vgrid': 'foobar',
+                             'recipe': notebook,
+                             'source': 'notebook.ipynb'}
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             WORKFLOW_RECIPE,
+                                             **recipe_attributes)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
     def test_pattern_create_with_persistence_id(self):
         pattern_attributes = {'name': self.test_pattern_name,
                               'vgrid': self.test_vgrid,
