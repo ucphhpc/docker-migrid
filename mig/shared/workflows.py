@@ -315,17 +315,17 @@ def valid_session_id(configuration, workflow_session_id):
     return possible_workflow_session_id(configuration, workflow_session_id)
 
 
-def __correct_user_input(configuration,  input, required_input=None,
+def __correct_user_input(configuration, input, required_input=None,
                          allowed_input=None):
     """ """
     _logger = configuration.logger
     _logger.debug("WP: __correct_user_input verifying user input"
                   " '%s' type '%s'" % (input, type(input)))
 
-    if not required_input or not isinstance(required_input, dict):
+    if not isinstance(required_input, dict):
         required_input = {}
 
-    if not allowed_input or not isinstance(allowed_input, dict):
+    if not isinstance(allowed_input, dict):
         allowed_input = {}
 
     for key, value in input.items():
@@ -343,6 +343,7 @@ def __correct_user_input(configuration,  input, required_input=None,
         if key not in input:
             msg = "required key: '%s' is missing, required includes: '%s'" \
                   % (key, ', '.join(required_input.keys()))
+            _logger.debug(msg)
             return (False, msg)
     return (True, "")
 
