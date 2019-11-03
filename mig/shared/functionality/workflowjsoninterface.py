@@ -33,9 +33,10 @@ from shared.job import get_jobs_with, JOB_TYPES, JOB, QUEUE
 from shared.safeinput import valid_sid, InputException
 from shared.workflows import INVALID_SESSION_ID, NOT_ENABLED, NOT_FOUND, \
     WORKFLOW_TYPES, WORKFLOW_CONSTRUCT_TYPES, WORKFLOW_PATTERN, \
-    valid_session_id, get_workflow_with, load_workflow_sessions_db,\
+    valid_session_id, get_workflow_with, load_workflow_sessions_db, \
     create_workflow, delete_workflow, update_workflow, \
-    touch_workflow_sessions_db, WORKFLOW_ACTION_TYPES, WORKFLOW_SEARCH_TYPES
+    touch_workflow_sessions_db, search_workflow,\
+    WORKFLOW_ACTION_TYPES, WORKFLOW_SEARCH_TYPES
 
 INVALID_FORMAT = 4
 
@@ -77,7 +78,7 @@ VALID_SIGNATURE_JSON_TYPES = {
 
 VALID_SIGNATURE_FILTER_MAP = {
     'attributes': valid_attributes,
-    'type': WORKFLOW_TYPES + WORKFLOW_ACTION_TYPES + JOB_TYPES,
+    'type': WORKFLOW_TYPES + WORKFLOW_ACTION_TYPES + WORKFLOW_SEARCH_TYPES + JOB_TYPES,
     'operation': VALID_OPERATIONS,
     'workflowsessionid': valid_sid
 }
@@ -115,8 +116,8 @@ def workflow_api_create(configuration, workflow_session,
     #                            workflow_type=workflow_type,
     #                            **workflow_attributes)
     return (False, "Invalid workflow create api type: '%s', valid are: '%s'" %
-                   (workflow_type,
-                    ', '.join(WORKFLOW_CONSTRUCT_TYPES)))
+            (workflow_type,
+             ', '.join(WORKFLOW_CONSTRUCT_TYPES)))
 
 
 def workflow_api_read(configuration, workflow_session,
@@ -124,8 +125,8 @@ def workflow_api_read(configuration, workflow_session,
     """ """
     logger = configuration.logger
     logger.debug("W_API: search: (%s, %s, %s)" % (workflow_session,
-                                                   workflow_type,
-                                                   workflow_attributes))
+                                                  workflow_type,
+                                                  workflow_attributes))
     if workflow_type in JOB_TYPES:
         first = False
         if workflow_type == JOB:
@@ -147,7 +148,7 @@ def workflow_api_read(configuration, workflow_session,
                                workflow_type=workflow_type,
                                **workflow_attributes)
     return (False, "Invalid workflow read api type: '%s', valid are: '%s'" %
-                   (workflow_type, ', '.join(WORKFLOW_TYPES + JOB_TYPES)))
+            (workflow_type, ', '.join(WORKFLOW_TYPES + JOB_TYPES)))
 
 
 def workflow_api_update(configuration, workflow_session,
@@ -167,7 +168,7 @@ def workflow_api_update(configuration, workflow_session,
                                workflow_type, **workflow_attributes)
 
     return (False, "Invalid workflow update api type: '%s', valid are: '%s'" %
-                   (workflow_type, ', '.join(WORKFLOW_CONSTRUCT_TYPES)))
+            (workflow_type, ', '.join(WORKFLOW_CONSTRUCT_TYPES)))
 
 
 # TODO, support deleting every workflow in vgrid without name
@@ -189,7 +190,7 @@ def workflow_api_delete(configuration, workflow_session,
                                workflow_type, **workflow_attributes)
 
     return (False, "Invalid workflow update api type: '%s', valid are: '%s'" %
-                       (workflow_type, ', '.join(WORKFLOW_CONSTRUCT_TYPES)))
+            (workflow_type, ', '.join(WORKFLOW_CONSTRUCT_TYPES)))
 
 
 def main(client_id, user_arguments_dict):
@@ -221,9 +222,8 @@ def main(client_id, user_arguments_dict):
         msg = "An invalid format was supplied to: '%s', requires a JSON " \
               "compatible format" % op_name
         logger.error(msg)
-        output_objects.append({'object_type': 'workflow',
-                               'error_text': msg,
-                               'error_code': INVALID_FORMAT})
+        output_objects.append({'object_type': 'error_text',
+                               'text': msg, 'error_code': INVALID_FORMAT})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     # If key not present set default signature
@@ -276,7 +276,7 @@ def main(client_id, user_arguments_dict):
     logger.debug('Executing: %s, accepted: %s' % (op_name, json_data))
     if not configuration.site_enable_workflows:
         output_objects.append({
-            'object_type': 'workflow',
+            'object_type': 'error_text',
             'error_text': 'Workflows are not enabled on this system',
             'error_code': NOT_ENABLED})
         return (output_objects, returnvalues.SYSTEM_ERROR)
@@ -287,8 +287,8 @@ def main(client_id, user_arguments_dict):
     workflow_session_id = json_data.get('workflowsessionid', None)
 
     if not valid_session_id(configuration, workflow_session_id):
-        output_objects.append({'object_type': 'workflow',
-                               'error_text': 'Invalid workflowsessionid',
+        output_objects.append({'object_type': 'error_text',
+                               'text': 'Invalid workflowsessionid',
                                'error_code': INVALID_SESSION_ID})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
@@ -300,16 +300,16 @@ def main(client_id, user_arguments_dict):
         logger.debug("Workflow sessions db didn't load, creating new db")
         if not touch_workflow_sessions_db(configuration, force=True):
             output_objects.append(
-                {'object_type': 'workflow',
-                 'error_text': "Internal sessions db failure, please contact "
-                               "an admin to resolve this issue."})
+                {'object_type': 'error_text',
+                 'text': "Internal sessions db failure, please contact "
+                         "an admin to resolve this issue."})
             return (output_objects, returnvalues.SYSTEM_ERROR)
         else:
             # Try reload
             workflow_sessions_db = load_workflow_sessions_db(configuration)
-        
+
     if workflow_session_id not in workflow_sessions_db:
-        output_objects.append({'object_type': 'workflow',
+        output_objects.append({'object_type': 'error_text',
                                'error_text': 'Invalid workflowsessionid',
                                'error_code': INVALID_SESSION_ID})
         return (output_objects, returnvalues.CLIENT_ERROR)
@@ -323,10 +323,11 @@ def main(client_id, user_arguments_dict):
                                            workflow_type,
                                            **workflow_attributes)
         if not created:
-            output_objects.append({'object_type': 'workflow',
-                                   'error_text': msg})
+            output_objects.append({'object_type': 'error_text',
+                                   'text': msg})
+            logger.error("Returning error msg '%s'" % msg)
             return (output_objects, returnvalues.CLIENT_ERROR)
-        output_objects.append({'object_type': 'workflow',
+        output_objects.append({'object_type': 'workflows',
                                'text': msg})
         return (output_objects, returnvalues.OK)
     # Read
@@ -356,7 +357,7 @@ def main(client_id, user_arguments_dict):
             output_objects.append({'object_type': 'error_text',
                                    'text': msg})
             return (output_objects, returnvalues.OK)
-        output_objects.append({'object_type': 'workflow',
+        output_objects.append({'object_type': 'workflows',
                                'text': msg})
         return (output_objects, returnvalues.OK)
 
@@ -369,7 +370,7 @@ def main(client_id, user_arguments_dict):
             output_objects.append({'object_type': 'error_text',
                                    'text': msg})
             return (output_objects, returnvalues.OK)
-        output_objects.append({'object_type': 'workflow', 'text': msg})
+        output_objects.append({'object_type': 'workflows', 'text': msg})
         return (output_objects, returnvalues.OK)
 
     output_objects.append({'object_type': 'error_text',
