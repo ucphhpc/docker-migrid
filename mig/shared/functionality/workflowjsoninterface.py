@@ -29,7 +29,7 @@ import sys
 import json
 import shared.returnvalues as returnvalues
 from shared.init import initialize_main_variables
-from shared.job import get_jobs_with, JOB_TYPES, JOB, QUEUE
+from shared.job import get_jobs_with, JOB_TYPES, JOB
 from shared.safeinput import valid_sid, InputException
 from shared.workflows import INVALID_SESSION_ID, NOT_ENABLED, NOT_FOUND, \
     WORKFLOW_TYPES, WORKFLOW_CONSTRUCT_TYPES, WORKFLOW_PATTERN, \
