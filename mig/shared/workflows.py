@@ -203,7 +203,13 @@ VALID_ACTION_REQUEST = {
 #  at the end of implementation this is still the case then do so
 
 def touch_workflow_sessions_db(configuration, force=False):
-    """Create and save an empty workflow_sessions_db"""
+    """
+    Create and save an empty workflow_sessions_db
+    :param configuration: The MiG configuration object.
+    :param force: Bool, if true the created database object will overwrite
+    any existing database object.
+    :return: (boolean) True/False based on successful creation or not.
+    """
     _logger = configuration.logger
     _logger.debug('WP: touch_workflow_sessions_db, '
                   'creating empty db if it does not exist')
@@ -225,7 +231,12 @@ def touch_workflow_sessions_db(configuration, force=False):
 
 
 def delete_workflow_sessions_db(configuration):
-    """Remove workflow_sessions_db"""
+    """
+    Removes workflow_sessions_db
+    :param configuration: The MiG configuration object.
+    :return: (boolean) True/False based on if database file has been deleted
+    or not.
+    """
     _logger = configuration.logger
     _logger.debug('WP: touch_workflow_sessions_db, '
                   'creating empty db if it does not exist')
@@ -234,16 +245,26 @@ def delete_workflow_sessions_db(configuration):
 
 
 def load_workflow_sessions_db(configuration):
-    """Read in the workflow DB dictionary:
-    Format is {session_id: 'owner': client_id}
+    """
+    Read the workflow DB dictionary.
+    :param configuration: The MiG configuration object.
+    :return: (dictionary) database of current workflow session ids. These are
+    used by the MiG to track valid users interacting with
+    workflowsjsoninterface.py. Format is {session_id: 'owner': client_id}.
     """
     _db_path = configuration.workflows_db
     return load(_db_path)
 
 
 def save_workflow_sessions_db(configuration, workflow_sessions_db):
-    """Read in the workflow session DB dictionary:
-    Format is {session_id: 'owner': client_id}
+    """
+    Write a dictionary of workflow session ids.
+    :param configuration: The MiG configuration object.
+    :param workflow_sessions_db: dictionary of workflow session ids. These are
+    used by the MiG to track valid users interacting with
+    workflowsjsoninterface.py. Format is {session_id: 'owner': client_id}.
+    :return: (boolean) True/False dependent of if provided dictionary is
+    saved or not.
     """
     _logger = configuration.logger
     _db_path = configuration.workflows_db
@@ -258,7 +279,14 @@ def save_workflow_sessions_db(configuration, workflow_sessions_db):
 
 
 def create_workflow_session_id(configuration, client_id):
-    """ """
+    """
+    Generate a new workflow session id, allowing for a client to connect
+    and interact with workflowsjsoninterface.py.
+    :param configuration: The MiG configuration object.
+    :param client_id: The MiG user id.
+    :return: (string or boolean) session id, or False if one could not be
+    created.
+    """
     _logger = configuration.logger
 
     # Generate session id
@@ -274,7 +302,14 @@ def create_workflow_session_id(configuration, client_id):
 
 
 def delete_workflow_session_id(configuration, workflow_session_id):
-    """ """
+    """
+    Deletes a given session id for workflow modification.
+    :param configuration: The MiG configuration object.
+    :param workflow_session_id: A workflow session id
+    :return: (bool) True/False dependent on if workflow_session_id was
+    deleted or not. Will return False if workflow_session_id does not exist
+    within the database
+    """
     _logger = configuration.logger
 
     db = load_workflow_sessions_db(configuration)
@@ -288,7 +323,13 @@ def delete_workflow_session_id(configuration, workflow_session_id):
 
 
 def get_workflow_session_id(configuration, client_id):
-    """ """
+    """
+    Gets a given users workflow_session_id.
+    :param configuration: The MiG configuration object.
+    :param client_id: The MiG user id.
+    :return: (string or None) session if, or None if no session id currently
+    exists for the given user.
+    """
     _logger = configuration.logger
     db = load_workflow_sessions_db(configuration)
     for session_id, user_state in db.items():
@@ -298,14 +339,24 @@ def get_workflow_session_id(configuration, client_id):
 
 
 def new_workflow_session_id():
-    """ """
+    """
+    Generates a new workflow_session_id as a string of random ascii characters.
+    :return: (string) workflow_session_id
+    """
     return generate_random_ascii(session_id_length,
                                  session_id_charset)
 
 
 def valid_session_id(configuration, workflow_session_id):
-    """Validates that the workflow_session_id id is of the
-    correct structure"""
+    """
+    Validates that the workflow_session_id id is of the correct structure.
+    Note this does not check that the session id exists in the current
+    database.
+    :param configuration: The MiG configuration object.
+    :param workflow_session_id: The MiG workflow_session_id.
+    :return: (boolean) True/False based on if provided workflow_session_id is
+    a correctly structured workflow_session_id.
+    """
     _logger = configuration.logger
     if not workflow_session_id:
         return False
@@ -317,7 +368,22 @@ def valid_session_id(configuration, workflow_session_id):
 
 def __correct_user_input(configuration, input, required_input=None,
                          allowed_input=None):
-    """ """
+    """
+    Validates user input against the required_input dictionary and the
+    allowed_input dictionary. Checks that all mandatory input is provided by
+    the user, and that any additional input is valid. All user inputs are
+    checked that they are in the expected format.
+    :param configuration: The MiG configuration object.
+    :param input: The user provided input to validate.
+    :param required_input: dictionary of the required input fields for the
+    users input. Format is {parameter: type}.
+    :param allowed_input: dictionary of any valid input fields for the users
+    input. Format is {parameter: type}.
+    :return: (Tuple (boolean, string)) First value will be True if user input
+    is valid, with an empty string. If any problems are encountered first
+    value with be False with an accompanying error message explaining the
+    issue.
+    """
     _logger = configuration.logger
     _logger.debug("WP: __correct_user_input verifying user input"
                   " '%s' type '%s'" % (input, type(input)))
@@ -349,7 +415,13 @@ def __correct_user_input(configuration, input, required_input=None,
 
 
 def __strip_input_attributes(workflow_pattern):
-
+    """
+    Removes any additional parameters the provided pattern has, that are not
+    necessary for a valid pattern within the MiG.
+    :param workflow_pattern: A workflow pattern dict.
+    :return: (dictionary) The workflow pattern dict, with any superfluous
+    keys removed.
+    """
     for key in ALL_PATTERN_INPUTS.keys():
         if key not in VALID_PATTERN.keys():
             workflow_pattern.pop(key, None)
@@ -358,7 +430,16 @@ def __strip_input_attributes(workflow_pattern):
 
 
 def __correct_persistent_wp(configuration, workflow_pattern):
-    """Validates that the workflow pattern object is correctly formatted"""
+    """
+    Validates that the given workflow_pattern dict is correctly formatted.
+    :param configuration: The MiG configuration object.
+    :param workflow_pattern: A workflow pattern dict.
+    :return: (Tuple (boolean, string)) First value will be True if pattern
+    dict is valid, with an empty string. If any problems are encountered the
+    first value with be False with an accompanying error message explaining the
+    issue.
+    """
+
     _logger = configuration.logger
     contact_msg = "please contact support so that we can help resolve this " \
                   "issue"
@@ -394,7 +475,16 @@ def __correct_persistent_wp(configuration, workflow_pattern):
 
 
 def __correct_persistent_wr(configuration, workflow_recipe):
-    """Validates that the workflow recipe object is correctly formatted"""
+    """
+    Validates that the given workflow_recipe dict is correctly formatted
+    :param configuration: The MiG configuration object.
+    :param workflow_recipe: A workflow recipe dict.
+    :return: (Tuple (boolean, string)) First value will be True if recipe
+    dict is valid, with an empty string. If any problems are encountered the
+    first value with be False with an accompanying error message explaining the
+    issue.
+    """
+
     _logger = configuration.logger
     contact_msg = "Please contact support so that we can help resolve this " \
                   "issue"
@@ -430,7 +520,13 @@ def __correct_persistent_wr(configuration, workflow_recipe):
 
 
 def __load_wp(configuration, wp_path):
-    """Load the workflow pattern from the specified path"""
+    """
+    Load a workflow pattern from the specified path
+    :param configuration: The MiG configuration object.
+    :param wp_path: path to an expected workflow pattern.
+    :return: (dictionary) The loaded workflow pattern dict. Will be empty if
+    no workflow pattern could be loaded from the given path.
+    """
     _logger = configuration.logger
     _logger.debug("WP: load_wp, wp_path: %s" % wp_path)
 
@@ -454,7 +550,13 @@ def __load_wp(configuration, wp_path):
 
 
 def __load_wr(configuration, wr_path):
-    """Load the workflow recipe from the specified path"""
+    """
+    Load a workflow recipe from the specified path
+    :param configuration: The MiG configuration object.
+    :param wr_path: path to an expected workflow recipe.
+    :return: (dictionary) The loaded workflow recipe dict. Will be empty if
+    no workflow recipe could be loaded from the given path.
+    """
     _logger = configuration.logger
     _logger.debug("WR: load_wr, wr_path: %s" % wr_path)
 
@@ -478,9 +580,12 @@ def __load_wr(configuration, wr_path):
 
 
 def __load_map(configuration, workflow_type=WORKFLOW_PATTERN, do_lock=True):
-    """Load map of workflow patterns. Uses a pickled
-    dictionary for efficiency. Optional do_lock option is used to enable and
-    disable locking during load.
+    """
+    Load map of workflow patterns. Uses a pickled dictionary for efficiency.
+    :param configuration: The MiG configuration object.
+    :param workflow_type: A MiG workflow type.
+    :param do_lock: [optional] enable and disable locking during load.
+    :return: (dictionary) The system dictionary of the given workflow_type.
     """
     if workflow_type == WORKFLOW_PATTERN:
         return load_system_map(configuration, 'workflowpatterns', do_lock)
@@ -489,10 +594,14 @@ def __load_map(configuration, workflow_type=WORKFLOW_PATTERN, do_lock=True):
 
 
 def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN):
-    """Refresh map of workflow objects. Uses a pickled dictionary for
-    efficiency. Only update map for workflow objects that appeared or
-    disappeared after last map save.
+    """
+    Refresh map of workflow objects. Uses a pickled dictionary for efficiency.
+    Only update map for workflow objects that appeared, disappeared, or have
+    changed after last map save.
     NOTE: Save start time so that any concurrent updates get caught next time
+    :param configuration: The MiG configuration object.
+    :param workflow_type: A MiG workflow type.
+    :return: (dictionary) The system dictionary of the given workflow_type.
     """
     _logger = configuration.logger
     start_time = time.time()
@@ -516,10 +625,7 @@ def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN):
             configuration, workflow_type, do_lock=False)
 
         # Find all workflow objects
-        (load_status, all_objects) = __list_path(configuration, workflow_type)
-        if not load_status:
-            _logger.warning('Workflows: failed to load list: %s' % all_objects)
-            return workflow_map
+        all_objects = __list_path(configuration, workflow_type)
 
         for workflow_dir, workflow_file in all_objects:
             workflow_map[workflow_file] = workflow_map.get(workflow_file, {})
@@ -567,9 +673,13 @@ def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN):
 
 
 def __list_path(configuration, workflow_type=WORKFLOW_PATTERN):
-    """Returns a list of tuples, containing the path to the individual
-    workflow objects and the actual objects. These can be either patterns or
-    recipes: (path,workflow_pattern)
+    """
+    Lists the paths of individual workflow objects.
+    :param configuration: The MiG configuration object.
+    :param workflow_type: A MiG workflow type.
+    :return: (list) A list of (string, string) tuples, with one entry for
+    each workflow object. First value is the path to that object, second
+    value is the system object itself.
     """
     _logger = configuration.logger
     _logger.debug("Workflows: __list_path")
@@ -598,71 +708,31 @@ def __list_path(configuration, workflow_type=WORKFLOW_PATTERN):
             else:
                 _logger.warning('WP: %s in %s is not a plain file, '
                                 'move it?' % (entry, home))
-    return (True, objects)
-
-
-def __query_map_for_patterns(configuration, client_id=None, **kwargs):
-    """"""
-    _logger = configuration.logger
-    _logger.debug("WP: query_map, client_id: %s, kwargs: %s" % (client_id,
-                                                                kwargs))
-    wp_map = get_wp_map(configuration)
-    if client_id:
-        wp_map = {k: v for k, v in wp_map.items()
-                  if CONF in v and 'owner' in v[CONF]
-                  and client_id == v[CONF]['owner']}
-
-    matches = []
-    for _, wp_content in wp_map.items():
-        _logger.debug("WP: looking at: " + str(wp_content))
-
-        if CONF in wp_content:
-            wp_obj, msg = __build_wp_object(configuration, **wp_content[CONF])
-            _logger.debug("WP: wp_obj %s" % wp_obj)
-            if not wp_obj:
-                _logger.debug("WP: wasn't a workflow_pattern object")
-                continue
-
-            all_match = True
-            for k, v in kwargs.items():
-                if (k not in wp_obj) or (wp_obj[k] != v):
-                    all_match = False
-            if all_match:
-                matches.append(wp_obj)
-    return matches
-
-
-def __query_map_for_recipes(configuration, client_id=None, **kwargs):
-    """"""
-    _logger = configuration.logger
-    _logger.debug("WR: query_map, client_id: %s, kwargs: %s" % (client_id,
-                                                                kwargs))
-    wr_map = get_wr_map(configuration)
-    if client_id:
-        wr_map = {k: v for k, v in wr_map.items()
-                  if CONF in v and 'owner' in v[CONF]
-                  and client_id == v[CONF]['owner']}
-
-    matches = []
-    for _, wr_content in wr_map.items():
-        if CONF in wr_content:
-            wr_obj = __build_wr_object(configuration, **wr_content[CONF])
-            _logger.debug("WR: wr_obj %s" % wr_obj)
-            if not wr_obj:
-                continue
-            all_match = True
-            for k, v in kwargs.items():
-                if (k not in wr_obj) or (wr_obj[k] != v):
-                    all_match = False
-            if all_match:
-                matches.append(wr_obj)
-    return matches
+    return objects
 
 
 def __query_workflow_map(configuration, client_id=None, first=False,
                          user_query=False, workflow_type=WORKFLOW_PATTERN,
                          **kwargs):
-    """"""
+    """
+    Gets all objects that a given user has access to according to the
+    provided workflow_type. Additional keyword arguments can be provided to
+    create a narrower search, where only those objects that match the
+    provided arguments and the user has access to are returned.
+    :param configuration: The MiG configuration object.
+    :param client_id: The MiG user
+    :param first: [optional] boolean. If True will only return the first valid
+    workflow object and return that. If false will return all valid objects.
+    Default is False.
+    :param user_query: [optional] boolean. Flag used to show that query
+    originates from user call.
+    :param workflow_type: A MiG workflow type.
+    :param kwargs: (dictionary) additional arguments that a user may provide
+    to narrow their search of the system map to only return a subset of the
+    objects they can access.
+    :return: (list or dict) If first is False then a list of all matching
+    workflow objects are returned. Else only the first match is returned.
+    """
     _logger = configuration.logger
     _logger.debug('__query_workflow_map, client_id: %s, '
                   'workflow_type: %s, kwargs: %s' % (client_id, workflow_type,
@@ -731,59 +801,20 @@ def __query_workflow_map(configuration, client_id=None, first=False,
         return matches
 
 
-def __query_map_for_first_patterns(configuration, client_id=None, **kwargs):
-    """"""
-    _logger = configuration.logger
-    _logger.debug("WP: query_map_first, client_id: %s, kwargs: %s"
-                  % (client_id, kwargs))
-    wp_map = get_wp_map(configuration)
-    if client_id:
-        wp_map = {k: v for k, v in wp_map.items()
-                  if CONF in v and 'owner' in v[CONF]
-                  and client_id == v[CONF]['owner']}
-    for _, wp_content in wp_map.items():
-        if CONF in wp_content:
-            wp_obj, _ = __build_wp_object(configuration, **wp_content[CONF])
-            _logger.debug("WP: wp_obj %s" % wp_obj)
-            if not wp_obj:
-                continue
-            all_match = True
-            for k, v in kwargs.items():
-                if (k not in wp_obj) or (wp_obj[k] != v):
-                    all_match = False
-            if all_match:
-                return wp_obj
-    return None
-
-
-def __query_map_for_first_recipes(configuration, client_id=None, **kwargs):
-    """"""
-    _logger = configuration.logger
-    _logger.debug("WR: query_map_first, client_id: %s, kwargs: %s"
-                  % (client_id, kwargs))
-    wr_map = get_wr_map(configuration)
-    if client_id:
-        wr_map = {k: v for k, v in wr_map.items()
-                  if CONF in v and 'owner' in v[CONF]
-                  and client_id == v[CONF]['owner']}
-
-    for _, wr_content in wr_map.items():
-        if CONF in wr_content:
-            wr_obj = __build_wr_object(configuration, **wr_content[CONF])
-            _logger.debug("WR: wr_obj %s" % wr_obj)
-            if not wr_obj:
-                continue
-            all_match = True
-            for k, v in kwargs.items():
-                if (k not in wr_obj) or (wr_obj[k] != v):
-                    all_match = False
-            if all_match:
-                return wr_obj
-    return None
-
-
 def __build_workflow_object(configuration, user_query=False,
                             workflow_type=WORKFLOW_PATTERN, **kwargs):
+    """
+    Creates a new dict of type workflow, containing a single workflow object
+    of the given type, using the provided keyword arguments.
+    :param configuration: The MiG configuration object.
+    :param user_query: [optional] Boolean marking if the original query came
+    from a user request. Default is False.
+    :param workflow_type: A MiG workflow type.
+    :param kwargs: (dictionary) arguments used to create the specified
+    workflow object
+    :return: (dictionary) A dictionary which itself contains a dictionary of
+    the workflow object specified by the provided arguments.
+    """
     _logger = configuration.logger
     workflow = {}
     if workflow_type == WORKFLOW_PATTERN:
@@ -804,7 +835,19 @@ def __build_workflow_object(configuration, user_query=False,
 
 
 def __build_wp_object(configuration, user_query=False, **kwargs):
-    """Build a workflow pattern object based on keyword arguments."""
+    """
+    Build a workflow pattern object based on keyword arguments.
+    :param configuration: The MiG configuration object.
+    :param user_query: [optional] Boolean marking if the original query came
+    from a user request. If this is a user request then system keys are
+    removed from the returned object. Default is False.
+    :param kwargs: (dictionary) arguments used to create a workflow pattern
+    dictionary.
+    :return: (Tuple (boolean or dict, string)) if workflow pattern dict is
+    successfully created it is returned as the first value, along with an empty
+    string. If a problem is encountered then the first value is False and an
+    accompanying error message is provided.
+    """
     _logger = configuration.logger
     _logger.debug("WP: __build_wp_object, kwargs: %s" % kwargs)
     correct, msg = __correct_persistent_wp(configuration, kwargs)
@@ -835,7 +878,19 @@ def __build_wp_object(configuration, user_query=False, **kwargs):
 
 
 def __build_wr_object(configuration, user_query=False, **kwargs):
-    """Build a workflow recipe object based on keyword arguments."""
+    """
+    Build a workflow recipe object based on keyword arguments.
+    :param configuration: The MiG configuration object.
+    :param user_query: [optional] Boolean marking if the original query came
+    from a user request. If this is a user request then system keys are
+    removed from the returned object. Default is False.
+    :param kwargs: (dictionary) arguments used to create a workflow recipe
+    dictionary.
+    :return: (Tuple (boolean or dict, string)) if workflow recipe dict is
+    successfully created it is returned as the first value, along with an empty
+    string. If a problem is encountered then the first value is False and an
+    accompanying error message is provided.
+    """
     _logger = configuration.logger
     _logger.debug("WR: __build_wr_object, kwargs: %s" % kwargs)
     correct, msg = __correct_persistent_wr(configuration, kwargs)
@@ -862,6 +917,16 @@ def __build_wr_object(configuration, user_query=False, **kwargs):
 
 
 def init_workflow_home(configuration, vgrid, workflow_type=WORKFLOW_PATTERN):
+    """
+    Creates directories in which to save workflow object data.
+    :param configuration: The MiG configuration object.
+    :param vgrid: The MiG VGrid
+    :param workflow_type: The MiG workflow type.
+    :return: (Tuple (boolean, string)) The first value is True if the required
+    directory has been created or already exists, and is False if it cannot be
+    created. If False, then an accompanying error message is provided in the
+    second value.
+    """
     vgrid_path = os.path.join(configuration.vgrid_home, vgrid)
     if not os.path.exists(vgrid_path):
         return (False, "vgrid: '%s' doesn't exist" % vgrid_path)
@@ -887,13 +952,26 @@ def init_workflow_home(configuration, vgrid, workflow_type=WORKFLOW_PATTERN):
 
 
 def get_workflow_home(configuration, vgrid, workflow_type=WORKFLOW_PATTERN):
+    """
+    Gets the path of the containing directory for a specified MiG workflow type
+    :param configuration: The MiG configuration object.
+    :param vgrid: The MiG VGrid
+    :param workflow_type: The MiG workflow type.
+    :return: (string) directory path
+    """
     if workflow_type == WORKFLOW_RECIPE:
         return get_workflow_recipe_home(configuration, vgrid)
     return get_workflow_pattern_home(configuration, vgrid)
 
 
 def get_workflow_pattern_home(configuration, vgrid):
-    """Returns the path of the directory storing patterns for a given vgrid"""
+    """
+    Returns the path of the directory storing patterns for a given vgrid.
+    :param configuration: The MiG configuration object.
+    :param vgrid: The MiG VGrid.
+    :return: (string or boolean) the pattern directory path or False if the
+    path does not exist and cannot be created.
+    """
     _logger = configuration.logger
     vgrid_path = os.path.join(configuration.vgrid_home, vgrid)
     if not os.path.exists(vgrid_path):
@@ -907,7 +985,13 @@ def get_workflow_pattern_home(configuration, vgrid):
 
 
 def get_workflow_recipe_home(configuration, vgrid):
-    """Returns the path of the directory storing recipes for a given vgrid"""
+    """
+    Returns the path of the directory storing recipes for a given vgrid.
+    :param configuration: The MiG configuration object.
+    :param vgrid: The MiG VGrid.
+    :return: (string or boolean) the recipe directory path or False if the
+    path does not exist and cannot be created.
+    """
     _logger = configuration.logger
 
     vgrid_path = os.path.join(configuration.vgrid_home, vgrid)
@@ -923,7 +1007,12 @@ def get_workflow_recipe_home(configuration, vgrid):
 
 
 def get_workflow_task_home(configuration, vgrid):
-    """Returns the path of the directory storing tasks for given vgrid"""
+    """
+    Returns the path of the directory storing tasks for a given vgrid.
+    :param configuration: The MiG configuration object.
+    :param vgrid: The MiG VGrid.
+    :return: (string) the task directory path .
+    """
     vgrid_path = os.path.join(configuration.vgrid_files_home, vgrid)
     task_home = os.path.join(vgrid_path,
                              configuration.vgrid_workflow_tasks_home)
@@ -931,9 +1020,12 @@ def get_workflow_task_home(configuration, vgrid):
 
 
 def get_wp_map(configuration):
-    """Returns the current map of workflow patterns and
-    their configurations. Caches the map for load prevention with
-    repeated calls within short time span.
+    """
+    Returns the current map of workflow patterns. Caches the map for load
+    prevention with repeated calls within a short time span.
+    :param configuration: The MiG configuration object.
+    :return: (dictionary) all currently registered workflow patterns. Format
+    is {pattern persistence id: pattern dict}.
     """
     _logger = configuration.logger
     modified_patterns, _ = check_workflow_p_modified(configuration)
@@ -953,9 +1045,12 @@ def get_wp_map(configuration):
 
 
 def get_wr_map(configuration):
-    """Returns the current map of workflow recipes and
-    their configurations. Caches the map for load prevention with
-    repeated calls within short time span.
+    """
+    Returns the current map of workflow recipes. Caches the map for load
+    prevention with repeated calls within a short time span.
+    :param configuration: The MiG configuration object.
+    :return: (dictionary) all currently registered workflow recipes. Format
+    is {recipe persistence id: recipe dict}.
     """
     _logger = configuration.logger
     modified_recipes, _ = check_workflow_r_modified(configuration)
