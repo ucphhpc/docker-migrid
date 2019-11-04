@@ -23,6 +23,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                 os.sep, 'home', 'mig', 'mig', 'server', 'MiGserver.conf')
         self.configuration = get_configuration_object()
         self.logger = self.configuration.logger
+        # Ensure workflows are enabled
+        self.configuration.site_enable_workflows = True
         (trigger_status, trigger_msg) = vgrid_set_triggers(self.configuration,
                                                            self.test_vgrid, [])
         self.assertTrue(trigger_status)
@@ -37,6 +39,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertTrue(reset_workflows(configuration, vgrid=test_vgrid))
         self.assertEqual(
             get_workflow_trigger(configuration, test_vgrid)[0], [])
+        configuration.site_enable_workflows = False
 
     def test_create_workflow_pattern(self):
         pattern_attributes = {'name': self.test_pattern_name,

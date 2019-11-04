@@ -24,6 +24,8 @@ class WorkflowJSONInterfaceSessionIDTest(unittest.TestCase):
         self.configuration = get_configuration_object()
         self.configuration.workflows_db = os.path.join(this_path,
                                                        'test_sessions_db')
+        # Ensure workflows are enabled
+        self.configuration.site_enable_workflows = True
 
     def tearDown(self):
         if not os.environ.get('MIG_CONF', False):
@@ -33,6 +35,7 @@ class WorkflowJSONInterfaceSessionIDTest(unittest.TestCase):
         configuration.workflows_db = os.path.join(this_path,
                                                   'test_sessions_db')
         delete_workflow_sessions_db(configuration)
+        configuration.site_enable_workflows = False
 
     def test_workflow_session_id(self):
         wrong_session_id = generate_random_ascii(64, 'ghijklmn')
@@ -89,6 +92,10 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         self.logger = self.configuration.logger
         self.configuration.workflows_db = os.path.join(this_path,
                                                        'test_sessions_db')
+        # Ensure workflows are enabled
+        self.configuration.site_enable_workflows = True
+        self.assertTrue(reset_workflows(self.configuration,
+                                        vgrid=self.test_vgrid))
         touch_workflow_sessions_db(self.configuration, force=True)
         self.session_id = create_workflow_session_id(self.configuration,
                                                      self.username)
@@ -112,6 +119,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         self.assertTrue(delete_workflow_sessions_db(configuration))
         # Also clear vgrid_dir of any patterns and recipes
         self.assertTrue(reset_workflows(configuration, vgrid=test_vgrid))
+        configuration.site_enable_workflows = False
 
     def test_create_workflow(self):
         notebook = nbformat.v4.new_notebook()
@@ -125,6 +133,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                                                  self.workflow_session,
                                                  WORKFLOW_RECIPE,
                                                  **recipe)
+        self.logger.info(recipe_id)
         self.assertTrue(created)
         pattern = {'name': pattern_name,
                    'vgrid': self.test_vgrid,
