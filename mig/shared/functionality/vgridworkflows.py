@@ -41,23 +41,15 @@ from shared.base import client_id_dir
 from shared.cmdapi import get_usage_map
 from shared.defaults import keyword_all, keyword_auto, \
     valid_trigger_changes, valid_trigger_actions, workflows_log_name, \
-    workflows_log_cnt, pending_states, final_states, img_trigger_prefix, \
-    csrf_field
+    workflows_log_cnt, pending_states, final_states, img_trigger_prefix
 from shared.events import get_path_expand_map
 from shared.fileio import unpickle, makedirs_rec, move_file
 from shared.functional import validate_input_and_cert, REJECT_UNSET
-from shared.html import jquery_ui_js, man_base_js, man_base_html, themed_styles,\
-    fancy_upload_js, fancy_upload_html
+from shared.html import jquery_ui_js, man_base_js, man_base_html, themed_styles
 from shared.init import initialize_main_variables, find_entry
 from shared.parseflags import verbose
 from shared.vgrid import vgrid_add_remove_table, vgrid_is_owner_or_member, \
     vgrid_triggers, vgrid_set_triggers
-from shared.handlers import get_csrf_limit
-from shared.pwhash import make_csrf_token
-from shared.workflows import get_wp_map
-from shared.functionality.workflowpatterns import workflow_patterns_table
-from shared.functionality.workflowrecipes import workflow_recipes_table
-from shared.output import html_link
 
 default_pager_entries = 20
 
@@ -114,7 +106,6 @@ def main(client_id, user_arguments_dict):
 
     (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(client_id, op_header=False)
-    client_dir = client_id_dir(client_id)
     defaults = signature()[1]
     title_entry = find_entry(output_objects, 'title')
     label = "%s" % configuration.site_vgrid_label
@@ -143,7 +134,7 @@ access the workflows.'''
                                % vgrid_name})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
-    if operation not in allowed_operations:
+    if not operation in allowed_operations:
         output_objects.append({'object_type': 'error_text', 'text':
                                '''Operation must be one of %s.''' %
                                ', '.join(allowed_operations)})
@@ -334,11 +325,9 @@ your disposal:<br/>
 <ul>
 <li><a href="#manage-tab">Manage Triggers</a></li>
 <li><a href="#jobs-tab">Active Trigger Jobs</a></li>
-<li><a href="#jupyter-tab-pattern">Patterns</a></li>
-<li><a href="#jupyter-tab-recipe">Recipes</a></li>
-<li><a href="#jupyter-tab-notebook">Register Notebook</a></li>
 </ul>
 '''})
+
         # Display existing triggers and form to add new ones
 
         output_objects.append({'object_type': 'html_form', 'text':  '''
@@ -347,12 +336,6 @@ your disposal:<br/>
 
         output_objects.append({'object_type': 'sectionheader',
                                'text': 'Manage Triggers'})
-
-        logger.debug('DELETE ME: debuggin broken oobjs')
-        logger.debug('DELETE ME: output_objects type: %s' % type(output_objects))
-        logger.debug('DELETE ME: oobjs type: %s' % type(oobjs))
-        logger.debug('DELETE ME: oobjs: %s' % oobjs)
-        logger.debug('DELETE ME: oobjs: %s' % oobjs)
         output_objects.extend(oobjs)
         output_objects.append(
             {'object_type': 'html_form', 'text': helper_html})
@@ -383,106 +366,21 @@ in reaction to file system events.</p>
             {'object_type': 'table_pager', 'entry_name': 'job',
              'default_entries': default_pager_entries})
 
-        # output_objects.append({'object_type': 'trigger_job_list', 'trigger_jobs':
-        #                        trigger_jobs})
+    output_objects.append({'object_type': 'trigger_job_list', 'trigger_jobs':
+                           trigger_jobs})
 
+    if operation in show_operations:
         output_objects.append({'object_type': 'sectionheader',
                                'text': 'Trigger Log'})
 
-        # output_objects.append({'object_type': 'trigger_log', 'log_content':
-        #                        log_content})
-
-        output_objects.append({'object_type': 'html_form', 'text':  '''</div>'''})
-
-        # Display current registered patterns
-
-        output_objects.append({'object_type': 'html_form', 'text': '''
-        <div id="jupyter-tab-pattern">
-        '''})
-
-        workflow_patterns_table(configuration,
-                                client_id,
-                                output_objects,
-                                vgrid=vgrid_name)
-
-        output_objects.append({'object_type': 'html_form', 'text': '''
-         </div>
-         '''})
-
-        # Display current registered recipes
-
-        output_objects.append({'object_type': 'html_form', 'text': '''
-            <div id="jupyter-tab-recipe">
-            '''})
-
-        workflow_recipes_table(configuration,
-                               client_id,
-                               output_objects,
-                               vgrid=vgrid_name)
-
-        output_objects.append({'object_type': 'html_form', 'text': '''
-             </div>
-             '''})
-
-        # Register jupyter notebook containing patterns and  recipes
-
-        output_objects.append({'object_type': 'html_form', 'text': '''
-                    <div id="jupyter-tab-notebook">
-                    '''})
-
-        output_objects.append({'object_type': 'sectionheader',
-                               'text': 'Register Jupyter Notebook'})
-
-        form_method = 'post'
-        target_op = 'scrapenotebookforworkflow'
-        csrf_limit = get_csrf_limit(configuration)
-
-        csrf_token = make_csrf_token(configuration, form_method,
-                                     target_op, client_id, csrf_limit)
-
-        (add_import, add_init, add_ready) = fancy_upload_js(configuration,
-                                                            csrf_token=csrf_token)
-
-        fill_helpers = {'form_method': form_method, 'target_op': target_op,
-                        'csrf_field': csrf_field, 'csrf_limit': csrf_limit,
-                        'csrf_token': csrf_token, 'dest_dir': '.' + os.sep,
-                        'vgrid': vgrid_name}
-
-        output_objects.append({'object_type': 'html_form', 'text': """
-                    <p>
-                    On this page you can register a JupyterLab notebook. Valid
-                    patterns will be scraped from it and a workflow will be
-                    formed, if possible If no patterns are present it is
-                    assumed that the notebook is a recipe and is read in as
-                    such.
-                    </p>"""})
-
-        output_objects.append({'object_type': 'html_form', 'text': """
-                    <form enctype='multipart/form-data' method='%(form_method)s'
-                        action='%(target_op)s.py'>
-                        <input type="hidden" name="vgrid_name" value="%(vgrid)s" />
-                        <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
-                        JupyterLab Notebook:
-                        <input type='file' name='wf_notebook'/></br>
-                        <input type='submit' value='Register Notebook'/>
-                    </form>
-                    """ % fill_helpers})
-
-        output_objects.append({'object_type': 'html_form', 'text': '''
-                     </div>
-                     '''})
-
+    output_objects.append({'object_type': 'trigger_log', 'log_content':
+                           log_content})
     if operation in show_operations:
-        output_objects.append({'object_type': 'html_form', 'text':  '''</div>'''})
+        output_objects.append({'object_type': 'html_form', 'text':  '''
+</div>
+'''})
 
-    # (add_import, add_init, add_ready) = fancy_upload_js(configuration,
-    #                                                     csrf_token=csrf_token)
-    # fancy_dialog = fancy_upload_html(configuration)
-
-    #
-    # title_entry['javascript'] = jquery_ui_js(configuration, add_import,
-    #                                          add_init, add_ready)
-
-    # configuration.logger.debug(output_objects)
-
+        output_objects.append({'object_type': 'html_form', 'text':  '''
+</div>
+'''})
     return (output_objects, returnvalues.OK)
