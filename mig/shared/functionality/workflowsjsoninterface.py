@@ -3,7 +3,7 @@
 #
 # --- BEGIN_HEADER ---
 #
-# workflows_crud_api - api for making CRUD workflows requests via cgisid
+# workflows - JSON interface for managing workflows via cgisid requests
 # Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
@@ -25,6 +25,9 @@
 #
 # -- END_HEADER ---
 #
+
+"""JSON interface for workflows related requests"""
+
 import sys
 import json
 import shared.returnvalues as returnvalues
