@@ -232,7 +232,7 @@ def generate_confs(
     enable_gdp='False',
     enable_jobs='True',
     enable_resources='True',
-    enable_workflows='True',
+    enable_workflows='False',
     enable_events='True',
     enable_sharelinks='True',
     enable_transfers='True',
@@ -1304,7 +1304,7 @@ def create_user(
     wsgi_procs = '5'
     enable_jobs = 'True'
     enable_resources = 'True'
-    enable_workflows = 'True'
+    enable_workflows = 'False'
     enable_events = 'True'
     enable_sharelinks = 'True'
     enable_transfers = 'True'
