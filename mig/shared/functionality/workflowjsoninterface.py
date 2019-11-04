@@ -203,6 +203,7 @@ def main(client_id, user_arguments_dict):
         initialize_main_variables(client_id, op_title=False, op_header=False,
                                   op_menu=False)
     logger.debug("Output objects %s" % output_objects)
+
     # Add allow Access-Control-Allow-Origin to headers
     # Required to allow Jupyter Widget from localhost to request against the
     # API
@@ -213,6 +214,13 @@ def main(client_id, user_arguments_dict):
     output_objects[0]['headers'].append(('Access-Control-Allow-Methods',
                                          'POST, OPTIONS'))
     output_objects[0]['headers'].append(('Content-Type', 'application/json'))
+
+    if not configuration.site_enable_workflows:
+        output_objects.append({
+            'object_type': 'error_text',
+            'error_text': 'Workflows are not enabled on this system',
+            'error_code': NOT_ENABLED})
+        return (output_objects, returnvalues.SYSTEM_ERROR)
 
     # Input data
     data = sys.stdin.read()
@@ -274,12 +282,6 @@ def main(client_id, user_arguments_dict):
                 return (output_objects, returnvalues.CLIENT_ERROR)
 
     logger.debug('Executing: %s, accepted: %s' % (op_name, json_data))
-    if not configuration.site_enable_workflows:
-        output_objects.append({
-            'object_type': 'error_text',
-            'error_text': 'Workflows are not enabled on this system',
-            'error_code': NOT_ENABLED})
-        return (output_objects, returnvalues.SYSTEM_ERROR)
 
     workflow_attributes = json_data.get('attributes', None)
     workflow_type = json_data.get('type', None)
