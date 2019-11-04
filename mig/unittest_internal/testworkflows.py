@@ -1217,8 +1217,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
 
         for k, v in new_attributes['output'].items():
             self.assertIn(k, parameters)
-            self.assertEqual(parameters[k], os.path.join(self.test_vgrid,
-                                                         v))
+            self.assertEqual(parameters[k], os.path.join(self.test_vgrid, v))
 
     def test_delete_pattern_parameter_file(self):
         pattern_attributes = {'name': self.test_pattern_name,
@@ -1268,9 +1267,6 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertTrue(deleted)
         self.assertEqual(pattern_id, msg)
         self.assertFalse(os.path.exists(parameter_path))
-
-
-
 
     # def test_recipe_pattern_association_creation_pattern_first(self):
     #     pattern_attributes = {'name': 'association test pattern',
