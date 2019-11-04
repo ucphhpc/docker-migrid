@@ -228,9 +228,9 @@ def fix_missing(config_file, verbose=True):
                            'suggest_threshold': 'GREEN',
                            }
 
-    workflows_section = {'workflows_vgrid_tasks_home': '.workflow_tasks_home/',
-                         'workflows_vgrid_patterns_home': '.workflow_patterns_home/',
-                         'workflows_vgrid_recipes_home': '.workflow_recipes_home/'}
+    workflows_section = {'vgrid_tasks_home': '.workflow_tasks_home/',
+                         'vgrid_patterns_home': '.workflow_patterns_home/',
+                         'vgrid_recipes_home': '.workflow_recipes_home/'}
 
     defaults = {
         'GLOBAL': global_section,
@@ -1336,15 +1336,15 @@ location.""" % self.config_file
         else:
             self.vm_extra_sys_re = []
 
-        if config.has_option('WORKFLOWS', 'workflows_vgrid_tasks_home'):
+        if config.has_option('WORKFLOWS', 'vgrid_tasks_home'):
             self.workflows_vgrid_tasks_home = config.get(
-                'WORKFLOWS', 'workflows_vgrid_tasks_home')
-        if config.has_option('WORKFLOWS', 'workflows_vgrid_patterns_home'):
+                'WORKFLOWS', 'vgrid_tasks_home')
+        if config.has_option('WORKFLOWS', 'vgrid_patterns_home'):
             self.workflows_vgrid_patterns_home = config.get(
-                'WORKFLOWS', 'workflows_vgrid_patterns_home')
-        if config.has_option('WORKFLOWS', 'workflows_vgrid_recipes_home'):
+                'WORKFLOWS', 'vgrid_patterns_home')
+        if config.has_option('WORKFLOWS', 'vgrid_recipes_home'):
             self.workflows_vgrid_recipes_home = config.get(
-                'WORKFLOWS', 'workflows_vgrid_recipes_home')
+                'WORKFLOWS', 'vgrid_recipes_home')
 
         if config.has_option('SITE', 'images'):
             self.site_images = config.get('SITE', 'images')
