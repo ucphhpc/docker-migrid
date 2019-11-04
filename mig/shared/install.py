@@ -751,10 +751,17 @@ cert, oid and sid based https!
     # Enable events daemon only if requested and deps are installed
     if user_dict['__ENABLE_WORKFLOWS__'].lower() == 'true':
         try:
-            import papermill
+            import nbformat
         except ImportError:
             print "ERROR: workflows use requested but " \
-                  "papermill is not installed!"
+                  "nbformat is not installed!"
+            sys.exit(1)
+
+        try:
+            import nbconvert
+        except ImportError:
+            print "ERROR: workflows use requested but " \
+                  "nbconvert is not installed!"
             sys.exit(1)
 
     # Enable events daemon only if requested and deps are installed
