@@ -930,15 +930,6 @@ def get_workflow_task_home(configuration, vgrid):
     return task_home
 
 
-def get_workflow_buffer_home(configuration, vgrid):
-    """Returns the path of the directory storing buffer files for a given
-    vgrid"""
-    vgrid_path = os.path.join(configuration.vgrid_home, vgrid)
-    buffer_home = os.path.join(vgrid_path,
-                               configuration.vgrid_workflow_buffer_home)
-    return buffer_home
-
-
 def get_wp_map(configuration):
     """Returns the current map of workflow patterns and
     their configurations. Caches the map for load prevention with
