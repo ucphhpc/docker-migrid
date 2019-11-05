@@ -290,7 +290,7 @@ def main(client_id, user_arguments_dict):
 
     if workflow_session_id not in workflow_sessions_db:
         output_objects.append({'object_type': 'error_text',
-                               'error_text': 'Invalid workflowsessionid'})
+                               'text': 'Invalid workflowsessionid'})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     workflow_session = workflow_sessions_db.get(workflow_session_id)
