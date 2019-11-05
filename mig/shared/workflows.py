@@ -48,11 +48,6 @@ from shared.vgrid import vgrid_list_vgrids, vgrid_add_triggers, \
 from shared.fileio import delete_file, write_file, makedirs_rec
 from shared.validstring import possible_workflow_session_id
 
-NOT_ENABLED = 1
-INVALID_SESSION_ID = 2
-NOT_FOUND = 3
-WORKFLOWS_ERRORS = (NOT_ENABLED, INVALID_SESSION_ID, NOT_FOUND)
-
 WRITE_LOCK = 'write.lock'
 WORKFLOW_PATTERN = 'workflowpattern'
 WORKFLOW_RECIPE = 'workflowrecipe'
