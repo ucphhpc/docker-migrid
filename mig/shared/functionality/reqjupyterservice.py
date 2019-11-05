@@ -441,7 +441,7 @@ def main(client_id, user_arguments_dict):
         session_id = create_workflow_session_id(configuration, client_id)
         # TODO get this dynamically
         url = configuration.migserver_https_sid_url + \
-              '/cgi-sid/workflowjsoninterface.py?output_format=json'
+              '/cgi-sid/workflowsjsoninterface.py?output_format=json'
 
         mount_dict = mig_to_mount_adapt(active_mount['state'])
         user_dict = mig_to_user_adapt(active_mount['state'])

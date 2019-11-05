@@ -1,9 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
-# --- BEGIN_HEADER ---
+# workflows.py - Collection of workflows related functions
 #
-# workflows - workflow functions
 # Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
@@ -20,13 +19,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
-# USA.
-#
-# -- END_HEADER ---
-#
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-"""Workflow functions"""
+"""A set of shared workflows functions"""
 
 import sys
 import fcntl
@@ -936,10 +931,10 @@ def init_workflow_home(configuration, vgrid, workflow_type=WORKFLOW_PATTERN):
     path = None
     if workflow_type == WORKFLOW_PATTERN:
         path = os.path.join(vgrid_path,
-                            configuration.vgrid_workflow_patterns_home)
+                            configuration.workflows_vgrid_patterns_home)
     elif workflow_type == WORKFLOW_RECIPE:
         path = os.path.join(vgrid_path,
-                            configuration.vgrid_workflow_recipes_home)
+                            configuration.workflows_vgrid_recipes_home)
 
     if not path:
         return (False, "Failed to setup init workflow home '%s' in vgrid '%s'"
@@ -980,7 +975,7 @@ def get_workflow_pattern_home(configuration, vgrid):
         _logger.warning("WP: vgrid '%s' dosen't exist" % vgrid_path)
         return False
     pattern_home = os.path.join(vgrid_path,
-                                configuration.vgrid_workflow_patterns_home)
+                                configuration.workflows_vgrid_patterns_home)
     if not os.path.exists(pattern_home):
         return False
     return pattern_home
@@ -1002,7 +997,7 @@ def get_workflow_recipe_home(configuration, vgrid):
         return False
 
     recipe_home = os.path.join(vgrid_path,
-                               configuration.vgrid_workflow_recipes_home)
+                               configuration.workflows_vgrid_recipes_home)
     if not os.path.exists(recipe_home):
         return False
     return recipe_home
@@ -1017,7 +1012,7 @@ def get_workflow_task_home(configuration, vgrid):
     """
     vgrid_path = os.path.join(configuration.vgrid_files_home, vgrid)
     task_home = os.path.join(vgrid_path,
-                             configuration.vgrid_workflow_tasks_home)
+                             configuration.workflows_vgrid_tasks_home)
     return task_home
 
 
@@ -2249,7 +2244,7 @@ def __recipe_get_task_path(configuration, vgrid, recipe, relative=False):
                 % (task_path, recipe))
 
     if relative:
-        rel_vgrid_path = configuration.vgrid_workflow_tasks_home
+        rel_vgrid_path = configuration.workflows_vgrid_tasks_home
         return (True, os.path.join(vgrid, rel_vgrid_path, recipe['task_file']))
 
     return (True, task_path)
@@ -2394,7 +2389,7 @@ def get_task_parameter_path(configuration, vgrid, pattern, extension='.yaml',
     :return: (string) returns parameter file path.
     """
     if relative:
-        rel_vgrid_path = configuration.vgrid_workflow_tasks_home
+        rel_vgrid_path = configuration.workflows_vgrid_tasks_home
         return os.path.join(vgrid, rel_vgrid_path,
                             pattern['persistence_id'] + extension)
 

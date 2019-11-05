@@ -3,7 +3,8 @@
 #
 # --- BEGIN_HEADER ---
 #
-# workflows_crud_api - API frontend for making workflows related CRUD requests
+# workflowsjsoninterface.py - JSON interface for
+# managing workflows via cgisid requests
 # Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
@@ -20,12 +21,13 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
+# USA.
 #
 # -- END_HEADER ---
 #
 
-"""API for making workflows CRUD JSON requests"""
+"""JSON interface for workflows related requests"""
 
 import cgi
 import cgitb

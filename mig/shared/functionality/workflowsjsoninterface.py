@@ -3,7 +3,8 @@
 #
 # --- BEGIN_HEADER ---
 #
-# workflows_crud_api - api for making CRUD workflows requests via cgisid
+# workflowsjsoninterface.py - JSON interface for
+# managing workflows via cgisid requests
 # Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
@@ -25,10 +26,14 @@
 #
 # -- END_HEADER ---
 #
+
+"""JSON interface for workflows related requests"""
+
 import sys
 import json
 import shared.returnvalues as returnvalues
 from shared.init import initialize_main_variables
+from shared.safeinput import validated_input
 from shared.job import get_jobs_with, JOB_TYPES, JOB
 from shared.safeinput import valid_sid, InputException
 from shared.workflows import INVALID_SESSION_ID, NOT_ENABLED, NOT_FOUND, \
@@ -234,13 +239,18 @@ def main(client_id, user_arguments_dict):
                                'text': msg, 'error_code': INVALID_FORMAT})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
+    # IMPORTANT!! Do not access the json_data input before it has been
+    # validated by validated_input.
+    accepted, rejected = validated_input(json_data,
+                                         VALID_SIGNATURE_JSON_TYPES)
+    if not accepted or rejected:
+        msg = "Invalid input was supplied to the workflow API: %s" % rejected
+        output_objects.append({'object_type': 'error_text', 'test': msg})
+        return (output_objects, returnvalues.CLIENT_ERROR)
+
     # If key not present set default signature
     json_data.update({k: v for k, v in DEFAULT_SIGNATURE.items()
                       if k not in json_data})
-
-    # TODO, evaluate json_data structure with core validated_input
-    # NOTE!! Do not access json_data input before validated_input has been
-    # called on the input
 
     # Ensure only valid keys and value types are present in json_data
     for key, value in json_data.items():
