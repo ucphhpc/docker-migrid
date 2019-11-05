@@ -35,15 +35,14 @@ import shared.returnvalues as returnvalues
 from shared.init import initialize_main_variables
 from shared.safeinput import validated_input
 from shared.job import get_jobs_with, JOB_TYPES, JOB
-from shared.safeinput import valid_sid, InputException
-from shared.workflows import INVALID_SESSION_ID, NOT_ENABLED, NOT_FOUND, \
-    WORKFLOW_TYPES, WORKFLOW_CONSTRUCT_TYPES, WORKFLOW_PATTERN, \
-    valid_session_id, get_workflow_with, load_workflow_sessions_db, \
-    create_workflow, delete_workflow, update_workflow, \
-    touch_workflow_sessions_db, search_workflow,\
+from shared.safeinput import valid_sid, valid_workflow_operation, \
+    valid_workflow_type, valid_workflow_attributes, \
+    InputException, REJECT_UNSET
+from shared.workflows import WORKFLOW_TYPES, WORKFLOW_CONSTRUCT_TYPES, \
+    WORKFLOW_PATTERN, valid_session_id, get_workflow_with,\
+    load_workflow_sessions_db, create_workflow, delete_workflow,\
+    update_workflow, touch_workflow_sessions_db, search_workflow, \
     WORKFLOW_ACTION_TYPES, WORKFLOW_SEARCH_TYPES
-
-INVALID_FORMAT = 4
 
 WORKFLOW_API_CREATE = 'create'
 WORKFLOW_API_READ = 'read'
@@ -56,52 +55,56 @@ RECIPE_LIST = 'recipe_list'
 VALID_OPERATIONS = [WORKFLOW_API_CREATE, WORKFLOW_API_READ,
                     WORKFLOW_API_UPDATE, WORKFLOW_API_DELETE]
 
-
-def valid_attributes(attribute):
-    # Allow valid keys or an empty structure
-    if attribute in VALID_ATTRIBUTES_KEYS or attribute == {}:
-        return True
-    return False
-
-
-# List of pattern attribute options
-# that can be used by the workflowjsoninterface to find a pattern
-# TODO, move to safeinput
-VALID_ATTRIBUTES_KEYS = (
-    'name',
-    'vgrid'
-)
-
-# List of recipe attribute options
-# that can be used by the workflowjsoninterface to find a recipe
-VALID_SIGNATURE_JSON_TYPES = {
-    'attributes': dict,
-    'type': basestring,
-    'operation': basestring,
-    'workflowsessionid': basestring
+WORKFLOW_SIGNATURE = {
+    'attributes': {},
+    'type': REJECT_UNSET,
+    'operation': REJECT_UNSET,
+    'workflowsessionid': REJECT_UNSET
 }
 
-VALID_SIGNATURE_FILTER_MAP = {
-    'attributes': valid_attributes,
-    'type': WORKFLOW_TYPES + WORKFLOW_ACTION_TYPES + WORKFLOW_SEARCH_TYPES + JOB_TYPES,
-    'operation': VALID_OPERATIONS,
+VALID_WORKFLOW_ATTRIBUTES = [
+    'persistence_id',
+    'vgrid',
+    'name',
+    'input_file',
+    'input_paths'
+    'output',
+    'recipes',
+    'variables',
+    'parameterize_over'
+]
+
+
+def type_value_checker(type_value):
+    """Validate that the provided workflow type is allowed"""
+    valid_types = WORKFLOW_TYPES + WORKFLOW_ACTION_TYPES +\
+                  WORKFLOW_SEARCH_TYPES + JOB_TYPES
+
+    if type_value not in valid_types:
+        raise ValueError("Workflow type '%s' is not valid"
+                         % valid_types)
+
+
+def operation_value_checker(operation_value):
+    """Validate that the provided workflow operation is allowed"""
+    if operation_value not in VALID_OPERATIONS:
+        raise ValueError("Workflow operation '%s' is not valid")
+
+
+WORKFLOW_TYPE_MAP = {
+    'attributes': valid_workflow_attributes,
+    'type': valid_workflow_type,
+    'operation': valid_workflow_operation,
     'workflowsessionid': valid_sid
 }
 
-DEFAULT_SIGNATURE = {
-    'attributes': {},
-    'type': WORKFLOW_PATTERN,
-    'operation': WORKFLOW_API_READ,
-    'workflowsessionid': ''
+WORKFLOW_VALUE_MAP = {
+    'type': type_value_checker,
+    'operation': operation_value_checker,
 }
 
 
-def str_hook(obj):
-    return {k.encode('utf-8') if isinstance(k, unicode) else k:
-                v.encode('utf-8') if isinstance(v, unicode) else v
-            for k, v in obj}
-
-
+# Workflow API functions
 def workflow_api_create(configuration, workflow_session,
                         workflow_type=WORKFLOW_PATTERN, **workflow_attributes):
     """ """
@@ -115,11 +118,6 @@ def workflow_api_create(configuration, workflow_session,
                                workflow_session['owner'],
                                workflow_type=workflow_type,
                                **workflow_attributes)
-    # elif workflow_type in WORKFLOW_ACTION_TYPES:
-    #     return workflow_action(configuration,
-    #                            workflow_session['owner'],
-    #                            workflow_type=workflow_type,
-    #                            **workflow_attributes)
     return (False, "Invalid workflow create api type: '%s', valid are: '%s'" %
             (workflow_type,
              ', '.join(WORKFLOW_CONSTRUCT_TYPES)))
@@ -207,7 +205,7 @@ def main(client_id, user_arguments_dict):
     (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(client_id, op_title=False, op_header=False,
                                   op_menu=False)
-    logger.debug("Output objects %s" % output_objects)
+    logger.debug("Workflowsjsoninterface.py entry %s" % output_objects)
 
     # Add allow Access-Control-Allow-Origin to headers
     # Required to allow Jupyter Widget from localhost to request against the
@@ -223,8 +221,7 @@ def main(client_id, user_arguments_dict):
     if not configuration.site_enable_workflows:
         output_objects.append({
             'object_type': 'error_text',
-            'error_text': 'Workflows are not enabled on this system',
-            'error_code': NOT_ENABLED})
+            'text': 'Workflows are not enabled on this system'})
         return (output_objects, returnvalues.SYSTEM_ERROR)
 
     # Input data
@@ -236,16 +233,22 @@ def main(client_id, user_arguments_dict):
               "compatible format" % op_name
         logger.error(msg)
         output_objects.append({'object_type': 'error_text',
-                               'text': msg, 'error_code': INVALID_FORMAT})
+                               'text': msg})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     # IMPORTANT!! Do not access the json_data input before it has been
     # validated by validated_input.
-    accepted, rejected = validated_input(json_data,
-                                         VALID_SIGNATURE_JSON_TYPES)
+    accepted, rejected = validated_input(
+        json_data, WORKFLOW_SIGNATURE,
+        type_override=WORKFLOW_TYPE_MAP,
+        value_override=WORKFLOW_VALUE_MAP)
+
     if not accepted or rejected:
+        logger.error("A validation error occurred: '%s'" % rejected)
         msg = "Invalid input was supplied to the workflow API: %s" % rejected
-        output_objects.append({'object_type': 'error_text', 'test': msg})
+        # Transform error messages to something more readable
+
+        output_objects.append({'object_type': 'error_text', 'text': msg})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     # If key not present set default signature
