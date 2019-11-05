@@ -70,8 +70,6 @@ last_load = {WORKFLOW_PATTERNS: 0, WORKFLOW_RECIPES: 0}
 last_refresh = {WORKFLOW_PATTERNS: 0, WORKFLOW_RECIPES: 0}
 last_map = {WORKFLOW_PATTERNS: {}, WORKFLOW_RECIPES: {}}
 
-BUFFER_FLAG = 'BUFFER_FLAG'
-
 # A persistent correct pattern
 VALID_PATTERN = {
     # The type of workflow object it is.
@@ -962,12 +960,12 @@ def get_workflow_pattern_home(configuration, vgrid):
     :param configuration: The MiG configuration object.
     :param vgrid: The MiG VGrid.
     :return: (string or boolean) the pattern directory path or False if the
-    path does not exist and cannot be created.
+    path does not exist.
     """
     _logger = configuration.logger
     vgrid_path = os.path.join(configuration.vgrid_home, vgrid)
     if not os.path.exists(vgrid_path):
-        _logger.warning("WP: vgrid '%s' dosen't exist" % vgrid_path)
+        _logger.warning("WP: vgrid '%s' doesn't exist" % vgrid_path)
         return False
     pattern_home = os.path.join(vgrid_path,
                                 configuration.workflows_vgrid_patterns_home)
@@ -982,13 +980,13 @@ def get_workflow_recipe_home(configuration, vgrid):
     :param configuration: The MiG configuration object.
     :param vgrid: The MiG VGrid.
     :return: (string or boolean) the recipe directory path or False if the
-    path does not exist and cannot be created.
+    path does not exist.
     """
     _logger = configuration.logger
 
     vgrid_path = os.path.join(configuration.vgrid_home, vgrid)
     if not os.path.exists(vgrid_path):
-        _logger.warning("WR: vgrid '%s' dosen't exist" % vgrid_path)
+        _logger.warning("WR: vgrid '%s' doesn't exist" % vgrid_path)
         return False
 
     recipe_home = os.path.join(vgrid_path,
@@ -998,16 +996,49 @@ def get_workflow_recipe_home(configuration, vgrid):
     return recipe_home
 
 
+def init_workflow_task_home(configuration, vgrid):
+    """
+    Returns the path of the directory storing tasks for a given vgrid.
+    :param configuration: The MiG configuration object.
+    :param vgrid: The MiG VGrid.
+    :return: (string or boolean) the tasks directory path or False if the
+    path does not exist.
+    """
+    _logger = configuration.logger
+    vgrid_path = os.path.join(configuration.vgrid_files_home, vgrid)
+    if not os.path.exists(vgrid_path):
+        _logger.warning("vgrid '%s' doesn't exist" % vgrid_path)
+        return (False, '')
+
+    task_home = os.path.join(vgrid_path,
+                             configuration.workflows_vgrid_tasks_home)
+    if not task_home:
+        return (False, "Failed to setup tasks workflow home '%s' in grid '%s'"
+                % (task_home, vgrid_path))
+
+    if not os.path.exists(task_home) and \
+            not makedirs_rec(task_home, configuration):
+        return (False, "Failed to init workflow task home: '%s'" % task_home)
+
+    _logger.debug("Created or found workflow_task_home '%s'" % task_home)
+    # Ensure correct permissions
+    os.chmod(task_home, 0744)
+    return (True, '')
+
+
 def get_workflow_task_home(configuration, vgrid):
     """
     Returns the path of the directory storing tasks for a given vgrid.
     :param configuration: The MiG configuration object.
     :param vgrid: The MiG VGrid.
-    :return: (string) the task directory path .
+    :return: (string or boolean) the task directory path or False if the
+    path does not exist.
     """
     vgrid_path = os.path.join(configuration.vgrid_files_home, vgrid)
     task_home = os.path.join(vgrid_path,
                              configuration.workflows_vgrid_tasks_home)
+    if not os.path.exists(task_home):
+        return False
     return task_home
 
 
@@ -1290,6 +1321,10 @@ def delete_workflow_pattern(configuration, client_id, vgrid, persistence_id):
                                  first=True, vgrid=vgrid,
                                  persistence_id=persistence_id)
 
+    if not workflow:
+        return (False, "Could not find pattern with persistence_id: '%s' "
+                       "to delete" % persistence_id)
+
     _logger.debug("WP: delete_workflow_pattern, vgrid '%s',"
                   "persistence_id '%s'" % (vgrid, persistence_id))
 
@@ -1324,16 +1359,17 @@ def delete_workflow_recipe(configuration, client_id, vgrid, persistence_id):
     _logger.debug("WR: delete_workflow_recipe:, client_id: %s, "
                   "persistence_id: %s" % (client_id, persistence_id))
 
-    recipe = get_workflow_with(configuration, client_id, first=True,
+    workflow = get_workflow_with(configuration, client_id, first=True,
                                workflow_type=WORKFLOW_RECIPE,
                                persistence_id=persistence_id)
 
-    if not recipe:
-        return (False, "Could not find recipe '%s' to delete" % persistence_id)
+    if not workflow:
+        return (False, "Could not find recipe with persistence_id '%s'"
+                       " to delete" % persistence_id)
 
     # Delete the associated task file
     deleted, msg = delete_workflow_task_file(configuration, vgrid,
-                                             recipe['task_file'])
+                                             workflow['task_file'])
     if not deleted:
         return (False, msg)
 
@@ -1561,9 +1597,18 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid,
         # Update each trigger to associate recipe['recipe'] as the template
         # if the recipe existed already
         recipe_triggers = []
+        created, msg = init_workflow_task_home(configuration, vgrid)
+        if not created:
+            return (False, msg)
+
         parameter_path = get_task_parameter_path(configuration, vgrid,
                                                  workflow_pattern,
                                                  relative=True)
+        if not parameter_path:
+            msg = "A valid task parameter path could not be found"
+            _logger.error(msg)
+            return (False, msg)
+
         for rule_id, recipes in workflow_pattern['trigger_recipes'].items():
             trigger, _ = get_workflow_trigger(configuration, vgrid, rule_id)
             _logger.info("Associating recipes: '%s' with trigger: '%s'"
@@ -1601,6 +1646,7 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid,
     created, msg = __create_task_parameter_file(configuration, vgrid, pattern)
     if not created:
         _logger.warning(msg)
+        return (False, msg)
 
     saved, msg = __save_workflow(configuration, vgrid, pattern,
                                  workflow_type=WORKFLOW_PATTERN)
@@ -2170,6 +2216,7 @@ def __register_recipe(configuration, client_id, vgrid, workflow_recipe):
         if missing_recipe:
             parameter_path = get_task_parameter_path(configuration, vgrid,
                                                      pattern, relative=True)
+
             for rule_id, recipe_name in missing_recipe:
                 trigger, msg = get_workflow_trigger(configuration, vgrid,
                                                     rule_id)
@@ -2232,8 +2279,10 @@ def __recipe_get_task_path(configuration, vgrid, recipe, relative=False):
         return (False, msg)
 
     task_home = get_workflow_task_home(configuration, vgrid)
-    task_path = os.path.join(task_home, recipe['task_file'])
+    if not task_home:
+        return (False, "Task home: '%s' doesn't exist")
 
+    task_path = os.path.join(task_home, recipe['task_file'])
     if not os.path.exists(task_path):
         return (False, "Could not find task file '%s' for recipe '%s'"
                 % (task_path, recipe))
@@ -2312,13 +2361,13 @@ def create_workflow_task_file(configuration, vgrid, source_code,
 
     _logger = configuration.logger
 
+    created, msg = init_workflow_task_home(configuration, vgrid)
+    if not created:
+        return (False, msg)
     task_home = get_workflow_task_home(configuration, vgrid)
-    if not os.path.exists(task_home):
-        if not makedirs_rec(task_home, configuration):
-            msg = "Couldn't create the required dependencies for " \
-                  "your workflow task"
-            return False, msg
-
+    if not task_home:
+        msg = "Task home in vgrid: '%s' does not exist" % vgrid
+        return (False, msg)
     # placeholder for unique name generation.
     file_name = generate_random_ascii(w_id_length, w_id_charset) + extension
     task_file_path = os.path.join(task_home, file_name)
@@ -2335,9 +2384,9 @@ def create_workflow_task_file(configuration, vgrid, source_code,
         # Ensure that the failed write does not stick around
         if not delete_file(task_file_path, _logger):
             msg += "Failed to cleanup after a failed workflow creation"
-        return False, msg
+        return (False, msg)
 
-    return True, file_name
+    return (True, file_name)
 
 
 def delete_workflow_task_file(configuration, vgrid, task_name):
@@ -2356,7 +2405,7 @@ def delete_workflow_task_file(configuration, vgrid, task_name):
     _logger.debug("deleting workflow task_file '%s'" % task_name)
 
     task_home = get_workflow_task_home(configuration, vgrid)
-    if not os.path.exists(task_home):
+    if not task_home:
         return (True, "Task home: '%s' doesn't exist, no '%s' to delete" %
                 (task_home, task_name))
 
@@ -2383,12 +2432,17 @@ def get_task_parameter_path(configuration, vgrid, pattern, extension='.yaml',
     :param relative: boolean for if path is relative to VGrid.
     :return: (string) returns parameter file path.
     """
+    _logger = configuration.logger
     if relative:
         rel_vgrid_path = configuration.workflows_vgrid_tasks_home
         return os.path.join(vgrid, rel_vgrid_path,
                             pattern['persistence_id'] + extension)
 
     task_home = get_workflow_task_home(configuration, vgrid)
+    if not task_home:
+        _logger.warning("Could not find task home in vgrid '%s' "
+                       "for paramater path" % vgrid)
+        return False
     return os.path.join(task_home, pattern['persistence_id'] + extension)
 
 
@@ -2407,7 +2461,17 @@ def __create_task_parameter_file(configuration, vgrid, pattern,
     second value which is otherwise an emtpy string.
     """
     _logger = configuration.logger
+
+    created, msg = init_workflow_task_home(configuration, vgrid)
+    if not created:
+        return (False, msg)
+
     path = get_task_parameter_path(configuration, vgrid, pattern)
+    if not path:
+        msg = "A valid task parameter path could not be found"
+        _logger.error(msg)
+        return (False, msg)
+
     input_file = pattern.get('input_file', VALID_PATTERN['input_file'])
     parameter_dict = {}
     if input_file:
@@ -2463,6 +2527,11 @@ def __delete_task_parameter_file(configuration, vgrid, pattern):
     """
     _logger = configuration.logger
     path = get_task_parameter_path(configuration, vgrid, pattern)
+    if not path:
+        msg = "Skipping deletion of task parameter file for: '%s' " \
+              "since it does not exist" % (pattern)
+        _logger.info(msg)
+        return True
     return delete_file(path, _logger, allow_missing=True)
 
 

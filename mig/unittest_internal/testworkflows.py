@@ -27,6 +27,7 @@ import os
 import nbformat
 from shared.conf import get_configuration_object
 from shared.vgrid import vgrid_set_triggers
+from shared.fileio import makedirs_rec, remove_rec
 from shared.serial import load
 from shared.workflows import reset_workflows, WORKFLOW_PATTERN, \
     WORKFLOW_RECIPE, WORKFLOW_ANY, get_workflow_with, \
@@ -47,6 +48,12 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                 os.sep, 'home', 'mig', 'mig', 'server', 'MiGserver.conf')
         self.configuration = get_configuration_object()
         self.logger = self.configuration.logger
+        # Ensure that the vgrid_files_home exist
+        vgrid_file_path = os.path.join(self.configuration.vgrid_files_home,
+                                       self.test_vgrid)
+        if not os.path.exists(vgrid_file_path):
+            self.assertTrue(makedirs_rec(vgrid_file_path, self.configuration,
+                                         accept_existing=True))
         # Ensure workflows are enabled
         self.configuration.site_enable_workflows = True
         (trigger_status, trigger_msg) = vgrid_set_triggers(self.configuration,
@@ -59,6 +66,12 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                 os.sep, 'home', 'mig', 'mig', 'server', 'MiGserver.conf')
         configuration = get_configuration_object()
         test_vgrid = 'Generic'
+        # Remove tmp vgrid_file_home
+        vgrid_file_path = os.path.join(configuration.vgrid_files_home,
+                                       test_vgrid)
+        if os.path.exists(vgrid_file_path):
+            self.assertTrue(remove_rec(vgrid_file_path, self.configuration))
+        self.assertFalse(os.path.exists(vgrid_file_path))
         # Also clear vgrid_dir of any patterns and recipes
         self.assertTrue(reset_workflows(configuration, vgrid=test_vgrid))
         self.assertEqual(

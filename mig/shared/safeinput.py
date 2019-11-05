@@ -47,6 +47,18 @@ from shared.validstring import valid_user_path
 from shared.valuecheck import lines_value_checker, \
     max_jobs_value_checker
 
+# Used by safeinput.py to validate input
+VALID_WORKFLOW_ATTRIBUTES = [
+    'persistence_id',
+    'vgrid',
+    'name',
+    'input_file',
+    'input_paths'
+    'output',
+    'recipes',
+    'variables',
+    'parameterize_over'
+]
 
 # Accented character constant helpers - the allowed set of accented characters
 # is chosen based which of these constants is used as the include_accented
@@ -803,50 +815,64 @@ def valid_gdp_ref_value(ref_value):
     __valid_contents(ref_value, letters + digits + '+-=/.:_')
 
 
+def valid_workflow_pers_id(persistence_id):
+    valid_sid(persistence_id, w_id_length, w_id_length)
+
+
+def valid_workflow_vgrid(vgrid):
+    valid_vgrid_name(vgrid)
+
+
+def valid_workflow_name(name):
+    valid_alphanumeric(name, extra_chars='+-=:_-')
+
+
+def valid_workflow_input_file(ifile):
+    valid_alphanumeric(ifile, extra_chars='+-=:_-')
+
+
+def valid_workflow_input_paths(paths):
+    valid_path_patterns(paths)
+
+
+def valid_workflow_output(output):
+    if not isinstance(output, dict):
+        raise InputException("Workflow attribute '%s' must be"
+                             "of type '%s'" % (key, dict))
+    for o_key, o_value in output.items():
+        # Validate that the output key is a variable
+        # name compliant string
+        valid_alphanumeric(o_key, extra_chars='_')
+        valid_path_pattern(o_value)
+
+
+def valid_workflow_recipes(recipes):
+    if not isinstance(recipes, list):
+        raise InputException("Workflow attribute: '%s' must "
+                             "be of type: '%s'" % (recipes, list))
+    for recipe in recipes:
+        valid_alphanumeric(recipe, extra_chars='+-=:_-')
+
+
+def valid_workflow_variables(vars):
+    if not isinstance(vars, dict):
+        raise InputException("Workflow attribute '%s' must "
+                             "be of type: '%s'" % (vars, dict))
+    for _key, _value in vars.items():
+        valid_alphanumeric(_key, extra_chars='_')
+        # Essentially no validation since this is a python variable
+        # value, don't evaluate this.
+        valid_free_text(_value)
+
+
 def valid_workflow_attributes(attributes):
     """Type validation filter of input attributes to a workflow"""
     if not isinstance(attributes, dict):
         raise InputException("Expects workflow attributes to be a dictionary")
 
-    for key, value in attributes.items():
-        if key not in VALID_WORKFLOW_ATTRIBUTES:
-            raise InputException("Workflow attribute '%s' is illegal" %
-                                 html_escape(key))
-        # key is a known safe constant value beyond this point
-
-        if key in ('persistence_id', ):
-            valid_sid(value, w_id_length, w_id_length)
-
-        if key in ('vgrid', ):
-            valid_vgrid_name(value)
-
-        if key in ('name', 'input_file'):
-            valid_alphanumeric(value, extra_chars='+-=:_-')
-
-        if key in ('input_paths', ):
-            valid_path_patterns(value)
-
-        if key in ('recipes', ):
-            valid_alphanumeric(value, extra_chars='+-=:_-')
-
-        if key in ('output', ):
-            if not isinstance(value, dict):
-                raise InputException("Workflow attribute '%s' must "
-                                     "of type '%s'" % (key, dict))
-
-            for o_key, o_value in value[key].items():
-                # Validate that the output key is a variable
-                # name compliant string
-                valid_alphanumeric(o_key, extra_chars='_')
-                valid_path_pattern(o_value)
-        # Dictionary of variable value pairs
-        if key in ('variables', 'parameterize_over'):
-            if not isinstance(value, dict):
-                raise InputException("Workflow attribute '%s' must be "
-                                     "of type '%s'" % (key, dict))
-            for _key, _value in value[key].items():
-                valid_alphanumeric(_key, extra_chars='_')
-                # TODO, validate _value as well (arbitrary python value)
+    for _key, _value in attributes.items():
+        if _key not in VALID_WORKFLOW_ATTRIBUTES:
+            raise InputException("Workflow attribute '%s' is illegal" % _key)
 
 
 def valid_workflow_operation(operation):
@@ -1539,27 +1565,18 @@ def validate_helper(
     Please note that all expected variable names must be included in
     the fields list in order to be accepted.
     """
-
     accepted = {}
     rejected = {}
     for (key, values) in input_dict.items():
-        inspect_values = values
-        if list_wrap:
-            inspect_values = [values]
-
-        ok_values, bad_values = [], []
-        if isinstance(inspect_values, dict):
-            # Validate the dict key is allowed
-            inspected_values = [validate_inspect(v_key, v_value, fields,
-                                                 type_checks, value_checks)
-                                for v_key, v_value in
-                                inspect_values.items()]
-            ok_values = inspected_values[0::2]
-            bad_values = inspected_values[1::2]
+        if isinstance(values, dict):
+            ok_values, bad_values = validate_dict_values(key, values, fields,
+                                                         type_checks,
+                                                         value_checks)
         else:
-            ok_values, bad_values = validate_inspect(key, values, fields,
-                                                     type_checks,
-                                                     value_checks)
+            ok_values, bad_values = validate_values(key, values, fields,
+                                                    type_checks,
+                                                    value_checks,
+                                                    list_wrap)
         if ok_values:
             accepted[key] = ok_values
         if bad_values:
@@ -1567,16 +1584,48 @@ def validate_helper(
     return (accepted, rejected)
 
 
-def validate_inspect(
+def validate_dict_values(key, values, fields, type_checks, value_checks):
+    ok_values, bad_values = [], []
+    error = False
+    if key not in fields:
+        err = 'unexpected field: %s' % key
+        bad_values.append((html_escape(key),
+                           html_escape(str(err))))
+
+    for _key, _value in values.items():
+        if _key in type_checks:
+            try:
+                type_checks[_key](_value)
+            except Exception, err:
+                error = True
+                # Probably illegal type hint
+                bad_values.append((html_escape(",".join(values)),
+                                   html_escape(str(err))))
+        if _key in value_checks:
+            try:
+                value_checks[_key](_value)
+            except Exception, err:
+                error = True
+                # Value check failed
+                bad_values.append((html_escape(",".join(values)),
+                                   html_escape(str(err))))
+    if not error:
+        ok_values.append(values)
+    return ok_values, bad_values
+
+
+def validate_values(
     key,
     values,
     fields,
     type_checks,
-    value_checks
+    value_checks,
+    list_wrap=False
 ):
     ok_values = []
     bad_values = []
-    if not isinstance(values, (list, set, tuple)):
+
+    if list_wrap and not isinstance(values, list):
         values = [values]
 
     for entry in values:

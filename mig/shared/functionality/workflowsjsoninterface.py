@@ -35,9 +35,11 @@ import shared.returnvalues as returnvalues
 from shared.init import initialize_main_variables
 from shared.safeinput import validated_input
 from shared.job import get_jobs_with, JOB_TYPES, JOB
-from shared.safeinput import valid_sid, valid_workflow_operation, \
-    valid_workflow_type, valid_workflow_attributes, \
-    InputException, REJECT_UNSET
+from shared.safeinput import REJECT_UNSET, valid_workflow_pers_id, \
+    valid_workflow_vgrid, valid_workflow_name, valid_workflow_input_file, \
+    valid_workflow_input_paths, valid_workflow_output, valid_workflow_recipes,\
+    valid_workflow_variables, valid_workflow_attributes, valid_workflow_type, \
+    valid_workflow_operation, valid_sid
 from shared.workflows import WORKFLOW_TYPES, WORKFLOW_CONSTRUCT_TYPES, \
     WORKFLOW_PATTERN, valid_session_id, get_workflow_with,\
     load_workflow_sessions_db, create_workflow, delete_workflow,\
@@ -62,18 +64,6 @@ WORKFLOW_SIGNATURE = {
     'workflowsessionid': REJECT_UNSET
 }
 
-VALID_WORKFLOW_ATTRIBUTES = [
-    'persistence_id',
-    'vgrid',
-    'name',
-    'input_file',
-    'input_paths'
-    'output',
-    'recipes',
-    'variables',
-    'parameterize_over'
-]
-
 
 def type_value_checker(type_value):
     """Validate that the provided workflow type is allowed"""
@@ -91,17 +81,39 @@ def operation_value_checker(operation_value):
         raise ValueError("Workflow operation '%s' is not valid")
 
 
-WORKFLOW_TYPE_MAP = {
+WORKFLOW_ATTRIBUTES_TYPE_MAP = {
+    'persistence_id': valid_workflow_pers_id,
+    'vgrid': valid_workflow_vgrid,
+    'name': valid_workflow_name,
+    'input_file': valid_workflow_input_file,
+    'input_paths': valid_workflow_input_paths,
+    'output': valid_workflow_output,
+    'recipes': valid_workflow_recipes,
+    'variables': valid_workflow_variables,
+    'parameterize_over': valid_workflow_variables
+}
+
+
+WORKFLOWS_INPUT_TYPE_MAP = {
     'attributes': valid_workflow_attributes,
     'type': valid_workflow_type,
     'operation': valid_workflow_operation,
     'workflowsessionid': valid_sid
 }
 
+WORKFLOWS_TYPE_MAP = dict(WORKFLOW_ATTRIBUTES_TYPE_MAP,
+                          **WORKFLOWS_INPUT_TYPE_MAP)
+
 WORKFLOW_VALUE_MAP = {
     'type': type_value_checker,
     'operation': operation_value_checker,
 }
+
+
+def str_hook(obj):
+    return {k.encode('utf-8') if isinstance(k, unicode) else k:
+            v.encode('utf-8') if isinstance(v, unicode) else v
+            for k, v in obj}
 
 
 # Workflow API functions
@@ -174,7 +186,6 @@ def workflow_api_update(configuration, workflow_session,
             (workflow_type, ', '.join(WORKFLOW_CONSTRUCT_TYPES)))
 
 
-# TODO, support deleting every workflow in vgrid without name
 def workflow_api_delete(configuration, workflow_session,
                         workflow_type=WORKFLOW_PATTERN, **workflow_attributes):
     """ """
@@ -201,11 +212,9 @@ def main(client_id, user_arguments_dict):
     # Ensure that the output format is in JSON
     user_arguments_dict['output_format'] = ['json']
     user_arguments_dict.pop('__DELAYED_INPUT__', None)
-
     (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(client_id, op_title=False, op_header=False,
                                   op_menu=False)
-    logger.debug("Workflowsjsoninterface.py entry %s" % output_objects)
 
     # Add allow Access-Control-Allow-Origin to headers
     # Required to allow Jupyter Widget from localhost to request against the
@@ -236,65 +245,22 @@ def main(client_id, user_arguments_dict):
                                'text': msg})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
+    logger.debug("Input data %s" % json_data)
+
     # IMPORTANT!! Do not access the json_data input before it has been
     # validated by validated_input.
     accepted, rejected = validated_input(
         json_data, WORKFLOW_SIGNATURE,
-        type_override=WORKFLOW_TYPE_MAP,
-        value_override=WORKFLOW_VALUE_MAP)
+        type_override=WORKFLOWS_TYPE_MAP,
+        value_override=WORKFLOW_VALUE_MAP,
+        list_wrap=True)
 
     if not accepted or rejected:
         logger.error("A validation error occurred: '%s'" % rejected)
         msg = "Invalid input was supplied to the workflow API: %s" % rejected
-        # Transform error messages to something more readable
-
+        # TODO, Transform error messages to something more readable
         output_objects.append({'object_type': 'error_text', 'text': msg})
         return (output_objects, returnvalues.CLIENT_ERROR)
-
-    # If key not present set default signature
-    json_data.update({k: v for k, v in DEFAULT_SIGNATURE.items()
-                      if k not in json_data})
-
-    # Ensure only valid keys and value types are present in json_data
-    for key, value in json_data.items():
-        if key not in VALID_SIGNATURE_JSON_TYPES:
-            output_objects.append(
-                {'object_type': 'error_text',
-                 'text': "Invalid key: '%s', was sent to workflows API,"
-                         " allowed are: '%s'"
-                         % (key, ','.join(VALID_SIGNATURE_JSON_TYPES.keys()))})
-            return (output_objects, returnvalues.CLIENT_ERROR)
-        if not isinstance(value, VALID_SIGNATURE_JSON_TYPES.get(key)):
-            output_objects.append(
-                {'object_type': 'error_text',
-                 'text': "Invalid type: '%s' for key: '%s', requires: '%s'"
-                         % (type(value), key,
-                            VALID_SIGNATURE_JSON_TYPES.get(key))})
-            return (output_objects, returnvalues.CLIENT_ERROR)
-
-    # Validate that the json_data values are allowed
-    for key, _filter in VALID_SIGNATURE_FILTER_MAP.items():
-        value = json_data.get(key)
-        # List of allowed values
-        if isinstance(_filter, (list, tuple)) and value not in _filter:
-            output_objects.append(
-                {'object_type': 'error_text',
-                 'text': "Invalid value: '%s' for key: '%s', allowed are: '%s'"
-                         % (value, key, ','.join(_filter))})
-            return (output_objects, returnvalues.CLIENT_ERROR)
-
-        if callable(_filter):
-            try:
-                _filter(value)
-            except InputException:
-                output_objects.append(
-                    {'object_type': 'error_text',
-                     'text': "Invalid value: '%s' for key: '%s', failed on a "
-                             "preset filter for that attribute type"
-                             % (value, key)})
-                return (output_objects, returnvalues.CLIENT_ERROR)
-
-    logger.debug('Executing: %s, accepted: %s' % (op_name, json_data))
 
     workflow_attributes = json_data.get('attributes', None)
     workflow_type = json_data.get('type', None)
@@ -303,15 +269,14 @@ def main(client_id, user_arguments_dict):
 
     if not valid_session_id(configuration, workflow_session_id):
         output_objects.append({'object_type': 'error_text',
-                               'text': 'Invalid workflowsessionid',
-                               'error_code': INVALID_SESSION_ID})
+                               'text': 'Invalid workflowsessionid'})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     # workflow_session_id symlink points to the vGrid it gives access to
     workflow_sessions_db = []
     try:
         workflow_sessions_db = load_workflow_sessions_db(configuration)
-    except IOError as err:
+    except IOError:
         logger.debug("Workflow sessions db didn't load, creating new db")
         if not touch_workflow_sessions_db(configuration, force=True):
             output_objects.append(
@@ -325,8 +290,7 @@ def main(client_id, user_arguments_dict):
 
     if workflow_session_id not in workflow_sessions_db:
         output_objects.append({'object_type': 'error_text',
-                               'error_text': 'Invalid workflowsessionid',
-                               'error_code': INVALID_SESSION_ID})
+                               'error_text': 'Invalid workflowsessionid'})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     workflow_session = workflow_sessions_db.get(workflow_session_id)
@@ -349,14 +313,11 @@ def main(client_id, user_arguments_dict):
     if operation == WORKFLOW_API_READ:
         workflows = workflow_api_read(configuration, workflow_session,
                                       workflow_type, **workflow_attributes)
-        # TODO change this to distinguish between incorrect attributes and
-        #  just empty vgrids
         if not workflows:
             output_objects.append(
                 {'object_type': 'error_text',
                  'text': 'Failed to find a workflow you own with '
-                         'attributes: %s' % workflow_attributes,
-                 'error_code': NOT_FOUND})
+                         'attributes: %s' % workflow_attributes})
             return (output_objects, returnvalues.OK)
 
         output_objects.append({'object_type': 'workflows',
