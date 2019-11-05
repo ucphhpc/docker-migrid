@@ -36,14 +36,13 @@ basis.
 """
 
 import cgi
-import copy
 from email.utils import parseaddr, formataddr
 from string import letters, digits, printable
 from unicodedata import category, normalize, name as unicode_name
 
 from shared.base import force_unicode, force_utf8
 from shared.defaults import src_dst_sep, user_id_charset, user_id_max_length, \
-    session_id_charset, session_id_length
+    session_id_charset, session_id_length, w_id_length
 from shared.validstring import valid_user_path
 from shared.valuecheck import lines_value_checker, \
     max_jobs_value_checker
@@ -804,6 +803,62 @@ def valid_gdp_ref_value(ref_value):
     __valid_contents(ref_value, letters + digits + '+-=/.:_')
 
 
+def valid_workflow_attributes(attributes):
+    """Type validation filter of input attributes to a workflow"""
+    if not isinstance(attributes, dict):
+        raise InputException("Expects workflow attributes to be a dictionary")
+
+    for key, value in attributes.items():
+        if key not in VALID_WORKFLOW_ATTRIBUTES:
+            raise InputException("Workflow attribute '%s' is illegal" %
+                                 html_escape(key))
+        # key is a known safe constant value beyond this point
+
+        if key in ('persistence_id', ):
+            valid_sid(value, w_id_length, w_id_length)
+
+        if key in ('vgrid', ):
+            valid_vgrid_name(value)
+
+        if key in ('name', 'input_file'):
+            valid_alphanumeric(value, extra_chars='+-=:_-')
+
+        if key in ('input_paths', ):
+            valid_path_patterns(value)
+
+        if key in ('recipes', ):
+            valid_alphanumeric(value, extra_chars='+-=:_-')
+
+        if key in ('output', ):
+            if not isinstance(value, dict):
+                raise InputException("Workflow attribute '%s' must "
+                                     "of type '%s'" % (key, dict))
+
+            for o_key, o_value in value[key].items():
+                # Validate that the output key is a variable
+                # name compliant string
+                valid_alphanumeric(o_key, extra_chars='_')
+                valid_path_pattern(o_value)
+        # Dictionary of variable value pairs
+        if key in ('variables', 'parameterize_over'):
+            if not isinstance(value, dict):
+                raise InputException("Workflow attribute '%s' must be "
+                                     "of type '%s'" % (key, dict))
+            for _key, _value in value[key].items():
+                valid_alphanumeric(_key, extra_chars='_')
+                # TODO, validate _value as well (arbitrary python value)
+
+
+def valid_workflow_operation(operation):
+    """Verify that the supplied operation only contains letters + _ """
+    __valid_contents(operation, letters + '_')
+
+
+def valid_workflow_type(type):
+    """Verify that the supplied type only contains letters"""
+    __valid_contents(type, letters)
+
+
 def filter_ascii(contents):
     """Filter supplied contents to only contain ascii characters"""
 
@@ -1403,40 +1458,6 @@ def guess_type(name):
         for key in ('gdp_ref_value', ):
             __type_map[key] = valid_gdp_ref_value
 
-        # Workflow Pattern
-
-        for key in ('wp_name', 'wp_recipes'):
-            __type_map[key] = lambda x: valid_backend_name(x, max_length=64)
-
-        for key in ('wp_variables', ):
-            __type_map[key] = lambda x: valid_printable(x, max_length=64)
-
-        for key in ('wp_inputs', ):
-            __type_map[key] = valid_path_patterns
-
-        for key in ('wp_output', 'wp_type_filters'):
-            __type_map[key] = valid_path_pattern
-
-        # Workflow Recipe
-
-        for key in ('wr_name', ):
-            __type_map[key] = lambda x: valid_backend_name(x, max_length=64)
-
-        for key in ('wr_recipefilename', ):
-            __type_map[key] = valid_path_pattern
-
-        for key in ('wr_recipe', ):
-            __type_map[key] = valid_printable
-
-        # Workflow notebook
-
-        for key in ('wf_notebookfilename', ):
-            # __type_map[key] = lambda x: valid_path_pattern(x, max_length=32)
-            __type_map[key] = valid_path_pattern
-
-        for key in ('wf_notebook', ):
-            __type_map[key] = valid_printable
-
     # Return type checker from __type_map with fall back to alphanumeric
 
     return __type_map.get(name.lower().strip(), valid_alphanumeric)
@@ -1472,11 +1493,11 @@ def validated_input(
     value_checks = {}
 
     for name in defaults.keys():
-        if type_override.has_key(name):
+        if name in type_override:
             type_checks[name] = type_override[name]
         else:
             type_checks[name] = guess_type(name)
-        if value_override.has_key(name):
+        if name in value_override:
             value_checks[name] = value_override[name]
         else:
             value_checks[name] = guess_value(name)
@@ -1485,13 +1506,12 @@ def validated_input(
                                            list_wrap)
 
     # Fall back to defaults when allowed and reject if required and unset
-
     for (key, val) in defaults.items():
         if REJECT_UNSET != val:
-            if not accepted.has_key(key):
+            if key not in accepted:
                 accepted[key] = val
         else:
-            if not accepted.has_key(key) and not rejected.has_key(key):
+            if key not in accepted and key not in rejected:
                 rejected[key] = (key, ['is required but missing', ''])
 
     return (accepted, rejected)
@@ -1523,53 +1543,70 @@ def validate_helper(
     accepted = {}
     rejected = {}
     for (key, values) in input_dict.items():
-        # NOTE! Allow for values to be a dictionary instead of list
-        # Exception when we are not providing arguments via cgi (e.g. JSON)
         inspect_values = values
         if list_wrap:
             inspect_values = [values]
-        ok_values = []
-        bad_values = []
-        for entry in inspect_values:
-            if not key in fields:
-                err = 'unexpected field: %s' % key
-                bad_values.append((html_escape(entry),
-                                   html_escape(str(err))))
-                continue
-            if not type_checks.has_key(key):
 
-                # No type check - just accept as is
-
-                continue
-            try:
-                type_checks[key](entry)
-            except Exception, err:
-
-                # Probably illegal type hint
-
-                bad_values.append((html_escape(entry),
-                                   html_escape(str(err))))
-                continue
-            if not value_checks.has_key(key):
-
-                # No value check - just accept as is
-
-                continue
-            try:
-                value_checks[key](entry)
-            except Exception, err:
-
-                # Value check failed
-
-                bad_values.append((html_escape(entry),
-                                   html_escape(str(err))))
-                continue
-            ok_values.append(entry)
+        ok_values, bad_values = [], []
+        if isinstance(inspect_values, dict):
+            # Validate the dict key is allowed
+            inspected_values = [validate_inspect(v_key, v_value, fields,
+                                                 type_checks, value_checks)
+                                for v_key, v_value in
+                                inspect_values.items()]
+            ok_values = inspected_values[0::2]
+            bad_values = inspected_values[1::2]
+        else:
+            ok_values, bad_values = validate_inspect(key, values, fields,
+                                                     type_checks,
+                                                     value_checks)
         if ok_values:
             accepted[key] = ok_values
         if bad_values:
             rejected[key] = bad_values
     return (accepted, rejected)
+
+
+def validate_inspect(
+    key,
+    values,
+    fields,
+    type_checks,
+    value_checks
+):
+    ok_values = []
+    bad_values = []
+    if not isinstance(values, (list, set, tuple)):
+        values = [values]
+
+    for entry in values:
+        if key not in fields:
+            err = 'unexpected field: %s' % key
+            bad_values.append((html_escape(entry),
+                               html_escape(str(err))))
+            continue
+        if key not in type_checks:
+            # No type check - just accept as is
+            continue
+        try:
+            type_checks[key](entry)
+        except Exception, err:
+            # Probably illegal type hint
+            bad_values.append((html_escape(entry),
+                               html_escape(str(err))))
+            continue
+        if key not in value_checks:
+            # No value check - just accept as is
+            continue
+        try:
+            value_checks[key](entry)
+        except Exception, err:
+            # Value check failed
+            bad_values.append((html_escape(entry),
+                               html_escape(str(err))))
+            continue
+        ok_values.append(entry)
+    return ok_values, bad_values
 
 
 class InputException(Exception):
