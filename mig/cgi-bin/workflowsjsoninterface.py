@@ -33,7 +33,7 @@ import cgi
 import cgitb
 cgitb.enable()
 
-from shared.functionality.workflowjsoninterface import main
+from shared.functionality.workflowsjsoninterface import main
 from shared.cgiscriptstub import run_cgi_script
 
 # Expect requests with a JSON formatted body and no field values
