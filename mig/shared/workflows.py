@@ -782,8 +782,10 @@ def __query_workflow_map(configuration, client_id=None, first=False,
         if kwargs:
             match, msg = workflow_match(configuration,
                                         workflow_obj[
-                                            workflow_conf['object_type']],
-                                        user_query, **kwargs)
+                                            workflow_conf['object_type']
+                                        ],
+                                        user_query,
+                                        **kwargs)
             if match:
                 matches.append(workflow_obj[workflow_conf['object_type']])
             else:
@@ -1074,6 +1076,22 @@ def get_wr_map(configuration):
 def get_workflow_with(configuration, client_id=None, first=False,
                       user_query=False, workflow_type=WORKFLOW_PATTERN,
                       **kwargs):
+    """
+    Searches workflow object databases for objects that match the provided
+    keyword arguments.
+    :param configuration: The MiG configuration object.
+    :param client_id: A MiG user
+    :param first: [optional] If True will return the first matching workflow
+    object, else will return all matching workflow objects in a list. Default
+    is False
+    :param user_query: [optional] Boolean showing if function call originates
+    from user call or not.
+    :param workflow_type: A MiG workflow object type.
+    :param kwargs: keyword arguments used to narrow search of workflow objects.
+    :return: (None or function call to '__query_workflow_map') Will call
+    '__query_workflow_map', unless a problem is encountered with input
+    arguments, in which case will return None.
+    """
     _logger = configuration.logger
     _logger.debug('get_workflow_with, first: %s, client_id: %s,'
                   ' workflow_type: %s, kwargs: %s' %
@@ -1092,7 +1110,21 @@ def get_workflow_with(configuration, client_id=None, first=False,
 
 def create_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
                     **kwargs):
-    """ """
+    """
+    Creates a new workflow object using the provided keyword arguments.
+    :param configuration: The MiG configuration object.
+    :param client_id: A MiG user
+    :param workflow_type: The MiG workflow object type which will now be
+    created.
+    :param kwargs: keyword arguments used to define the state of the new
+    workflow object
+    :return: (Tuple(boolean, string) or function call to
+    '__create_workflow_recipe_entry', or '__create_workflow_pattern_entry') If
+    any problems are encountered with provided arguments a tuple will be return
+    with the first value being the boolean False, and the second value being
+    an error messsage. If there are no issues then the appropriate workflow
+    object creation function is called.
+    """
     _logger = configuration.logger
     vgrid = kwargs.get('vgrid', None)
     if not vgrid:
@@ -1154,7 +1186,22 @@ def create_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
 
 def delete_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
                     **kwargs):
-    """ """
+    """
+    Deletes the specified workflow object.
+    :param configuration: The MiG configuration object.
+    :param client_id: A MiG user
+    :param workflow_type: The MiG workflow object type which will now be
+    deleted.
+    :param kwargs: keyword arguments identifiying the workflow objects to be
+    deleted. These should be the containing VGrid and the objects
+    persistence_id.
+    :return: (Tuple(boolean, string) or function call to
+    'delete_workflow_recipe', or 'delete_workflow_pattern') If the necessary
+    keyword arguments are invalid then a tuple will be returned with the first
+    value being False, and the second being an error message. If no problems
+    are encountered then the appropriate workflow object deletion function
+    will be called.
+    """
     _logger = configuration.logger
     vgrid = kwargs.get('vgrid', None)
     if not vgrid:
@@ -1185,7 +1232,22 @@ def delete_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
 
 def update_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
                     **kwargs):
-    """ """
+    """
+    Updates the record of a workflow object using newly provide arguments.
+    :param configuration: The MiG configuration object.
+    :param client_id: A MiG user
+    :param workflow_type: The MiG workflow object type which will now be
+    deleted.
+    :param kwargs: keyword arguments identifying the workflow objects to be
+    updated, and defining the new object state. Any object argument keywords
+    not present in the kwargs will not be altered.
+    :return: (Tuple(boolean, string) or function call to
+    '__update_workflow_recipe', or '__update_workflow_pattern') If the
+    necessary keyword arguments are invalid then a tuple will be returned with
+    the first value being False, and the second being an error message. If no
+    problems are encountered then the appropriate workflow object update
+    function will be called.
+    """
     _logger = configuration.logger
     vgrid = kwargs.get('vgrid', None)
     if not vgrid:
@@ -1214,119 +1276,20 @@ def update_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
                                      kwargs)
 
 
-# TODO, look into this
-# This point is surely to trigger a pattern to execute
-# def __manual_trigger(configuration, client_id, vgrid, action):
-#     """
-#     """
-#     _logger = configuration.logger
-#     _logger.debug("ACT: __manual_trigger, client_id: %s, action: %s"
-#                   % (client_id, action))
-#
-#     if not isinstance(action, dict):
-#         _logger.error("ACT: __manual_trigger, incorrect 'action' "
-#                       "structure '%s'" % type(action))
-#         return (False, "Internal server error due to incorrect action "
-#                        "structure")
-#
-#     # TODO, convert to __correct_user_input
-#     for key, value in action.items():
-#         if key not in VALID_ACTION_REQUEST:
-#             msg = "key: '%s' is not allowed, valid includes '%s'" \
-#                   % (key, ', '.join(VALID_ACTION_REQUEST.keys()))
-#             _logger.debug(msg)
-#             return (False, msg)
-#         if not isinstance(value, VALID_ACTION_REQUEST.get(key)):
-#             msg = "value: '%s' has an incorrect type: '%s', requires: '%s'" \
-#                   % (value, type(value), VALID_ACTION_REQUEST.get(key))
-#             _logger.info(msg)
-#             return (False, msg)
-#
-#     persistence_id = action['persistence_id']
-#     object_type = action['object_type']
-#
-#     triggering_patterns = []
-#
-#     if object_type == WORKFLOW_PATTERN:
-#         triggering_patterns.append(persistence_id)
-#     elif object_type == WORKFLOW_RECIPE:
-#         recipe = get_workflow_with(
-#             configuration,
-#             client_id=client_id,
-#             first=True,
-#             vgrid=vgrid,
-#             persistence_id=persistence_id,
-#             workflow_type=object_type
-#         )
-#
-#         if not recipe:
-#             msg = "A recipe with persistence_id: '%s' was not found " \
-#                   % persistence_id
-#             _logger.error(msg)
-#             return (False, msg)
-#
-#         for pattern in recipe:
-#             triggering_patterns.append(pattern)
-#     else:
-#         msg = "Unknown object_type %s. Valid are %s" \
-#               % (object_type, WORKFLOW_CONSTRUCT_TYPES)
-#         _logger.info(msg)
-#         return (False, msg)
-#
-#     vgrid_files_home = os.path.join(configuration.vgrid_files_home, vgrid)
-#     status, trigger_list = vgrid_triggers(vgrid, configuration)
-#
-#     # Saves us looking through triggers again and again but is this actually
-#     # faster?
-#     trigger_dict = {}
-#     for trigger in trigger_list:
-#         trigger_dict[trigger['rule_id']] = trigger
-#
-#     if not status:
-#         msg = "Could not retrieve trigger list. Aborting manual trigger"
-#         _logger.info(msg)
-#         return (False, msg)
-#
-#     for pattern_id in triggering_patterns:
-#         pattern = get_workflow_with(
-#             configuration,
-#             client_id=client_id,
-#             first=True,
-#             vgrid=vgrid,
-#             persistence_id=persistence_id,
-#             workflow_type=WORKFLOW_PATTERN
-#         )
-#
-#         if not pattern:
-#             msg = "A pattern with persistence_id: '%s' was not found " \
-#                   % persistence_id
-#             _logger.error(msg)
-#             return (False, msg)
-#
-#         for trigger_id in pattern['trigger_recipes'].keys():
-#             try:
-#                 trigger_path = trigger_dict[trigger_id]['path']
-#             except KeyError as err:
-#                 msg = 'Internal structure failure inspecting triggers. %s' \
-#                       % err
-#                 _logger.error(msg)
-#                 return False, msg
-#             for root, dirs, files in os.walk(vgrid_files_home,
-#                                              topdown=False):
-#                 for name in files:
-#                     file_path = os.path.join(root, name)
-#                     prefix = name
-#                     if '.' in prefix:
-#                         prefix = prefix[:prefix.index('.')]
-#                     regex_path = os.path.join(vgrid_files_home,
-#                                               trigger_path)
-#
-#                     if re.match(regex_path, file_path):
-#                         touch(file_path, configuration)
-
-
 def delete_workflow_pattern(configuration, client_id, vgrid, persistence_id):
-    """Delete a workflow pattern"""
+    """
+    Deletes a workflow pattern object.
+    :param configuration: The MiG configuration object.
+    :param client_id: A MiG user.
+    :param vgrid: The VGrid containg the workflow pattern.
+    :param persistence_id: The persistence_id of the workflow pattern to be
+    deleted.
+    :return: (Tuple(boolean, string) or function call to '__delete_workflow')
+    If provided arguments are invalid, or something goes wrong with deletion
+    will return a Tuple with the first value being the boolean False, and the
+    second value being an error message. If no problems are encountered then
+    the function '__delete_workflow' will be called.
+    """
 
     _logger = configuration.logger
     _logger.debug("WP: delete_workflow_pattern, client_id: %s, "
@@ -1354,7 +1317,19 @@ def delete_workflow_pattern(configuration, client_id, vgrid, persistence_id):
 
 
 def delete_workflow_recipe(configuration, client_id, vgrid, persistence_id):
-    """Delete a workflow recipe"""
+    """
+    Deletes a workflow recipe object.
+    :param configuration: The MiG configuration object.
+    :param client_id: A MiG user.
+    :param vgrid: The VGrid containg the workflow recipe.
+    :param persistence_id: The persistence_id of the workflow recipe to be
+    deleted.
+    :return: (Tuple(boolean, string) or function call to '__delete_workflow')
+    If provided arguments are invalid, or something goes wrong with deletion
+    will return a Tuple with the first value being the boolean False, and the
+    second value being an error message. If no problems are encountered then
+    the function '__delete_workflow' will be called.
+    """
     _logger = configuration.logger
     _logger.debug("WR: delete_workflow_recipe:, client_id: %s, "
                   "persistence_id: %s" % (client_id, persistence_id))
@@ -1378,7 +1353,20 @@ def delete_workflow_recipe(configuration, client_id, vgrid, persistence_id):
 
 def __save_workflow(configuration, vgrid, workflow,
                     workflow_type=WORKFLOW_PATTERN, overwrite=False):
-
+    """
+    Saves a workflow object to disk. Will also mark that the object has been
+    modified so that the storing map will be reloaded when next called.
+    :param configuration: The MiG configuration object.
+    :param vgrid: The VGrid to which data is to be saved.
+    :param workflow: The workflow object to be saved.
+    :param workflow_type: The Mig workflow object type.
+    :param overwrite: [optional] boolean value denoting if the save process
+    should overwrite existing saved data or not. Default is False.
+    :return: (Tuple(boolean, string)) Returns a tuple with the first value
+    being a boolean, with True showing successful saving, and False showing
+    that a problem has been encountered. If a problem is encountered the
+    second value is an explanatory error message, else it is an empty string.
+    """
     _logger = configuration.logger
 
     home = get_workflow_home(configuration, vgrid, workflow_type)
@@ -1439,7 +1427,21 @@ def __save_workflow(configuration, vgrid, workflow,
 
 def __delete_workflow(configuration, client_id, vgrid, persistence_id,
                       workflow_type=WORKFLOW_PATTERN):
-    """Delete a workflow recipe"""
+    """
+    Delete a workflow object from disk. Will also mark that the object has been
+    removed so that the storing map will be reloaded when next called.
+    :param configuration: The MiG configuration object.
+    :param client_id: The MiG user.
+    :param vgrid: The VGrid from which data is to be deleted.
+    :param persistence_id: The identifying characteristic of the workflow
+    object to be deleted.
+    :param workflow_type: A MiG workflow object type.
+    :return: (Tuple(boolean, string)) Returns a tuple with the first value
+    being a boolean, with True showing successful deletion, and False showing
+    that a problem has been encountered. If a problem is encountered the
+    second value is an explanatory error message, else it is the
+    persistence_id of the deleted object.
+    """
     _logger = configuration.logger
     _logger.debug("__delete_workflow:, client_id: %s, "
                   "persistence_id: %s" % (client_id, persistence_id))
@@ -1479,7 +1481,17 @@ def __delete_workflow(configuration, client_id, vgrid, persistence_id,
 
 def __create_workflow_pattern_entry(configuration, client_id, vgrid,
                                     workflow_pattern):
-    """ Creates a workflow pattern based on the passed workflow_pattern object.
+    """
+    Creates a workflow pattern based on the passed workflow_pattern object.
+    :param configuration: The MiG configuration object.
+    :param client_id: The MiG user.
+    :param vgrid: A MiG VGrid.
+    :param workflow_pattern: A dict defining the workflow pattern object.
+    :return: (Tuple(boolean, string)) Returns a tuple with the first value
+    being a boolean, with True showing successful pattern creation, and False
+    showing that a problem has been encountered. If a problem is encountered
+    the second value is an explanatory error message, else it is the
+    persistence_id of the created pattern.
     """
     _logger = configuration.logger
     _logger.debug("WP: __create_workflow_pattern_entry, client_id: %s,"
@@ -1611,7 +1623,18 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid,
 
 def __create_workflow_recipe_entry(configuration, client_id, vgrid,
                                    workflow_recipe):
-    """ """
+    """
+    Creates a workflow recipe based on the passed workflow_recipe object.
+    :param configuration: The MiG configuration object.
+    :param client_id: The MiG user.
+    :param vgrid: A MiG VGrid.
+    :param workflow_recipe: A dict defining the workflow recipe object.
+    :return: (Tuple(boolean, string)) Returns a tuple with the first value
+    being a boolean, with True showing successful recipe creation, and False
+    showing that a problem has been encountered. If a problem is encountered
+    the second value is an explanatory error message, else it is the
+    persistence_id of the created recipe.
+    """
     _logger = configuration.logger
     _logger.debug(
         "WR: __create_workflow_recipe_entry, client_id: %s,"
@@ -1693,8 +1716,26 @@ def __create_workflow_recipe_entry(configuration, client_id, vgrid,
 def __update_workflow_pattern(configuration, client_id, vgrid,
                               workflow_pattern, required_input=None,
                               allowed_input=None):
-    """Updates an already registered pattern with new variables. Only the
-    variables to be updated are passed to the function """
+    """
+    Updates an already registered pattern with new variables. Only the
+    variables to be updated are passed to the function. Will automatically
+    update appropriate recipe entries if necessary.
+    :param configuration: The MiG configuration object.
+    :param client_id: The MiG user.
+    :param vgrid: A MiG VGrid.
+    :param workflow_pattern: A dict on new variables to apply to an existing
+    pattern. Only values to be updated should be included. Must include the
+    persistence_id of the pattern to update.
+    :param required_input: [optional] any mandatory arguments required for the
+    update. By default this includes the persistence_id.
+    :param allowed_input: [optional] any arguments possible to provide on top
+    of the required_input. By default is the VALID_USER_UPDATE_PATTERN dict.
+    :return: (Tuple(boolean, string)) Returns a tuple with the first value
+    being a boolean, with True showing successful pattern creation, and False
+    showing that a problem has been encountered. If a problem is encountered
+    the second value is an explanatory error message, else it is the
+    persistence_id of the created pattern.
+    """
     _logger = configuration.logger
     if not required_input or not isinstance(required_input, dict):
         required_input = {'persistence_id': str}
@@ -1872,9 +1913,23 @@ def __update_workflow_pattern(configuration, client_id, vgrid,
 
 def __update_workflow_recipe(configuration, client_id, vgrid, workflow_recipe,
                              valid_keys=None):
-    """Updates an already registered recipe with new variables. Only the
-    variables to be updated are passed to the function
     """
+    Updates an already registered recipe with new variables. Only the
+    variables to be updated are passed to the function. Will automatically
+    update appropriate pattern entries if necessary.
+    :param configuration: The MiG configuration object.
+    :param client_id: The MiG user.
+    :param vgrid: A MiG VGrid.
+    :param workflow_recipe:
+    :param valid_keys: [optional] any arguments possible to provide for
+    updating. By default is the VALID_USER_UPDATE_RECIPE dict.
+    :return: (Tuple(boolean, string)) Returns a tuple with the first value
+    being a boolean, with True showing successful recipe creation, and False
+    showing that a problem has been encountered. If a problem is encountered
+    the second value is an explanatory error message, else it is the
+    persistence_id of the created recipe.
+    """
+
     _logger = configuration.logger
     _logger.debug("WR: update_workflow_recipe, client_id: %s, recipe: %s"
                   % (client_id, workflow_recipe))
@@ -1936,6 +1991,21 @@ def __update_workflow_recipe(configuration, client_id, vgrid, workflow_recipe,
 
 
 def workflow_match(configuration, workflow_object, user_query=False, **kwargs):
+    """
+    Checks if a given workflow object has matching arguments to those provided.
+    :param configuration: The MiG configuration object.
+    :param workflow_object: The workflow object whose parameters will be
+    checked for matches.
+    :param user_query: [optional] If True, then a single argument match will
+    return True. If False, then all provided kwargs must match for a return of
+    True.
+    :param kwargs: keyword arguments used to query workflow object. Only the
+    keys provided in kwargs are checked against.
+    :return: (Tuple (boolean, string)) First value is True if the workflow
+    object matches the provided kwargs, and False if not. Second value is an
+    appropriate error message if a problem is not encountered and an empty
+    string if not.
+    """
     _logger = configuration.logger
     _logger.debug("WP: searching '%s' with '%s'" % (workflow_object, kwargs))
 
@@ -1964,8 +2034,14 @@ def workflow_match(configuration, workflow_object, user_query=False, **kwargs):
 
 
 def __prepare_template(configuration, template, **kwargs):
-    """Prepares the job mrsl template string with the values provided by
-    kwargs, requires that the kwargs contains at least the 'execute' key."""
+    """
+    Prepares the job mrsl template string.
+    :param configuration: The MiG configuration object.
+    :param template: Mandatory arguments for a mrsl template. Must contain
+    'execute' and 'output_files'
+    :param kwargs: Additional input arguments. Currently does nothing.
+    :return: (string) The mrsl template as a single string.
+    """
 
     _logger = configuration.logger
     _logger.debug("preparing trigger template '%s' with arguments '%s'"
@@ -2025,12 +2101,22 @@ PAPERMILL
 
 def __prepare_recipe_template(configuration, vgrid, recipe,
                               parameter_path=None):
-    """"""
+    """
+    Makes intitial preperations for job mrsl template according to a provided
+    recipe.
+    :param configuration: The MiG configuration object.
+    :param vgrid: A MiG VGrid.
+    :param recipe: A workflow recipe used to
+    :param parameter_path: [optional] Path to ymal file to be used to
+    parameterise the recipe. Default is None.
+    :return: (Boolean or function call to '__prepare_template') Will return
+    False if no template can be prepared, or calls '__prepare_template'.
+    """
     _logger = configuration.logger
     _logger.debug("__prepare_recipe_template %s %s %s"
                   % (vgrid, recipe, parameter_path))
-    # Prepare for output notebook
 
+    # Prepare for output notebook
     task_output = "%s_" + recipe['name'] + "_output.ipynb"
     task_output = task_output % "+JOBID+"
 
@@ -2063,7 +2149,18 @@ def __prepare_recipe_template(configuration, vgrid, recipe,
 
 
 def __register_recipe(configuration, client_id, vgrid, workflow_recipe):
-    """ """
+    """
+    Registers a recipe within a given VGrid. Will automatically update
+    workflow triggers and patterns as necessary.
+    :param configuration: The MiG configuration object.
+    :param client_id: A MiG user.
+    :param vgrid: The MiG VGrid in which the recipe is to be registered.
+    :param workflow_recipe: The workflow recipe to be registered.
+    :return: (Tuple (boolean, string)) Returns a tuple with the first value
+    being True if recipe is successfully register, and False otherwise. If a
+    problem is encountered an explanatory error message is provided in the
+    second value which is otherwise and empty string.
+    """
 
     _logger = configuration.logger
     patterns = get_workflow_with(configuration,
@@ -2123,6 +2220,18 @@ def __register_recipe(configuration, client_id, vgrid, workflow_recipe):
 
 
 def __recipe_get_task_path(configuration, vgrid, recipe, relative=False):
+    """
+    Gets the path to the appropriate task file from a recipe.
+    :param configuration: The MiG configuration object.
+    :param vgrid: A MiG VGrid
+    :param recipe: The recipe used as a base for the task file.
+    :param relative: [optional] boolean showing if returned path should be
+    relative to vgrid or not. Default is False.
+    :return: (Tuple (boolean, string)) Returns a tuple with the first value
+    being True if task path could be identified, and False otherwise. If a
+    problem is encountered an explanatory error message is provided in the
+    second value which is otherwise the identified path.
+    """
     _logger = configuration.logger
     _logger.info("Recipe '%s' loading tasks" % recipe)
 
@@ -2147,6 +2256,19 @@ def __recipe_get_task_path(configuration, vgrid, recipe, relative=False):
 
 
 def reset_workflows(configuration, vgrid=None, client_id=None):
+    """
+    Either removes all workflow objects from a given VGrid, or all workflow
+    objects owned by a given user. One of either vgrid or client_id must be
+    provided, and if both are provided the vgrid will be used over the
+    client_id.
+    :param configuration: The MiG configuration object.
+    :param vgrid: [optional] A MiG VGrid to empty. If provided all contents
+    will be deleted but the VGrid itself will remain. Default is None.
+    :param client_id: [optional] A MiG User to empty. If provided all workflow
+    objects owned by the user will be deleted. Default is None.
+    :return: (Boolean) True/False based on if all specified VGrid or Client
+    data has been deleted.
+    """
     _logger = configuration.logger
     _logger.debug("Resetting workflows, vgrid: '%s' client_id: '%s'" %
                   (vgrid, client_id))
@@ -2178,14 +2300,25 @@ def reset_workflows(configuration, vgrid=None, client_id=None):
     return True
 
 
+# If we don't want users to combine recipes, then remove this
+# functionality as it is just replication of data for no reason
 def create_workflow_task_file(configuration, vgrid, source_code,
                               extension='.ipynb'):
-    # If we don't want users to combine recipes, then remove this
-    # functionality as it is just replication of data for no reason
-    """Creates a task file. This is the actual notebook to be run on the
+    """
+    Creates a task file. This is the actual notebook to be run on the
     resource. A new notebook is required as users can potentially combine
-    multiple notebooks into one super notebook, and may in future define
-    recipes not within notebooks."""
+    multiple notebooks into one 'super notebook', and may in future define
+    recipes not within notebooks.
+    :param configuration: The MiG configuration object.
+    :param vgrid: The MiG VGrid containing the task file.
+    :param source_code: Notebook definiton code.
+    :param extension: File extension used for the task file. Currently only
+    'ipynb' is supported. Default is 'ipynb'.
+    :return: (Tuple (boolean, string)) Returns a tuple with the first value
+    being True if task file could be created, and False otherwise. If a
+    problem is encountered an explanatory error message is provided in the
+    second value which is otherwise the name of the created file.
+    """
 
     _logger = configuration.logger
 
@@ -2218,7 +2351,16 @@ def create_workflow_task_file(configuration, vgrid, source_code,
 
 
 def delete_workflow_task_file(configuration, vgrid, task_name):
-    """ """
+    """
+    Deleted the workflow task file with a given name.
+    :param configuration: The MiG configuration object.
+    :param vgrid: The MiG VGrid containing the task file.
+    :param task_name: Name of the task file to delete.
+    :return: (Tuple (boolean, string)) Returns a tuple with the first value
+    being True if task file could be created, and False otherwise. If a
+    problem is encountered an explanatory error message is provided in the
+    second value which is otherwise the name of the created file.
+    """
 
     _logger = configuration.logger
     _logger.debug("deleting workflow task_file '%s'" % task_name)
@@ -2241,7 +2383,16 @@ def delete_workflow_task_file(configuration, vgrid, task_name):
 
 def get_task_parameter_path(configuration, vgrid, pattern, extension='.yaml',
                             relative=False):
-    """ """
+    """
+    Gets path to a parameter file based on a given pattern.
+    :param configuration: The MiG configuration object.
+    :param vgrid: The MiG VGrid containing the parameter file.
+    :param pattern: Workflow pattern used to generate parameter file.
+    :param extension: [optional] parameter file extension. Currently only
+    supports '.yaml'. Default is .'yaml'.
+    :param relative: boolean for if path is relative to VGrid.
+    :return: (string) returns parameter file path.
+    """
     if relative:
         rel_vgrid_path = configuration.vgrid_workflow_tasks_home
         return os.path.join(vgrid, rel_vgrid_path,
@@ -2253,8 +2404,18 @@ def get_task_parameter_path(configuration, vgrid, pattern, extension='.yaml',
 
 def __create_task_parameter_file(configuration, vgrid, pattern,
                                  serializer='yaml'):
-    """Create a yaml task parameter file that can be used by the executed
-    task"""
+    """
+    Create a yaml task parameter file that can be used by the executed task.
+    :param configuration: The MiG configuration object.
+    :param vgrid: The MiG VGrid containing the parameter file.
+    :param pattern: Workflow pattern used to generate parameter file.
+    :param serializer: [optional] serialiser used for parameter file creation.
+    Currently only '.yaml' are supported. Default is .'yaml'.
+    :return: (Tuple (boolean, string)) Returns a tuple with the first value
+    being True if parameter file could be created, and False otherwise. If a
+    problem is encountered an explanatory error message is provided in the
+    second value which is otherwise an emtpy string.
+    """
     _logger = configuration.logger
     path = get_task_parameter_path(configuration, vgrid, pattern)
     input_file = pattern.get('input_file', VALID_PATTERN['input_file'])
@@ -2280,7 +2441,20 @@ def __create_task_parameter_file(configuration, vgrid, pattern,
 
 def __update_task_parameter_file(configuration, vgrid, pattern,
                                  serializer='yaml'):
-    """ """
+    """
+    Updates a task parameter file by deleting the old version and creating a
+    new one.
+    :param configuration: The MiG configuration object.
+    :param vgrid: The MiG VGrid containing the parameter file.
+    :param pattern: Workflow pattern used to generate parameter file.
+    :param serializer: [optional] serialiser used for parameter file creation.
+    Currently only '.yaml' are supported. Default is .'yaml'.
+    :return: (Tuple (boolean, string) or function call to
+    '__create_task_parameter_file') If a problem is encountered whilst deleting
+    a previous parameter file then a tuple is returned with the first value
+    being False, and an explanatory error message in the second value.
+    Otherwise, the '__create_task_parameter_file' function is called.
+    """
     if not __delete_task_parameter_file(configuration, vgrid, pattern):
         return False, "Failed to update the patterns parameter configuration"
     return __create_task_parameter_file(configuration, vgrid, pattern,
@@ -2288,7 +2462,15 @@ def __update_task_parameter_file(configuration, vgrid, pattern,
 
 
 def __delete_task_parameter_file(configuration, vgrid, pattern):
-    """ """
+    """
+    Deletes a task parameter file based on the given pattern.
+    :param configuration: The MiG configuration object.
+    :param vgrid: The MiG VGrid containing the parameter file.
+    :param pattern: The workflow pattern object used to create the parameter
+    file.
+    :return: (function call to 'delete_file') Calls function 'delete_file' on
+    the identified parameter file path.
+    """
     _logger = configuration.logger
     path = get_task_parameter_path(configuration, vgrid, pattern)
     return delete_file(path, _logger, allow_missing=True)
@@ -2296,7 +2478,21 @@ def __delete_task_parameter_file(configuration, vgrid, pattern):
 
 def create_workflow_trigger(configuration, client_id, vgrid, path,
                             arguments=None, templates=None):
-    """ """
+    """
+    Creates a workflow trigger for a given path.
+    :param configuration: The MiG configuration object.
+    :param client_id: The MiG user to own the trigger.
+    :param vgrid: The MiG VGrid containing trigger.
+    :param path: Path against which events will be tested to determine if
+    trigger fires or not. Paths are relative to the containing VGrid.
+    :param arguments: [optional] (list) list of additional trigger arguments.
+    :param templates: [optional] (list) list of additional trigger templates.
+    :return: (Tuple (boolean or dict, string)) A tuple is returned. If a
+    problem is encountered whilst creating a trigger the first value is False,
+    with an explanatory error message in the second value. Otherwise the first
+    value is the dictionary expressing the state of the created trigger and
+    the sceond is an empty string.
+    """
     _logger = configuration.logger
     if not arguments or not isinstance(arguments, list):
         arguments = []
@@ -2343,7 +2539,18 @@ def create_workflow_trigger(configuration, client_id, vgrid, path,
 
 
 def delete_workflow_trigger(configuration, vgrid, rule_id):
-
+    """
+    Deleters a workflow trigger with the given id.
+    :param configuration: The MiG configuration object.
+    :param vgrid: The MiG VGrid containing trigger.
+    :param rule_id: Identifying characteristic of the trigger to be deleted.
+    :return: (Tuple (boolean, string)) Returns a tuple with the first value
+    being True if trigger could be deleted, and False otherwise. If a
+    problem is encountered an explanatory error message is provided in the
+    second value which is otherwise an emtpy string. In the unexpected event
+    that we attempt to delete a file that does not exist, True is returned
+    along with an explanatory message.
+    """
     _logger = configuration.logger
     _logger.info("WP: delete_workflow_trigger")
     trigger, msg = get_workflow_trigger(configuration, vgrid, rule_id)
@@ -2362,7 +2569,24 @@ def delete_workflow_trigger(configuration, vgrid, rule_id):
 
 
 def get_workflow_trigger(configuration, vgrid, rule_id=None, recursive=False):
-
+    """
+    Gets either an individual trigger if a rule_id is provided, or a list of
+    all triggers in the given vgrid.
+    :param configuration: The MiG configuration object.
+    :param vgrid: The MiG VGrid containing the trigger.
+    :param rule_id: [optional] Identifier of an individual trigger. If
+    provided only that trigger is returned. If not provided a list of all
+    triggers in the given VGrid are returned instead.
+    :param recursive: [optional] boolean stating if recursive search through
+    sub_vgrids should be performed, or just the top level vgrid. Default is
+    False.
+    :return: (Tuple (boolean or list or dict, string)) A tuple is returned. If
+    a problem is encountered whilst retrieving a trigger the first value is
+    False, with an explanatory error message in the second value. Otherwise
+    the first value is either the list of all returned triggers ir no rule_id
+    is specified, or only the dict expressing the trigger which matches the
+    given rule_id. In either case the second value is an empty string.
+    """
     _logger = configuration.logger
     status, triggers = vgrid_triggers(vgrid, configuration,
                                       recursive=recursive)
@@ -2385,6 +2609,17 @@ def get_workflow_trigger(configuration, vgrid, rule_id=None, recursive=False):
 
 
 def update_workflow_trigger(configuration, vgrid, trigger):
+    """
+    Updates a workflow trigger.
+    :param configuration: The MiG configuration object.
+    :param vgrid: The MiG VGrid containing the trigger.
+    :param trigger: Trigger dictionary to update. Must contain the key
+    'rule_id'.
+    :return: (Tuple (boolean, string) or function call to 'vgrid_set_triggers')
+    If a problem is encountered returns a tuple with the first value being
+    False, and an explanatory string in the second value. Otherwise will call
+    the function 'vgrid_set_triggers'
+    """
     _logger = configuration.logger
 
     if 'rule_id' not in trigger:
@@ -2404,12 +2639,27 @@ def update_workflow_trigger(configuration, vgrid, trigger):
 
 def convert_to(configuration, notebook, exporter='notebook',
                return_resources=False):
-    """Converts a notebook dictionary to 'lang' by utilizing nbconvert"""
+    """
+    Converts a notebook dictionary using a specified exporter.
+    :param configuration: The MiG configuration object.
+    :param notebook: The notebook to be exported.
+    :param exporter: [optional] Exporter to be used. Currently only supports
+    'notebook' and 'python'. Default is notebook.
+    :param return_resources: [optional] Boolean specifying if export resources
+    should be returned or not. Default is False.
+    :return: (Tuple (boolean, dictionary or Tuple(dictionary, dictionary)
+    Returns a tuple, with the first value being a boolean with True meaning
+    the conversion was successful, and False anything else. If
+    return_resources is True the second value is a Tuple with the first value
+    containing the notebook source code, and the second value containing any
+    notebook resources. If return_resources is False the second value is just
+    the notebook source code.
+    """
     _logger = configuration.logger
 
     valid_exporters = ['notebook', 'python']
     if exporter not in valid_exporters:
-        return (False, "lang: '%s' is not a valid exporter")
+        return (False, "lang: '%s' is not a valid exporter" % exporter)
 
     if exporter == 'python':
         ex = PythonExporter()
@@ -2435,7 +2685,17 @@ def convert_to(configuration, notebook, exporter='notebook',
 
 def search_workflow(configuration, client_id,
                     workflow_search_type=PATTERN_GRAPH, **kwargs):
-    """ """
+    """
+    Searches a VGrid for workflow definitions. Currently only supports
+    emergent pattern based workflows.
+    :param configuration: The MiG configuration object.
+    :param client_id: The MiG user
+    :param workflow_search_type: type of search to be conducted. Currently
+    only supported search is 'pattern_graph'.
+    :param kwargs: keyword arguments for workflow search. Must contain key
+    'vgrid'. All other arguments are currently unsupported.
+    :return:
+    """
     _logger = configuration.logger
     vgrid = kwargs.get('vgrid', None)
     if not vgrid:
@@ -2452,9 +2712,17 @@ def search_workflow(configuration, client_id,
 
 
 def __search_workflow_p_graph(configuration, vgrid):
-    """ """
+    """
+    Identifies emergent workflow from defined workflow patterns in a given
+    VGrid.
+    :param configuration: The MiG configuration object.
+    :param vgrid: A MiG VGrid to search
+    :return: (dictionary) Identified emergent Workflow. Format is {'nodes':
+    dict of workflow nodes, 'edges': list of workflow edges}
+    """
     _logger = configuration.logger
-    workflows = get_workflow_with(configuration, user_query=True,
+    workflows = get_workflow_with(configuration,
+                                  user_query=True,
                                   workflow_type=WORKFLOW_PATTERN,
                                   **{'vgrid': vgrid})
     if not workflows:
