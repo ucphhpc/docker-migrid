@@ -1130,105 +1130,12 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
                          (pid, state, src_path))
             return
 
-        # # ---------------------------------------------------------------------
-        # # TODO this section should probably be moved into the traditional
-        # #  trigger handling. Do it once we know what structure actually is as
-        # #  may be difficult to implement. Also consider if we want to make use
-        # #  of the mig_meow module here
-        #
-        # # ignore the event if it is a buffer being updated, but is not yet
-        # # complete
-        # if configuration.workflow_buffer_home in src_path:
-        #     with h5py.File(src_path, 'a') as buffer_file:
-        #         expected_data_files = buffer_file
-        #         for key in expected_data_files:
-        #             logger.debug('key: %s with data: %s'
-        #                          % (key, len(expected_data_files[key].keys())))
-        #             if len(expected_data_files[key].keys()):
-        #                 logger.debug('(%s) skip %s event as only update for '
-        #                              'incomplete buffer: %s'
-        #                              % (pid, state, src_path))
-        #                 return
-        #
-        # # check if event is something being passed from mig_meow
-        # MIG_MEOW_DIR = '.meow_export_home'
-        # NOTEBOOK_EXTENSION = '.ipynb'
-        # PATTERN_EXTENSION = '.pattern'
-        # if MIG_MEOW_DIR in src_path:
-        #     logger.debug("(%s) Spotted potential mig_meow export: %s"
-        #                  % (pid, src_path))
-        #     try:
-        #         filename = src_path[src_path.rfind(os.path.sep)+1:]
-        #         extension = filename[filename.rfind('.'):]
-        #
-        #         preceeding_path = src_path[:src_path.index(MIG_MEOW_DIR)-1]
-        #         vgrid = preceeding_path[preceeding_path.rfind(os.path.sep)+1:]
-        #
-        #         # TODO pull client_id from somewhere.
-        #         if extension == NOTEBOOK_EXTENSION:
-        #             notebook = json.loads(src_path)
-        #             if not isinstance(notebook, dict):
-        #                 raise Exception("(%s) Notebook %s is not formatted "
-        #                                 "correctly" % (pid, src_path))
-        #
-        #             import_notebook_as_recipe(configuration, client_id,
-        #                                       vgrid, notebook, filename)
-        #         elif extension == PATTERN_EXTENSION:
-        #             pattern = json.loads(src_path)
-        #             if not isinstance(pattern, dict):
-        #                 raise Exception("(%s) Pattern %s is not formatted "
-        #                                 "correctly" % (pid, src_path))
-        #             define_pattern(configuration, client_id, vgrid, pattern)
-        #
-        #         else:
-        #             logger.debug("(%s) Export format could not be "
-        #                          "determined." % pid)
-        #     except Exception as exception:
-        #         logger.debug("(%s) Exported file %s could not be processed "
-        #                      "correctly. %s" % (pid, src_path, exception))
-        #         pass
-        #
-        #     if not delete_file(src_path, configuration.logger):
-        #         logger.debug("(%s) Exported file %s could not be deleted."
-        #                      % (pid, src_path))
-        #         return
-        #     logger.debug("(%s) Exported file %s processed and deleted."
-        #                  % (pid, src_path))
-        #     return
-        # # ---------------------------------------------------------------------
-
         rule_hit = False
 
         # Each target_path pattern has one or more rules associated
 
         for (target_path, rule_list) in all_rules.items():
             # TODO compress this code once finalised
-            # check to see if a buffer should be updated
-            if configuration.vgrid_workflow_buffer_home in target_path:
-
-                logger.debug('(%s) rule is waiting for buffer file %s'
-                             % (pid, target_path))
-
-                buffer_extension = target_path[target_path.rfind('.'):]
-                src_extension = src_path[src_path.rfind('.'):]
-                if buffer_extension == src_extension == '.hdf5':
-                    logger.debug('Buffer is in hdf5')
-                    with h5py.File(target_path, 'a') as h5_buffer_file:
-                        logger.debug('opening %s' % target_path)
-                        expected_data_files = h5_buffer_file.keys()
-                        logger.debug('Buffer is looking for files: %s'
-                                     % expected_data_files)
-                        if src_path in expected_data_files:
-                            logger.debug('src path is in buffer')
-                            with h5py.File(src_path, 'r') as h5_data_file:
-                                logger.debug('opening src file')
-                                for data_key in h5_data_file.keys():
-                                    logger.debug('copying %s' % data_key)
-                                    h5_buffer_file.copy(
-                                        h5_data_file[data_key],
-                                        src_path + "/" + data_key)
-                            logger.debug('(%s) resulted in updated buffer at '
-                                         '%s ' % (pid, src_path))
 
             # Do not use ordinary fnmatch as it lets '*' match anything
             # including '/' which leads to greedy matching in subdirs
@@ -1691,15 +1598,8 @@ def monitor(configuration, vgrid_name):
     file_monitor = Observer()
     file_patterns = [os.path.join(file_monitor_home, '*')]
 
-    # ignore buffer files as h5py generates far too many system events, and we
-    # can easily get stuck in an infinite loop of events, where checking a
-    # buffer file generates a modification event, which means we need to check
-    # the file ...
-    ignore_patterns = [os.path.join(file_monitor_home,
-                                    configuration.vgrid_workflow_buffer_home)]
-
     shared_state['file_handler'] = MiGFileEventHandler(
-        patterns=file_patterns, ignore_patterns=ignore_patterns, ignore_directories=False, case_sensitive=True)
+        patterns=file_patterns, ignore_directories=False, case_sensitive=True)
     file_monitor.schedule(shared_state['file_handler'], file_monitor_home,
                           recursive=False)
     file_monitor.start()
