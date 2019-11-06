@@ -317,6 +317,7 @@ def main(client_id, user_arguments_dict):
     # Add allow Access-Control-Allow-Origin to headers
     # Required to allow Jupyter Widget from localhost to request against the
     # API
+    # TODO, possibly restrict allowed origins
     output_objects[0]['headers'].append(('Access-Control-Allow-Origin', '*'))
     output_objects[0]['headers'].append(('Access-Control-Allow-Headers',
                                          'Content-Type'))
