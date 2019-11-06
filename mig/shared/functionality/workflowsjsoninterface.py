@@ -75,7 +75,14 @@ WORKFLOW_SIGNATURE = {
 
 
 def type_value_checker(type_value):
-    """Validate that the provided workflow type is allowed"""
+    """
+    Validate that the provided workflow type is allowed. A ValueError
+    Exception will be raised if type_value is invalid.
+    :param type_value: The type to be checked. Valid types are
+    'workflowpattern', 'workflowrecipe', 'any', 'manual_trigger',
+    'cancel_job', 'resubmit_job', 'pattern_graph', 'job', and 'queue'
+    :return: No return
+    """
     valid_types = WORKFLOW_TYPES + WORKFLOW_ACTION_TYPES +\
                   WORKFLOW_SEARCH_TYPES + JOB_TYPES
 
@@ -85,7 +92,13 @@ def type_value_checker(type_value):
 
 
 def operation_value_checker(operation_value):
-    """Validate that the provided workflow operation is allowed"""
+    """
+    Validate that the provided workflow operation is allowed. A ValueError
+    Exception will be raised if operation_value is invalid.
+    :param operation_value: The operation to be checked. Valid operations are:
+    'create', 'read', 'update' and 'delete'.
+    :return: No return.
+    """
     if operation_value not in VALID_OPERATIONS:
         raise ValueError("Workflow operation '%s' is not valid")
 
@@ -120,6 +133,12 @@ WORKFLOW_VALUE_MAP = {
 
 
 def str_hook(obj):
+    """
+    A custom decoder to be used in the 'json.loads' function. This decodes
+    unicode to utf-8.
+    :param obj: The object to be decoded.
+    :return: (dictionary) decoded object.
+    """
     return {k.encode('utf-8') if isinstance(k, unicode) else k:
             v.encode('utf-8') if isinstance(v, unicode) else v
             for k, v in obj}
@@ -128,7 +147,21 @@ def str_hook(obj):
 # Workflow API functions
 def workflow_api_create(configuration, workflow_session,
                         workflow_type=WORKFLOW_PATTERN, **workflow_attributes):
-    """ """
+    """
+    Handler for 'create' calls to workflow API.
+    :param configuration: The MiG configuration object.
+    :param workflow_session: The MiG workflow session. This must contain the
+    key 'owner'
+    :param workflow_type: [optional] A MiG workflow construct type. This should
+    be one of 'workflowpattern' or 'workflowrecipe'. Default is
+    'workflowpattern'.
+    :param workflow_attributes: dictionary of arguments used to create the
+    specified workflow object
+    :return: (Tuple (boolean, string) or function call to 'create_workflow')
+    if workflow_type is valid the function 'create_workflow' is called. Else,
+    a tuple is returned with a first value of False, and an explanatory error
+    message as the second value.
+    """
     _logger = configuration.logger
     _logger.debug("W_API: create: (%s, %s, %s)" % (workflow_session,
                                                    workflow_type,
@@ -146,7 +179,25 @@ def workflow_api_create(configuration, workflow_session,
 
 def workflow_api_read(configuration, workflow_session,
                       workflow_type=WORKFLOW_PATTERN, **workflow_attributes):
-    """ """
+    """
+    Handler for 'read' calls to workflow API.
+    :param configuration: The MiG configuration object.
+    :param workflow_session: The MiG workflow session. This must contain the
+    key 'owner'
+    :param workflow_type: [optional] A MiG workflow read type. This should
+    be one of 'job', 'queue', 'workflowpattern', 'workflowrecipe', 'any' or
+    'pattern_graph'. Default is 'workflowpattern'.
+    :param workflow_attributes: dictionary of arguments used to select the
+    workflow object to read.
+    :return: (Tuple (boolean, string) or function call to 'get_jobs_with',
+    'get_workflow_with' or 'search_workflow') If the given workflow_type is
+    either 'job' or 'queue' the function 'get_jobs_with' will be called. If
+    the given workflow type is either 'workflowpattern', 'workflowrecipe', or
+    'any' the fucntion 'get_workflow_with' is called. If the given
+    workflow_type is 'pattern_graph' the function 'search_workflow' is called.
+    If the given workflow_type is none of the above a tuple is returned with a
+    first value of False, and an explanatory error message as the second value.
+    """
     logger = configuration.logger
     logger.debug("W_API: search: (%s, %s, %s)" % (workflow_session,
                                                   workflow_type,
@@ -177,7 +228,21 @@ def workflow_api_read(configuration, workflow_session,
 
 def workflow_api_update(configuration, workflow_session,
                         workflow_type=WORKFLOW_PATTERN, **workflow_attributes):
-    """ """
+    """
+    Handler for 'update' calls to workflow API.
+    :param configuration: The MiG configuration object.
+    :param workflow_session: The MiG workflow session. This must contain the
+    key 'owner'
+    :param workflow_type: [optional] A MiG workflow construct type. This should
+    be one of 'workflowpattern' or 'workflowrecipe'. Default is
+    'workflowpattern'.
+    :param workflow_attributes: dictionary of arguments used to update the
+    specified workflow object. Must contain key 'vgrid'.
+    :return: (Tuple (boolean, string) or function call to 'update_workflow')
+    If the given workflow_type is valid the function 'update_workflow' will be
+    called. Else, a tuple is returned with a first value of False, and an
+    explanatory error message as the second value.
+    """
     _logger = configuration.logger
     _logger.debug("W_API: update: (%s, %s, %s)" % (workflow_session,
                                                    workflow_type,
@@ -197,7 +262,21 @@ def workflow_api_update(configuration, workflow_session,
 
 def workflow_api_delete(configuration, workflow_session,
                         workflow_type=WORKFLOW_PATTERN, **workflow_attributes):
-    """ """
+    """
+    Handler for 'delete' calls to workflow API.
+    :param configuration: The MiG configuration object.
+    :param workflow_session: The MiG workflow session. This must contain the
+    key 'owner'
+    :param workflow_type: [optional] A MiG workflow construct type. This should
+    be one of 'workflowpattern' or 'workflowrecipe'. Default is
+    'workflowpattern'.
+    :param workflow_attributes: dictionary of arguments used to update the
+    specified workflow object. Must contain key 'persistence_id'.
+    :return: (Tuple (boolean, string) or function call to 'delete_workflow')
+    If the given workflow_type is valid the function 'delete_workflow' will be
+    called. Else, a tuple is returned with a first value of False, and an
+    explanatory error message as the second value.
+    """
     _logger = configuration.logger
     _logger.debug("W_API: delete: (%s, %s, %s)" % (workflow_session,
                                                    workflow_type,
@@ -217,7 +296,17 @@ def workflow_api_delete(configuration, workflow_session,
 
 
 def main(client_id, user_arguments_dict):
-    """Main function used by front end"""
+    """
+    Main function used by front end.
+    :param client_id: A MiG user.
+    :param user_arguments_dict: A JSON message sent to the MiG. This will be
+    parsed and if valid, the relevant API handler functions are called to
+    generate meaningful output.
+    :return: (Tuple (list, Tuple(integer,string))) Returns a tuple with the
+    first value being a list of output objects generated by the call. The
+    second value is also a tuple used for error code reporting, with the first
+    value being an error code and the second being a brief explanation.
+    """
     # Ensure that the output format is in JSON
     user_arguments_dict['output_format'] = ['json']
     user_arguments_dict.pop('__DELAYED_INPUT__', None)
