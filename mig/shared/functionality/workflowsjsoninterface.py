@@ -61,7 +61,16 @@ WORKFLOW_SIGNATURE = {
     'attributes': {},
     'type': REJECT_UNSET,
     'operation': REJECT_UNSET,
-    'workflowsessionid': REJECT_UNSET
+    'workflowsessionid': REJECT_UNSET,
+    'persistence_id': '',
+    'vgrid': '',
+    'name': '',
+    'input_file': '',
+    'input_paths': [],
+    'output': {},
+    'recipes': [],
+    'variables': {},
+    'parameterize_over': {}
 }
 
 
@@ -244,8 +253,6 @@ def main(client_id, user_arguments_dict):
         output_objects.append({'object_type': 'error_text',
                                'text': msg})
         return (output_objects, returnvalues.CLIENT_ERROR)
-
-    logger.debug("Input data %s" % json_data)
 
     # IMPORTANT!! Do not access the json_data input before it has been
     # validated by validated_input.

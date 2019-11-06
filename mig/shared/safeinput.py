@@ -47,7 +47,6 @@ from shared.validstring import valid_user_path
 from shared.valuecheck import lines_value_checker, \
     max_jobs_value_checker
 
-# Used by safeinput.py to validate input
 VALID_WORKFLOW_ATTRIBUTES = [
     'persistence_id',
     'vgrid',
@@ -816,26 +815,44 @@ def valid_gdp_ref_value(ref_value):
 
 
 def valid_workflow_pers_id(persistence_id):
+    """Verify that supplied persistence_id only contains characters that
+    we consider valid in a workflow persistence id.
+    """
     valid_sid(persistence_id, w_id_length, w_id_length)
 
 
 def valid_workflow_vgrid(vgrid):
+    """Verify that supplied vgrid only contains characters that
+    we consider valid in a workflow vgrid name.
+    """
     valid_vgrid_name(vgrid)
 
 
 def valid_workflow_name(name):
+    """Verify that supplied name only contains characters that
+    we consider valid in a workflow name.
+    """
     valid_alphanumeric(name, extra_chars='+-=:_-')
 
 
 def valid_workflow_input_file(ifile):
+    """Verify that supplied ifile value only contains characters that
+    we consider valid in a workflow ifile variable value.
+    """
     valid_alphanumeric(ifile, extra_chars='+-=:_-')
 
 
 def valid_workflow_input_paths(paths):
+    """Verify that supplied input paths only contains characters that
+    we consider valid workflow input paths.
+    """
     valid_path_patterns(paths)
 
 
 def valid_workflow_output(output):
+    """Verify that supplied output dictionary only contains characters that
+    we consider valid workflow output key value pairs.
+    """
     if not isinstance(output, dict):
         raise InputException("Workflow attribute '%s' must be"
                              "of type '%s'" % (key, dict))
@@ -847,6 +864,9 @@ def valid_workflow_output(output):
 
 
 def valid_workflow_recipes(recipes):
+    """Verify that supplied recipes list only contains characters that
+    we consider a valid workflow recipe for each entry.
+    """
     if not isinstance(recipes, list):
         raise InputException("Workflow attribute: '%s' must "
                              "be of type: '%s'" % (recipes, list))
@@ -855,6 +875,9 @@ def valid_workflow_recipes(recipes):
 
 
 def valid_workflow_variables(vars):
+    """Verify that supplied vars dictionary only contains characters that
+    we consider valid workflow variable key value pairs.
+    """
     if not isinstance(vars, dict):
         raise InputException("Workflow attribute '%s' must "
                              "be of type: '%s'" % (vars, dict))
@@ -866,6 +889,9 @@ def valid_workflow_variables(vars):
 
 
 def valid_workflow_attributes(attributes):
+    """Verify that supplied attributes dictionary only contains entries that
+      we consider valid workflow attribute keys.
+      """
     """Type validation filter of input attributes to a workflow"""
     if not isinstance(attributes, dict):
         raise InputException("Expects workflow attributes to be a dictionary")
@@ -876,12 +902,13 @@ def valid_workflow_attributes(attributes):
 
 
 def valid_workflow_operation(operation):
-    """Verify that the supplied operation only contains letters + _ """
+    """Verify that the supplied workflow
+    operation only contains letters + _ """
     __valid_contents(operation, letters + '_')
 
 
 def valid_workflow_type(type):
-    """Verify that the supplied type only contains letters"""
+    """Verify that the supplied workflow type only contains letters"""
     __valid_contents(type, letters)
 
 
@@ -1569,49 +1596,64 @@ def validate_helper(
     rejected = {}
     for (key, values) in input_dict.items():
         if isinstance(values, dict):
-            ok_values, bad_values = validate_dict_values(key, values, fields,
-                                                         type_checks,
-                                                         value_checks)
+            a_values, r_values = validate_dict_values(key,
+                                                      values,
+                                                      fields,
+                                                      type_checks,
+                                                      value_checks)
+            rejected.update(r_values)
+            accepted.update(a_values)
         else:
             ok_values, bad_values = validate_values(key, values, fields,
                                                     type_checks,
                                                     value_checks,
                                                     list_wrap)
-        if ok_values:
-            accepted[key] = ok_values
-        if bad_values:
-            rejected[key] = bad_values
+            if ok_values:
+                accepted[key] = ok_values
+            if bad_values:
+                rejected[key] = bad_values
     return (accepted, rejected)
 
 
-def validate_dict_values(key, values, fields, type_checks, value_checks):
-    ok_values, bad_values = [], []
-    error = False
+def validate_dict_values(
+    key,
+    values,
+    fields,
+    type_checks,
+    value_checks
+):
+    """Validates a dictionary by executing the predefined type_checks
+    and value_checks maps with a prepopulated function where the map key
+    is the key for each entry in values
+
+    Returns two dictionaries containing the passed and failed validations"""
+    accepted_v = {}
+    rejected_v = {}
     if key not in fields:
         err = 'unexpected field: %s' % key
-        bad_values.append((html_escape(key),
+        rejected_v[key] = ((html_escape(key),
                            html_escape(str(err))))
+        return accepted_v, rejected_v
 
     for _key, _value in values.items():
         if _key in type_checks:
             try:
                 type_checks[_key](_value)
             except Exception, err:
-                error = True
                 # Probably illegal type hint
-                bad_values.append((html_escape(",".join(values)),
-                                   html_escape(str(err))))
+                rejected_v[_key] = ((html_escape(",".join(values)),
+                                     html_escape(str(err))))
+                continue
         if _key in value_checks:
             try:
                 value_checks[_key](_value)
             except Exception, err:
-                error = True
                 # Value check failed
-                bad_values.append((html_escape(",".join(values)),
-                                   html_escape(str(err))))
-    if not error:
-        ok_values.append(values)
-    return ok_values, bad_values
+                rejected_v[_key] = ((html_escape(",".join(values)),
+                                     html_escape(str(err))))
+                continue
+        accepted_v[_key] = _value
+    return accepted_v, rejected_v
 
 
 def validate_values(
@@ -1622,6 +1664,10 @@ def validate_values(
     value_checks,
     list_wrap=False
 ):
+    """Validates the values in 'values' by passing each entry to
+     a predefined type_checks and value_checks map with a matching 'key'
+
+    Returns two lists containing the passed and failed validations"""
     ok_values = []
     bad_values = []
 
