@@ -57,6 +57,7 @@ def signature():
                 'flags': []}
     return ['text', defaults]
 
+
 def rm_tracker_admin(configuration, cert_id, vgrid_name, tracker_dir,
                      output_objects):
     """Remove Trac issue tracker owner"""
@@ -136,6 +137,7 @@ def unlink_share(user_dir, vgrid):
         msg += "\nCould not remove link %s: %s" % (path, err)
     return (success, msg[1:])
 
+
 def unlink_web_folders(user_dir, vgrid):
     """Utility function to remove links to shared vgrid web folders.
 
@@ -164,6 +166,7 @@ def unlink_web_folders(user_dir, vgrid):
             success = False
             msg += "\nCould not remove link %s: %s" % (path, err)
     return (success, msg[1:])
+
 
 def abandon_vgrid_files(vgrid, configuration):
     """Remove all files which belong to the given VGrid (parameter).
@@ -195,6 +198,7 @@ def abandon_vgrid_files(vgrid, configuration):
     msg = ""
 
     # removing this soft link may fail, since it is a directory for sub-VGrids
+
     try:
         os.remove(os.path.join(configuration.wwwpublic, 'vgrid', vgrid))
     except Exception, err:
@@ -223,6 +227,7 @@ def abandon_vgrid_files(vgrid, configuration):
         _logger.debug('Messages: %s.' % msg)
 
     return (success, msg)
+
 
 def inherit_vgrid_files(vgrid, configuration):
     """Transfer ownership of all files which belong to the given VGrid argument
@@ -280,6 +285,7 @@ def inherit_vgrid_files(vgrid, configuration):
 
     return (success, msg)
 
+
 def remove_vgrid_entry(vgrid, configuration):
     """Remove an entry for a VGrid in the vgrid configuration directory.
             configuration.vgrid_home/<vgrid>
@@ -327,6 +333,7 @@ def remove_vgrid_entry(vgrid, configuration):
                     real_collab = os.path.realpath(collab_path)
                     if real_collab.startswith(ro_path):
                         collab_path = real_collab.replace(ro_path, rw_path)
+
                 if not remove_rec(collab_path, configuration):
                     _logger.warning('Error while removing %s.' % collab_path)
                     collab_name = collab_dir.replace('.vgrid', '')
@@ -434,6 +441,7 @@ CSRF-filtered POST requests to prevent unintended updates'''
 
     logger.info('%s removing owner %s from %s' % (client_id, cert_id,
                                                   vgrid_name))
+
     # find out whether to just remove an owner or delete the whole thing.
     # ask about delete if last or no direct owners.
 
@@ -597,6 +605,7 @@ first remove all its children: %s.''' % (vgrid_name, ', '.join(subs))})
             return (output_objects, returnvalues.CLIENT_ERROR)
 
         # we consider the local members and resources here, not inherited ones
+
         (member_status, members_direct) = vgrid_members(vgrid_name,
                                                         configuration,
                                                         False)

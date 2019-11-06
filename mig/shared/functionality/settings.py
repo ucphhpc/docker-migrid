@@ -50,7 +50,9 @@ from shared.settings import load_settings, load_widgets, load_profile, \
     load_ssh, load_davs, load_ftps, load_seafile, load_duplicati, \
     load_twofactor
 from shared.profilekeywords import get_profile_specs
-from shared.safeinput import html_escape
+from shared.pwhash import parse_password_policy
+from shared.safeinput import html_escape, password_min_len, password_max_len, \
+    valid_password_chars
 from shared.settingskeywords import get_settings_specs
 from shared.twofactorkeywords import get_twofactor_specs
 from shared.widgetskeywords import get_widgets_specs
@@ -238,11 +240,17 @@ def main(client_id, user_arguments_dict):
                                'No valid topics!'})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
+    # Site policy dictates pw min length greater or equal than password_min_len
+    policy_min_len, policy_min_classes = parse_password_policy(configuration)
     form_method = 'post'
     csrf_limit = get_csrf_limit(configuration)
-    fill_helpers = {'site': configuration.short_title,
-                    'form_method': form_method, 'csrf_field': csrf_field,
-                    'csrf_limit': csrf_limit}
+    fill_helpers = {
+        'site': configuration.short_title, 'form_method': form_method,
+        'csrf_field': csrf_field, 'csrf_limit': csrf_limit,
+        'valid_password_chars': html_escape(valid_password_chars),
+        'password_min_len': max(policy_min_len, password_min_len),
+        'password_max_len': password_max_len,
+        'password_min_classes': max(policy_min_classes, 1)}
     if 'general' in topics:
         target_op = 'settingsaction'
         csrf_token = make_csrf_token(configuration, form_method, target_op,
@@ -1199,12 +1207,12 @@ password YOUR_PASSWORD_HERE
 </pre>
 From then on you can use e.g. lftp or CurlFtpFS to access your %(site)s home:
 <pre>
-lftp -e "set ssl:verify-certificate no; set ftp:ssl-protect-data on; set net:connection-limit %(max_sessions)d" \\
+lftp -e "set ftp:ssl-protect-data on; set net:connection-limit %(max_sessions)d" \\
      -p %(ftps_ctrl_port)s %(ftps_server)s
 </pre>
 <pre>
 curlftpfs -o ssl %(ftps_server)s:%(ftps_ctrl_port)s remote-home \\
-          -o user=%(username)s -ouid=$(id -u) -o gid=$(id -g) -o no_verify_peer
+          -o user=%(username)s -ouid=$(id -u) -o gid=$(id -g)
 </pre>
 </div>
 <div class="div-ftps-client-notes">
@@ -1351,7 +1359,7 @@ function open_login_window(url, username) {
 </script>
 <div id="seafileaccess">
 <div id="seafileregaccess">
-<form method="post" action="%(seareg_url)s" target="_blank">
+<form id="seafile_reg_form" method="post" action="%(seareg_url)s" target="_blank">
 <table class="seafilesettings fixedlayout">
 <tr class="title"><td class="centertext">
 Seafile Synchronization on %(site)s
@@ -1373,12 +1381,20 @@ all your computers and to share those files and folders with other people.<br/>
 <input class="input" id="dummy_email" type="text" value="%(username)s"
     readonly />
 <br/>
+<!-- NOTE: we require password policy in this case because pw MUST be set -->
 <label for="id_password1">Choose Password</label>
 <input class="input" id="id_password1" name="password1"
-    type="password" />
+minlength=%(password_min_len)d maxlength=%(password_max_len)d required
+pattern=".{%(password_min_len)d,%(password_max_len)d}"
+title="Password of your choice with at least %(password_min_len)d characters
+from %(password_min_classes)d classes (lowercase, uppercase, digits and other)"
+type="password" />
 <br/>
 <label for="id_password2">Confirm Password</label>
-<input class="input" id="id_password2" name="password2" type="password" />
+<input class="input" id="id_password2" name="password2"
+minlength=%(password_min_len)d maxlength=%(password_max_len)d required
+pattern=".{%(password_min_len)d,%(password_max_len)d}"
+title="Repeat your chosen password" type="password" />
 <br/>
 <input id="seafileregbutton" type="submit" value="Register" class="submit" />
 and wait for email confirmation before continuing below.
@@ -1439,22 +1455,26 @@ and sharing solution.<br/>
 </fieldset>
 </td></tr>
 <tr><td>
+'''
+
+        if configuration.user_seafile_ro_access:
+            html += '''
 <form method="%(form_method)s" action="%(target_op)s.py">
 <input type="hidden" name="%(csrf_field)s" value="%(csrf_token)s" />
 <input type="hidden" name="topic" value="seafile" />
 <fieldset>
 <legend>%(site)s Seafile Integration</legend>
-If you wish you can additionally save your chosen password here for Seafile
+If you wish you can additionally save your credentials here for Seafile
 integration in your %(site)s user home.<br/>
 Then your Seafile libraries will show up in a read-only mode under a new
 <em>%(seafile_ro_dirname)s</em> folder e.g. on the Files page.<br/>
 <br/>
 '''
 
-        if 'password' in configuration.user_seafile_auth:
+            if 'password' in configuration.user_seafile_auth:
 
-            # We only want a single password and a masked input field
-            html += '''
+                # We only want a single password and a masked input field
+                html += '''
 Please enter and save your chosen Seafile password again in the text field
 below, to enable the read-only Seafile integration in your user home.
 <br/>
@@ -1463,10 +1483,12 @@ value="%(default_authpassword)s" />
 (leave empty to disable seafile integration)
 <br/>'''
 
-        html += '''
+            html += '''
 <input id="seafilesavebutton" type="submit" value="Save Seafile Password" />
 </fieldset>
 </form>
+'''
+        html += '''
 </td></tr>
 </table>
 </div>

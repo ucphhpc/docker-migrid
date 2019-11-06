@@ -61,11 +61,13 @@ _valid_write_access = _none_choice + _user_choice
 _valid_visible = _user_choice + _all_choice
 _valid_bool = _bool_choice
 
+
 def signature():
     """Signature of the main function"""
 
     defaults = {'vgrid_name': REJECT_UNSET}
     return ['html_form', defaults]
+
 
 def main(client_id, user_arguments_dict):
     """Main function used by front end"""
@@ -97,6 +99,7 @@ def main(client_id, user_arguments_dict):
     # with alphabetical client ID last)
     # sharelinks table initially sorted by 5, 4 reversed (active first and
     # in growing age)
+
     table_specs = [{'table_id': 'accessrequeststable', 'pager_id':
                     'accessrequests_pager', 'sort_order':
                     '[[0,0],[4,0],[3,0]]'},
@@ -320,6 +323,7 @@ def main(client_id, user_arguments_dict):
                            'default_entries': default_pager_entries})
     output_objects.append({'object_type': 'accessrequests',
                            'accessrequests': request_list})
+
     # VGrid Share links
 
     # Table columns to skip
@@ -366,6 +370,7 @@ def main(client_id, user_arguments_dict):
                            'skip_list': skip_list})
 
     # VGrid settings
+
     output_objects.append({'object_type': 'sectionheader',
                            'text': "Settings"})
 

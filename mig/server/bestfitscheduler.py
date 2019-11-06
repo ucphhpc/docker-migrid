@@ -116,6 +116,7 @@ class BestFitScheduler(Scheduler):
 
         for i in range(0, qlen):
             job = self.job_queue.get_job(i)
+
             # Ignore job which don't match the filter requirements
 
             for (key, val) in must_match.items():
@@ -123,8 +124,6 @@ class BestFitScheduler(Scheduler):
                     continue
 
             # self.logger.debug("schedule treating job %d: %s", i, job['JOB_ID'])
-
-
 
             if 'GO' == job['SCHEDULE_HINT']\
                  and resource_conf['RESOURCE_ID']\
@@ -141,7 +140,6 @@ class BestFitScheduler(Scheduler):
                     best_job = job
                     best_i = i
                     best_fitness = job_fitness
-
             else:
 
                     # self.logger.info("schedule: new best fit: %s %f" % \
@@ -149,13 +147,6 @@ class BestFitScheduler(Scheduler):
                 # self.logger.info("schedule: job %s marked %s" % \
                 #                  (job["JOB_ID"], job["SCHEDULE_HINT"]))
 
-                if 'GO' == job['SCHEDULE_HINT']:
-                    self.logger.info('Passed because GO is not job[SCHEDULE_HINT]. It is %s' % job['SCHEDULE_HINT'])
-                if resource_conf['RESOURCE_ID'] in job['SCHEDULE_TARGETS']:
-                    self.logger.info('Passed because resource_conf[RESOURCE_ID] is not in job[SCHEDULE_TARGETS]. '
-                                     'resource_conf[RESOURCE_ID] is %s '
-                                     'job[SCHEDULE_TARGETS] is %s'
-                                     % (resource_conf['RESOURCE_ID'], job['SCHEDULE_TARGETS']))
                 pass
 
         if not best_job:

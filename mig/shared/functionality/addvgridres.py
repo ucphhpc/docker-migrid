@@ -166,6 +166,7 @@ sub-%(vgrid_label)s and try again''' % {'res_name': unique_resource_name,
                 break
         if skip_entity:
             continue
+
         # Check if only rank change was requested and apply if so
 
         if rank is not None:

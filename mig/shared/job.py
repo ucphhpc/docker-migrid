@@ -287,101 +287,8 @@ def get_job_ids_with_specified_project_name(
     return matching_job_ids
 
 
-def get_job_ids_with_task_file_in_contents(
-    client_id,
-    task_file,
-    mrsl_files_dir,
-    logger,
-    ):
-    """Helper for finding a job which uses a give task file"""
-
-    client_dir = client_id_dir(client_id)
-
-    if task_file[0] == os.path.sep:
-        task_file = task_file[1:]
-
-    # Please note that base_dir must end in slash to avoid access to other
-    # user dirs when own name is a prefix of another user name
-
-    base_dir = os.path.abspath(os.path.join(mrsl_files_dir, client_dir)) \
-         + os.sep
-
-    # this is heavy :-/ we must loop all the mrsl files submitted by the user
-    # to find the job ids belonging to the specified project
-
-    matching_job_ids = []
-    all_files = os.listdir(base_dir)
-
-    for mrsl_file in all_files:
-        job_dict = unpickle(base_dir + os.sep + mrsl_file, logger)
-
-        if not job_dict:
-            continue
-        if job_dict.has_key('EXECUTABLES'):
-            for executable in job_dict['EXECUTABLES']:
-                if task_file in executable:
-                    matching_job_ids.append(job_dict['JOB_ID'])
-    return matching_job_ids
-
-
-def get_jobs_with( client_id, mrsl_files_dir, logger, first=False, **kwargs):
-    """"""
-    client_dir = client_id_dir(client_id)
-
-    # Please note that base_dir must end in slash to avoid access to other
-    # user dirs when own name is a prefix of another user name
-
-    base_dir = os.path.abspath(os.path.join(mrsl_files_dir, client_dir)) \
-         + os.sep
-
-    # this is heavy :-/ we must loop all the mrsl files submitted by the user
-    # to find the job ids belonging to the specified project
-
-    all_jobs = []
-    all_files = os.listdir(base_dir)
-
-    for mrsl_file in all_files:
-        job_dict = unpickle(base_dir + os.sep + mrsl_file, logger)
-
-        if not job_dict:
-            continue
-
-        # convert timestamps as they are not json serialisable
-        for k, v in job_dict.items():
-            if isinstance(v, time.struct_time):
-                job_dict[k] = time.strftime('%Y-%m-%d %H:%M:%S', job_dict[k])
-
-        if 'EXECUTION_HISTORY' in job_dict:
-            for entry in job_dict['EXECUTION_HISTORY']:
-                for k, v in entry.items():
-                    if isinstance(v, time.struct_time):
-                        entry[k] = time.strftime('%Y-%m-%d %H:%M:%S', entry[k])
-
-        all_jobs.append(job_dict)
-
-    logger.error(all_jobs)
-    matching_jobs = {}
-    if kwargs:
-        for job in all_jobs:
-            all_match = True
-            for k, v in kwargs.items():
-                # TODO, move v != "" to a search section that is intended
-                #  for outside API search. I.e. will do expansive search beyond
-                #  the exact value
-
-                if (k not in job) or (job[k] != v and v != ""):
-                    all_match = False
-            if all_match:
-                if first:
-                    return job
-                matching_jobs[job['JOB_ID']] = job
-
-    return matching_jobs
-
-
 def fields_to_mrsl(configuration, user_arguments_dict, external_dict):
     """Generate mRSL from fields"""
-
     spec = []
     for key in external_dict.keys():
         attr_name = key
@@ -390,7 +297,7 @@ def fields_to_mrsl(configuration, user_arguments_dict, external_dict):
             attr = user_arguments_dict[attr_name]
 
             # FIXME: this type check is not perfect... I should be
-            #  able to extend on any sequence...
+            # able to extend on any sequence...
 
             if isinstance(attr, list):
                 spec.extend(attr)

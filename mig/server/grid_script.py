@@ -1188,7 +1188,7 @@ while True:
             if vgrid_name in original_last_request_dict_vgrids:
                 pickle(last_request_dict, monitor_last_request_file,
                        logger)
-                logger.info('vgrid_name: %s, status: %s' % (vgrid_name,
+                logger.info('vgrid_name: %s status: %s' % (vgrid_name,
                             last_request_dict['STATUS']))
             elif vgrid_name in executing_in_other_vgrids:
 

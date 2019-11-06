@@ -86,6 +86,7 @@ def contents_changed(configuration, root, files, ref_stamp):
             return True
     return False
 
+
 def update_disk_stats(configuration, stats, root, rel_root, dirs, files,
                       total):
     """Update disk stats for root"""
@@ -122,6 +123,7 @@ def update_disk_stats(configuration, stats, root, rel_root, dirs, files,
         stats[rel_root][KIND] = total
     return stats
 
+
 def update_job_stats(stats, job_id, job):
     """Update job stats for job"""
 
@@ -136,6 +138,7 @@ def update_job_stats(stats, job_id, job):
     for field in JOBFIELDS:
         stats[job_id][field] = job[field]
     return stats
+
 
 def refresh_disk_stats(configuration, client_id):
     """Refresh disk use stats for specified user"""
@@ -245,6 +248,7 @@ def refresh_disk_stats(configuration, client_id):
     stats['time_stamp'] = stats_stamp
     return stats
 
+
 def refresh_job_stats(configuration, client_id):
     """Refresh job stats for specified user"""
     _logger = configuration.logger
@@ -294,6 +298,7 @@ def refresh_job_stats(configuration, client_id):
         except Exception, exc:
             _logger.warning("getmtime failed on %s: %s" % (job_path, exc))
             job_stamp = -1
+
         if stats.has_key(name) and job_stamp < stats_stamp:
             continue
 
@@ -316,6 +321,7 @@ def refresh_job_stats(configuration, client_id):
 
     stats['time_stamp'] = stats_stamp
     return stats
+
 
 if "__main__" == __name__:
     import sys

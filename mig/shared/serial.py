@@ -32,23 +32,25 @@ import json
 import yaml
 
 
-def dumps(data, protocol=0, serializer='pickle'):
+def dumps(data, protocol=0, serializer='pickle', **kwargs):
     """Dump data to serialized string using given serializer."""
-    serial_helper = pickle.dumps
+    if serializer == 'pickle':
+        serial_helper = pickle.dumps
+        if 'protocol' not in kwargs:
+            kwargs['protocol'] = protocol
     if serializer == 'json':
         serial_helper = json.dumps
     if serializer == 'yaml':
         serial_helper = yaml.dump
-    return serial_helper(data)
+    return serial_helper(data, **kwargs)
 
 
-def dump(data, path, serializer='pickle', mode='wb', **kwargs):
+def dump(data, path, protocol=0, serializer='pickle', mode='wb', **kwargs):
     """Dump data to file given by path"""
-
     if serializer == 'pickle':
         serial_helper = pickle.dump
         if 'protocol' not in kwargs:
-            kwargs['protocol'] = 0
+            kwargs['protocol'] = protocol
     if serializer == 'json':
         serial_helper = json.dump
     if serializer == 'yaml':
@@ -59,7 +61,6 @@ def dump(data, path, serializer='pickle', mode='wb', **kwargs):
 
 def loads(data, serializer='pickle'):
     """Load data from serialized string"""
-
     serial_helper = pickle.loads
     if serializer == 'json':
         serial_helper = json.loads

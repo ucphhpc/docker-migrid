@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # fileman - File manager UI for browsing and manipulating files and folders
-# Copyright (C) 2003-2018  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -473,6 +473,7 @@ def html_tmpl(configuration, client_id, title_entry, csrf_map={}, chroot=''):
 def css_tmpl(configuration):
     """Stylesheets to include in the page header"""
     css = themed_styles(configuration, base=['jquery.contextmenu.css',
+                                             'jquery.managers.contextmenu.css',
                                              'jquery.xbreadcrumbs.css',
                                              'jquery.fmbreadcrumbs.css',
                                              'jquery.fileupload.css',
@@ -514,6 +515,10 @@ def js_tmpl(configuration,
     }
     js = '''
 <script type="text/javascript" src="/images/js/jquery.js"></script>
+<!-- NOTE: only for testing JQuery API compliance - not for production use -->
+<!--
+<script type="text/javascript" src="/images/js/jquery-migrate.js"></script>
+-->
 <script type="text/javascript" src="/images/js/jquery-ui.js"></script>
 <!-- Filemanager and dependencies -->
 <script type="text/javascript" src="/images/js/jquery.form.js"></script>
@@ -569,7 +574,9 @@ csrf_map["%s"] = "%s";
 <script type="text/javascript" src="/images/js/jquery.fileupload-validate.js"></script>
 <!-- The File Upload user interface plugin -->
 <script type="text/javascript" src="/images/js/jquery.fileupload-ui.js"></script>
-<!-- The File Upload jQuery UI plugin -->
+<!-- The File Upload jQuery UI plugin using simple jQuery UI -->
+<!-- Please note that this is no longer distributed with file uploader since
+     switch to bootstrap. We still use it to style the fileupload dialog buttons. -->
 <script type="text/javascript" src="/images/js/jquery.fileupload-jquery-ui.js"></script>
 
 <!-- The template to display files available for upload -->

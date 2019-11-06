@@ -40,6 +40,7 @@ from shared.httpsclient import extract_client_cert, extract_client_openid
 from shared.safeinput import validated_input, REJECT_UNSET
 from shared.useradm import expire_oid_sessions
 
+
 def warn_on_rejects(rejects, output_objects):
     """Helper to fill in output_objects in case of rejects"""
     if rejects:
@@ -184,6 +185,7 @@ def validate_input_and_cert(
                                                            identity)
                     else:
                         logger.info("no openid user logged in")
+
                 output_objects.append({'object_type': 'link', 'text': signup_url,
                                        'destination': signup_url + signup_query})
         return (False, output_objects)

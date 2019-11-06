@@ -262,6 +262,7 @@ sub-%(vgrid_label)ss then removal must be performed from the most significant
         return (output_objects, returnvalues.SYSTEM_ERROR)
 
     unmap_inheritance(configuration, vgrid_name, cert_id)
+
     output_objects.append({'object_type': 'text', 'text':
                            '%s successfully removed as member of %s %s!'
                            % (cert_id, vgrid_name, label)})

@@ -131,6 +131,7 @@ def fix_missing(config_file, verbose=True):
         'empty_job_name': 'no_suitable_job-',
         'smtp_server': fqdn,
         'smtp_sender': '',
+        'smtp_send_as_user': False,
         'smtp_reply_to': '',
         'user_sftp_address': fqdn,
         'user_sftp_port': 2222,
@@ -163,6 +164,7 @@ def fix_missing(config_file, verbose=True):
         'user_seahub_url': '',
         'user_seafile_url': '',
         'user_seafile_auth': ['password'],
+        'user_seafile_ro_access': False,
         'user_duplicati_protocols': [],
         'user_imnotify_address': '',
         'user_imnotify_port': 6667,
@@ -213,7 +215,6 @@ def fix_missing(config_file, verbose=True):
     monitor_section = {'sleep_secs': '60',
                        'sleep_update_totals': '600',
                        'slackperiod': '600'}
-
     settings_section = {'language': 'English', 'submitui': ['fields',
                                                             'textarea', 'files']}
     feasibility_section = {'resource_seen_within_hours': '24',
@@ -351,6 +352,7 @@ class Configuration:
     trac_id_field = ''
     smtp_server = ''
     smtp_sender = ''
+    smtp_send_as_user = False
     smtp_reply_to = ''
     user_sftp_address = ''
     user_sftp_port = 2222
@@ -393,6 +395,7 @@ class Configuration:
     user_seafile_url = ''
     user_seafile_auth = ['password']
     user_seafile_alias = ''
+    user_seafile_ro_access = True
     user_duplicati_protocols = []
     user_openid_address = ''
     user_openid_port = 8443
@@ -966,6 +969,9 @@ location.""" % self.config_file
         if config.has_option('GLOBAL', 'user_seafile_alias'):
             self.user_seafile_alias = config.get('GLOBAL',
                                                  'user_seafile_alias')
+        if config.has_option('GLOBAL', 'user_seafile_ro_access'):
+            self.user_seafile_ro_access = config.getboolean(
+                'GLOBAL', 'user_seafile_ro_access')
         if config.has_option('SITE', 'enable_duplicati'):
             self.site_enable_duplicati = config.getboolean(
                 'SITE', 'enable_duplicati')
@@ -1145,6 +1151,11 @@ location.""" % self.config_file
                                (self.short_title,
                                 os.environ.get('USER', 'mig'),
                                 self.server_fqdn)
+        if config.has_option('GLOBAL', 'smtp_send_as_user'):
+            self.smtp_send_as_user = config.getboolean('GLOBAL',
+                                                       'smtp_send_as_user')
+        else:
+            self.smtp_send_as_user = False
         if config.has_option('GLOBAL', 'smtp_reply_to'):
             self.smtp_reply_to = config.get('GLOBAL', 'smtp_reply_to')
         else:
@@ -1559,7 +1570,7 @@ location.""" % self.config_file
         syslog_gdp = None
         if config.has_option('SITE', 'enable_gdp'):
             self.site_enable_gdp = config.getboolean('SITE', 'enable_gdp')
-            if not skip_log:
+            if not skip_log and self.site_enable_gdp:
                 syslog_gdp = SYSLOG_GDP
         else:
             self.site_enable_gdp = False
@@ -1668,6 +1679,14 @@ location.""" % self.config_file
             self.site_support_image = config.get('SITE', 'support_image')
         else:
             self.site_support_image = '%s/icons/help.png' % self.site_images
+        if config.has_option('SITE', 'privacy_text'):
+            self.site_privacy_text = config.get('SITE', 'privacy_text')
+        else:
+            self.site_privacy_text = ''
+        if config.has_option('SITE', 'privacy_image'):
+            self.site_privacy_image = config.get('SITE', 'privacy_image')
+        else:
+            self.site_privacy_image = ''
         if config.has_option('SITE', 'credits_text'):
             self.site_credits_text = config.get('SITE', 'credits_text')
         else:

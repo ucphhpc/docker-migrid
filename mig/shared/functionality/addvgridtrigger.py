@@ -204,6 +204,7 @@ sub-%(vgrid_label)s and try again''' % {'rule_id': rule_id,
             return (output_objects, returnvalues.CLIENT_ERROR)
 
     # Check if we should load saved trigger for rank change or update
+
     rule_dict = None
     if rank is not None or update_id is not None:
         (load_status, all_triggers) = vgrid_triggers(vgrid_name, configuration)
@@ -276,7 +277,6 @@ a job description file path as argument.'''})
             for rel_path in rule_dict['arguments']:
                 # IMPORTANT: path must be expanded to abs for proper chrooting
                 abs_path = os.path.abspath(os.path.join(base_dir, rel_path))
-                logger.debug("looking at location " + str(abs_path))
                 try:
                     if not valid_user_path(configuration, abs_path, base_dir,
                                            True):

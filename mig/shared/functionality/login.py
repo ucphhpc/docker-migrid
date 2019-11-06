@@ -129,6 +129,7 @@ below.""" % configuration.short_title
             err_txt += "OpenID server error!"
             report_txt += """It appears there's a problem with the requested
 OpenID login service""" + report_fail
+
         html += """<h2>OpenID Login to %s Failed!</h2>
 <div class='errortext'>
 %s (error code(s): %s)

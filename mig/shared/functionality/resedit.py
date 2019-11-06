@@ -60,6 +60,7 @@ def field_size(value, default=30):
         size = value_len
     return size
 
+
 def available_choices(configuration, client_id, resource_id, field, spec):
     """Find the available choices for the selectable field.
     Tries to lookup all valid choices from configuration if field is
@@ -81,6 +82,7 @@ def available_choices(configuration, client_id, resource_id, field, spec):
     if default in choices:
         choices = [default] + [i for i in choices if not default == i]
     return choices
+
 
 def main(client_id, user_arguments_dict):
     """Main function used by front end"""
@@ -120,6 +122,7 @@ def main(client_id, user_arguments_dict):
     allowed_run_envs.sort()
     area_cols = 80
     area_rows = 5
+
     status = returnvalues.OK
 
     logger.info('Starting Resource edit GUI.')

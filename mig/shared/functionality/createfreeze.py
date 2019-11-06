@@ -268,11 +268,8 @@ You must provide author and department for the thesis!"""})
         changes = {}
         if freeze_name and freeze_name != keyword_auto:
             changes['NAME'] = freeze_name
-<<<<<<< HEAD
-=======
         if freeze_author:
             changes['AUTHOR'] = freeze_author
->>>>>>> ae8cc615db00d3bfaf0134377f21bd63eade76b2
         if freeze_description:
             changes['DESCRIPTION'] = freeze_description
         if freeze_publish:
@@ -310,12 +307,8 @@ existing archive of yours!""" % freeze_id})
                                           upload_rejected)})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
-<<<<<<< HEAD
-    # NOTE: this may be a new or an existing pending archive
-=======
     # NOTE: this may be a new or an existing pending archive, and it will fail
     #       if archive is already under update
->>>>>>> ae8cc615db00d3bfaf0134377f21bd63eade76b2
     (retval, retmsg) = create_frozen_archive(freeze_meta, copy_files,
                                              move_files, upload_files,
                                              client_id, configuration)
@@ -330,6 +323,9 @@ existing archive of yours!""" % freeze_id})
     freeze_id = freeze_meta['ID']
     logger.info("%s: successful for '%s': %s" % (op_name,
                                                  freeze_id, client_id))
+    # Return simple status mainly for use in scripting
+    output_objects.append({'object_type': 'freezestatus', 'freeze_id': freeze_id,
+                           'flavor': flavor, 'freeze_state': freeze_state})
     publish_note = ''
     if freeze_state == keyword_pending:
         publish_hint = 'Preview published archive page in a new window/tab'

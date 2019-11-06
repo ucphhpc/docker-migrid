@@ -185,6 +185,7 @@ def parse_atjobs_contents(configuration, client_id, atjobs_lines):
             _logger.warning("Skip invalid atjobs line for %s: %s (%s)" %
                             (client_id, line, exc))
             continue
+
         # Ignore seconds
         when = when.replace(second=0)
         cmd_list = shlex.split(hit.group(7))

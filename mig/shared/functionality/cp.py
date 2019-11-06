@@ -42,6 +42,7 @@ from shared.parseflags import verbose, recursive, force
 from shared.sharelinks import extract_mode_id
 from shared.userio import GDPIOLogError, gdp_iolog
 from shared.validstring import valid_user_path
+from shared.vgrid import in_vgrid_share
 
 
 def signature():
@@ -213,7 +214,6 @@ supported for directory sharelinks!"""})
             {'object_type': 'error_text', 'text':
              'cannot import to "%s" : file in the way?' % relative_dest})
         return (output_objects, returnvalues.SYSTEM_ERROR)
-
     if not check_write_access(abs_dest, parent_dir=True):
         logger.warning('%s called without write access: %s'
                        % (op_name, abs_dest))
@@ -273,11 +273,19 @@ confirm it. You may want to back up any important data from %s first, however.
 
             # Prevent vgrid share copy which would create read-only dot dirs
 
+            # Generally refuse handling symlinks including root vgrid shares
             if os.path.islink(abs_path):
                 output_objects.append(
                     {'object_type': 'warning', 'text': """You're not allowed to
 copy entire special folders like %s shared folders!"""
                      % configuration.site_vgrid_label})
+                status = returnvalues.CLIENT_ERROR
+                continue
+            # Additionally refuse operations on inherited subvgrid share roots
+            elif in_vgrid_share(configuration, abs_path) == relative_path:
+                output_objects.append(
+                    {'object_type': 'warning', 'text': """You're not allowed to
+copy entire %s shared folders!""" % configuration.site_vgrid_label})
                 status = returnvalues.CLIENT_ERROR
                 continue
             elif os.path.realpath(abs_path) == os.path.realpath(base_dir):

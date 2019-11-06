@@ -53,6 +53,7 @@ def signature():
                 'request_name': [''], 'rank': ['']}
     return ['text', defaults]
 
+
 def add_tracker_admin(configuration, cert_id, vgrid_name, tracker_dir,
                       output_objects):
     """Add new Trac issue tracker owner"""

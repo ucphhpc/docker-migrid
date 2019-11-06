@@ -355,12 +355,8 @@ def execute_on_resource(
         x_fwd = True
 
     options = default_ssh_options(close_stdin=True, x_forward=x_fwd)
-    # TODO This has been changed for simpler setup of a development enviroment
-    #  change this back, or resolve it properly later
-    # options += ['-o', 'Port=%s' % port, '-o', 'CheckHostIP=yes',
-    #             '-o', 'StrictHostKeyChecking=yes']
     options += ['-o', 'Port=%s' % port, '-o', 'CheckHostIP=yes',
-                '-o', 'StrictHostKeyChecking=no']
+                '-o', 'StrictHostKeyChecking=yes']
 
     if hostkey:
         options += ['-o', 'UserKnownHostsFile=%s' % key_path]
@@ -398,7 +394,6 @@ def execute_on_resource(
     status = ssh_proc.wait()
     out_msg, err_msg = ssh_proc.communicate()
 
-    logger.debug('command status: %s' % str(status))
     logger.debug('command out: %s' % out_msg)
     logger.debug('command err: %s' % err_msg)
 

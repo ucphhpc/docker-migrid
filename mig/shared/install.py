@@ -49,10 +49,11 @@ from shared.defaults import default_http_port, default_https_port, \
     auth_openid_mig_db, auth_openid_ext_db, STRONG_TLS_CIPHERS, \
     STRONG_TLS_CURVES, STRONG_SSH_KEXALGOS, STRONG_SSH_LEGACY_KEXALGOS, \
     STRONG_SSH_CIPHERS, STRONG_SSH_LEGACY_CIPHERS, STRONG_SSH_MACS, \
-    STRONG_SSH_LEGACY_MACS, CRACK_USERNAME_REGEX
-from shared.safeeval import subprocess_call, subprocess_popen, subprocess_pipe
+    STRONG_SSH_LEGACY_MACS, CRACK_USERNAME_REGEX, CRACK_WEB_REGEX
 from shared.jupyter import gen_balancer_proxy_template, gen_openid_template, \
     gen_rewrite_template
+from shared.pwhash import password_requirements
+from shared.safeeval import subprocess_call, subprocess_popen, subprocess_pipe
 from shared.safeinput import valid_alphanumeric, InputException
 
 
@@ -74,7 +75,11 @@ def fill_template(template_file, output_file, settings, eat_trailing_space=[],
         suffix = ''
         if variable in eat_trailing_space:
             suffix = '\s{0,1}'
-        contents = re.sub(variable + suffix, value, contents)
+        try:
+            contents = re.sub(variable + suffix, value, contents)
+        except Exception, exc:
+            print "Error stripping %s: %s" % (variable, [value])
+            raise exc
     # print "output:\n", contents
 
     # print "writing specific contents to %s" % (output_file)
@@ -116,9 +121,8 @@ def template_insert(template_file, insert_identifiers, unique=False):
                 len(contents)) if variable in contents[i]][0]
         except IndexError, err:
             print(
-                "Template insert, Identifer: %s not found in %s: %s" % (variable,
-                                                                        template_file,
-                                                                        err))
+                "Template insert, Identifer: %s not found in %s: %s"
+                % (variable, template_file, err))
             return False
 
         if isinstance(value, basestring):
@@ -173,9 +177,8 @@ def template_remove(template_file, remove_pattern):
             len(contents)) if remove_pattern in contents[i]]
     except IndexError, err:
         print(
-            "Template remove, Identifer: %s not found in %s: %s" % (remove_pattern,
-                                                                    template_file,
-                                                                    err))
+            "Template remove, Identifer: %s not found in %s: %s"
+            % (remove_pattern, template_file, err))
         return False
 
     # Remove in reverse
@@ -208,6 +211,10 @@ def generate_confs(
     ext_oid_fqdn='localhost',
     sid_fqdn='localhost',
     io_fqdn='localhost',
+    seafile_fqdn='localhost',
+    seafile_base='/seafile',
+    seafmedia_base='/seafmedia',
+    seafhttp_base='/seafhttp',
     jupyter_services='',
     jupyter_services_desc='{}',
     user='mig',
@@ -217,52 +224,55 @@ def generate_confs(
     apache_run='/var/run',
     apache_lock='/var/lock',
     apache_log='/var/log/apache2',
-    apache_worker_procs='256',
+    apache_worker_procs=256,
     openssh_version='7.4',
     mig_code='/home/mig/mig',
     mig_state='/home/mig/state',
     mig_certs='/home/mig/certs',
-    enable_sftp='True',
-    enable_sftp_subsys='True',
-    sftp_subsys_auth_procs='10',
-    enable_davs='True',
-    enable_ftps='True',
-    enable_wsgi='True',
-    wsgi_procs='10',
-    enable_gdp='False',
-    enable_jobs='True',
-    enable_resources='True',
-    enable_workflows='False',
-    enable_events='True',
-    enable_sharelinks='True',
-    enable_transfers='True',
-    enable_freeze='True',
-    enable_sandboxes='False',
-    enable_vmachines='False',
-    enable_preview='False',
-    enable_jupyter='False',
-    enable_hsts='',
-    enable_vhost_certs='',
-    enable_verify_certs='',
-    enable_seafile='False',
-    enable_duplicati='False',
-    enable_crontab='False',
-    enable_notify='False',
-    enable_imnotify='False',
-    enable_dev_accounts='False',
-    enable_twofactor='False',
-    enable_cracklib='False',
-    enable_openid='False',
+    enable_sftp=True,
+    enable_sftp_subsys=True,
+    sftp_subsys_auth_procs=10,
+    enable_davs=True,
+    enable_ftps=True,
+    enable_wsgi=True,
+    wsgi_procs=10,
+    enable_gdp=False,
+    enable_jobs=True,
+    enable_resources=True,
+    enable_workflows=False,
+    enable_events=True,
+    enable_sharelinks=True,
+    enable_transfers=True,
+    enable_freeze=True,
+    enable_sandboxes=False,
+    enable_vmachines=False,
+    enable_preview=False,
+    enable_jupyter=False,
+    enable_hsts=False,
+    enable_vhost_certs=False,
+    enable_verify_certs=False,
+    enable_seafile=False,
+    enable_duplicati=False,
+    enable_crontab=False,
+    enable_notify=False,
+    enable_imnotify=False,
+    enable_dev_accounts=False,
+    enable_twofactor=False,
+    enable_twofactor_strict_address=False,
+    enable_cracklib=False,
+    enable_openid=False,
     mig_oid_provider='',
     ext_oid_provider='',
     dhparams_path='',
     daemon_keycert='',
     daemon_pubkey='',
-    daemon_pubkey_from_dns='False',
+    daemon_pubkey_from_dns=False,
     daemon_show_address='',
     alias_field='',
     signup_methods='extcert',
     login_methods='extcert',
+    csrf_protection='MEDIUM',
+    password_policy='MEDIUM',
     hg_path='',
     hgweb_scripts='',
     trac_admin_path='',
@@ -274,6 +284,20 @@ def generate_confs(
     mig_oid_port=default_https_port + 3,
     ext_oid_port=default_https_port + 2,
     sid_port=default_https_port + 4,
+    sftp_port=2222,
+    sftp_subsys_port=22,
+    sftp_show_port=22,
+    davs_port=4443,
+    davs_show_port=443,
+    ftps_ctrl_port=8021,
+    ftps_ctrl_show_port=21,
+    openid_port=8443,
+    openid_show_port=443,
+    seafile_seahub_port=8000,
+    seafile_seafhttp_port=8082,
+    seafile_client_port=13419,
+    seafile_quota=2,
+    seafile_ro_access=True,
     user_clause='User',
     group_clause='Group',
     listen_clause='#Listen',
@@ -281,6 +305,8 @@ def generate_confs(
     distro='Debian',
     landing_page=None,
     skin='migrid-basic',
+    short_title='MiG',
+    secscan_addr='UNSET',
 ):
     """Generate Apache and MiG server confs with specified variables"""
 
@@ -299,6 +325,10 @@ def generate_confs(
     user_dict['__EXT_OID_FQDN__'] = ext_oid_fqdn
     user_dict['__SID_FQDN__'] = sid_fqdn
     user_dict['__IO_FQDN__'] = io_fqdn
+    user_dict['__SEAFILE_FQDN__'] = seafile_fqdn
+    user_dict['__SEAFILE_BASE__'] = seafile_base
+    user_dict['__SEAFMEDIA_BASE__'] = seafmedia_base
+    user_dict['__SEAFHTTP_BASE__'] = seafhttp_base
     user_dict['__JUPYTER_SERVICES__'] = jupyter_services
     user_dict['__JUPYTER_DEFS__'] = ''
     user_dict['__JUPYTER_OPENIDS__'] = ''
@@ -323,39 +353,41 @@ def generate_confs(
     user_dict['__APACHE_RUN__'] = apache_run
     user_dict['__APACHE_LOCK__'] = apache_lock
     user_dict['__APACHE_LOG__'] = apache_log
-    user_dict['__APACHE_WORKER_PROCS__'] = apache_worker_procs
+    user_dict['__APACHE_WORKER_PROCS__'] = str(apache_worker_procs)
     user_dict['__OPENSSH_VERSION__'] = openssh_version
-    user_dict['__ENABLE_SFTP__'] = enable_sftp
-    user_dict['__ENABLE_SFTP_SUBSYS__'] = enable_sftp_subsys
-    user_dict['__SFTP_SUBSYS_AUTH_PROCS__'] = sftp_subsys_auth_procs
-    user_dict['__ENABLE_DAVS__'] = enable_davs
-    user_dict['__ENABLE_FTPS__'] = enable_ftps
-    user_dict['__ENABLE_WSGI__'] = enable_wsgi
-    user_dict['__WSGI_PROCS__'] = wsgi_procs
-    user_dict['__ENABLE_GDP__'] = enable_gdp
-    user_dict['__ENABLE_JOBS__'] = enable_jobs
-    user_dict['__ENABLE_RESOURCES__'] = enable_resources
-    user_dict['__ENABLE_WORKFLOWS__'] = enable_workflows
-    user_dict['__ENABLE_EVENTS__'] = enable_events
-    user_dict['__ENABLE_SHARELINKS__'] = enable_sharelinks
-    user_dict['__ENABLE_TRANSFERS__'] = enable_transfers
-    user_dict['__ENABLE_FREEZE__'] = enable_freeze
-    user_dict['__ENABLE_SANDBOXES__'] = enable_sandboxes
-    user_dict['__ENABLE_VMACHINES__'] = enable_vmachines
-    user_dict['__ENABLE_PREVIEW__'] = enable_preview
-    user_dict['__ENABLE_JUPYTER__'] = enable_jupyter
-    user_dict['__ENABLE_HSTS__'] = enable_hsts
-    user_dict['__ENABLE_VHOST_CERTS__'] = enable_vhost_certs
-    user_dict['__ENABLE_VERIFY_CERTS__'] = enable_verify_certs
-    user_dict['__ENABLE_SEAFILE__'] = enable_seafile
-    user_dict['__ENABLE_DUPLICATI__'] = enable_duplicati
-    user_dict['__ENABLE_CRONTAB__'] = enable_crontab
-    user_dict['__ENABLE_NOTIFY__'] = enable_notify
-    user_dict['__ENABLE_IMNOTIFY__'] = enable_imnotify
-    user_dict['__ENABLE_DEV_ACCOUNTS__'] = enable_dev_accounts
-    user_dict['__ENABLE_TWOFACTOR__'] = enable_twofactor
-    user_dict['__ENABLE_CRACKLIB__'] = enable_cracklib
-    user_dict['__ENABLE_OPENID__'] = enable_openid
+    user_dict['__ENABLE_SFTP__'] = str(enable_sftp)
+    user_dict['__ENABLE_SFTP_SUBSYS__'] = str(enable_sftp_subsys)
+    user_dict['__SFTP_SUBSYS_AUTH_PROCS__'] = str(sftp_subsys_auth_procs)
+    user_dict['__ENABLE_DAVS__'] = str(enable_davs)
+    user_dict['__ENABLE_FTPS__'] = str(enable_ftps)
+    user_dict['__ENABLE_WSGI__'] = str(enable_wsgi)
+    user_dict['__WSGI_PROCS__'] = str(wsgi_procs)
+    user_dict['__ENABLE_GDP__'] = str(enable_gdp)
+    user_dict['__ENABLE_JOBS__'] = str(enable_jobs)
+    user_dict['__ENABLE_RESOURCES__'] = str(enable_resources)
+    user_dict['__ENABLE_WORKFLOWS__'] = str(enable_workflows)
+    user_dict['__ENABLE_EVENTS__'] = str(enable_events)
+    user_dict['__ENABLE_SHARELINKS__'] = str(enable_sharelinks)
+    user_dict['__ENABLE_TRANSFERS__'] = str(enable_transfers)
+    user_dict['__ENABLE_FREEZE__'] = str(enable_freeze)
+    user_dict['__ENABLE_SANDBOXES__'] = str(enable_sandboxes)
+    user_dict['__ENABLE_VMACHINES__'] = str(enable_vmachines)
+    user_dict['__ENABLE_PREVIEW__'] = str(enable_preview)
+    user_dict['__ENABLE_JUPYTER__'] = str(enable_jupyter)
+    user_dict['__ENABLE_HSTS__'] = str(enable_hsts)
+    user_dict['__ENABLE_VHOST_CERTS__'] = str(enable_vhost_certs)
+    user_dict['__ENABLE_VERIFY_CERTS__'] = str(enable_verify_certs)
+    user_dict['__ENABLE_SEAFILE__'] = str(enable_seafile)
+    user_dict['__ENABLE_DUPLICATI__'] = str(enable_duplicati)
+    user_dict['__ENABLE_CRONTAB__'] = str(enable_crontab)
+    user_dict['__ENABLE_NOTIFY__'] = str(enable_notify)
+    user_dict['__ENABLE_IMNOTIFY__'] = str(enable_imnotify)
+    user_dict['__ENABLE_DEV_ACCOUNTS__'] = str(enable_dev_accounts)
+    user_dict['__ENABLE_TWOFACTOR__'] = str(enable_twofactor)
+    user_dict['__ENABLE_TWOFACTOR_STRICT_ADDRESS__'] = \
+        str(enable_twofactor_strict_address)
+    user_dict['__ENABLE_CRACKLIB__'] = str(enable_cracklib)
+    user_dict['__ENABLE_OPENID__'] = str(enable_openid)
     user_dict['__MIG_OID_PROVIDER_BASE__'] = mig_oid_provider
     user_dict['__MIG_OID_PROVIDER_ID__'] = mig_oid_provider
     user_dict['__MIG_OID_AUTH_DB__'] = auth_openid_mig_db
@@ -375,11 +407,27 @@ def generate_confs(
     user_dict['__DAEMON_KEYCERT_SHA256__'] = ''
     user_dict['__DAEMON_PUBKEY_MD5__'] = ''
     user_dict['__DAEMON_PUBKEY_SHA256__'] = ''
-    user_dict['__DAEMON_PUBKEY_FROM_DNS__'] = daemon_pubkey_from_dns
+    user_dict['__DAEMON_PUBKEY_FROM_DNS__'] = str(daemon_pubkey_from_dns)
     user_dict['__DAEMON_SHOW_ADDRESS__'] = daemon_show_address
+    user_dict['__SFTP_PORT__'] = str(sftp_port)
+    user_dict['__SFTP_SUBSYS_PORT__'] = str(sftp_subsys_port)
+    user_dict['__SFTP_SHOW_PORT__'] = str(sftp_show_port)
+    user_dict['__DAVS_PORT__'] = str(davs_port)
+    user_dict['__DAVS_SHOW_PORT__'] = str(davs_show_port)
+    user_dict['__FTPS_CTRL_PORT__'] = str(ftps_ctrl_port)
+    user_dict['__FTPS_CTRL_SHOW_PORT__'] = str(ftps_ctrl_show_port)
+    user_dict['__OPENID_PORT__'] = str(openid_port)
+    user_dict['__OPENID_SHOW_PORT__'] = str(openid_show_port)
+    user_dict['__SEAFILE_SEAHUB_PORT__'] = str(seafile_seahub_port)
+    user_dict['__SEAFILE_SEAFHTTP_PORT__'] = str(seafile_seafhttp_port)
+    user_dict['__SEAFILE_CLIENT_PORT__'] = str(seafile_client_port)
+    user_dict['__SEAFILE_QUOTA__'] = str(seafile_quota)
+    user_dict['__SEAFILE_RO_ACCESS__'] = str(seafile_ro_access)
     user_dict['__ALIAS_FIELD__'] = alias_field
     user_dict['__SIGNUP_METHODS__'] = signup_methods
     user_dict['__LOGIN_METHODS__'] = login_methods
+    user_dict['__CSRF_PROTECTION__'] = csrf_protection
+    user_dict['__PASSWORD_POLICY__'] = password_policy
     user_dict['__HG_PATH__'] = hg_path
     user_dict['__HGWEB_SCRIPTS__'] = hgweb_scripts
     user_dict['__TRAC_ADMIN_PATH__'] = trac_admin_path
@@ -390,8 +438,11 @@ def generate_confs(
     user_dict['__SERVERALIAS_CLAUSE__'] = serveralias_clause
     user_dict['__DISTRO__'] = distro
     user_dict['__SKIN__'] = skin
+    user_dict['__SHORT_TITLE__'] = short_title
+    user_dict['__SECSCAN_ADDR__'] = secscan_addr
     user_dict['__PUBLIC_ALIAS_LISTEN__'] = listen_clause
 
+    fail2ban_daemon_ports = []
     # Apache fails on duplicate Listen directives so comment in that case
     port_list = [mig_cert_port, ext_cert_port, mig_oid_port, ext_oid_port,
                  sid_port]
@@ -413,6 +464,9 @@ WARNING: you probably have to use either different fqdn or port settings for
 cert, oid and sid based https!
 """
 
+    # All web ports for Fail2Ban jail
+    fail2ban_daemon_ports += enabled_ports
+
     # List of (file, remove_identifers) used to dynamically remove lines from template
     # configurations files
     cleanup_list = []
@@ -422,6 +476,9 @@ cert, oid and sid based https!
 
     # Paraview and Jupyter require websockets proxy - enable conditionally
     user_dict['__WEBSOCKETS_COMMENTED__'] = '#'
+    # OpenID, Seafile, etc. require http(s) proxy - enable conditionally
+    user_dict['__PROXY_HTTP_COMMENTED__'] = '#'
+    user_dict['__PROXY_HTTPS_COMMENTED__'] = '#'
 
     # Switch between apache 2.2 and 2.4 directives to match requested version
     user_dict['__APACHE_RECENT_ONLY__'] = 'Only for apache>=2.4'
@@ -454,6 +511,19 @@ cert, oid and sid based https!
     # We know that login with one of these common usernames is a password
     # cracking attempt since our own username format differs.
     user_dict['__CRACK_USERNAME_REGEX__'] = CRACK_USERNAME_REGEX
+    # We know that when a web request for one of these addresses fails it is a
+    # clear sign of someone scanning for web vulnerabilities to abuse.
+    user_dict['__CRACK_WEB_REGEX__'] = CRACK_WEB_REGEX
+
+    # Insert min password length based on policy
+    min_len, min_classes, errors = password_requirements(password_policy)
+    if errors:
+        print "Invalid password policy %s: %s" % (password_policy,
+                                                  '\n'.join(errors))
+        sys.exit(1)
+    # Values must be strings
+    user_dict['__PASSWORD_MIN_LEN__'] = "%d" % min_len
+    user_dict['__PASSWORD_MIN_CLASSES__'] = "%d" % min_classes
 
     # Define some FQDN helpers if set
     user_dict['__IFDEF_BASE_FQDN__'] = 'UnDefine'
@@ -523,6 +593,9 @@ cert, oid and sid based https!
     if user_dict['__HG_PATH__']:
         user_dict['__HG_COMMENTED__'] = ''
 
+    # TODO: switch to test input values directly now that they are bool?
+    #       like e.g. in if enable_wsgi: BLA
+
     # Enable WSGI web interface only if explicitly requested
     if user_dict['__ENABLE_WSGI__'].lower() == 'true':
         user_dict['__WSGI_COMMENTED__'] = ''
@@ -549,11 +622,105 @@ cert, oid and sid based https!
         user_dict['__IS_VERIFYCERTS_COMMENTED__'] = '#'
         user_dict['__NOT_VERIFYCERTS_COMMENTED__'] = ''
 
+    if user_dict['__ENABLE_SFTP__'].lower() == 'true':
+        fail2ban_daemon_ports.append(sftp_port)
+        fail2ban_daemon_ports.append(sftp_show_port)
+    if user_dict['__ENABLE_SFTP_SUBSYS__'].lower() == 'true':
+        fail2ban_daemon_ports.append(sftp_subsys_port)
+        fail2ban_daemon_ports.append(sftp_show_port)
+    if user_dict['__ENABLE_DAVS__'].lower() == 'true':
+        fail2ban_daemon_ports.append(davs_port)
+        fail2ban_daemon_ports.append(davs_show_port)
+    if user_dict['__ENABLE_FTPS__'].lower() == 'true':
+        fail2ban_daemon_ports.append(ftps_ctrl_port)
+        fail2ban_daemon_ports.append(ftps_ctrl_show_port)
+
+    sys_timezone = 'UTC'
+    timezone_cmd = ["/usr/bin/timedatectl", "status"]
+    try:
+        timezone_proc = subprocess_popen(timezone_cmd, stdout=subprocess_pipe)
+        for line in timezone_proc.stdout.readlines():
+            line = line.strip()
+            if not line.startswith("Time zone: "):
+                continue
+            sys_timezone = line.replace("Time zone: ", "").split(" ", 1)[0]
+    except Exception, exc:
+        print "WARNING: failed to extract system time zone: %s" % exc
+    user_dict['__SEAFILE_TIMEZONE__'] = sys_timezone
+    user_dict['__SEAFILE_SECRET_KEY__'] = base64.b64encode(
+        os.urandom(32)).lower()
+    user_dict['__SEAFILE_CCNET_ID__'] = base64.b16encode(
+        os.urandom(20)).lower()
+    user_dict['__SEAFILE_SHORT_NAME__'] = short_title.replace(' ', '-')
+    # IMPORTANT: we discriminate on local and remote seafile service
+    #            for local ones we partly integrate directly with apache etc.
+    #            while for remote we must securely proxy everything.
+    # Assume localhost installation by default without need for protection
+    seafile_local_instance = True
+    seafile_proxy_proto = 'http'
+    seafile_proxy_host = '127.0.0.1'
+    # These three are the public addresses for the seahub, seafhttp and client
+    # sync interfaces
+    user_dict['__SEAHUB_URL__'] = '%s' % seafile_base
+    user_dict['__SEAFHTTP_URL__'] = 'https://%s%s' % (sid_fqdn, seafhttp_base)
+    user_dict['__SEAFILE_URL__'] = 'https://%s%s' % (sid_fqdn, seafile_base)
+    user_dict['__SEAFMEDIA_URL__'] = 'https://%s%s' % (
+        sid_fqdn, seafmedia_base)
+    if not enable_seafile:
+        seafile_local_instance = False
+    elif seafile_fqdn and seafile_fqdn \
+            not in ['127.0.0.1', 'localhost'] + fqdn_list:
+        # Require https for all remote seafile host access
+        seafile_local_instance = False
+        seafile_proxy_proto = 'https'
+        seafile_proxy_host = seafile_fqdn
+        user_dict['__SEAHUB_URL__'] = 'https://%s%s' % (
+            seafile_fqdn, seafile_base)
+        user_dict['__SEAFILE_URL__'] = 'https://%s%s' % (seafile_fqdn,
+                                                         seafile_base)
+        user_dict['__SEAFMEDIA_URL__'] = 'https://%s%s' % (seafile_fqdn,
+                                                           seafmedia_base)
+        user_dict['__SEAFHTTP_URL__'] = 'https://%s%s' % (seafile_fqdn,
+                                                          seafhttp_base)
+
+    user_dict['__SEAFILE_LOCAL_INSTANCE__'] = str(seafile_local_instance)
+
+    # These two are used for internal proxying of the backends in apache
+    seahub_proxy_host_port = seafhttp_proxy_host_port = seafile_proxy_host
+    if seafile_local_instance:
+        seahub_proxy_host_port += ':%d' % seafile_seahub_port
+        seafhttp_proxy_host_port += ':%d' % seafile_seafhttp_port
+        # NOTE: local seafhttp maps to URL root without /seafhttp suffix
+        seafhttp_proxy_base = ''
+    else:
+        seafhttp_proxy_base = seafhttp_base
+
+    user_dict['__SEAFILE_PROXY_URL__'] = '%s://%s%s' % (
+        seafile_proxy_proto, seahub_proxy_host_port, seafile_base)
+    user_dict['__SEAFMEDIA_PROXY_URL__'] = '%s://%s%s' % (
+        seafile_proxy_proto, seahub_proxy_host_port, seafmedia_base)
+    user_dict['__SEAFHTTP_PROXY_URL__'] = '%s://%s%s' % (
+        seafile_proxy_proto, seafhttp_proxy_host_port, seafhttp_proxy_base)
+
+    user_dict['__SEAFILE_COMMENTED__'] = '#'
+    user_dict['__SEAFILE_LOCAL_COMMENTED__'] = '#'
+    user_dict['__SEAFILE_REMOTE_COMMENTED__'] = '#'
     # Enable Seafile integration only if explicitly requested
     if user_dict['__ENABLE_SEAFILE__'].lower() == 'true':
         user_dict['__SEAFILE_COMMENTED__'] = ''
-    else:
-        user_dict['__SEAFILE_COMMENTED__'] = '#'
+        # Always requires reverse http proxy
+        user_dict['__PROXY_HTTP_COMMENTED__'] = ''
+        if seafile_local_instance:
+            # Disable comment for local-only rules
+            user_dict['__SEAFILE_REMOTE_COMMENTED__'] = ''
+            # Add fail2ban target ports
+            fail2ban_daemon_ports.append(seafile_seahub_port)
+            fail2ban_daemon_ports.append(seafile_seafhttp_port)
+        else:
+            # Disable comment for remote-only rules
+            user_dict['__SEAFILE_LOCAL_COMMENTED__'] = ''
+            # Remote Seafile additionally requires reverse *https* proxy
+            user_dict['__PROXY_HTTPS_COMMENTED__'] = ''
 
     if user_dict['__ENABLE_JUPYTER__'].lower() == 'true':
         try:
@@ -658,8 +825,8 @@ cert, oid and sid based https!
             # Populate apache confs with hosts definitions and balancer members
             for i_h, host in enumerate(values['hosts']):
                 name_index = '%s_%s' % (u_name, i_h)
-                member = "BalancerMember %s route=%s retry=600 timeout=40\n" % (
-                    "${JUPYTER_%s}" % name_index, i_h)
+                member = "BalancerMember %s route=%s retry=600 timeout=40\n" \
+                    % ("${JUPYTER_%s}" % name_index, i_h)
                 ws_member = member.replace("${JUPYTER_%s}" % name_index,
                                            "${WS_JUPYTER_%s}" % name_index)
                 hosts.append(member)
@@ -704,8 +871,9 @@ cert, oid and sid based https!
     # Enable Paraview integration only if explicitly requested
     if user_dict['__ENABLE_PREVIEW__'].lower() == 'true':
         user_dict['__PREVIEW_COMMENTED__'] = ''
-        # Paraview requires websockets proxy
+        # Paraview requires websockets and http proxy
         user_dict['__WEBSOCKETS_COMMENTED__'] = ''
+        user_dict['__PROXY_HTTP_COMMENTED__'] = ''
     else:
         user_dict['__PREVIEW_COMMENTED__'] = '#'
 
@@ -717,6 +885,7 @@ cert, oid and sid based https!
 
     # Helpers for the migstatecleanup cron job
     user_dict['__CRON_VERBOSE_CLEANUP__'] = '1'
+    user_dict['__CRON_EVENT_CLEANUP__'] = '1'
     if 'migoid' in signup_methods or 'migcert' in signup_methods:
         user_dict['__CRON_REQ_CLEANUP__'] = '1'
     else:
@@ -739,6 +908,16 @@ cert, oid and sid based https!
     else:
         user_dict['__TWOFACTOR_COMMENTED__'] = '#'
         user_dict['__CRON_TWOFACTOR_CLEANUP__'] = '0'
+
+    # Enable 2FA strict address only if explicitly requested
+    if user_dict['__ENABLE_TWOFACTOR_STRICT_ADDRESS__'].lower() == 'true':
+        if not user_dict['__ENABLE_TWOFACTOR__'].lower() == 'true':
+            print "ERROR: twofactor strict address use requested" \
+                + " but twofactor is disabled!"
+            sys.exit(1)
+        user_dict['__TWOFACTOR_STRICT_ADDRESS_COMMENTED__'] = ''
+    else:
+        user_dict['__TWOFACTOR_STRICT_ADDRESS_COMMENTED__'] = '#'
 
     # Enable cracklib only if explicitly requested and installed
     if user_dict['__ENABLE_CRACKLIB__'].lower() == 'true':
@@ -783,6 +962,11 @@ cert, oid and sid based https!
     if user_dict['__EXT_OID_PROVIDER_BASE__'].strip() or \
             user_dict['__MIG_OID_PROVIDER_BASE__'].strip():
         user_dict['__OPENID_COMMENTED__'] = ''
+        # Requires reverse http(s) proxy
+        user_dict['__PROXY_HTTP_COMMENTED__'] = ''
+        user_dict['__PROXY_HTTPS_COMMENTED__'] = ''
+        fail2ban_daemon_ports.append(openid_port)
+        fail2ban_daemon_ports.append(openid_show_port)
     else:
         user_dict['__OPENID_COMMENTED__'] = '#'
 
@@ -980,11 +1164,22 @@ ssh-keygen -f %(__DAEMON_KEYCERT__)s -y > %(__DAEMON_PUBKEY__)s""" % user_dict
         xgi_auth = 'cgi-auth'
     user_dict['__TWOFACTOR_PAGE__'] = os.path.join(
         '/', xgi_auth, 'twofactor.py')
+    user_dict['__AUTOLOGOUT_PAGE__'] = os.path.join(
+        '/', xgi_auth, 'autologout.py')
     if landing_page is None:
         user_dict['__LANDING_PAGE__'] = os.path.join(
             '/', xgi_bin, 'dashboard.py')
     else:
         user_dict['__LANDING_PAGE__'] = landing_page
+
+    # Fill list of unique daemon ports to block on Fail2Ban trigger
+    # Typically something like '21,22,2222,4443,8000,8020,8021,8082,8443'
+    sorted_ports = list(set(fail2ban_daemon_ports))
+    sorted_ports.sort()
+    # print "fail2ban_daemon_ports %s sorted into %s" % (
+    #    fail2ban_daemon_ports, sorted_ports)
+    user_dict['__FAIL2BAN_DAEMON_PORTS__'] = ','.join(
+        [str(i) for i in sorted_ports])
 
     # Collect final variable values for log
     sorted_keys = user_dict.keys()
@@ -1005,6 +1200,7 @@ ssh-keygen -f %(__DAEMON_KEYCERT__)s -y > %(__DAEMON_PUBKEY__)s""" % user_dict
         ("apache-httpd-template.conf", "httpd.conf"),
         ("apache-ports-template.conf", "ports.conf"),
         ("apache-MiG-template.conf", "MiG.conf"),
+        ("apache-production-mode-template.conf", "production-mode.conf"),
         ("apache-mimic-deb-template.conf", "mimic-deb.conf"),
         ("apache-init.d-deb-template", "apache-%s" % user),
         ("apache-service-template.conf", "apache2.service"),
@@ -1020,14 +1216,21 @@ ssh-keygen -f %(__DAEMON_KEYCERT__)s -y > %(__DAEMON_PUBKEY__)s""" % user_dict
         ("index-template.html", "index.html"),
         ("openssh-MiG-sftp-subsys-template.conf",
          "sshd_config-MiG-sftp-subsys"),
+        ("seafile-template.conf", "seafile.conf"),
+        ("seafile-ccnet-template.conf", "ccnet.conf"),
+        ("seafile-seahub_settings-template.py", "seahub_settings.py"),
         ("fail2ban-MiG-daemons-filter-template.conf",
          "MiG-daemons-filter.conf"),
         ("fail2ban-MiG-daemons-handshake-filter-template.conf",
          "MiG-daemons-handshake-filter.conf"),
+        ("fail2ban-MiG-daemons-webscan-filter-template.conf",
+         "MiG-daemons-webscan-filter.conf"),
         ("fail2ban-MiG-daemons-pw-crack-filter-template.conf",
          "MiG-daemons-pw-crack-filter.conf"),
         ("fail2ban-sshd-pw-crack-filter-template.conf",
          "sshd-pw-crack-filter.conf"),
+        ("fail2ban-seafile-auth-filter-template.conf",
+         "seafile-auth-filter.conf"),
         ("fail2ban-MiG-daemons-jail-template.conf", "MiG-daemons-jail.conf"),
         # service script for MiG daemons
         ("migrid-init.d-rh-template", "migrid-init.d-rh"),
@@ -1044,6 +1247,7 @@ ssh-keygen -f %(__DAEMON_KEYCERT__)s -y > %(__DAEMON_PUBKEY__)s""" % user_dict
         in_path = os.path.join(source, in_name)
         out_path = os.path.join(destination_path, out_name)
         if os.path.exists(in_path):
+            # print "DEBUG: fill template: %s" % in_path
             fill_template(in_path, out_path, user_dict, strip_trailing_space)
             # Sync permissions
             os.chmod(out_path, os.stat(in_path).st_mode)
@@ -1077,10 +1281,11 @@ sudo cp %(destination)s/mimic-deb.conf %(apache_etc)s/conf/httpd.conf
 sudo cp %(destination)s/envvars /etc/sysconfig/httpd
 sudo cp %(destination)s/apache2.service /lib/systemd/system/httpd.service
 
-You may also want to consider copying the generated apache2.conf,
-httpd.conf, ports.conf and envvars to %(apache_etc)s/:
+You may also want to consider copying the generated apache2.conf, httpd.conf,
+production-mode.conf, ports.conf and envvars to %(apache_etc)s/:
 sudo cp %(destination)s/apache2.conf %(apache_etc)s/
 sudo cp %(destination)s/httpd.conf %(apache_etc)s/
+sudo cp %(destination)s/production-mode.conf %(apache_etc)s/
 sudo cp %(destination)s/ports.conf %(apache_etc)s/
 sudo cp %(destination)s/envvars %(apache_etc)s/
 
@@ -1129,6 +1334,12 @@ rotate and compress log files for all MiG daemons.
 You can install it with:
 sudo cp %(destination)s/logrotate-migrid /etc/logrotate.d/migrid
 
+If running a local Seafile instamce you may also want to copy confs to the
+Seafile installation 
+cp %(destination)s/seafile.conf ~/seafile/conf/
+cp %(destination)s/ccnet.conf ~/seafile/conf/
+cp %(destination)s/seahub_settings.py ~/seafile/conf/
+
 The MiG-daemons-filter.conf and sshd-pw-crack-filter.conf contain Fail2Ban
 filters and MiG-daemons-jail.conf contains a matching Fail2Ban jail
 configuration to automatically lock out clients after a number of consecutive
@@ -1138,10 +1349,14 @@ sudo cp %(destination)s/MiG-daemons-filter.conf \\
         /etc/fail2ban/filter.d/MiG-daemons.conf
 sudo cp %(destination)s/MiG-daemons-handshake-filter.conf \\
         /etc/fail2ban/filter.d/MiG-daemons-handshake.conf
+sudo cp %(destination)s/MiG-daemons-webscan-filter.conf \\
+        /etc/fail2ban/filter.d/MiG-daemons-webscan.conf
 sudo cp %(destination)s/MiG-daemons-pw-crack-filter.conf \\
         /etc/fail2ban/filter.d/MiG-daemons-pw-crack.conf
 sudo cp %(destination)s/sshd-pw-crack-filter.conf \\
         /etc/fail2ban/filter.d/sshd-pw-crack.conf
+sudo cp %(destination)s/seafile-auth-filter.conf \\
+        /etc/fail2ban/filter.d/seafile-auth.conf
 sudo cp %(destination)s/MiG-daemons-jail.conf \\
         /etc/fail2ban/jails.local
 After making sure they fit your site you can start the fail2ban service with:
@@ -1288,46 +1503,47 @@ def create_user(
     apache_run = '%s/run' % apache_dir
     apache_lock = '%s/lock' % apache_dir
     apache_log = '%s/log' % apache_dir
-    apache_worker_procs = '256'
+    apache_worker_procs = 256
     openssh_version = '7.4'
     cert_dir = '%s/MiG-certificates' % apache_dir
     # We don't necessarily have free ports for daemons
-    enable_sftp = 'False'
-    enable_sftp_subsys = 'False'
-    sftp_subsys_auth_procs = '10'
-    enable_davs = 'False'
-    enable_ftps = 'False'
-    enable_twofactor = 'False'
-    enable_cracklib = 'False'
-    enable_openid = 'False'
-    enable_wsgi = 'True'
-    wsgi_procs = '5'
-    enable_jobs = 'True'
-    enable_resources = 'True'
-    enable_workflows = 'False'
-    enable_events = 'True'
-    enable_sharelinks = 'True'
-    enable_transfers = 'True'
-    enable_freeze = 'False'
-    enable_sandboxes = 'False'
-    enable_vmachines = 'False'
-    enable_preview = 'False'
-    enable_jupyter = 'False'
-    enable_hsts = 'False'
-    enable_vhost_certs = 'False'
-    enable_verify_certs = 'False'
-    enable_seafile = 'False'
-    enable_duplicati = 'False'
-    enable_crontab = 'False'
-    enable_notify = 'False'
-    enable_imnotify = 'False'
-    enable_dev_accounts = 'False'
+    enable_sftp = False
+    enable_sftp_subsys = False
+    sftp_subsys_auth_procs = 10
+    enable_davs = False
+    enable_ftps = False
+    enable_twofactor = False
+    enable_twofactor_strict_address = False
+    enable_cracklib = False
+    enable_openid = False
+    enable_wsgi = True
+    wsgi_procs = 5
+    enable_jobs = True
+    enable_resources = True
+    enable_workflows = False
+    enable_events = True
+    enable_sharelinks = True
+    enable_transfers = True
+    enable_freeze = False
+    enable_sandboxes = False
+    enable_vmachines = False
+    enable_preview = False
+    enable_jupyter = False
+    enable_hsts = False
+    enable_vhost_certs = False
+    enable_verify_certs = False
+    enable_seafile = False
+    enable_duplicati = False
+    enable_crontab = False
+    enable_notify = False
+    enable_imnotify = False
+    enable_dev_accounts = False
     mig_oid_provider = ''
     ext_oid_provider = ''
     dhparams_path = ''
     daemon_keycert = ''
     daemon_pubkey = ''
-    daemon_pubkey_from_dns = 'False'
+    daemon_pubkey_from_dns = False
     daemon_show_address = ''
     alias_field = 'email'
     hg_path = '/usr/bin/hg'

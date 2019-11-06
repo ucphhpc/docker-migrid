@@ -348,9 +348,6 @@ table th.icon {
 .navmenu ul li.jupyter a {
   background-image: url('/images/icons/jupyter.png')
 }
-.navmenu ul li.workflowpatterns a {
-  background-image: url('/images/icons/workflowpatterns.png')
-}
 .navmenu ul li.runtimeenvs a {
   background-image: url('/images/icons/database.png');
 }
@@ -634,6 +631,25 @@ input[type=number] {
   vertical-align: middle;
   font-size: 12px;
   font-weight: bold;
+}
+#privacyimage {
+  z-index: 1;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0px;
+  display: inline;
+  vertical-align: middle;
+}
+#privacy {
+  padding: 2px;
+  margin-left: auto;
+  margin-right: auto;
+  vertical-align: middle;
+}
+#privacy a {
+}
+.privacytext {
+  display: inline;
 }
 #creditsimage {
   z-index: 1;

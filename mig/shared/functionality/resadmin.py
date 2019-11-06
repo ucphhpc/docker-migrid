@@ -109,6 +109,7 @@ def display_resource(
     csrf_limit = fill_helpers['csrf_limit']
     fill_helpers.update({'res_id': resourcename, 'hosturl': hosturl,
                          'identifier': identifier})
+
     html += '''<a id="%(res_id)s"></a>
 <h1>%(res_id)s</h1>
 <h3>Configuration</h3>

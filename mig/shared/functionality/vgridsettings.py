@@ -45,6 +45,7 @@ _valid_sharelink = (keyword_owners, keyword_members)
 _valid_write_access = (keyword_owners, keyword_members, keyword_none)
 _keyword_auto_int = '0'
 
+
 def signature():
     """Signature of the main function"""
 
@@ -176,6 +177,7 @@ CSRF-filtered POST requests to prevent unintended updates'''
             logger.warning(msg)
             output_objects.append({'object_type': 'error_text', 'text': msg})
             return (output_objects, returnvalues.CLIENT_ERROR)
+
     if not _keyword_auto_int in accepted['request_recipients']:
         try:
             request_recipients = accepted['request_recipients'][-1]

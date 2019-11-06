@@ -43,6 +43,7 @@ def handle_stop(signum, stack):
     print "Got signal %s - fake ctrl-c" % signum
     raise KeyboardInterrupt
 
+
 if __name__ == '__main__':
     # Force no log init since we use separate logger
     configuration = get_configuration_object(skip_log=True)

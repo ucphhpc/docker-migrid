@@ -44,7 +44,6 @@ from shared.handlers import safe_handler, get_csrf_limit
 from shared.init import initialize_main_variables, find_entry
 from shared.safeeval import subprocess_call, subprocess_popen, \
      subprocess_stdout, subprocess_pipe
-from shared.serial import dumps
 from shared.useradm import get_full_user_map
 from shared.vgrid import vgrid_is_owner, vgrid_set_owners, vgrid_set_members, \
      vgrid_set_resources, vgrid_set_triggers, vgrid_set_settings, \
@@ -993,7 +992,6 @@ user home directory. Therefore it is also usable as source and destination
 for job input and output.
 """ % (vgrid_name, label, vgrid_name),
                        share_readme, logger, make_parent=False)
-
     except Exception, exc:
         logger.error('Could not create vgrid files directory: %s' % exc)
         output_objects.append({'object_type': 'error_text', 'text'

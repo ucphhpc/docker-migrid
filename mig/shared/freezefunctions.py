@@ -164,13 +164,15 @@ def build_freezeitem_object(configuration, freeze_dict, summary=False):
             # NOTE: datetime is not json-serializable so we force to string
             dt_timestamp = datetime.datetime.fromtimestamp(int_timestamp)
             str_timestamp = "%s" % dt_timestamp
+            # NOTE: xmlrpc is limited to 32-bit ints so force size to string
+            str_size = "%(size)s" % file_item
             entry = {
                 'object_type': 'frozenfile',
                 'name': file_item['name'],
                 'showfile_link': showfile_link,
                 'timestamp': int_timestamp,
                 'date': str_timestamp,
-                'size': file_item['size'],
+                'size': str_size,
             }
             # Users may delete pending or non permanent archives
             if freeze_dict.get('STATE', keyword_final) != keyword_final or \
@@ -1008,6 +1010,7 @@ def create_frozen_archive(freeze_meta, freeze_copy, freeze_move,
     and updated archive values.
     """
     _logger = configuration.logger
+
     # Create if new and load existing otherwise
     freeze_id = freeze_meta.get('ID', keyword_auto)
     if not freeze_id or freeze_id == keyword_auto:

@@ -6,8 +6,6 @@ Embeds data structures from Python 2.7.5 source:
 Modules/socketmodule.h
 Modules/_ssl.c
 
-pip install ../sslsession
-=======
 Dependencies:
 =============
 C compiler (e.g. gcc), Python development headers, OpenSSL development headers

@@ -123,6 +123,7 @@ def txt_file_info(file_dict):
     file_details = "%s %s" % (size_pad, date_pad)
     return file_details
 
+
 def txt_format(configuration, ret_val, ret_msg, out_obj):
     """Generate output in txt format"""
 
@@ -184,6 +185,7 @@ ___%s___
                                                          ['path', 'cur_size',
                                                           'total_size',
                                                           'percent', 'done']))
+
         elif i['object_type'] == 'submitstatuslist':
             submitstatuslist = i['submitstatuslist']
             if len(submitstatuslist) == 0:
@@ -254,6 +256,9 @@ ___%s___
             lines.append('Created: %s\n' % val)
             for (location, store_date) in i.get('location', []):
                 lines.append('On %s: %s\n' % (location, store_date))
+        elif i['object_type'] == 'freezestatus':
+            # We only use this element for scripted archive creation
+            pass
         elif i['object_type'] == 'datatransfers':
             datatransferslist = i['datatransfers']
             header = [['ID', 'Action', 'Protocol', 'Host', 'Port', 'Login',
@@ -574,6 +579,7 @@ ctime\t%(ctime)s
             pass
         else:
             lines.append('unknown object %s\n' % i)
+
     if status_line:
         status_line = status_line.replace('TIMING_INFO', timing_info)
         lines = [status_line] + lines
@@ -582,6 +588,7 @@ ctime\t%(ctime)s
 
 def html_link(obj):
     """html format link"""
+
     extra_fields = ['id', 'class', 'title', 'target']
     extra_params = []
     # Set parameter in link
@@ -592,6 +599,7 @@ def html_link(obj):
     link = '<a href="%s" %s>%s</a>' % (obj['destination'],
                                        ' '.join(extra_params), obj['text'])
     return link
+
 
 def html_cond_summary(job_cond_msg):
     """Pretty format job feasibilty condition"""
@@ -627,6 +635,7 @@ def html_cond_summary(job_cond_msg):
             lines.append('</dl></td></tr>')
         lines.append('</table>')
     return '\n'.join(lines)
+
 
 def html_table_if_have_keys(dictionary, keywordlist):
     """create html table contents based on keys in a dictionary"""
@@ -1041,11 +1050,12 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
                         else:
                             cls = ""
                             details = ''
-                        lines.append('<td class="%s"><tt>%s</tt></td>' % \
+                        lines.append('<td class="%s"><tt>%s</tt></td>' %
                                      (cls, details.replace(' ', '&nbsp;')))
                         cols += 1
                         # TODO: enable edit in sharelink and remove if_full here?
-                        lines.append("<td class='enable_write if_full narrow'></td>")
+                        lines.append(
+                            "<td class='enable_write if_full narrow'></td>")
                         cols += 1
                         # Note: this includes CSRF token
                         rmdir_url = rmdir_url_template % directory
@@ -1376,98 +1386,8 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
                  % name} for name in i['providers']]
             provider_links = [html_link(res) for res in view_providers]
             lines.append('<tr><td>Resources</td><td>%s</td></tr>'
-                          % ', '.join(provider_links))
+                         % ', '.join(provider_links))
             lines.append('</table>')
-
-        elif i['object_type'] == 'workflowpatterns':
-            workflowpatterns = i['workflowpatterns']
-            lines.append('<div class="workflowpatterns">')
-            lines.append('''
-<table class="workflowpatns columnsort" id="workflowpatntable">
-<thead class="title">
-    <tr>
-        <th>Actions</th>
-        <th>Name</th>
-        <th>Monitored Input(s)</th>
-        <th>Output</th>
-        <th>Recipe(s)</th>
-        <th>Variable(s)</th>
-        <th>Trigger</th>
-    </tr>
-</thead>
-<tbody>
-''')
-            for single_wp in workflowpatterns:
-                lines.append('''
-<tr>
-<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>
-</tr>''' % (html_link(single_wp.get('delwplink', '')),
-            html_link(single_wp.get('namelink', '')),
-            single_wp.get('trigger_paths', ''),
-            single_wp.get('output', ''),
-            single_wp.get('recipes', ''),
-            single_wp.get('variables', ''),
-            single_wp.get('trigger', '')))
-            lines.append('''
-</tbody>
-</table>''')
-            lines.append('</div>')
-        elif i['object_type'] == 'workflowpattern':
-            wp = i['workflowpattern']
-            trigger_paths, recipes = wp.get('trigger_paths', []), wp.get('recipes', [])
-            lines.append('''
-<div class="workflowpattern">
-    <h3>Pattern: %(name)s</h3>
-    <h3>Inputs</h3>
-    <h4>%(trigger_paths)s</h4>
-    <h3>Output</h3>
-    <h4>%(output)s</h4>
-    <h3>Parameters</h3>
-    <h4>%(variables)s</h4>
-    <h3>Recipes</h3>
-    <h4>%(recipes)s</h4>
-    <h3>Trigger</h3>
-    <h4>%(triggers)s</h4>
-</div>''' % wp)
-
-        elif i['object_type'] == 'workflowrecipes':
-            workflowrecipes = i['workflowrecipes']
-            lines.append('<div class="workflowrecipes">')
-            lines.append('''
-        <table class="workflowrcps columnsort" id="workflowrcptable">
-        <thead class="title">
-            <tr>
-                <th>Actions</th>            
-                <th>Name</th>
-                <th>Recipe</th>
-                <th>Trigger(s)</th>
-            </tr>
-        </thead>
-        <tbody>
-        ''')
-            for single_wr in workflowrecipes:
-                lines.append('''
-        <tr>
-        <td>%s</td><td>%s</td><td>%s</td><td>%s</td>
-        </tr>''' % (html_link(single_wr.get('delwrlink', '')),
-                    html_link(single_wr.get('namelink', '')),
-                    single_wr.get('recipe', ''),
-                    single_wr.get('triggers', '')))
-            lines.append('''
-        </tbody>
-        </table>''')
-            lines.append('</div>')
-        elif i['object_type'] == 'workflowrecipe':
-            wr = i['workflowrecipe']
-            inputs, recipes = wr.get('inputs', []), wr.get('recipes', [])
-            lines.append('''
-        <div class="workflowrecipe">
-            <h3>Recipe: %(name)s</h3>
-            <h3>Recipe</h3>
-            <h4>%(recipe)s</h4>
-            <h3>Trigger(s)</h3>
-            <h4>%(trigger)s</h4>
-        </div>''' % wr)
         elif i['object_type'] == 'frozenarchives':
             frozenarchives = i['frozenarchives']
             lines.append('''
@@ -1507,6 +1427,7 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
 </tr>''' % (single_freeze['id'], viewlink, editlink, dellink,
                     single_freeze['name'], single_freeze['created'],
                     single_freeze['flavor'], single_freeze['state'], file_count))
+
             lines.append('''
 </tbody>
 </table>''')
@@ -1601,6 +1522,9 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
             lines.append('</table>')
             lines.append('</div>')
             lines.append('</div>')
+        elif i['object_type'] == 'freezestatus':
+            # We only use this element for scripted archive creation
+            pass
         elif i['object_type'] == 'datatransfers':
             datatransfers = i['datatransfers']
             lines.append('''
@@ -1811,7 +1735,7 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
 <tr>
 <td>%s</td><td class="centertext">%s</td><td class="centertext">%s</td><td>%s</td><td>%s</td><td>%s</td>
 </tr>''' % (req_type, acceptlink_html, rejectlink_html, single_req['entity'],
-            single_req['created'], single_req['request_text']))
+                    single_req['created'], single_req['request_text']))
 
             lines.append('''
 </tbody>
@@ -1854,11 +1778,11 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
 <td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>
 <td>%s</td>
 </tr>''' % (single_accountreq['id'], addlink_html, dellink_html,
-            single_accountreq['full_name'], single_accountreq['email'],
-            single_accountreq['organization'], single_accountreq['country'],
-            single_accountreq['state'], single_accountreq['comment'],
-            ', '.join(single_accountreq['auth']), single_accountreq['created']))
-            
+                    single_accountreq['full_name'], single_accountreq['email'],
+                    single_accountreq['organization'], single_accountreq['country'],
+                    single_accountreq['state'], single_accountreq['comment'],
+                    ', '.join(single_accountreq['auth']), single_accountreq['created']))
+
             lines.append('''
 </tbody>
 </table>
@@ -1986,6 +1910,7 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
 ''' % (key, val)
             if not i['stores']:
                 resource_html += '<tr><td coslpan=2>None</td></tr>'
+
             resource_html += '''
 </table>
 '''
@@ -2384,21 +2309,25 @@ def soap_format(configuration, ret_val, ret_msg, out_obj):
     import SOAPpy
     return SOAPpy.buildSOAP(out_obj)
 
+
 def pickle_helper(configuration, ret_val, ret_msg, out_obj, protocol=None):
     """Generate output in requested pickle protocol format"""
 
     from shared.serial import dumps
     return dumps(out_obj, protocol)
 
+
 def pickle_format(configuration, ret_val, ret_msg, out_obj):
     """Generate output in default pickle protocol format"""
 
     return pickle_helper(configuration, ret_val, ret_msg, out_obj, protocol=0)
 
+
 def pickle1_format(configuration, ret_val, ret_msg, out_obj):
     """Generate output in pickle protocol 1 format"""
 
     return pickle_helper(configuration, ret_val, ret_msg, out_obj, protocol=1)
+
 
 def pickle2_format(configuration, ret_val, ret_msg, out_obj):
     """Generate output in default pickle protocol 2 format"""
@@ -2412,6 +2341,7 @@ def yaml_format(configuration, ret_val, ret_msg, out_obj):
     import yaml
     return yaml.dump(out_obj)
 
+
 def xmlrpc_format(configuration, ret_val, ret_msg, out_obj):
     """Generate output in xmlrpc format"""
 
@@ -2424,6 +2354,7 @@ def xmlrpc_format(configuration, ret_val, ret_msg, out_obj):
                     continue
                 entry[key] = xmlrpclib.Binary(entry[key])
     return xmlrpclib.dumps((out_obj, ), allow_none=True)
+
 
 def json_format(configuration, ret_val, ret_msg, out_obj):
     """Generate output in json format"""
@@ -2541,6 +2472,7 @@ def format_timedelta(timedelta):
     minutes_str = "%s" % (str(minutes))
     if (minutes < 10):
         minutes_str = "0%s" % (minutes_str)
+
     seconds_str = "%s" % (str(seconds))
     if (seconds < 10):
         seconds_str = "0%s" % (seconds_str)

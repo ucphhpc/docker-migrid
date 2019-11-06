@@ -71,6 +71,7 @@ def write_chunks(path, file_obj, restrict):
         os.remove(path)
         raise exc
 
+
 def main(client_id, user_arguments_dict):
     """Main function used by front end"""
 
@@ -109,6 +110,7 @@ def main(client_id, user_arguments_dict):
     logger.info('Filtered input is: %s' % user_arguments_dict)
 
     # Now validate parts as usual
+
     (validate_status, accepted) = validate_input_and_cert(
         user_arguments_dict,
         defaults,
@@ -169,13 +171,11 @@ Please contact the site admins %s if you think they should be enabled.
         logger.warning('%s tried to %s restricted path %s ! (%s)'
                        % (client_id, op_name, real_path, path))
         output_objects.append(
-            {'object_type': 'error_text', 'text'
-             : "Invalid destination (%s expands to an illegal path)" % path})
+            {'object_type': 'error_text', 'text': "Invalid destination (%s expands to an illegal path)" % path})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     if not os.path.isdir(os.path.dirname(real_path)):
-        output_objects.append({'object_type': 'error_text', 'text'
-                               : "cannot write: no such file or directory: %s)"
+        output_objects.append({'object_type': 'error_text', 'text': "cannot write: no such file or directory: %s)"
                                % path})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
@@ -206,8 +206,7 @@ Please contact the site admins %s if you think they should be enabled.
             else:
                 os._exit(0)
     except OSError, ose:
-        output_objects.append({'object_type': 'error_text',
-                               'text': '%s upload could not background! (%s)'
+        output_objects.append({'object_type': 'error_text', 'text': '%s upload could not background! (%s)'
                                % (path, str(ose).replace(base_dir, ''
                                                          ))})
         return (output_objects, returnvalues.SYSTEM_ERROR)
@@ -221,10 +220,11 @@ Please contact the site admins %s if you think they should be enabled.
         except Exception, exc:
             pass
     else:
-        output_objects.append({'object_type': 'text',
-                               'text': 'Upload of %s in progress' % path})
+        output_objects.append(
+            {'object_type': 'text', 'text': 'Upload of %s in progress' % path})
         progress_link = {'object_type': 'link', 'text': 'show progress',
                          'destination': 'uploadprogress.py?path=%s;size=%d'
                          % (path, total_size)}
         output_objects.append(progress_link)
+
     return (output_objects, status)

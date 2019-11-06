@@ -62,7 +62,8 @@ from shared.httpsclient import unescape
 from shared.init import initialize_main_variables
 from shared.pwhash import generate_random_ascii
 from shared.ssh import generate_ssh_rsa_key_pair, tighten_key_perms
-from shared.workflows import create_workflow_session_id
+from shared.workflows import create_workflow_session_id, \
+    get_workflow_session_id
 
 
 def is_active(pickle_state, timeout=7200):
@@ -438,7 +439,9 @@ def main(client_id, user_arguments_dict):
     # A valid active key is already present redirect straight to the jupyter
     # service, pass most recent mount information
     if active_mount is not None:
-        session_id = create_workflow_session_id(configuration, client_id)
+        session_id = get_workflow_session_id(configuration, client_id)
+        if not session_id:
+            session_id = create_workflow_session_id(configuration, client_id)
         # TODO get this dynamically
         url = configuration.migserver_https_sid_url + \
               '/cgi-sid/workflowsjsoninterface.py?output_format=json'

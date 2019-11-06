@@ -30,6 +30,7 @@
 /* Enable strict mode to help catch tricky errors early */
 "use strict";
 
+
 var center_class="class='centertext'";
 var title_class="class='title'";
 var border_class="class='border'";

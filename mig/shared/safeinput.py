@@ -653,10 +653,6 @@ def valid_archive_name(
     __valid_contents(archive_name, valid_chars, min_length, max_length)
 
 
-# NOTE, I suspect that allowing '.' will allow you to pass paths 
-# external to your allowed vgrids as the 'mig' user
-# via the '..' (parent directory) command.
-# Investigate this before merge
 def valid_path_pattern(
     pattern,
     min_length=1,
@@ -671,17 +667,14 @@ def valid_path_pattern(
     valid_path(pattern, min_length, max_length, extra_chars)
 
 
-# NOTE, also allowing escape character might also cause problems
-# where users can escape illegal characters
-# Investigate this before merge
 def valid_path_patterns(
     pattern_list,
     min_length=1,
     max_length=4096,
-    extra_chars='.*?\\',
+    extra_chars='.*?',
 ):
     """Verify that supplied pattern_list only contains characters that
-    we consider valid for regex paths. Valid wild card characters are added
+    we consider valid in paths. Valid wild card characters are added
     by default.
     """
 

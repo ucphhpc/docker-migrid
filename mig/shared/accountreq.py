@@ -194,6 +194,7 @@ def account_js_helpers(fields):
 """
     return js
 
+
 def build_accountreqitem_object(configuration, accountreq_dict):
     """Build a accountreq object based on input accountreq_dict"""
 
@@ -248,6 +249,7 @@ def list_account_reqs(configuration):
                 % (entry, configuration.user_pending))
     return (True, accountreq_list)
 
+
 def is_account_req(req_id, configuration):
     """Check that req_id is an existing account request"""
     req_path = os.path.join(configuration.user_pending, req_id)
@@ -255,6 +257,7 @@ def is_account_req(req_id, configuration):
         return True
     else:
         return False
+
 
 def get_account_req(req_id, configuration):
     """Helper to fetch dictionary for a pending account request"""
@@ -267,6 +270,7 @@ def get_account_req(req_id, configuration):
         req_dict['created'] = os.path.getctime(req_path)
         return (True, req_dict)
 
+
 def accept_account_req(req_id, configuration):
     """Helper to accept a pending account request"""
     _logger = configuration.logger
@@ -274,6 +278,7 @@ def accept_account_req(req_id, configuration):
     # TODO: run createuser
     _logger.warning('account creation from admin page not implemented yet')
     return False
+
 
 def delete_account_req(req_id, configuration):
     """Helper to delete a pending account request"""

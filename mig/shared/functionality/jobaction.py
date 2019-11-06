@@ -233,6 +233,7 @@ jobs!''' % (job_id, action)
             job_dict['EXE'] = 'EXE_NAME_NOT_FOUND'
 
         # notify queue
+
         if not send_message_to_grid_script('JOBACTION ' + job_id + ' '
                                            + job_dict['STATUS'] + ' '
                                            + new_state + ' '

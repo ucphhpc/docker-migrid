@@ -81,6 +81,7 @@ def finish_cgi_script(configuration, output_format, ret_code, ret_msg,
 
     output = format_output(configuration, ret_code, ret_msg, output_objs,
                            output_format)
+
     # Explicit None means error during output formatting - empty string is okay
 
     if output is None:
@@ -137,6 +138,7 @@ def run_cgi_script_possibly_with_cert(main, delayed_input=None,
     except:
         import traceback
         logger.error("script crashed:\n%s" % traceback.format_exc())
+
     after_time = time.time()
     out_obj.append({'object_type': 'timing_info', 'text':
                     "done in %.3fs" % (after_time - before_time)})
@@ -144,6 +146,7 @@ def run_cgi_script_possibly_with_cert(main, delayed_input=None,
         output_format = user_arguments_dict.get('output_format', ['html'])[-1]
 
     finish_cgi_script(configuration, output_format, ret_code, ret_msg, out_obj)
+
 
 def run_cgi_script(main, delayed_input=None, delay_format=False):
     """Just a wrapper for run_cgi_script_possibly_with_cert now since we always

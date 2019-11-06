@@ -265,6 +265,7 @@ def atomic_resource_exe_restart(
     """Atomic version of exe node restart needed for consistent
     clean up.
     """
+
     resource_home = configuration.resource_home
 
     pgid_path = os.path.join(resource_home, unique_resource_name,
@@ -630,6 +631,7 @@ def start_resource_exe(
 
     try:
         if not os.path.exists(pgid_path):
+
             # The pgid_path is only created the first time the exe
             # is started. Thus the minor race where two such processes
             # get here at once (race between open+truncate and
@@ -714,6 +716,7 @@ def start_resource_exe(
 
     exe_kind = get_node_kind(exe['start_command'])
     try:
+
         # Securely open a temporary file in resource_dir
         # Please note that mkstemp uses os.open() style rather
         # than open()
@@ -724,7 +727,8 @@ def start_resource_exe(
         (rv, msg) = fill_exe_node_script(filehandle, resource_config,
                 exe, cputime, exe_kind)
         if not rv:
-            logger.error('fill %s node script failed: %s' % (exe_kind, err))
+            logger.error('fill %s node script failed: %s' % (exe_kind,
+                         err))
             return (False, msg)
         os.close(filehandle)
 

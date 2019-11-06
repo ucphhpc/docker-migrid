@@ -57,6 +57,7 @@ def signature():
                 'current_dir': ['.']}
     return ['dir_listings', defaults]
 
+
 def select_all_javascript():
     """javascript to select all html checkboxes"""
     return """
@@ -65,6 +66,7 @@ function toggleChecked() {
    $('td input[type=checkbox]').prop('checked', doCheck);
 }
     """
+
 
 def selected_file_actions_javascript():
     """javascript  to dynamically select action for marked items"""
@@ -104,6 +106,7 @@ function selectedFilesAction() {
     return true;
 }
     """
+
 
 def fileinfo_stat(path):
     """Additional stat information for file manager"""
@@ -176,6 +179,7 @@ def handle_file(
     # Build entire line before printing to avoid newlines
 
     # Recursion can get here when called without explicit invisible files
+
     if invisible_path(file_with_dir):
         return
     special = ''
@@ -314,6 +318,7 @@ def handle_ls(
         relative_path = real_path.replace(base_dir, '')
 
     # Recursion can get here when called without explicit invisible files
+
     if invisible_path(relative_path):
         return
 
@@ -483,6 +488,7 @@ def main(client_id, user_arguments_dict, environ=None):
         %s
         </style>
         ''' % (visibility_mods % {'main_id': main_id})
+
     # Please note that base_dir must end in slash to avoid access to other
     # user dirs when own name is a prefix of another user name
 
@@ -679,6 +685,7 @@ Action on paths selected below
         # Never show any ls output in write-only mode (css hide is not enough!)
         if not read_mode:
             continue
+
         for abs_path in match:
             if abs_path + os.sep == base_dir:
                 relative_path = '.'
@@ -806,6 +813,7 @@ upload data and create directories.
     <input type='hidden' name='share_id' value='%(share_id)s' />
     <input name='current_dir' type='hidden' value='%(dest_dir)s' />
     """ % fill_helpers
+
     for entry in pattern_list:
         htmlform += "<input type='hidden' name='path' value='%s' />"\
                     % entry

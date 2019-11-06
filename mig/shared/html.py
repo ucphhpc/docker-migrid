@@ -64,16 +64,13 @@ menu_items['settings'] = {'class': 'settings', 'url': 'settings.py',
 menu_items['crontab'] = {'class': 'crontab', 'url': 'crontab.py',
                          'title': 'Schedule Tasks',
                          'hover': 'Your personal task scheduler'}
-menu_items['seafile'] = {'class': 'seafile', 'url': '/seafile/',
-                         'title': 'Seafile',
-                         'hover': 'Access the associated Seafile service'}
+# NOTE: we rely on seafile location from conf and only fill it in render
+menu_items['seafile'] = {'class': 'seafile', 'url': '', 'title': 'Seafile',
+                         'hover': 'Access the associated Seafile service',
+                         'target': '_blank'}
 menu_items['jupyter'] = {'class': 'jupyter', 'url': 'jupyter.py',
                          'title': 'Jupyter',
                          'hover': 'Access the associated Jupyter service'}
-menu_items['workflowpatterns'] = {'class': 'workflowpatterns',
-                                  'url': 'workflowpatterns.py',
-                                  'title': 'Workflow Patterns',
-                                  'hover': 'Registered Workflow Patterns'}
 
 menu_items['shell'] = {'class': 'shell', 'url': 'shell.py', 'title': 'Shell',
                        'hover': 'A command line interface, based on javascript and xmlrpc'}
@@ -174,12 +171,16 @@ def render_menu(configuration, menu_class='navmenu',
                                           configuration.site_vgrid_label)
             spec['title'] = title
             spec['hover'] = hover
+        if name == 'seafile':
+            spec['url'] = configuration.user_seahub_url
+
+        target = 'target="%s"' % spec.get('target', '')
         selected = ''
         if os.path.splitext(spec['url'])[0] == current_element:
             selected = ' class="selected" '
-        menu_lines += '   <li %s class="%s"><a href="%s" %s title="%s">%s</a></li>\n'\
+        menu_lines += '   <li %s class="%s"><a href="%s" %s %s title="%s">%s</a></li>\n'\
             % (spec.get('attr', ''), spec['class'], spec['url'], selected,
-               spec.get('hover', ''), spec['title'])
+               target, spec.get('hover', ''), spec['title'])
 
     menu_lines += ' </ul>\n'
     menu_lines += '</div>\n'
@@ -499,7 +500,9 @@ def fancy_upload_js(configuration, callback=None, share_id='', csrf_token='',
 <script type="text/javascript" src="/images/js/jquery.fileupload-validate.js"></script>
 <!-- The File Upload user interface plugin -->
 <script type="text/javascript" src="/images/js/jquery.fileupload-ui.js"></script>
-<!-- The File Upload jQuery UI plugin -->
+<!-- The File Upload jQuery UI plugin using simple jQuery UI -->
+<!-- Please note that this is no longer distributed with file uploader since
+     switch to bootstrap. We still use it to style the fileupload dialog buttons. -->
 <script type="text/javascript" src="/images/js/jquery.fileupload-jquery-ui.js"></script>
 
 <!-- The template to display files available for upload -->
@@ -1194,6 +1197,12 @@ def get_cgi_html_footer(configuration, footer='', html=True, widgets=True, user_
 </div>
 </div>
 <div id="bottomlogoright">
+<div id="privacy">
+<img src="%s" id="privacyimage" alt=""/>
+<div class="privacytext i18n" lang="en">
+%s
+</div>
+</div>
 <div id="credits">
 <img src="%s" id="creditsimage" alt=""/>
 <div class="creditstext i18n" lang="en">
@@ -1207,6 +1216,7 @@ def get_cgi_html_footer(configuration, footer='', html=True, widgets=True, user_
 </body>
 </html>
 ''' % (configuration.site_support_image, configuration.site_support_text,
+       configuration.site_privacy_image, configuration.site_privacy_text,
        configuration.site_credits_image, configuration.site_credits_text)
     return out
 

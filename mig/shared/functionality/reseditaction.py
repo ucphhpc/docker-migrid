@@ -211,6 +211,7 @@ def main(client_id, user_arguments_dict):
     critical_fields.append(csrf_field)
     for field in critical_fields:
         critical_arguments[field] = user_arguments_dict.get(field, [''])
+
     (validate_status, accepted) = validate_input_and_cert(
         critical_arguments,
         defaults,

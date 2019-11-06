@@ -780,13 +780,10 @@ background: url(/images/icons/code.png) left center no-repeat;
     list-style-type: none;
 }
 
-<<<<<<< HEAD
-=======
 .jupyter-tabs { 
     /* needed to avoid tabs bar growing to entire menu height */
     overflow: auto;
 }
->>>>>>> ae8cc615db00d3bfaf0134377f21bd63eade76b2
 .workflow-tabs { 
     /* needed to avoid tabs bar growing to entire menu height */
     overflow: auto;
@@ -842,8 +839,6 @@ background: url(/images/icons/code.png) left center no-repeat;
 #submit_button {
     width: auto;
 }
-<<<<<<< HEAD
-=======
 
 /* gdpman */
 .gm_projects_table {
@@ -913,4 +908,3 @@ background: url(/images/icons/code.png) left center no-repeat;
     background: #679c5b;
     color:  #fff;
 }
->>>>>>> ae8cc615db00d3bfaf0134377f21bd63eade76b2

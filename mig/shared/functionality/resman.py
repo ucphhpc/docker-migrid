@@ -45,6 +45,7 @@ list_operations = ['showlist', 'list']
 show_operations = ['show', 'showlist']
 allowed_operations = list(set(list_operations + show_operations))
 
+
 def signature():
     """Signature of the main function"""
 
@@ -233,6 +234,7 @@ to open resource management.
         # insert dummy placeholder to build table
         res_obj = {'object_type': 'resource', 'name': ''}
         resources.append(res_obj)
+
     output_objects.append({'object_type': 'resource_list', 'resources':
                            resources})
 

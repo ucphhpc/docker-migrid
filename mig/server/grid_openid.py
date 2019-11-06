@@ -63,9 +63,10 @@ import Cookie
 import cgi
 import cgitb
 import os
-import ssl
+import socket
 import sys
 import time
+import types
 
 try:
     import openid
@@ -81,10 +82,13 @@ from openid.consumer import discover
 from shared.base import client_id_dir, cert_field_map
 from shared.conf import get_configuration_object
 from shared.defaults import user_db_filename
-from shared.griddaemons import refresh_user_creds, update_login_map, \
-    login_map_lookup, hit_rate_limit, update_rate_limit, expire_rate_limit, \
-    penalize_rate_limit
+from shared.griddaemons import default_max_user_hits, \
+    default_user_abuse_hits, default_proto_abuse_hits, \
+    default_username_validator, refresh_user_creds, update_login_map, \
+    login_map_lookup, hit_rate_limit, expire_rate_limit, \
+    handle_auth_attempt
 from shared.logger import daemon_logger, register_hangup_handler
+from shared.pwhash import make_scramble
 from shared.safeinput import valid_distinguished_name, valid_password, \
     valid_path, valid_ascii, valid_job_id, valid_base_url, valid_url, \
     valid_complex_url, InputException
@@ -304,6 +308,9 @@ class ServerHandler(BaseHTTPRequestHandler):
             self.session_ttl = 48 * 3600
 
         self.clearUser()
+        # NOTE: drop idle clients after N seconds to clean stale connections.
+        #       Does NOT include clients that connect and do nothing at all :-(
+        self.timeout = 120
         BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
 
     def clearUser(self):
@@ -452,7 +459,20 @@ Invalid '%s' input: %s
         pair against user DB.
         """
         # Use client address directly but with optional local proxy override
+        secret = None
+        exceeded_rate_limit = False
+        invalid_username = False
+        valid_password = False
+        daemon_conf = configuration.daemon_conf
+        max_user_hits = daemon_conf['auth_limits']['max_user_hits']
+        user_abuse_hits = daemon_conf['auth_limits']['user_abuse_hits']
+        proto_abuse_hits = daemon_conf['auth_limits']['proto_abuse_hits']
+        max_secret_hits = daemon_conf['auth_limits']['max_secret_hits']
         client_ip = self.headers.get('X-Forwarded-For', self.client_address[0])
+        if client_ip == self.client_address[0]:
+            tcp_port = self.client_address[1]
+        else:
+            tcp_port = 0
         request = self.server.lastCheckIDRequest.get(self.user)
         # NOTE: last request may be None here e.g. on back after illegal char!
         if not request:
@@ -476,7 +496,7 @@ Invalid '%s' input: %s
         if 'yes' in query:
             if 'login_as' in query:
                 self.user = self.query['login_as']
-                #print "handleAllow set user %s" % self.user
+                # print "handleAllow set user %s" % self.user
             elif 'identifier' in query:
                 self.user = self.query['identifier']
             elif self.user is None:
@@ -486,7 +506,7 @@ Invalid '%s' input: %s
 
             if request.idSelect():
                 # Do any ID expansion to a specified format
-                if configuration.daemon_conf['expandusername']:
+                if daemon_conf['expandusername']:
                     user_id = lookup_full_identity(query.get('identifier', ''))
                 else:
                     user_id = query.get('identifier', '')
@@ -496,16 +516,43 @@ Invalid '%s' input: %s
 
             logger.debug("handleAllow with identity %s" % identity)
 
-            if 'password' in self.query:
-                logger.debug("setting password")
-                self.password = self.query['password']
+            if hit_rate_limit(configuration, "openid",
+                              client_ip, self.user,
+                              max_user_hits=max_user_hits):
+                exceeded_rate_limit = True
+            elif not default_username_validator(configuration, self.user):
+                invalid_username = True
             else:
-                logger.debug("no password in query")
-                self.password = None
+                if 'password' in self.query:
+                    logger.debug("setting password")
+                    self.password = self.query['password']
+                    secret = make_scramble(self.password, None)
+                else:
+                    logger.debug("no password in query")
+                    self.password = None
+                if self.checkLogin(self.user, self.password, client_ip):
+                    valid_password = True
 
-            if not hit_rate_limit(configuration, "openid", client_ip,
-                                  self.user) and \
-                    self.checkLogin(self.user, self.password, client_ip):
+            # Update rate limits and write to auth log
+
+            (authorized, _) = handle_auth_attempt(
+                configuration,
+                'openid',
+                self.user,
+                client_ip,
+                tcp_port,
+                secret=secret,
+                invalid_username=invalid_username,
+                skip_twofa_check=True,
+                password_enabled=True,
+                valid_password=valid_password,
+                exceeded_rate_limit=exceeded_rate_limit,
+                user_abuse_hits=user_abuse_hits,
+                proto_abuse_hits=proto_abuse_hits,
+                max_secret_hits=max_secret_hits,
+            )
+
+            if authorized:
                 logger.debug("handleAllow validated login %s" % identity)
                 trust_root = request.trust_root
                 if self.query.get('remember', 'no') == 'yes':
@@ -514,19 +561,12 @@ Invalid '%s' input: %s
                 self.login_expire = int(time.time() + self.session_ttl)
                 logger.info("handleAllow approving login %s" % identity)
                 response = self.approved(request, identity)
-                update_rate_limit(configuration, "openid", client_ip,
-                                  self.user, True, self.password)
             else:
                 logger.warning("handleAllow rejected login %s" % identity)
-                #logger.debug("full query: %s" % self.query)
-                #logger.debug("full headers: %s" % self.headers)
+                # logger.debug("full query: %s" % self.query)
+                # logger.debug("full headers: %s" % self.headers)
                 fail_user, fail_pw = self.user, self.password
                 self.clearUser()
-                failed_count = update_rate_limit(configuration, "openid",
-                                                 client_ip, fail_user, False,
-                                                 fail_pw)
-                penalize_rate_limit(configuration, "openid", client_ip,
-                                    fail_user, failed_count)
                 # Login failed - return to refering page to let user try again
                 retry_url = self.headers.get('Referer', '')
                 # Add error message to display
@@ -654,7 +694,8 @@ Invalid '%s' input: %s
             response = request.answer(False)
             self.displayResponse(response)
         else:
-            # print "DEBUG: adding user request to last dict: %s : %s" % (self.user, request)
+            # print "DEBUG: adding user request to last dict: %s : %s" \
+            #    % (self.user, request)
             self.server.lastCheckIDRequest[self.user] = request
             self.showDecidePage(request)
 
@@ -744,8 +785,22 @@ Invalid '%s' input: %s
 
     def doLogin(self):
         """Login handler"""
+        secret = None
+        exceeded_rate_limit = False
+        invalid_username = False
+        valid_password = False
+        daemon_conf = configuration.daemon_conf
+        max_user_hits = daemon_conf['auth_limits']['max_user_hits']
+        user_abuse_hits = daemon_conf['auth_limits']['user_abuse_hits']
+        proto_abuse_hits = daemon_conf['auth_limits']['proto_abuse_hits']
+        max_secret_hits = daemon_conf['auth_limits']['max_secret_hits']
         # Use client address directly but with optional local proxy override
         client_ip = self.headers.get('X-Forwarded-For', self.client_address[0])
+
+        if client_ip == self.client_address[0]:
+            tcp_port = self.client_address[1]
+        else:
+            tcp_port = 0
         if 'submit' in self.query:
             if 'user' in self.query:
                 self.user = self.query['user']
@@ -753,29 +808,52 @@ Invalid '%s' input: %s
                 self.clearUser()
                 self.redirect(self.query['success_to'])
                 return
-            if 'password' in self.query:
-                self.password = self.query['password']
+
+            if hit_rate_limit(configuration, "openid",
+                              client_ip, self.user,
+                              max_user_hits=max_user_hits):
+                exceeded_rate_limit = True
+            elif not default_username_validator(configuration, self.user):
+                invalid_username = True
             else:
-                self.password = None
-            if not hit_rate_limit(configuration, "openid", client_ip,
-                                  self.user) and \
-                    self.checkLogin(self.user, self.password, client_ip):
-                if not self.query['success_to']:
-                    self.query['success_to'] = '%s/id/' % self.server.base_url
-                update_rate_limit(configuration, "openid", client_ip,
-                                  self.user, True, self.password)
-                # print "doLogin succeded: redirect to %s" % self.query['success_to']
+                if 'password' in self.query:
+                    self.password = self.query['password']
+                    secret = make_scramble(self.password, None)
+                else:
+                    self.password = None
+
+                if self.checkLogin(self.user, self.password, client_ip):
+                    valid_password = True
+                    if not self.query['success_to']:
+                        self.query['success_to'] = '%s/id/' \
+                            % self.server.base_url
+                # print "doLogin succeded: redirect to %s" \
+                #    % self.query['success_to']
+
+            # Update rate limits and write to auth log
+
+            (authorized, _) = handle_auth_attempt(
+                configuration,
+                'openid',
+                self.user,
+                client_ip,
+                tcp_port,
+                secret=secret,
+                invalid_username=invalid_username,
+                skip_twofa_check=True,
+                password_enabled=True,
+                valid_password=valid_password,
+                exceeded_rate_limit=exceeded_rate_limit,
+                user_abuse_hits=user_abuse_hits,
+                proto_abuse_hits=proto_abuse_hits,
+                max_secret_hits=max_secret_hits,
+            )
+            if authorized:
                 self.redirect(self.query['success_to'])
             else:
                 logger.warning("login failed for %s" % self.user)
                 logger.debug("full query: %s" % self.query)
-                fail_user, fail_pw = self.user, self.password
                 self.clearUser()
-                failed_count = update_rate_limit(configuration, "openid",
-                                                 client_ip, fail_user, False,
-                                                 fail_pw)
-                penalize_rate_limit(configuration, "openid", client_ip,
-                                    fail_user, failed_count)
                 # Login failed - return to refering page to let user try again
                 retry_url = self.headers.get('Referer', self.server.base_url)
                 # Add error message to display
@@ -785,7 +863,6 @@ Invalid '%s' input: %s
                     retry_url += '&'
                 retry_url += 'err=loginfail'
                 self.redirect(retry_url)
-                return
         elif 'cancel' in self.query:
             self.redirect(self.query['fail_to'])
         else:
@@ -1278,7 +1355,7 @@ Invalid '%s' input: %s
         self.send_header('Content-type', 'text/html')
         self.end_headers()
 
-        self.wfile.write('''<!DOCTYPE html>
+        html = '''<!DOCTYPE html>
 <html>
   <head>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
@@ -1333,18 +1410,70 @@ Invalid '%s' input: %s
     </div>
 %(body)s
   </div>
-</div>
+</div>''' % contents
+        # mimic footer from shared.html
+        html += '''
 <div id="bottomlogo" class="staticpage">
-<img src="%(credits_logo)s" id="creditsimage" alt=""/>
-<span id="credits" class="staticpage">
-%(credits_text)s
-</span>
+<!-- NOTE: sync with shared.html -->
+<div id="bottomlogoleft">
+<div id="support">
+<img src="%s" id="supportimage" alt=""/>
+<div class="supporttext i18n" lang="en">
+%s
+</div>
+</div>
+</div>
+<div id="bottomlogoright">
+<div id="privacy">
+<img src="%s" id="privacyimage" alt=""/>
+<div class="privacytext i18n" lang="en">
+%s
+</div>
+</div>
+<div id="credits">
+<img src="%s" id="creditsimage" alt=""/>
+<div class="creditstext i18n" lang="en">
+%s
+</div>
+</div>
+</div>
 </div>
 <div id="bottomspace" class="staticpage">
 </div>
 </body>
 </html>
-''' % contents)
+''' % (configuration.site_support_image, configuration.site_support_text,
+            configuration.site_privacy_image, configuration.site_privacy_text,
+            configuration.site_credits_image, configuration.site_credits_text)
+        self.wfile.write(html)
+
+
+def limited_accept(self, *args, **kwargs):
+    """Accepts a new connection from a remote client, and returns a tuple
+    containing that new connection wrapped with a server-side SSL channel, and
+    the address of the remote client.
+
+    This version extends the default SSLSocket accept handler to only allow the
+    client a limited idle period before timing out the connection, to avoid
+    blocking legitimate clients.
+
+    It can be tested with something like
+    for i in $(seq 1 5); do telnet FQDN PORT & ; done
+    curl https://FQDN:PORT/
+    which should eventually show the page content.
+    """
+    newsock, addr = socket.socket.accept(self)
+    # NOTE: fetch timeout from kwargs but with fall back to 10s
+    #       it must be short since server completely blocks here!
+    timeout = kwargs.get('timeout', 10)
+    logger.debug("Accept connection from %s with timeout %s" % (addr, timeout))
+    newsock.settimeout(timeout)
+    newsock = self.context.wrap_socket(newsock,
+                                       do_handshake_on_connect=self.do_handshake_on_connect,
+                                       suppress_ragged_eofs=self.suppress_ragged_eofs,
+                                       server_side=True)
+    logger.debug('Done accepting connection.')
+    return newsock, addr
 
 
 def start_service(configuration):
@@ -1356,7 +1485,7 @@ def start_service(configuration):
     nossl = daemon_conf['nossl']
     addr = (host, port)
     # TODO: is this threaded version robust enough (thread safety)?
-    #OpenIDServer = OpenIDHTTPServer
+    # OpenIDServer = OpenIDHTTPServer
     OpenIDServer = ThreadedOpenIDHTTPServer
     httpserver = OpenIDServer(addr, ServerHandler)
 
@@ -1383,6 +1512,10 @@ def start_service(configuration):
                                        dhparams_path)
         httpserver.socket = ssl_ctx.wrap_socket(httpserver.socket,
                                                 server_side=True)
+        # Override default SSLSocket accept function to inject timeout support
+        # https://stackoverflow.com/questions/394770/override-a-method-at-instance-level/42154067#42154067
+        httpserver.socket.accept = types.MethodType(
+            limited_accept, httpserver.socket)
 
     serve_msg = 'Server running at: %s' % httpserver.base_url
     logger.info(serve_msg)
@@ -1390,7 +1523,9 @@ def start_service(configuration):
     min_expire_delay = 300
     last_expire = time.time()
     while True:
+        logger.debug('handle next request')
         httpserver.handle_request()
+        logger.debug('done handling request')
         if last_expire + min_expire_delay < time.time():
             httpserver.expire_volatile()
 
@@ -1498,6 +1633,17 @@ i4HdbgS6M21GvqIfhN2NncJ00aJukr5L29JrKFgSCPP9BDRb9Jgy0gu1duhTv0C0
         'expandusername': expandusername,
         'show_address': show_address,
         'show_port': show_port,
+        # TODO: Add the following to configuration:
+        # max_openid_user_hits
+        # max_openid_user_abuse_hits
+        # max_openid_proto_abuse_hits
+        # max_openid_secret_hits
+        'auth_limits':
+            {'max_user_hits': default_max_user_hits,
+             'user_abuse_hits': default_user_abuse_hits,
+             'proto_abuse_hits': default_proto_abuse_hits,
+             'max_secret_hits': 1,
+             },
     }
     logger.info("Starting OpenID server")
     info_msg = "Listening on address '%s' and port %d" % (address, port)

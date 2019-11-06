@@ -82,12 +82,14 @@ def vgrid_add_remove_table(client_id,
     optional = False
 
     # Default to dynamic input fields, and override for triggers
+
     id_html_tr = '''<tr><td>
           <div id="dyn%sspares">
           <!-- placeholder for dynamic add %s fields -->
       </div>
       </td></tr>
     ''' % (item_string, item_string)
+
     if item_string == 'resource':
         id_field = 'unique_resource_name'
         optional = True
@@ -333,13 +335,6 @@ doubt, just let the user request access and accept it with the
           </tbody>
         </table>
         '''
-
-        # TODO this table appears to be sometimes in unicode. If so convert it
-        #  to bytes. Investigate further why it is sometimes in unicode,
-        #  seems to be if triggers are created from remote patterns or
-        #  recipes?
-        if isinstance(vgrid_table, unicode):
-            vgrid_table = vgrid_table.encode('latin-1')
         out.append({'object_type': 'html_form',
                     'text': vgrid_table % fill_helpers})
 
@@ -391,6 +386,7 @@ doubt, just let the user request access and accept it with the
       </fieldset>
       </form>
 ''' % fill_helpers})
+
     return (True, out)
 
 
@@ -669,19 +665,22 @@ def init_vgrid_script_add_rem(
         msg += 'unknown subject type in init_vgrid_script_add_rem'
         return (False, msg, [])
 
+    # special case: members may modify/remove own triggers and add new ones
+
+    if subject_type == 'trigger':
+        if vgrid_is_trigger(vgrid_name, subject, configuration) and not \
+               vgrid_is_trigger_owner(vgrid_name, subject, client_id, 
+                                      configuration):
+            msg += 'You must be an owner of the %s %s trigger to modify it' % \
+                   (vgrid_name, subject)
+            return (False, msg, [])
+        elif vgrid_is_member(vgrid_name, client_id, configuration):
+            return (True, msg, [])
+
     # special case: members may terminate own membership
 
     if (subject_type == 'member') and (client_id == subject) \
             and (vgrid_is_member(vgrid_name, subject, configuration)):
-
-        return (True, msg, [])
-
-    # special case: members may remove own triggers and add new ones
-
-    if (subject_type == 'trigger') and \
-        (not vgrid_is_trigger(vgrid_name, subject, configuration) or
-            vgrid_is_trigger_owner(vgrid_name, subject, client_id,
-                                   configuration)):
         return (True, msg, [])
 
     # otherwise: only owners may add or remove:
@@ -1646,8 +1645,8 @@ def __in_vgrid_special(configuration, path, vgrid_special_base, flat=False):
             vgrid_path = vgrid_path.replace(vgrid_nest_sep, '/')
         while vgrid_path != os.sep:
             if os.path.isdir(os.path.join(vgrid_home, vgrid_path)):
-                _logger.debug("in vgrid special found %s" % \
-                                           vgrid_path)
+                # _logger.debug("in vgrid special found %s" % \
+                #                           vgrid_path)
                 break
             vgrid_path = os.path.dirname(vgrid_path)
     return vgrid_path

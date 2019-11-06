@@ -99,13 +99,14 @@ $(document).ready(function() {
 );
 </script>
 '''
+
     html = get_cgi_html_header(
         configuration,
         '%(short_title)s Monitor, VGrid %(vgrid_name)s' % html_vars,
         '',
         html=True,
         meta=monitor_meta,
-        base_styles=themed_styles(configuration),
+        base_styles=themed_styles(configuration)['base'],
         scripts=monitor_js,
         bodyfunctions='',
         menu=False,
@@ -489,6 +490,7 @@ This page was generated %(now)s (automatic refresh every %(sleep_secs)s secs).
 
                 if current_dir != vgrid_name:
                     continue
+
                 # read last resource action status file
 
                 mon_file_name = os.path.join(abs_mon_dir, filename)
@@ -668,6 +670,7 @@ Listing the last check for each resource<br />
 """
     html += stores
     html += '</tbody>\n</table>\n'
+
     html += '''
 <h2>VGrid Totals</h2>
 A total of <b>'''\
@@ -714,6 +717,7 @@ if __name__ == '__main__':
         logger.error(err_msg)
         print err_msg
         sys.exit(1)
+
     print """
 Running grid monitor generator.
 

@@ -83,9 +83,9 @@ def load_entity_map(configuration, kind, do_lock):
         lock_handle = open(lock_path, 'a')
         fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
     try:
-        configuration.logger.info("vgridaccess before %s map load" % kind)
+        configuration.logger.info("before %s map load" % kind)
         entity_map = load(map_path)
-        configuration.logger.info("vgridaccess after %s map load" % kind)
+        configuration.logger.info("after %s map load" % kind)
         map_stamp = os.path.getmtime(map_path)
     except IOError:
         configuration.logger.warn("No %s map to load" % kind)
