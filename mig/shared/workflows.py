@@ -2077,7 +2077,7 @@ def __prepare_template(configuration, template, **kwargs):
     :param kwargs: Additional input arguments. Currently does nothing.
     :return: (string) The mrsl template as a single string.
     """
-
+    # TODO, add option to provide optional kwargs for RETRIES, MEMORY etc
     _logger = configuration.logger
     _logger.debug("preparing trigger template '%s' with arguments '%s'"
                   % (template, kwargs))
@@ -2818,7 +2818,7 @@ if __name__ == '__main__':
     args = sys.argv[1:]
     if args:
         if args[0] == 'create_workflow_session_id':
-            touch_workflow_sessions_db(conf)
+            touch_workflow_sessions_db(conf, force=True)
             client_id = "/C=dk/ST=dk/L=NA/O=org/OU=NA/CN=" \
                         "devuser/emailAddress=dev@dev.dk"
             if not get_workflow_session_id(conf, client_id):
