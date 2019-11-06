@@ -770,8 +770,7 @@ def __query_workflow_map(configuration, client_id=None, first=False,
         if kwargs:
             match, msg = workflow_match(configuration,
                                         workflow_obj[
-                                            workflow_conf['object_type']
-                                        ],
+                                            workflow_conf['object_type']],
                                         user_query,
                                         **kwargs)
             if match:
@@ -2138,12 +2137,12 @@ PAPERMILL
 def __prepare_recipe_template(configuration, vgrid, recipe,
                               parameter_path=None):
     """
-    Makes intitial preperations for job mrsl template according to a provided
+    Makes initial preparations for job mrsl template according to a provided
     recipe.
     :param configuration: The MiG configuration object.
     :param vgrid: A MiG VGrid.
     :param recipe: A workflow recipe used to
-    :param parameter_path: [optional] Path to ymal file to be used to
+    :param parameter_path: [optional] Path to yaml file to be used to
     parameterise the recipe. Default is None.
     :return: (Boolean or function call to '__prepare_template') Will return
     False if no template can be prepared, or calls '__prepare_template'.
