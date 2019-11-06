@@ -134,7 +134,7 @@ WORKFLOW_VALUE_MAP = {
 
 def str_hook(obj):
     """
-    A custom decoder to be used in the 'json.loads' function. This decodes
+    A custom encoder to be used in the 'json.loads' function. This encodes
     unicode to utf-8.
     :param obj: The object to be decoded.
     :return: (dictionary) decoded object.
