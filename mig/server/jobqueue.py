@@ -136,9 +136,6 @@ class JobQueue:
     def get_job_by_id(self, jobid, log_errors=True):
         """Find and return job with jobid"""
 
-        self.logger.debug('DELETE ME get_job_by_id: looking for job id: %s'
-                          % jobid)
-
         job = None
         if self.queue_length() > 0:
             for j in self.queue:
