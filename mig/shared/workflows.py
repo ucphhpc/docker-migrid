@@ -2784,7 +2784,7 @@ def __search_workflow_p_graph(configuration, vgrid):
                                   workflow_type=WORKFLOW_PATTERN,
                                   **{'vgrid': vgrid})
     if not workflows:
-        return workflows
+        return (False, "Failed to find any workflows you own")
 
     wp_graph = {'nodes': {},
                 'edges': []}
@@ -2809,8 +2809,7 @@ def __search_workflow_p_graph(configuration, vgrid):
                 if output in neighbour['input_paths']:
                     wp_graph['edges'].append({'from': w_id,
                                               'to': n_id})
-
-    return wp_graph
+    return (True, wp_graph)
 
 
 if __name__ == '__main__':
