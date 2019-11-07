@@ -839,7 +839,7 @@ def valid_workflow_input_paths(paths):
     """Verify that supplied input paths only contains characters that
     we consider valid workflow input paths.
     """
-    valid_path_patterns(paths)
+    valid_path_patterns(paths, min_length=0)
 
 
 def valid_workflow_output(output):
@@ -853,7 +853,7 @@ def valid_workflow_output(output):
         # Validate that the output key is a variable
         # name compliant string
         valid_alphanumeric(o_key, extra_chars='_')
-        valid_path_pattern(o_value)
+        valid_path_pattern(o_value, min_length=0)
 
 
 def valid_workflow_recipes(recipes):
@@ -897,12 +897,12 @@ def valid_workflow_attributes(attributes):
 def valid_workflow_operation(operation):
     """Verify that the supplied workflow
     operation only contains letters + _ """
-    __valid_contents(operation, letters + '_')
+    valid_ascii(operation, extra_chars='_')
 
 
 def valid_workflow_type(type):
     """Verify that the supplied workflow type only contains letters"""
-    __valid_contents(type, letters)
+    valid_ascii(type, extra_chars='_')
 
 
 def filter_ascii(contents):
