@@ -2740,9 +2740,6 @@ def convert_to(configuration, notebook, exporter='notebook',
 
     return (True, body)
 
-# TODO, implement function that allows for re-evaluating patterns
-# on a user provided path (E.g. dir or file) through the UI or API
-
 
 def search_workflow(configuration, client_id,
                     workflow_search_type=PATTERN_GRAPH, **kwargs):
