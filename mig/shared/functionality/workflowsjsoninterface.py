@@ -33,12 +33,11 @@ import sys
 import json
 import shared.returnvalues as returnvalues
 from shared.init import initialize_main_variables
-from shared.safeinput import validated_input
 from shared.safeinput import REJECT_UNSET, valid_workflow_pers_id, \
     valid_workflow_vgrid, valid_workflow_name, valid_workflow_input_file, \
     valid_workflow_input_paths, valid_workflow_output, valid_workflow_recipes,\
     valid_workflow_variables, valid_workflow_attributes, valid_workflow_type, \
-    valid_workflow_operation, valid_sid
+    valid_workflow_operation, valid_sid, validated_input, html_escape
 from shared.workflows import WORKFLOW_TYPES, WORKFLOW_CONSTRUCT_TYPES, \
     WORKFLOW_PATTERN, valid_session_id, get_workflow_with,\
     load_workflow_sessions_db, create_workflow, delete_workflow,\
@@ -87,7 +86,7 @@ def type_value_checker(type_value):
 
     if type_value not in valid_types:
         raise ValueError("Workflow type '%s' is not valid"
-                         % valid_types)
+                         % html_escape(valid_types))
 
 
 def operation_value_checker(operation_value):
@@ -99,7 +98,8 @@ def operation_value_checker(operation_value):
     :return: No return.
     """
     if operation_value not in VALID_OPERATIONS:
-        raise ValueError("Workflow operation '%s' is not valid")
+        raise ValueError("Workflow operation '%s' is not valid"
+                         % html_escape(operation_value))
 
 
 WORKFLOW_ATTRIBUTES_TYPE_MAP = {
