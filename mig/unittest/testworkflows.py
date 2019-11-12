@@ -22,14 +22,15 @@
 
 """Unittest to verify the functionality of the workflows implementation"""
 
-import unittest
 import os
+import unittest
 import nbformat
-from shared.defaults import default_vgrid
+
 from shared.conf import get_configuration_object
-from shared.vgrid import vgrid_set_triggers
+from shared.defaults import default_vgrid
 from shared.fileio import makedirs_rec, remove_rec
 from shared.serial import load
+from shared.vgrid import vgrid_set_triggers
 from shared.workflows import reset_workflows, WORKFLOW_PATTERN, \
     WORKFLOW_RECIPE, WORKFLOW_ANY, get_workflow_with, \
     delete_workflow, create_workflow, update_workflow, \

@@ -32,6 +32,7 @@
 import sys
 import json
 import shared.returnvalues as returnvalues
+
 from shared.init import initialize_main_variables
 from shared.safeinput import REJECT_UNSET, valid_workflow_pers_id, \
     valid_workflow_vgrid, valid_workflow_name, valid_workflow_input_file, \

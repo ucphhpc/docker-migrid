@@ -23,21 +23,22 @@
 
 """Unittest functions for the Workflow JSON interface"""
 
-import unittest
 import os
+import unittest
 import nbformat
-from shared.defaults import default_vgrid
-from shared.pwhash import generate_random_ascii
+
 from shared.conf import get_configuration_object
+from shared.defaults import default_vgrid
 from shared.fileio import makedirs_rec, remove_rec
+from shared.functionality.workflowsjsoninterface import workflow_api_create, \
+    workflow_api_delete, workflow_api_read, workflow_api_update
+from shared.pwhash import generate_random_ascii
 from shared.validstring import possible_workflow_session_id
 from shared.workflows import touch_workflow_sessions_db, \
     load_workflow_sessions_db, create_workflow_session_id, \
     delete_workflow_sessions_db, new_workflow_session_id, \
     delete_workflow_session_id, reset_workflows, get_workflow_with, \
     WORKFLOW_PATTERN, WORKFLOW_RECIPE, WORKFLOW_ANY
-from shared.functionality.workflowsjsoninterface import workflow_api_create, \
-    workflow_api_delete, workflow_api_read, workflow_api_update
 
 this_path = os.path.dirname(os.path.abspath(__file__))
 
