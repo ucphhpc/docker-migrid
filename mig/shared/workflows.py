@@ -31,7 +31,7 @@ import re
 import nbformat
 
 from nbconvert import PythonExporter, NotebookExporter
-from shared.base import force_utf8_rec
+from shared.base import force_utf8_rec, valid_dir_input
 from shared.conf import get_configuration_object
 from shared.map import load_system_map
 from shared.modified import check_workflow_p_modified, \
@@ -165,30 +165,12 @@ VALID_USER_UPDATE_RECIPE = {
 }
 VALID_USER_UPDATE_RECIPE.update(ALL_RECIPE_INPUTS)
 
-
-# TODO, have an extra look at these
-# Only update the triggers if these variables are changed in a pattern
-UPDATE_TRIGGER_PATTERN = [
-    'inputs',
-    'recipes',
-    'variables'
-]
-
-# Only update the triggers if these variables are changed in a recipe
-UPDATE_TRIGGER_RECIPE = [
-    'name',
-    'recipe'
-]
-
 # Attributes required by an action request
 VALID_ACTION_REQUEST = {
     'persistence_id': str,
     'object_type': str
 }
 
-
-# TODO several of the following functions can probably be rolled together. If
-#  at the end of implementation this is still the case then do so
 
 def touch_workflow_sessions_db(configuration, force=False):
     """
@@ -354,6 +336,26 @@ def valid_session_id(configuration, workflow_session_id):
     return possible_workflow_session_id(configuration, workflow_session_id)
 
 
+def __generate_persistence_id():
+    """
+    Creates a new persistence id for a workflow object by creating a sting of
+    random ascii characters.
+
+    :return: (function call to 'generate_random_ascii')
+    """
+    return generate_random_ascii(w_id_length, charset=w_id_charset)
+
+
+def __generate_task_file_name():
+    """
+    Creates a new task file name by creating a string of random ascii
+    characters.
+
+    :return: (function call to 'generate_random_ascii')
+    """
+    return generate_random_ascii(w_id_length, charset=w_id_charset)
+
+
 def __correct_user_input(configuration, input, required_input=None,
                          allowed_input=None):
     """
@@ -447,17 +449,17 @@ def __correct_persistent_wp(configuration, workflow_pattern):
         return (False, msg)
 
     msg = "The workflow pattern had an incorrect structure, " + contact_msg
-    for k, v in workflow_pattern.items():
-        if k not in VALID_PATTERN:
+    for key, value in workflow_pattern.items():
+        if key not in VALID_PATTERN:
             _logger.error(
                 "WP: __correct_wp, workflow_pattern had an incorrect "
-                "key '%s', allowed are %s" % (k, VALID_PATTERN.keys()))
+                "key '%s', allowed are %s" % (key, VALID_PATTERN.keys()))
             return (False, msg)
-        if not isinstance(v, VALID_PATTERN.get(k)):
+        if not isinstance(value, VALID_PATTERN.get(key)):
             _logger.error(
                 "WP: __correct_wp, workflow_pattern had an incorrect "
                 "value type '%s', on key '%s', valid is '%s'"
-                % (type(v), k, VALID_PATTERN[k]))
+                % (type(value), key, VALID_PATTERN[key]))
             return (False, msg)
     return (True, "")
 
@@ -492,17 +494,17 @@ def __correct_persistent_wr(configuration, workflow_recipe):
         return (False, msg)
 
     msg = "The workflow recipe had an incorrect structure, " + contact_msg
-    for k, v in workflow_recipe.items():
-        if k not in VALID_RECIPE:
+    for key, value in workflow_recipe.items():
+        if key not in VALID_RECIPE:
             _logger.error(
                 "WR: __correct_wr, workflow_recipe had an incorrect key %s, "
-                "allowed are %s" % (k, VALID_RECIPE.keys()))
+                "allowed are %s" % (key, VALID_RECIPE.keys()))
             return (False, msg)
-        if not isinstance(v, VALID_RECIPE.get(k)):
+        if not isinstance(value, VALID_RECIPE.get(key)):
             _logger.error(
                 "WR: __correct_wr, workflow_recipe had an incorrect "
                 "value type %s, on key %s, valid is %s"
-                % (type(v), k, VALID_RECIPE[k]))
+                % (type(value), key, VALID_RECIPE[key]))
             return (False, msg)
     return (True, '')
 
@@ -745,9 +747,9 @@ def __query_workflow_map(configuration, client_id=None, first=False,
         return []
 
     if client_id:
-        workflow_map = {k: v for k, v in workflow_map.items()
-                        if v.get(CONF, None) and 'owner' in v[CONF]
-                        and client_id == v[CONF]['owner']}
+        workflow_map = {key: value for key, value in workflow_map.items()
+                        if value.get(CONF, None) and 'owner' in value[CONF]
+                        and client_id == value[CONF]['owner']}
 
     matches = []
     for _, workflow in workflow_map.items():
@@ -936,7 +938,7 @@ def init_workflow_home(configuration, vgrid, workflow_type=WORKFLOW_PATTERN):
         return (False, "Failed to init workflow home: '%s'" % path)
 
     # Ensure correct permissions
-    os.chmod(path, 0744)
+    os.chmod(path, 0740)
     return (True, '')
 
 
@@ -1020,8 +1022,8 @@ def init_workflow_task_home(configuration, vgrid):
         return (False, "Failed to init workflow task home: '%s'" % task_home)
 
     _logger.debug("Created or found workflow_task_home '%s'" % task_home)
-    # Ensure correct permissions
-    os.chmod(task_home, 0744)
+    # Ensure correct permissions.
+    os.chmod(task_home, 0740)
     return (True, '')
 
 
@@ -1281,12 +1283,11 @@ def update_workflow(configuration, client_id, workflow_type=WORKFLOW_PATTERN,
               "a workflow object."
         return (False, msg)
 
-    if vgrid:
-        # User is vgrid owner or member
-        success, msg, _ = init_vgrid_script_list(vgrid, client_id,
-                                                 configuration)
-        if not success:
-            return (False, msg)
+    # User is vgrid owner or member
+    success, msg, _ = init_vgrid_script_list(vgrid, client_id,
+                                             configuration)
+    if not success:
+        return (False, msg)
 
     if workflow_type == WORKFLOW_RECIPE:
         return __update_workflow_recipe(configuration, client_id, vgrid,
@@ -1539,9 +1540,6 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid,
     if not success:
         return (False, msg)
 
-    # TODO, validate here that the user specified paths don't try to
-    # go outside the vgrid, -> don't allow vgrid/../ on input_paths, output
-
     # If pattern folder doesn't exist, create it.
     if not get_workflow_pattern_home(configuration, vgrid):
         created, msg = init_workflow_home(configuration, vgrid,
@@ -1559,7 +1557,7 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid,
         _logger.info(msg)
         return (False, msg)
 
-    persistence_id = generate_random_ascii(w_id_length, charset=w_id_charset)
+    persistence_id = __generate_persistence_id()
     workflow_pattern['object_type'] = WORKFLOW_PATTERN
     workflow_pattern['persistence_id'] = persistence_id
     workflow_pattern['owner'] = client_id
@@ -1696,7 +1694,7 @@ def __create_workflow_recipe_entry(configuration, client_id, vgrid,
         if not created:
             return (False, msg)
 
-    persistence_id = generate_random_ascii(w_id_length, charset=w_id_charset)
+    persistence_id = __generate_persistence_id()
     workflow_recipe['object_type'] = WORKFLOW_RECIPE
     workflow_recipe['persistence_id'] = persistence_id
     workflow_recipe['owner'] = client_id
@@ -1801,9 +1799,6 @@ def __update_workflow_pattern(configuration, client_id, vgrid,
     success, msg, _ = init_vgrid_script_list(vgrid, client_id, configuration)
     if not success:
         return (False, msg)
-
-    # TODO, validate here that the user specified paths don't try to
-    # go outside the vgrid, -> don't allow vgrid/../ on input_paths, output
 
     pattern = get_workflow_with(configuration,
                                 client_id,
@@ -2368,11 +2363,10 @@ def create_workflow_task_file(configuration, vgrid, source_code,
         msg = "Task home in vgrid: '%s' does not exist" % vgrid
         return (False, msg)
     # placeholder for unique name generation.
-    file_name = generate_random_ascii(w_id_length, w_id_charset) + extension
+    file_name = __generate_task_file_name()
     task_file_path = os.path.join(task_home, file_name)
     while os.path.exists(task_file_path):
-        file_name = generate_random_ascii(w_id_length,
-                                          w_id_charset) + extension
+        file_name = __generate_task_file_name() + extension
         task_file_path = os.path.join(task_home, file_name)
 
     wrote = write_file(source_code, task_file_path, _logger,
@@ -2477,8 +2471,9 @@ def __create_task_parameter_file(configuration, vgrid, pattern,
         parameter_dict.update({input_file: "ENV_WORKFLOW_INPUT_PATH"})
     # Ensure that output variables are based of the vgrid root dir
     output = pattern.get('output', VALID_PATTERN['output'])
-    parameter_dict.update({k: os.path.join(vgrid, v)
-                           for k, v in output.items()})
+    parameter_dict.update(
+        {key: os.path.join(vgrid, value) for key, value in output.items()}
+    )
     parameter_dict.update(pattern.get('variables', VALID_PATTERN['variables']))
     try:
         dump(parameter_dict, path, serializer=serializer, mode='w',
@@ -2569,6 +2564,13 @@ def create_workflow_trigger(configuration, client_id, vgrid, path,
         _logger.warning("WP: A conflicting trigger rule already exists: '%s'"
                         % rule_id)
         return (False, "Failed to create trigger, conflicting rule_id")
+
+    valid = valid_dir_input(vgrid, path)
+    if not valid:
+        msg = "WP: Trigger path %s, created by user %s was trying to access " \
+              "a directory outside of vgrid %s. " % (path, client_id, vgrid)
+        _logger.warning(msg)
+        return (False, msg)
 
     # TODO, for now set the settle_time to 1s
     # To avoid double scheduling of triggered create/modified
