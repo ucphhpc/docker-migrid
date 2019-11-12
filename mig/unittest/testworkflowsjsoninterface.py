@@ -50,8 +50,11 @@ class WorkflowJSONInterfaceSessionIDTest(unittest.TestCase):
             os.environ['MIG_CONF'] = os.path.join(
                 os.sep, 'home', 'mig', 'mig', 'server', 'MiGserver.conf')
         self.configuration = get_configuration_object()
+        self.configuration.workflows_db_home = this_path
         self.configuration.workflows_db = os.path.join(this_path,
-                                                       'test_sessions_db')
+                                                       'test_sessions_db.pickle')
+        self.configuration.workflows_db_lock = os.path.join(this_path,
+                                                            'test_sessions_db.lock')
         # Ensure workflows are enabled
         self.configuration.site_enable_workflows = True
 
@@ -60,8 +63,11 @@ class WorkflowJSONInterfaceSessionIDTest(unittest.TestCase):
             os.environ['MIG_CONF'] = os.path.join(
                 os.sep, 'home', 'mig', 'mig', 'server', 'MiGserver.conf')
         configuration = get_configuration_object()
+        configuration.workflows_db_home = this_path
         configuration.workflows_db = os.path.join(this_path,
-                                                  'test_sessions_db')
+                                                  'test_sessions_db.pickle')
+        configuration.workflows_db_lock = os.path.join(this_path,
+                                                       'test_sessions_db.lock')
         delete_workflow_sessions_db(configuration)
         configuration.site_enable_workflows = False
 
@@ -99,9 +105,11 @@ class WorkflowJSONInterfaceSessionIDTest(unittest.TestCase):
 
         # Fail to remove non existing id
         self.assertFalse(delete_workflow_session_id(self.configuration,
+                                                    client_id,
                                                     new_workflow_session_id()))
         # Delete new_state
         self.assertTrue(delete_workflow_session_id(self.configuration,
+                                                   client_id,
                                                    workflow_session_id))
         self.assertEqual(load_workflow_sessions_db(self.configuration), {})
         # Delete the DB
@@ -126,13 +134,17 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                                          accept_existing=True))
         self.assertTrue(os.path.exists(vgrid_file_path))
 
+        self.configuration.workflows_db_home = this_path
         self.configuration.workflows_db = os.path.join(this_path,
-                                                       'test_sessions_db')
+                                                       'test_sessions_db.pickle')
+        self.configuration.workflows_db_lock = os.path.join(this_path,
+                                                            'test_sessions_db.lock')
         # Ensure workflows are enabled
         self.configuration.site_enable_workflows = True
         self.assertTrue(reset_workflows(self.configuration,
                                         vgrid=self.test_vgrid))
-        touch_workflow_sessions_db(self.configuration, force=True)
+        created = touch_workflow_sessions_db(self.configuration, force=True)
+        self.assertTrue(created)
         self.session_id = create_workflow_session_id(self.configuration,
                                                      self.username)
         self.assertIsNot(self.session_id, False)
@@ -156,9 +168,12 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         if os.path.exists(vgrid_file_path):
             self.assertTrue(remove_rec(vgrid_file_path, self.configuration))
         self.assertFalse(os.path.exists(vgrid_file_path))
-
+        configuration.workflows_db_home = this_path
         configuration.workflows_db = os.path.join(this_path,
-                                                  'test_sessions_db')
+                                                  'test_sessions_db.pickle')
+        configuration.workflows_db_lock = os.path.join(this_path,
+                                                       'test_sessions_db.lock')
+
         self.assertTrue(delete_workflow_sessions_db(configuration))
         # Also clear vgrid_dir of any patterns and recipes
         self.assertTrue(reset_workflows(configuration, vgrid=test_vgrid))
@@ -306,10 +321,10 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         self.logger.info(pattern_id)
         self.assertTrue(created)
 
-        workflow = workflow_api_read(self.configuration,
-                                     self.workflow_session,
-                                     WORKFLOW_PATTERN,
-                                     **{'persistence_id': pattern_id})
+        workflow, msg = workflow_api_read(self.configuration,
+                                          self.workflow_session,
+                                          WORKFLOW_PATTERN,
+                                          **{'persistence_id': pattern_id})
         self.assertIsNot(workflow, False)
         self.assertEqual(len(workflow), 1)
         # Check internal attributes
@@ -331,11 +346,11 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         self.logger.info(deleted_id)
         self.assertTrue(deleted)
 
-        workflow = workflow_api_read(self.configuration,
-                                     self.workflow_session,
-                                     WORKFLOW_PATTERN,
-                                     **{'persistence_id': deleted_id})
-        self.assertEqual(workflow, [])
+        workflow, msg = workflow_api_read(self.configuration,
+                                          self.workflow_session,
+                                          WORKFLOW_PATTERN,
+                                          **{'persistence_id': deleted_id})
+        self.assertFalse(workflow)
 
     def test_create_read_delete_recipe(self):
         notebook = nbformat.v4.new_notebook()
@@ -351,10 +366,10 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                                                  **recipe_attributes)
         self.logger.info(recipe_id)
         self.assertTrue(created)
-        workflow = workflow_api_read(self.configuration,
-                                     self.workflow_session,
-                                     WORKFLOW_RECIPE,
-                                     **{'persistence_id': recipe_id})
+        workflow, msg = workflow_api_read(self.configuration,
+                                          self.workflow_session,
+                                          WORKFLOW_RECIPE,
+                                          **{'persistence_id': recipe_id})
         self.assertIsNot(workflow, False)
         self.assertEqual(len(workflow), 1)
         # Check internal attributes
@@ -372,11 +387,11 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         self.logger.info(msg)
         self.assertTrue(deleted)
 
-        workflow = workflow_api_read(self.configuration,
-                                     self.workflow_session,
-                                     WORKFLOW_RECIPE,
-                                     **{'persistence_id': msg})
-        self.assertEqual(workflow, [])
+        workflow, msg = workflow_api_read(self.configuration,
+                                          self.workflow_session,
+                                          WORKFLOW_RECIPE,
+                                          **{'persistence_id': msg})
+        self.assertFalse(workflow)
 
     def test_update_pattern(self):
         pattern_name = 'test_pattern'
@@ -409,10 +424,10 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                                                   **new_attributes)
         self.logger.info(pattern_id)
         self.assertTrue(updated)
-        workflow = workflow_api_read(self.configuration,
-                                     self.workflow_session,
-                                     WORKFLOW_PATTERN,
-                                     **{'persistence_id': pattern_id})
+        workflow, msg = workflow_api_read(self.configuration,
+                                          self.workflow_session,
+                                          WORKFLOW_PATTERN,
+                                          **{'persistence_id': pattern_id})
         self.assertEqual(len(workflow), 1)
         self.assertEqual(workflow[0]['persistence_id'], pattern_id)
         self.assertEqual(workflow[0]['name'], new_attributes['name'])
@@ -443,16 +458,16 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         self.logger.info(recipe_id)
         self.assertTrue(updated)
 
-        workflow = workflow_api_read(self.configuration,
-                                     self.workflow_session,
-                                     WORKFLOW_RECIPE,
-                                     **{'persistence_id': recipe_id})
+        workflow, msg = workflow_api_read(self.configuration,
+                                          self.workflow_session,
+                                          WORKFLOW_RECIPE,
+                                          **{'persistence_id': recipe_id})
         self.assertEqual(len(workflow), 1)
         self.assertEqual(workflow[0]['persistence_id'], recipe_id)
         self.assertEqual(workflow[0]['name'], new_attributes['name'])
         self.assertEqual(workflow[0]['vgrid'], new_attributes['vgrid'])
 
-    def test_clear_user_worklows(self):
+    def test_clear_user_workflows(self):
         pattern_name = 'test_pattern'
         recipe_name = 'test_recipe'
         pattern_attributes = {
@@ -485,10 +500,11 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         self.assertTrue(created)
 
         # Get every workflow in vgrid
-        workflows = workflow_api_read(self.configuration,
-                                      self.workflow_session,
-                                      WORKFLOW_ANY,
-                                      **{'vgrid': self.test_vgrid})
+        workflows, msg = workflow_api_read(self.configuration,
+                                           self.workflow_session,
+                                           WORKFLOW_ANY,
+                                           **{'vgrid': self.test_vgrid})
+        self.logger.info(workflows)
         self.assertIsNotNone(workflows)
         # Verify that the created objects exist
         self.assertEqual(len(workflows), 2)
@@ -509,11 +525,11 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         self.assertTrue(reset_workflows(self.configuration,
                                         client_id=self.username))
 
-        no_workflows = workflow_api_read(self.configuration,
-                                         self.workflow_session,
-                                         WORKFLOW_ANY,
-                                         **{'vgrid': self.test_vgrid})
-        self.assertEqual(no_workflows, [])
+        no_workflows, msg = workflow_api_read(self.configuration,
+                                              self.workflow_session,
+                                              WORKFLOW_ANY,
+                                              **{'vgrid': self.test_vgrid})
+        self.assertFalse(no_workflows)
 
     def test_delete_pattern(self):
         pattern_name = 'test_pattern'

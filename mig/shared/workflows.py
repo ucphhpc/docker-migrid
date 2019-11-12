@@ -35,7 +35,7 @@ from shared.base import force_utf8_rec, valid_dir_input
 from shared.conf import get_configuration_object
 from shared.defaults import src_dst_sep, w_id_charset, \
     w_id_length, session_id_length, session_id_charset, default_vgrid
-from shared.fileio import delete_file, write_file, makedirs_rec
+from shared.fileio import delete_file, write_file, makedirs_rec, touch
 from shared.map import load_system_map
 from shared.modified import check_workflow_p_modified, \
     check_workflow_r_modified, reset_workflow_p_modified, \
@@ -187,17 +187,24 @@ def touch_workflow_sessions_db(configuration, force=False):
     _db_path = configuration.workflows_db
 
     if os.path.exists(_db_path) and not force:
-        _logger.debug('WP: touch_workflow_sessions_db, '
-                      'db: %s already exists ' % _db_path)
+        _logger.debug("WP: touch_workflow_sessions_db, "
+                      "db: '%s' already exists" % _db_path)
         return False
 
     # Ensure the directory path is available
     dir_path = os.path.dirname(_db_path)
     if not makedirs_rec(dir_path, configuration, accept_existing=True):
-        _logger.debug('WP: touch_workflow_sessions_db, '
-                      'failed to create dependent dir %s'
-                      % dir_path)
+        _logger.debug("WP: touch_workflow_sessions_db, "
+                      "failed to create dependent dir %s" % dir_path)
         return False
+
+    # Create lock file.
+    if not touch(configuration.workflows_db_lock, configuration):
+        _logger.debug("WP: touch_workflow_sessions_db"
+                      "failed to create dependent lock file: '%s'"
+                      % configuration.workflows_db_lock)
+        return False
+
     return save_workflow_sessions_db(configuration, {})
 
 
@@ -209,42 +216,88 @@ def delete_workflow_sessions_db(configuration):
     or not.
     """
     _logger = configuration.logger
-    _logger.debug('WP: touch_workflow_sessions_db, '
-                  'creating empty db if it does not exist')
-    _db_path = configuration.workflows_db
-    return delete_file(_db_path, _logger)
+    _logger.debug('WP: delete_workflow_sessions_db, '
+                  'deleting the sessions db if it exists')
+    result = False
+    try:
+        with open(configuration.workflows_db_lock, 'a') as lock_file:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            result = delete_file(configuration.workflows_db, _logger)
+    except OSError as err:
+        _logger.warning("WP: Failed to properly lock and delete '%s'" % err)
+    return result
 
 
-def load_workflow_sessions_db(configuration):
+def load_workflow_sessions_db(configuration, do_lock=True):
     """
     Read the workflow DB dictionary.
     :param configuration: The MiG configuration object.
+    :param do_lock: Bool, whether the function should lock via the
+    configuration.workflows_db_lock file.
     :return: (dictionary) database of current workflow session ids. These are
     used by the MiG to track valid users interacting with
     workflowsjsoninterface.py. Format is {session_id: 'owner': client_id}.
     """
-    _db_path = configuration.workflows_db
-    return load(_db_path)
+    _logger = configuration.logger
+    lock_handle = None
+    if do_lock:
+        try:
+            lock_handle = open(configuration.workflows_db_lock, 'a')
+            fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
+        except OSError as err:
+            _logger.warning("Failed to set lock on load workflow_session_db '%s'"
+                            % err)
+            if lock_handle and not lock_handle.closed:
+                lock_handle.close()
+            return False
+
+    db = {}
+    try:
+        db = load(configuration.workflows_db)
+    except IOError as err:
+        _logger.warning("Failed to load workflow_session_db '%s'" % err)
+
+    if do_lock and lock_handle and not lock_handle.closed:
+        lock_handle.close()
+    return db
 
 
-def save_workflow_sessions_db(configuration, workflow_sessions_db):
+def save_workflow_sessions_db(configuration, workflow_sessions_db,
+                              do_lock=True):
     """
     Write a dictionary of workflow session ids.
     :param configuration: The MiG configuration object.
     :param workflow_sessions_db: dictionary of workflow session ids. These are
+    :param do_lock: Bool, whether the function should lock via the
+    configuration.workflows_db_lock file.
     used by the MiG to track valid users interacting with
     workflowsjsoninterface.py. Format is {session_id: 'owner': client_id}.
     :return: (boolean) True/False dependent of if provided dictionary is
     saved or not.
     """
     _logger = configuration.logger
-    _db_path = configuration.workflows_db
-
+    lock_handle = None
+    success = True
     try:
-        dump(workflow_sessions_db, _db_path)
-    except IOError as err:
-        _logger.error('WP: save_workflow_sessions_db, '
-                      'Failed to open %s, err: %s' % (_db_path, err))
+        if do_lock:
+            lock_handle = open(configuration.workflows_db_lock, 'a')
+            fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
+    except OSError as err:
+        _logger.warning("Failed to set lock on save workflow_session_db '%s'"
+                        % err)
+        success = False
+
+    if success:
+        try:
+            dump(workflow_sessions_db, configuration.workflows_db)
+        except IOError as err:
+            _logger.error("WP: save_workflow_sessions_db, Failed to open '%s', "
+                          "err: '%s'" % (configuration.workflows_db, err))
+            success = False
+
+    if do_lock and lock_handle and not lock_handle.closed:
+        lock_handle.close()
+    if not success:
         return False
     return True
 
@@ -259,38 +312,66 @@ def create_workflow_session_id(configuration, client_id):
     created.
     """
     _logger = configuration.logger
-
     # Generate session id
     workflow_session_id = new_workflow_session_id()
-    db = load_workflow_sessions_db(configuration)
-    db[workflow_session_id] = {'owner': client_id}
-    saved = save_workflow_sessions_db(configuration, db)
-    if not saved:
-        _logger.error('WP: create_workflow_session_id, failed to add a '
-                      'workflow session id for user: %s' % client_id)
+    # Lock between load and save
+    try:
+        with open(configuration.workflows_db_lock, 'a') as lock_file:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            db = load_workflow_sessions_db(configuration, do_lock=False)
+            if isinstance(db, dict) and workflow_session_id not in db:
+                db[workflow_session_id] = {'owner': client_id}
+                saved = save_workflow_sessions_db(configuration, db,
+                                                  do_lock=False)
+                if not saved:
+                    _logger.error('WP: create_workflow_session_id, failed '
+                                  'to add a workflow session id for '
+                                  'user: %s' % client_id)
+                    return False
+            else:
+                return False
+    except OSError as err:
+        _logger.warning("WP: create_workflow_session_id failed '%s'" % err)
         return False
     return workflow_session_id
 
 
-def delete_workflow_session_id(configuration, workflow_session_id):
+def delete_workflow_session_id(configuration, client_id, workflow_session_id):
     """
     Deletes a given session id for workflow modification.
     :param configuration: The MiG configuration object.
+    :param client_id: The MiG user id.
     :param workflow_session_id: A workflow session id
     :return: (bool) True/False dependent on if workflow_session_id was
     deleted or not. Will return False if workflow_session_id does not exist
     within the database
     """
     _logger = configuration.logger
-
-    db = load_workflow_sessions_db(configuration)
-    if workflow_session_id not in db:
-        _logger.error('WP: delete_workflow_session_id, '
-                      'failed to delete workflow_session_id: %s '
-                      'was not found in db' % workflow_session_id)
+    try:
+        with open(configuration.workflows_db_lock, 'a') as lock_file:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            db = load_workflow_sessions_db(configuration, do_lock=False)
+            if not isinstance(db, dict):
+                _logger.error("WP: delete_workflow_session_id, "
+                              "missing db: '%s'" % db)
+                return False
+            if workflow_session_id not in db:
+                _logger.error('WP: delete_workflow_session_id, '
+                              'failed to delete workflow_session_id: %s '
+                              'was not found in db' % workflow_session_id)
+                return False
+            if db[workflow_session_id]['owner'] != client_id:
+                _logger.error("WP: client_id '%s' is trying to a delete"
+                              " someone elses session_id '%s'"
+                              % (client_id, workflow_session_id))
+                return False
+            db.pop(workflow_session_id, None)
+            if not save_workflow_sessions_db(configuration, db, do_lock=False):
+                return False
+    except OSError as err:
+        _logger.warning("WP: delete_workflow_session_id failed '%s'" % err)
         return False
-    db.pop(workflow_session_id, None)
-    return save_workflow_sessions_db(configuration, db)
+    return True
 
 
 def get_workflow_session_id(configuration, client_id):
@@ -303,6 +384,9 @@ def get_workflow_session_id(configuration, client_id):
     """
     _logger = configuration.logger
     db = load_workflow_sessions_db(configuration)
+    if not isinstance(db, dict):
+        return None
+
     for session_id, user_state in db.items():
         if user_state.get('owner', '') == client_id:
             return session_id
@@ -681,6 +765,7 @@ def __list_path(configuration, workflow_type=WORKFLOW_PATTERN):
     # be too much needless processing if multiple users are using the system at
     # once though. Talk to Jonas/Martin about this. Also note this system is
     # terrible
+
     found, vgrids = vgrid_list_vgrids(configuration)
     for vgrid in vgrids:
         home = get_workflow_home(configuration, vgrid, workflow_type)

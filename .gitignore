@@ -138,5 +138,7 @@ res/migrid.test.0/last_request.migrid.test
 
 # Execution node volume
 MiG-exe/
+# Ignore test lock files
+mig/unittest/*.lock
 
 *.DS_Store
