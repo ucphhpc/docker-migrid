@@ -2,7 +2,7 @@ OWNER=nielsbohr
 IMAGE=migrid
 TAG=edge
 
-CHECKOUT=4367
+CHECKOUT=4383
 
 all: init build
 

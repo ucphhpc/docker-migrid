@@ -23,31 +23,32 @@
 
 """A set of shared workflows functions"""
 
-import sys
-import fcntl
 import os
-import time
 import re
+import sys
+import time
+import fcntl
 import nbformat
 
 from nbconvert import PythonExporter, NotebookExporter
 from shared.base import force_utf8_rec, valid_dir_input
 from shared.conf import get_configuration_object
+from shared.defaults import src_dst_sep, w_id_charset, \
+    w_id_length, session_id_length, session_id_charset, default_vgrid
+from shared.fileio import delete_file, write_file, makedirs_rec
 from shared.map import load_system_map
 from shared.modified import check_workflow_p_modified, \
     check_workflow_r_modified, reset_workflow_p_modified, \
     reset_workflow_r_modified, mark_workflow_p_modified, \
     mark_workflow_r_modified
 from shared.pwhash import generate_random_ascii
-from shared.defaults import src_dst_sep, w_id_charset, \
-    w_id_length, session_id_length, session_id_charset
 from shared.serial import dump, load
-from shared.vgrid import vgrid_list_vgrids, vgrid_add_triggers, \
-    vgrid_remove_triggers, vgrid_triggers, vgrid_set_triggers, \
-    init_vgrid_script_add_rem, init_vgrid_script_list, vgrid_allowed
-from shared.fileio import delete_file, write_file, makedirs_rec
 from shared.validstring import possible_workflow_session_id
+from shared.vgrid import vgrid_add_triggers, vgrid_remove_triggers, \
+    vgrid_triggers, vgrid_set_triggers, init_vgrid_script_add_rem, \
+    init_vgrid_script_list
 from shared.vgridaccess import get_vgrid_map, VGRIDS, user_vgrid_access
+
 
 WRITE_LOCK = 'write.lock'
 WORKFLOW_PATTERN = 'workflowpattern'
@@ -2840,4 +2841,4 @@ if __name__ == '__main__':
         if args[0] == 'delete_workflow_sessions':
             delete_workflow_sessions_db(conf)
         if args[0] == 'reset_test_workflows':
-            reset_workflows(conf, 'Generic ')
+            reset_workflows(conf, default_vgrid)

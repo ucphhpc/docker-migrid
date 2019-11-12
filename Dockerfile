@@ -1,4 +1,4 @@
-FROM centos:latest
+FROM centos:7
 
 # Centos image default yum configs prevent docs installation
 # https://superuser.com/questions/784451/centos-on-docker-how-to-install-doc-files
@@ -187,21 +187,11 @@ RUN pip2 install --user \
     pytest
 
 # Install and configure MiG
-ARG MIG_CHECKOUT=4367
+ARG MIG_CHECKOUT=4383
 RUN svn checkout -r $MIG_CHECKOUT https://svn.code.sf.net/p/migrid/code/trunk .
 
 USER root
 RUN chown -R $USER:$USER $MIG_ROOT/mig
-
-# Compile and install nss_switch and pam_mig
-RUN cd $MIG_ROOT/mig/pam-mig \
-    && make \
-    && chmod 755 libpam_mig.so \
-    && cp $MIG_ROOT/mig/pam-mig/libpam_mig.so /lib64/security/pam_mig.so \
-    && cd $MIG_ROOT/mig/libnss-mig \
-    && make \
-    && chmod 755 $MIG_ROOT/mig/libnss-mig/libnss_mig.so.2 \
-    && cp $MIG_ROOT/mig/libnss-mig/libnss_mig.so.2 /lib64/libnss_mig.so.2
 
 USER $USER
 

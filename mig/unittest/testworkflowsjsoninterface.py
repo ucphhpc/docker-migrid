@@ -23,20 +23,22 @@
 
 """Unittest functions for the Workflow JSON interface"""
 
-import unittest
 import os
+import unittest
 import nbformat
-from shared.pwhash import generate_random_ascii
+
 from shared.conf import get_configuration_object
+from shared.defaults import default_vgrid
 from shared.fileio import makedirs_rec, remove_rec
+from shared.functionality.workflowsjsoninterface import workflow_api_create, \
+    workflow_api_delete, workflow_api_read, workflow_api_update
+from shared.pwhash import generate_random_ascii
 from shared.validstring import possible_workflow_session_id
 from shared.workflows import touch_workflow_sessions_db, \
     load_workflow_sessions_db, create_workflow_session_id, \
     delete_workflow_sessions_db, new_workflow_session_id, \
     delete_workflow_session_id, reset_workflows, get_workflow_with, \
     WORKFLOW_PATTERN, WORKFLOW_RECIPE, WORKFLOW_ANY
-from shared.functionality.workflowsjsoninterface import workflow_api_create, \
-    workflow_api_delete, workflow_api_read, workflow_api_update
 
 this_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -111,7 +113,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
     def setUp(self):
         self.created_workflows = []
         self.username = 'FooBar'
-        self.test_vgrid = 'Generic'
+        self.test_vgrid = default_vgrid
         if not os.environ.get('MIG_CONF', False):
             os.environ['MIG_CONF'] = '/home/mig/mig/server/MiGserver.conf'
         self.configuration = get_configuration_object()
@@ -147,7 +149,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         if not os.environ.get('MIG_CONF', False):
             os.environ['MIG_CONF'] = '/home/mig/mig/server/MiGserver.conf'
         configuration = get_configuration_object()
-        test_vgrid = 'Generic'
+        test_vgrid = default_vgrid
         # Remove tmp vgrid_file_home
         vgrid_file_path = os.path.join(configuration.vgrid_files_home,
                                        test_vgrid)
@@ -216,7 +218,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         self.logger.warning("Workflow returned '%s'" % workflow)
         self.assertIsNotNone(workflow)
         self.assertEqual(len(workflow), 1)
-        # Strip internal attributes
+        # Check internal attributes
         self.assertEqual(workflow[0]['persistence_id'], pattern_id)
         self.assertEqual(workflow[0]['name'],
                          minimum_pattern_attributes['name'])
@@ -250,7 +252,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                                      **{'persistence_id': pattern_id_1})
         self.assertIsNotNone(workflow)
         self.assertEqual(len(workflow), 1)
-        # Strip internal attributes
+        # Check internal attributes
         self.assertEqual(workflow[0]['persistence_id'], pattern_id_1)
         self.assertEqual(workflow[0]['name'],
                          full_pattern_attributes['name'])
@@ -280,7 +282,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         self.assertIsNotNone(workflow)
         self.logger.info(workflow)
         self.assertEqual(len(workflow), 1)
-        # Strip internal attributes
+        # Check internal attributes
         for k, v in recipe_attributes.items():
             self.assertEqual(workflow[0][k], v)
 
@@ -310,7 +312,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                                      **{'persistence_id': pattern_id})
         self.assertIsNot(workflow, False)
         self.assertEqual(len(workflow), 1)
-        # Strip internal attributes
+        # Check internal attributes
         self.assertEqual(workflow[0]['persistence_id'], pattern_id)
         self.assertEqual(workflow[0]['name'],
                          pattern_attributes['name'])
@@ -355,7 +357,7 @@ class WorkflowJSONInterfaceAPIFunctionsTest(unittest.TestCase):
                                      **{'persistence_id': recipe_id})
         self.assertIsNot(workflow, False)
         self.assertEqual(len(workflow), 1)
-        # Strip internal attributes
+        # Check internal attributes
         for k, v in recipe_attributes.items():
             self.assertEqual(workflow[0][k], v)
 
