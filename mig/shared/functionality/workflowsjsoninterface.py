@@ -197,7 +197,7 @@ def workflow_api_read(configuration, workflow_session,
     If the given workflow_type is none of the above a tuple is returned with a
     first value of False, and an explanatory error message as the second value.
     """
-    logger = configuration.logger
+    _logger = configuration.logger
     logger.debug("W_API: search: (%s, %s, %s)" % (workflow_session,
                                                   workflow_type,
                                                   workflow_attributes))
