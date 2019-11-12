@@ -44,9 +44,10 @@ from shared.modified import check_workflow_p_modified, \
 from shared.pwhash import generate_random_ascii
 from shared.serial import dump, load
 from shared.validstring import possible_workflow_session_id
-from shared.vgrid import vgrid_list_vgrids, vgrid_add_triggers, \
-    vgrid_remove_triggers, vgrid_triggers, vgrid_set_triggers, \
-    init_vgrid_script_add_rem, init_vgrid_script_list
+from shared.vgrid import vgrid_add_triggers, vgrid_remove_triggers, \
+    vgrid_triggers, vgrid_set_triggers, init_vgrid_script_add_rem, \
+    init_vgrid_script_list
+from shared.vgridaccess import get_vgrid_map, VGRIDS, user_vgrid_access
 
 
 WRITE_LOCK = 'write.lock'
@@ -516,8 +517,8 @@ def __correct_persistent_wp(configuration, workflow_pattern):
     """
 
     _logger = configuration.logger
-    contact_msg = "please contact support so that we can help resolve this " \
-                  "issue"
+    contact_msg = "please contact support at %s so that we can help resolve " \
+                  "this issue" % configuration.admin_email
 
     if not workflow_pattern:
         msg = "A workflow pattern was not provided, " + contact_msg
@@ -561,8 +562,8 @@ def __correct_persistent_wr(configuration, workflow_recipe):
     """
 
     _logger = configuration.logger
-    contact_msg = "Please contact support so that we can help resolve this " \
-                  "issue"
+    contact_msg = "please contact support at %s so that we can help resolve " \
+                  "this issue" % configuration.admin_email
 
     if not workflow_recipe:
         msg = "A workflow recipe was not provided, " + contact_msg
@@ -668,7 +669,8 @@ def __load_map(configuration, workflow_type=WORKFLOW_PATTERN, do_lock=True):
         return load_system_map(configuration, 'workflowrecipes', do_lock)
 
 
-def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN):
+def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN,
+                  client_id=None):
     """
     Refresh map of workflow objects. Uses a pickled dictionary for efficiency.
     Only update map for workflow objects that appeared, disappeared, or have
@@ -676,6 +678,7 @@ def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN):
     NOTE: Save start time so that any concurrent updates get caught next time
     :param configuration: The MiG configuration object.
     :param workflow_type: A MiG workflow type.
+    :param client_id: [optional] A MiG user client. Default is None
     :return: (dictionary) The system dictionary of the given workflow_type.
     """
     _logger = configuration.logger
@@ -700,7 +703,8 @@ def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN):
             configuration, workflow_type, do_lock=False)
 
         # Find all workflow objects
-        all_objects = __list_path(configuration, workflow_type)
+        all_objects = \
+            __list_path(configuration, workflow_type, client_id=client_id)
 
         for workflow_dir, workflow_file in all_objects:
             workflow_map[workflow_file] = workflow_map.get(workflow_file, {})
@@ -747,11 +751,14 @@ def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN):
     return workflow_map
 
 
-def __list_path(configuration, workflow_type=WORKFLOW_PATTERN):
+def __list_path(configuration, workflow_type=WORKFLOW_PATTERN, client_id=None):
     """
     Lists the paths of individual workflow objects.
     :param configuration: The MiG configuration object.
     :param workflow_type: A MiG workflow type.
+    :param client_id: [optional] A MiG user id. If provided only the vgrids
+    that user has access to will be searched, otherwise all VGrids will be.
+    Default is None.
     :return: (list) A list of (string, string) tuples, with one entry for
     each workflow object. First value is the path to that object, second
     value is the system object itself.
@@ -760,14 +767,13 @@ def __list_path(configuration, workflow_type=WORKFLOW_PATTERN):
     _logger.debug("Workflows: __list_path")
 
     objects = []
-    # Note that this is currently listing all objects for all users. This
-    # might want to be altered to only the current user and global? That might
-    # be too much needless processing if multiple users are using the system at
-    # once though. Talk to Jonas/Martin about this. Also note this system is
-    # terrible
+    if client_id:
+        vgrid_list = user_vgrid_access(configuration, client_id)
+    else:
+        vgrid_map = get_vgrid_map(configuration)
+        vgrid_list = [vgrid for vgrid in vgrid_map[VGRIDS]]
 
-    found, vgrids = vgrid_list_vgrids(configuration)
-    for vgrid in vgrids:
+    for vgrid in vgrid_list:
         home = get_workflow_home(configuration, vgrid, workflow_type)
         if not home:
             # No home, skip to next
@@ -1023,7 +1029,7 @@ def init_workflow_home(configuration, vgrid, workflow_type=WORKFLOW_PATTERN):
     if not os.path.exists(path) and not makedirs_rec(path, configuration):
         return (False, "Failed to init workflow home: '%s'" % path)
 
-    # Ensure correct permissions
+    # TODO. Ensure correct permissions.
     os.chmod(path, 0740)
     return (True, '')
 
@@ -1108,7 +1114,7 @@ def init_workflow_task_home(configuration, vgrid):
         return (False, "Failed to init workflow task home: '%s'" % task_home)
 
     _logger.debug("Created or found workflow_task_home '%s'" % task_home)
-    # Ensure correct permissions.
+    # TODO. Ensure correct permissions.
     os.chmod(task_home, 0740)
     return (True, '')
 
@@ -1129,11 +1135,12 @@ def get_workflow_task_home(configuration, vgrid):
     return task_home
 
 
-def get_wp_map(configuration):
+def get_wp_map(configuration, client_id=None):
     """
     Returns the current map of workflow patterns. Caches the map for load
     prevention with repeated calls within a short time span.
     :param configuration: The MiG configuration object.
+    :param client_id: [optional] A MiG user id.
     :return: (dictionary) all currently registered workflow patterns. Format
     is {pattern persistence id: pattern dict}.
     """
@@ -1143,7 +1150,7 @@ def get_wp_map(configuration):
 
     if modified_patterns:
         map_stamp = time.time()
-        workflow_p_map = __refresh_map(configuration)
+        workflow_p_map = __refresh_map(configuration, client_id=client_id)
         reset_workflow_p_modified(configuration)
     else:
         workflow_p_map, map_stamp = __load_map(configuration)
@@ -1154,11 +1161,12 @@ def get_wp_map(configuration):
     return workflow_p_map
 
 
-def get_wr_map(configuration):
+def get_wr_map(configuration, client_id=None):
     """
     Returns the current map of workflow recipes. Caches the map for load
     prevention with repeated calls within a short time span.
     :param configuration: The MiG configuration object.
+    :param client_id: [optional] A MiG user id.
     :return: (dictionary) all currently registered workflow recipes. Format
     is {recipe persistence id: recipe dict}.
     """
@@ -1169,7 +1177,8 @@ def get_wr_map(configuration):
     if modified_recipes:
         map_stamp = time.time()
         workflow_r_map = __refresh_map(configuration,
-                                       workflow_type=WORKFLOW_RECIPE)
+                                       workflow_type=WORKFLOW_RECIPE,
+                                       client_id=client_id)
         reset_workflow_r_modified(configuration)
     else:
         workflow_r_map, map_stamp = __load_map(configuration,
@@ -2058,7 +2067,7 @@ def __update_workflow_recipe(configuration, client_id, vgrid, workflow_recipe,
             "WR: __update_workflow_recipe, incorrect 'workflow_recipe' "
             "structure '%s'" % type(workflow_recipe))
         return (False, "Internal server error due to incorrect recipe "
-                       "structure")
+                       "structure.")
 
     for key, value in workflow_recipe.items():
         if key not in valid_keys:

@@ -374,7 +374,8 @@ def main(client_id, user_arguments_dict):
             output_objects.append(
                 {'object_type': 'error_text',
                  'text': "Internal sessions db failure, please contact "
-                         "an admin to resolve this issue."})
+                         "an admin at '%s' to resolve this issue." %
+                         configuration.admin_email})
             return (output_objects, returnvalues.SYSTEM_ERROR)
         else:
             # Try reload
