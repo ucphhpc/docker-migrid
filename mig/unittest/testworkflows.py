@@ -25,6 +25,7 @@
 import unittest
 import os
 import nbformat
+from shared.defaults import default_vgrid
 from shared.conf import get_configuration_object
 from shared.vgrid import vgrid_set_triggers
 from shared.fileio import makedirs_rec, remove_rec
@@ -40,7 +41,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
     def setUp(self):
         self.created_workflows = []
         self.username = 'FooBar'
-        self.test_vgrid = 'Generic'
+        self.test_vgrid = default_vgrid
         self.test_pattern_name = 'pattern_name'
         self.test_recipe_name = 'recipe_name'
         if not os.environ.get('MIG_CONF', False):
@@ -65,7 +66,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
             os.environ['MIG_CONF'] = os.path.join(
                 os.sep, 'home', 'mig', 'mig', 'server', 'MiGserver.conf')
         configuration = get_configuration_object()
-        test_vgrid = 'Generic'
+        test_vgrid = default_vgrid
         # Remove tmp vgrid_file_home
         vgrid_file_path = os.path.join(configuration.vgrid_files_home,
                                        test_vgrid)
@@ -101,7 +102,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                                      **pattern_attributes)
         self.assertIsNotNone(workflow)
         self.assertEqual(len(workflow), 1)
-        # Strip internal attributes
+        # Check internal attributes
         self.assertEqual(workflow[0]['persistence_id'], pattern_id)
         self.assertEqual(workflow[0]['name'], pattern_attributes['name'])
         self.assertEqual(workflow[0]['vgrid'], pattern_attributes['vgrid'])
@@ -258,7 +259,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                                      **pattern_attributes)
         self.assertIsNotNone(workflow)
         self.assertEqual(len(workflow), 1)
-        # Strip internal attributes
+        # Check internal attributes
         self.assertEqual(workflow[0]['persistence_id'], pattern_id)
         self.assertEqual(workflow[0]['name'], pattern_attributes['name'])
         self.assertEqual(workflow[0]['vgrid'], pattern_attributes['vgrid'])
@@ -286,7 +287,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                                      **recipe_attributes)
         self.assertIsNotNone(workflow)
         self.assertEqual(len(workflow), 1)
-        # Strip internal attributes
+        # Check internal attributes
         for k, v in recipe_attributes.items():
             self.assertEqual(recipe_attributes[k], v)
 
@@ -339,7 +340,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                                      **recipe_attributes)
         self.assertIsNotNone(workflow)
         self.assertEqual(len(workflow), 1)
-        # Strip internal attributes
+        # Check internal attributes
         for k, v in recipe_attributes.items():
             self.assertEqual(recipe_attributes[k], v)
 
@@ -367,7 +368,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                                      **pattern_attributes)
         self.assertIsNot(workflow, False)
         self.assertEqual(len(workflow), 1)
-        # Strip internal attributes
+        # Check internal attributes
         self.assertEqual(workflow[0]['persistence_id'], pattern_id)
         self.assertEqual(workflow[0]['name'], pattern_attributes['name'])
         self.assertEqual(workflow[0]['vgrid'], pattern_attributes['vgrid'])
@@ -441,7 +442,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                                      **recipe_attributes)
         self.assertIsNot(workflow, False)
         self.assertEqual(len(workflow), 1)
-        # Strip internal attributes
+        # Check internal attributes
         for k, v in recipe_attributes.items():
             self.assertEqual(recipe_attributes[k], v)
 
@@ -876,7 +877,9 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertEqual(trigger['vgrid_name'], pattern_attributes['vgrid'])
         # Templates should contain the parsed recipe
         self.assertNotEqual(trigger['templates'], [])
-        # TODO, convert templates stings to object that we can check has
+        # TODO, convert templates stings to object that we can check the
+        # execute and output_files strings for each associated
+        # recipe are correctly created
 
     def test_workflow_create_recipe_associate_pattern(self):
         pattern_attributes = {'name': self.test_pattern_name,
@@ -958,7 +961,9 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertEqual(trigger['vgrid_name'], pattern_attributes['vgrid'])
         # Templates should contain the parsed recipe
         self.assertNotEqual(trigger['templates'], [])
-        # TODO, convert templates stings to object that we can check has
+        # TODO, convert templates stings to object that we can check the
+        # execute and output_files strings for each associated
+        # recipe are correctly created
 
     def test_workflow_update_pattern_trigger_recipe(self):
         pattern_attributes = {'name': self.test_pattern_name,
