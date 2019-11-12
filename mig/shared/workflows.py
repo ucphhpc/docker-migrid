@@ -33,6 +33,7 @@ import nbformat
 from nbconvert import PythonExporter, NotebookExporter
 from shared.base import force_utf8_rec, valid_dir_input
 from shared.conf import get_configuration_object
+from shared.defaults import default_vgrid
 from shared.map import load_system_map
 from shared.modified import check_workflow_p_modified, \
     check_workflow_r_modified, reset_workflow_p_modified, \
@@ -2830,4 +2831,4 @@ if __name__ == '__main__':
         if args[0] == 'delete_workflow_sessions':
             delete_workflow_sessions_db(conf)
         if args[0] == 'reset_test_workflows':
-            reset_workflows(conf, 'Generic ')
+            reset_workflows(conf, default_vgrid)
