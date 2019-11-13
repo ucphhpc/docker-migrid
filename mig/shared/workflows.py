@@ -24,6 +24,7 @@
 """A set of shared workflows functions"""
 
 import os
+import glob
 import re
 import sys
 import time
@@ -31,7 +32,7 @@ import fcntl
 import nbformat
 
 from nbconvert import PythonExporter, NotebookExporter
-from shared.base import force_utf8_rec, valid_dir_input
+from shared.base import force_utf8_rec, user_base_dir
 from shared.conf import get_configuration_object
 from shared.defaults import src_dst_sep, w_id_charset, \
     w_id_length, session_id_length, session_id_charset, default_vgrid
@@ -43,7 +44,7 @@ from shared.modified import check_workflow_p_modified, \
     mark_workflow_r_modified
 from shared.pwhash import generate_random_ascii
 from shared.serial import dump, load
-from shared.validstring import possible_workflow_session_id
+from shared.validstring import possible_workflow_session_id, valid_user_path
 from shared.vgrid import vgrid_add_triggers, vgrid_remove_triggers, \
     vgrid_triggers, vgrid_set_triggers, init_vgrid_script_add_rem, \
     init_vgrid_script_list
@@ -708,8 +709,8 @@ def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN,
             configuration, workflow_type, do_lock=False)
 
         # Find all workflow objects
-        all_objects = \
-            __list_path(configuration, workflow_type, client_id=client_id)
+        all_objects = __list_path(configuration, workflow_type=workflow_type,
+                                  client_id=client_id)
 
         for workflow_dir, workflow_file in all_objects:
             workflow_map[workflow_file] = workflow_map.get(workflow_file, {})
@@ -2666,12 +2667,21 @@ def create_workflow_trigger(configuration, client_id, vgrid, path,
                         % rule_id)
         return (False, "Failed to create trigger, conflicting rule_id")
 
-    valid = valid_dir_input(vgrid, path)
-    if not valid:
-        msg = "WP: Trigger path %s, created by user %s was trying to access " \
-              "a directory outside of vgrid %s. " % (path, client_id, vgrid)
+    # TODO, Jonas kik her om jeg har lavet noget dumt (Vigtigt!)
+    base_dir = user_base_dir(configuration, client_id)
+    if not base_dir:
+        msg = "Failed to find a valid user path for '%s'" % client_id
         _logger.warning(msg)
         return (False, msg)
+
+    abs_vgrid = os.path.abspath(os.path.join(base_dir, vgrid))
+    abs_path = os.path.abspath(os.path.join(abs_vgrid, path))
+    if not valid_user_path(configuration, abs_path, base_dir, True):
+        _logger.warning("'%s' tried to create a "
+                        "workflow trigger for a restricted path '%s'"
+                        % (client_id, abs_path))
+        return (False, "Path '%s' is trying to escape valid vgrid '%s'"
+                       % (path, vgrid))
 
     # TODO, for now set the settle_time to 1s
     # To avoid double scheduling of triggered create/modified

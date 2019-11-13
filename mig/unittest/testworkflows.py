@@ -1314,6 +1314,32 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertEqual(pattern_id, msg)
         self.assertFalse(os.path.exists(parameter_path))
 
+    def test_illegal_pattern_path(self):
+        pattern_attributes = {'name': self.test_pattern_name,
+                              'vgrid': self.test_vgrid,
+                              'input_paths': ['../../../initial_data/*hdf5'],
+                              'input_file': 'hdf5_input',
+                              'output': {
+                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                              'recipes': [self.test_recipe_name],
+                              'variables': {'iterations': 20}}
+
+        created_0, pattern_id_0 = create_workflow(self.configuration,
+                                                  self.username,
+                                                  WORKFLOW_PATTERN,
+                                                  **pattern_attributes)
+        self.logger.info(pattern_id_0)
+        self.assertFalse(created_0)
+
+        pattern_attributes.update({'vgrid': self.test_vgrid,
+                                   'input_paths': ['my_dir/../../../*.hdf5']})
+        created_1, pattern_id_1 = create_workflow(self.configuration,
+                                                  self.username,
+                                                  WORKFLOW_PATTERN,
+                                                  **pattern_attributes)
+        self.logger.info(pattern_id_1)
+        self.assertFalse(created_1)
+
     # def test_recipe_pattern_association_creation_pattern_first(self):
     #     pattern_attributes = {'name': 'association test pattern',
     #                           'vgrid': self.test_vgrid,
