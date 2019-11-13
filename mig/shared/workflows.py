@@ -32,7 +32,7 @@ import fcntl
 import nbformat
 
 from nbconvert import PythonExporter, NotebookExporter
-from shared.base import force_utf8_rec, user_base_dir
+from shared.base import force_utf8_rec, user_base_dir, valid_dir_input
 from shared.conf import get_configuration_object
 from shared.defaults import src_dst_sep, w_id_charset, \
     w_id_length, session_id_length, session_id_charset, default_vgrid
@@ -2667,7 +2667,11 @@ def create_workflow_trigger(configuration, client_id, vgrid, path,
                         % rule_id)
         return (False, "Failed to create trigger, conflicting rule_id")
 
-    # TODO, Jonas kik her om jeg har lavet noget dumt (Vigtigt!)
+    # NOTE! Validating here that the user hasn't provided an input_path
+    # that escapes the actual vgrid path. If this happens grid_script.py
+    # simply will ignore the escaped path so it is actually safe to let it
+    # through. Therefore we simply do it to let the user know that it won't
+    # work
     base_dir = user_base_dir(configuration, client_id)
     if not base_dir:
         msg = "Failed to find a valid user path for '%s'" % client_id
@@ -2675,11 +2679,10 @@ def create_workflow_trigger(configuration, client_id, vgrid, path,
         return (False, msg)
 
     abs_vgrid = os.path.abspath(os.path.join(base_dir, vgrid))
-    abs_path = os.path.abspath(os.path.join(abs_vgrid, path))
-    if not valid_user_path(configuration, abs_path, base_dir, True):
+    if not valid_dir_input(abs_vgrid, path):
         _logger.warning("'%s' tried to create a "
                         "workflow trigger for a restricted path '%s'"
-                        % (client_id, abs_path))
+                        % (client_id, path))
         return (False, "Path '%s' is trying to escape valid vgrid '%s'"
                        % (path, vgrid))
 
