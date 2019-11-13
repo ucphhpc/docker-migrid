@@ -186,6 +186,7 @@ def touch_workflow_sessions_db(configuration, force=False):
     _logger.debug('WP: touch_workflow_sessions_db, '
                   'creating empty db if it does not exist')
     _db_path = configuration.workflows_db
+    _db_home = configuration.workflows_db_home
 
     if os.path.exists(_db_path) and not force:
         _logger.debug("WP: touch_workflow_sessions_db, "
@@ -193,10 +194,14 @@ def touch_workflow_sessions_db(configuration, force=False):
         return False
 
     # Ensure the directory path is available
-    dir_path = os.path.dirname(_db_path)
-    if not makedirs_rec(dir_path, configuration, accept_existing=True):
+    if not makedirs_rec(_db_home, configuration, accept_existing=True):
         _logger.debug("WP: touch_workflow_sessions_db, "
-                      "failed to create dependent dir %s" % dir_path)
+                      "failed to create dependent dir %s" % _db_home)
+        return False
+    # Create db file
+    if not touch(_db_path, configuration):
+        _logger.debug("WP: touch_workflow_sessions_db, "
+                      "failed to create db '%s'" % _db_path)
         return False
 
     # Create lock file.
@@ -2914,11 +2919,17 @@ if __name__ == '__main__':
     args = sys.argv[1:]
     if args:
         if args[0] == 'create_workflow_session_id':
-            touch_workflow_sessions_db(conf, force=True)
+            created = touch_workflow_sessions_db(conf, force=True)
+            print("Created sessions db %s" % created)
             client_id = "/C=dk/ST=dk/L=NA/O=org/OU=NA/CN=" \
                         "devuser/emailAddress=dev@dev.dk"
             if not get_workflow_session_id(conf, client_id):
-                create_workflow_session_id(conf, client_id)
+                sid = create_workflow_session_id(conf, client_id)
+                if not sid:
+                    print("Failed to create session_id '%s'" % sid)
+                else:
+                    print("Created session_id '%s' for user '%s'"
+                          % (sid, client_id))
         if args[0] == 'workflow_sessions':
             sessions_db = load_workflow_sessions_db(conf)
             print(sessions_db)

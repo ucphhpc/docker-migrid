@@ -33,6 +33,7 @@ import sys
 import json
 import shared.returnvalues as returnvalues
 
+from shared.base import force_utf8_rec
 from shared.init import initialize_main_variables
 from shared.safeinput import REJECT_UNSET, valid_workflow_pers_id, \
     valid_workflow_vgrid, valid_workflow_name, valid_workflow_input_file, \
@@ -130,18 +131,6 @@ WORKFLOW_VALUE_MAP = {
     'type': type_value_checker,
     'operation': operation_value_checker,
 }
-
-
-def str_hook(obj):
-    """
-    A custom encoder to be used in the 'json.loads' function. This encodes
-    unicode to utf-8.
-    :param obj: The object to be decoded.
-    :return: (dictionary) decoded object.
-    """
-    return {k.encode('utf-8') if isinstance(k, unicode) else k:
-            v.encode('utf-8') if isinstance(v, unicode) else v
-            for k, v in obj}
 
 
 # Workflow API functions
@@ -330,7 +319,7 @@ def main(client_id, user_arguments_dict):
     # Input data
     data = sys.stdin.read()
     try:
-        json_data = json.loads(data, object_pairs_hook=str_hook)
+        json_data = json.loads(data, object_hook=force_utf8_rec)
     except ValueError:
         msg = "An invalid format was supplied to: '%s', requires a JSON " \
               "compatible format" % op_name
@@ -338,6 +327,8 @@ def main(client_id, user_arguments_dict):
         output_objects.append({'object_type': 'error_text',
                                'text': msg})
         return (output_objects, returnvalues.CLIENT_ERROR)
+
+    logger.debug("Received %s" % (json_data))
 
     # IMPORTANT!! Do not access the json_data input before it has been
     # validated by validated_input.
