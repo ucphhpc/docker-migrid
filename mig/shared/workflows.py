@@ -807,7 +807,7 @@ def __query_workflow_map(configuration, client_id=None, first=False,
     create a narrower search, where only those objects that match the
     provided arguments and the user has access to are returned.
     :param configuration: The MiG configuration object.
-    :param client_id: The MiG user
+    :param client_id: [optional] The MiG user
     :param first: [optional] boolean. If True will only return the first valid
     workflow object and return that. If false will return all valid objects.
     Default is False.
@@ -826,15 +826,15 @@ def __query_workflow_map(configuration, client_id=None, first=False,
                                                      kwargs))
     workflow_map = None
     if workflow_type == WORKFLOW_PATTERN:
-        workflow_map = get_wp_map(configuration)
+        workflow_map = get_wp_map(configuration, client_id=client_id)
 
     if workflow_type == WORKFLOW_RECIPE:
-        workflow_map = get_wr_map(configuration)
+        workflow_map = get_wr_map(configuration, client_id=client_id)
 
     if workflow_type == WORKFLOW_ANY:
         # Load every type into workflow_map
-        workflow_map = get_wr_map(configuration)
-        workflow_map.update(get_wp_map(configuration))
+        workflow_map = get_wr_map(configuration, client_id=client_id)
+        workflow_map.update(get_wp_map(configuration, client_id=client_id))
 
     if not workflow_map:
         _logger.debug("WP: __query_workflow_map, empty map retrieved: '%s'"
@@ -1202,7 +1202,7 @@ def get_workflow_with(configuration, client_id=None, first=False,
     Searches workflow object databases for objects that match the provided
     keyword arguments.
     :param configuration: The MiG configuration object.
-    :param client_id: A MiG user
+    :param client_id: [optional] A MiG user
     :param first: [optional] If True will return the first matching workflow
     object, else will return all matching workflow objects in a list. Default
     is False
@@ -1416,7 +1416,8 @@ def delete_workflow_pattern(configuration, client_id, vgrid, persistence_id):
     _logger.debug("WP: delete_workflow_pattern, client_id: %s, "
                   "persistence_id: %s" % (client_id, persistence_id))
 
-    workflow = get_workflow_with(configuration, client_id,
+    workflow = get_workflow_with(configuration,
+                                 client_id,
                                  workflow_type=WORKFLOW_PATTERN,
                                  first=True, vgrid=vgrid,
                                  persistence_id=persistence_id)
@@ -1460,8 +1461,8 @@ def delete_workflow_recipe(configuration, client_id, vgrid, persistence_id):
                   "persistence_id: %s" % (client_id, persistence_id))
 
     workflow = get_workflow_with(configuration, client_id, first=True,
-                               workflow_type=WORKFLOW_RECIPE,
-                               persistence_id=persistence_id)
+                                 workflow_type=WORKFLOW_RECIPE,
+                                 persistence_id=persistence_id)
 
     if not workflow:
         return (False, "Could not find recipe with persistence_id '%s'"
