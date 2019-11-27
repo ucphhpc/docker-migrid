@@ -23,16 +23,22 @@
 
 """A set of shared workflows functions"""
 
+import fcntl
 import os
-import glob
 import re
 import sys
 import time
-import fcntl
-import nbformat
+try:
+    import nbformat
+except ImportError:
+    nbformat = None
+try:
+    from nbconvert import PythonExporter, NotebookExporter
+except ImportError:
+    PythonExporter = None
+    NotebookExporter = None
 
-from nbconvert import PythonExporter, NotebookExporter
-from shared.base import force_utf8_rec, user_base_dir, valid_dir_input
+from shared.base import force_utf8_rec
 from shared.conf import get_configuration_object
 from shared.defaults import src_dst_sep, w_id_charset, \
     w_id_length, session_id_length, session_id_charset, default_vgrid
@@ -44,7 +50,7 @@ from shared.modified import check_workflow_p_modified, \
     mark_workflow_r_modified
 from shared.pwhash import generate_random_ascii
 from shared.serial import dump, load
-from shared.validstring import possible_workflow_session_id, valid_user_path
+from shared.validstring import possible_workflow_session_id
 from shared.vgrid import vgrid_add_triggers, vgrid_remove_triggers, \
     vgrid_triggers, vgrid_set_triggers, init_vgrid_script_add_rem, \
     init_vgrid_script_list
@@ -188,8 +194,10 @@ def touch_workflow_sessions_db(configuration, force=False):
                   'creating empty db if it does not exist')
     _db_path = configuration.workflows_db
     _db_home = configuration.workflows_db_home
+    _db_lock_path = configuration.workflows_db_lock
 
-    if os.path.exists(_db_path) and not force:
+    if os.path.exists(_db_path) and os.path.exists(_db_lock_path) \
+            and not force:
         _logger.debug("WP: touch_workflow_sessions_db, "
                       "db: '%s' already exists" % _db_path)
         return False
@@ -199,18 +207,24 @@ def touch_workflow_sessions_db(configuration, force=False):
         _logger.debug("WP: touch_workflow_sessions_db, "
                       "failed to create dependent dir %s" % _db_home)
         return False
-    # Create db file
-    if not touch(_db_path, configuration):
-        _logger.debug("WP: touch_workflow_sessions_db, "
-                      "failed to create db '%s'" % _db_path)
-        return False
 
     # Create lock file.
-    if not touch(configuration.workflows_db_lock, configuration):
-        _logger.debug("WP: touch_workflow_sessions_db"
-                      "failed to create dependent lock file: '%s'"
-                      % configuration.workflows_db_lock)
-        return False
+    if not os.path.exists(_db_lock_path):
+        if not touch(_db_lock_path, configuration):
+            _logger.debug("WP: touch_workflow_sessions_db"
+                          "failed to create dependent lock file: '%s'"
+                          % configuration.workflows_db_lock)
+            return False
+
+    if not os.path.exists(_db_path):
+        # Use the lock to synchronize the creation of the sessions db
+        with open(_db_lock_path, 'a') as lock_file:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            # Create the db file
+            if not touch(_db_path, configuration):
+                _logger.debug("WP: touch_workflow_sessions_db, "
+                              "failed to create db '%s'" % _db_path)
+                return False
 
     return save_workflow_sessions_db(configuration, {})
 
@@ -247,13 +261,18 @@ def load_workflow_sessions_db(configuration, do_lock=True):
     """
     _logger = configuration.logger
     lock_handle = None
+    if not os.path.exists(configuration.workflows_db_lock) \
+            or not os.path.exists(configuration.workflows_db):
+        created = touch_workflow_sessions_db(configuration)
+        _logger.info("Created %s" % created)
+
     if do_lock:
         try:
             lock_handle = open(configuration.workflows_db_lock, 'a')
             fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
         except OSError as err:
-            _logger.warning("Failed to set lock on load workflow_session_db '%s'"
-                            % err)
+            _logger.warning("Failed to set lock on load "
+                            "workflow_session_db '%s'" % err)
             if lock_handle and not lock_handle.closed:
                 lock_handle.close()
             return False
@@ -432,7 +451,6 @@ def __generate_persistence_id():
     """
     Creates a new persistence id for a workflow object by creating a sting of
     random ascii characters.
-
     :return: (function call to 'generate_random_ascii')
     """
     return generate_random_ascii(w_id_length, charset=w_id_charset)
@@ -442,7 +460,6 @@ def __generate_task_file_name():
     """
     Creates a new task file name by creating a string of random ascii
     characters.
-
     :return: (function call to 'generate_random_ascii')
     """
     return generate_random_ascii(w_id_length, charset=w_id_charset)
@@ -521,7 +538,6 @@ def __correct_persistent_wp(configuration, workflow_pattern):
     first value with be False with an accompanying error message explaining the
     issue.
     """
-
     _logger = configuration.logger
     contact_msg = "please contact support at %s so that we can help resolve " \
                   "this issue" % configuration.admin_email
@@ -1035,8 +1051,7 @@ def init_workflow_home(configuration, vgrid, workflow_type=WORKFLOW_PATTERN):
     if not os.path.exists(path) and not makedirs_rec(path, configuration):
         return (False, "Failed to init workflow home: '%s'" % path)
 
-    # TODO. Ensure correct permissions.
-    os.chmod(path, 0740)
+    os.chmod(path, 0750)
     return (True, '')
 
 
@@ -1121,7 +1136,7 @@ def init_workflow_task_home(configuration, vgrid):
 
     _logger.debug("Created or found workflow_task_home '%s'" % task_home)
     # TODO. Ensure correct permissions.
-    os.chmod(task_home, 0740)
+    os.chmod(task_home, 0750)
     return (True, '')
 
 
@@ -2667,32 +2682,15 @@ def create_workflow_trigger(configuration, client_id, vgrid, path,
                         % rule_id)
         return (False, "Failed to create trigger, conflicting rule_id")
 
-    # NOTE! Validating here that the user hasn't provided an input_path
-    # that escapes the actual vgrid path. If this happens grid_script.py
-    # simply will ignore the escaped path so it is actually safe to let it
-    # through. Therefore we simply do it to let the user know that it won't
-    # work
-    base_dir = user_base_dir(configuration, client_id)
-    if not base_dir:
-        msg = "Failed to find a valid user path for '%s'" % client_id
-        _logger.warning(msg)
-        return (False, msg)
-
-    abs_vgrid = os.path.abspath(os.path.join(base_dir, vgrid))
-    if not valid_dir_input(abs_vgrid, path):
-        _logger.warning("'%s' tried to create a "
-                        "workflow trigger for a restricted path '%s'"
-                        % (client_id, path))
-        return (False, "Path '%s' is trying to escape valid vgrid '%s'"
-                       % (path, vgrid))
-
+    # See addvgridtrigger.py#86 NOTE about normalizing trigger path
+    norm_path = os.path.normpath(path.strip()).lstrip(os.sep)
     # TODO, for now set the settle_time to 1s
     # To avoid double scheduling of triggered create/modified
     # events on the same operation (E.g. copy a file into the dir)
     rule_dict = {
         'rule_id': rule_id,
         'vgrid_name': vgrid,
-        'path': path,
+        'path': norm_path,
         'changes': ['created', 'modified'],
         'run_as': client_id,
         'action': 'submit',
@@ -2835,12 +2833,26 @@ def convert_to(configuration, notebook, exporter='notebook',
     if exporter not in valid_exporters:
         return (False, "lang: '%s' is not a valid exporter" % exporter)
 
+    if not PythonExporter:
+        _logger.error("The required python package 'nbconvert' for "
+                      "workflows is missing")
+        return (False, "Missing the nbconvert python package")
+
+    if not NotebookExporter:
+        _logger.error("The required python package 'nbconvert' for "
+                      "workflows is missing")
+        return (False, "Missing the nbconvert python package")
+
     if exporter == 'python':
         ex = PythonExporter()
     else:
         ex = NotebookExporter()
 
     # Validate format of the provided notebook
+    if not nbformat:
+        _logger.error("The required python package 'nbformat' for "
+                      "workflows is missing")
+        return (False, "Missing the nbformat python package")
     try:
         nbformat.validate(notebook, version=4)
     except nbformat.ValidationError as err:

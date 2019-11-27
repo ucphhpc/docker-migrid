@@ -166,8 +166,8 @@ def _find_authenticator(application):
 
 def _open_session(username, ip_addr, tcp_port, session_id):
     """Keep track of new session"""
-    logger.debug("auth succeeded for %s from (%s, %s) with session: %s" %
-                 (username, ip_addr, tcp_port, session_id))
+    # logger.debug("auth succeeded for %s from %s:%s with session: %s" %
+    #             (username, ip_addr, tcp_port, session_id))
 
     status = track_open_session(configuration,
                                 'davs',
@@ -198,8 +198,8 @@ def _open_session(username, ip_addr, tcp_port, session_id):
 
 def _close_session(username, ip_addr, tcp_port, session_id):
     """Mark session as closed"""
-    logger.debug("_close_session for %s from (%s, %s) with session: %s" %
-                 (username, ip_addr, tcp_port, session_id))
+    # logger.debug("_close_session for %s from %s:%s with session: %s" %
+    #              (username, ip_addr, tcp_port, session_id))
 
     track_close_session(configuration,
                         'davs',
@@ -512,6 +512,11 @@ class MiGHTTPAuthenticator(HTTPAuthenticator):
         user_abuse_hits = daemon_conf['auth_limits']['user_abuse_hits']
         proto_abuse_hits = daemon_conf['auth_limits']['proto_abuse_hits']
         max_secret_hits = daemon_conf['auth_limits']['max_secret_hits']
+        authtype = ''
+        if password_enabled:
+            authtype = 'password'
+        elif digest_enabled:
+            authtype = 'digest'
 
         # For e.g. GDP we require all logins to match active 2FA session IP,
         # but otherwise user may freely switch net during 2FA lifetime.
@@ -556,7 +561,9 @@ class MiGHTTPAuthenticator(HTTPAuthenticator):
             elif not environ.get('http_authenticator.valid_user', False):
                 invalid_user = True
         else:
-            logger.error("Neither password NOR digest enabled")
+            logger.error(
+                "Neither password NOR digest enabled for %s from %s:%s"
+                % (username, ip_addr, tcp_port))
 
         if not pre_authorized:
             self._expire_rate_limit()
@@ -575,6 +582,7 @@ class MiGHTTPAuthenticator(HTTPAuthenticator):
             (authorized, disconnect) = handle_auth_attempt(
                 configuration,
                 'davs',
+                authtype,
                 username,
                 ip_addr,
                 tcp_port,
@@ -582,15 +590,14 @@ class MiGHTTPAuthenticator(HTTPAuthenticator):
                 invalid_username=invalid_username,
                 invalid_user=invalid_user,
                 valid_twofa=valid_twofa,
-                digest_enabled=digest_enabled,
-                valid_digest=valid_digest,
-                password_enabled=password_enabled,
-                valid_password=valid_password,
+                authtype_enabled=(digest_enabled or password_enabled),
+                valid_auth=(valid_digest or valid_password),
                 exceeded_rate_limit=exceeded_rate_limit,
                 user_abuse_hits=user_abuse_hits,
                 proto_abuse_hits=proto_abuse_hits,
                 max_secret_hits=max_secret_hits,
             )
+
         if authorized and valid_session:
             result = self.__application(environ, start_response)
             if result:
@@ -598,10 +605,13 @@ class MiGHTTPAuthenticator(HTTPAuthenticator):
             else:
                 _close_session(username, ip_addr, tcp_port, session_id)
                 logger.error(
-                    "MiGHTTPAuthenticator.authRequest failed")
+                    "MiGHTTPAuthenticator.authRequest failed for %s from %s:%s"
+                    % (username, ip_addr, tcp_port))
         elif authorized and not valid_session:
             response_ok = True
-            logger.error("503 Service Unavailable")
+            logger.error("Authorized but no valid session for %s from %s:%s"
+                         % (username, ip_addr, tcp_port))
+            # logger.debug("503 Service Unavailable")
             start_response("503 Service Unavailable",
                            [("Content-Length", "0"),
                             ("Date", getRfc1123Time()),
@@ -609,7 +619,8 @@ class MiGHTTPAuthenticator(HTTPAuthenticator):
             result = ['']
         elif disconnect:
             response_ok = True
-            logger.error("403 Forbidden")
+            # logger.debug("403 Forbidden for %s from %s:%s" \
+            #   % (username, ip_addr, tcp_port))
             start_response("403 Forbidden", [("Content-Length", "0"),
                                              ("Date", getRfc1123Time()),
                                              ])
@@ -620,10 +631,14 @@ class MiGHTTPAuthenticator(HTTPAuthenticator):
                 response_ok = True
             else:
                 logger.error(
-                    "MiGHTTPAuthenticator.sendDigestAuthResponse failed")
+                    "MiGHTTPAuthenticator.sendDigestAuthResponse failed"
+                    + " for %s from %s:%s"
+                    % (username, ip_addr, tcp_port))
 
         if not response_ok:
-            logger.error("MiGHTTPAuthenticator: 400 Bad Request")
+            logger.error("MiGHTTPAuthenticator: 400 Bad Request"
+                         + " for %s from %s:%s"
+                         % (username, ip_addr, tcp_port))
             start_response("400 Bad Request", [("Content-Length", "0"),
                                                ("Date", getRfc1123Time()),
                                                ])
@@ -737,7 +752,7 @@ class MiGWsgiDAVDomainController(WsgiDAVDomainController):
         # logger.debug("auth:isRealmUser: realmname: %s, username: %s" \
         #     % (realmname, username))
         success = False
-        logger.debug("refresh user %s" % username)
+        # logger.debug("refresh user %s" % username)
         update_users(configuration, self.user_map, username)
         if self._get_user_digests(realmname, username):
             success = True

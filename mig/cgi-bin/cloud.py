@@ -3,7 +3,7 @@
 #
 # --- BEGIN_HEADER ---
 #
-# reqjupyterservice - Redirect the user to a backend jupyter service host
+# cloud - initializes access to user home from a cloud session
 # Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
@@ -25,13 +25,11 @@
 # -- END_HEADER ---
 #
 
-"""Request a jupyter service"""
-
+from shared.cgiscriptstub import run_cgi_script
+from shared.functionality.cloud import main
 import cgi
 import cgitb
 cgitb.enable()
 
-from shared.functionality.reqjupyterservice import main
-from shared.cgiscriptstub import run_cgi_script
 
 run_cgi_script(main)

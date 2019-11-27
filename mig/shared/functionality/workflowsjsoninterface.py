@@ -189,8 +189,8 @@ def workflow_api_read(configuration, workflow_session,
     """
     _logger = configuration.logger
     _logger.debug("W_API: search: (%s, %s, %s)" % (workflow_session,
-                                                  workflow_type,
-                                                  workflow_attributes))
+                                                   workflow_type,
+                                                   workflow_attributes))
     if workflow_type in WORKFLOW_TYPES:
         workflows = get_workflow_with(configuration,
                                       workflow_session['owner'],
@@ -328,8 +328,6 @@ def main(client_id, user_arguments_dict):
                                'text': msg})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
-    logger.debug("Received %s" % (json_data))
-
     # IMPORTANT!! Do not access the json_data input before it has been
     # validated by validated_input.
     accepted, rejected = validated_input(
@@ -373,6 +371,8 @@ def main(client_id, user_arguments_dict):
             workflow_sessions_db = load_workflow_sessions_db(configuration)
 
     if workflow_session_id not in workflow_sessions_db:
+        # TODO, Log this in the auth logger,
+        # Also track multiple attempts from the same IP
         output_objects.append({'object_type': 'error_text',
                                'text': 'Invalid workflowsessionid'})
         return (output_objects, returnvalues.CLIENT_ERROR)

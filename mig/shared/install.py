@@ -935,7 +935,10 @@ cert, oid and sid based https!
             print "ERROR: workflows use requested but " \
                   "nbformat is not installed!"
             sys.exit(1)
-
+        except SyntaxError:
+            print "ERROR: workflows requires that the more-itertools package" \
+                  "is installed as version 5.0.0"
+            sys.exit(1)
         try:
             import nbconvert
         except ImportError:
@@ -1164,8 +1167,6 @@ ssh-keygen -f %(__DAEMON_KEYCERT__)s -y > %(__DAEMON_PUBKEY__)s""" % user_dict
         xgi_auth = 'cgi-auth'
     user_dict['__TWOFACTOR_PAGE__'] = os.path.join(
         '/', xgi_auth, 'twofactor.py')
-    user_dict['__AUTOLOGOUT_PAGE__'] = os.path.join(
-        '/', xgi_auth, 'autologout.py')
     if landing_page is None:
         user_dict['__LANDING_PAGE__'] = os.path.join(
             '/', xgi_bin, 'dashboard.py')
