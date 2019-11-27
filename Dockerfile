@@ -187,7 +187,7 @@ RUN pip2 install --user \
     pytest
 
 # Install and configure MiG
-ARG MIG_CHECKOUT=4383
+ARG MIG_CHECKOUT=4398
 RUN svn checkout -r $MIG_CHECKOUT https://svn.code.sf.net/p/migrid/code/trunk .
 
 USER root
