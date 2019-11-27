@@ -14,7 +14,6 @@ c.JupyterHub.base_url = '/dag'
 c.JupyterHub.spawner_class = 'jhub.SwarmSpawner'
 c.SwarmSpawner.jupyterhub_service_name = 'migrid-service_dag'
 c.SwarmSpawner.start_timeout = 60 * 10
-c.SwarmSpawner.image = 'nielsbohr/base-notebook:latest'
 c.SwarmSpawner.networks = ['migrid-service_default']
 c.SwarmSpawner.use_user_options = True
 
@@ -32,12 +31,14 @@ mounts = [SSHFSMounter({
 
 c.SwarmSpawner.container_spec = {
     'env': {'JUPYTER_ENABLE_LAB': '1',
-            'NOTEBOOK_DIR': work_path,
-            'SESSION_ID': '{data[Session][Session_id]}',
-            'URL': '{data[Session][URL]}'
-            },
+            'NOTEBOOK_DIR': work_path},
     'mounts': mounts
 }
+
+c.SwarmSpawner.dockerimages = [
+    {'image': 'nielsbohr/base-notebook:workflow',
+     'name': 'Workflow demo'}
+]
 
 # Authenticator setup
 c.JupyterHub.authenticator_class = 'jhubauthenticators.HeaderAuthenticator'

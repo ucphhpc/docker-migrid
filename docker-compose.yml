@@ -52,7 +52,7 @@ services:
     command: /app/docker-entry.sh -u dev@dev.dk -p Passw0rd123
 
   dag:
-    image: nielsbohr/jupyterhub:latest
+    image: nielsbohr/jupyterhub:4c9fc363a62a
     hostname: dag
     depends_on:
       - migrid
@@ -85,6 +85,14 @@ services:
       - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/sid.migrid.test.crt:ro
       - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/oid.migrid.test.key:ro
       - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/sid.migrid.test.key:ro
+  docker-volume-monitor:
+    image: rasmunk/docker-volume-monitor
+    deploy:
+      mode: global
+    environment:
+      TZ: Europe/Copenhagen
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
   certs:
