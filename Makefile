@@ -1,7 +1,7 @@
 OWNER=nielsbohr
 IMAGE=migrid
 TAG=edge
-CHECKOUT=4207
+CHECKOUT=4400
 
 build:
 	mkdir -p ./certs
