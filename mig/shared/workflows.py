@@ -2121,6 +2121,8 @@ def __update_workflow_recipe(configuration, client_id, vgrid, workflow_recipe,
 
     for variable in workflow_recipe.keys():
         recipe[variable] = workflow_recipe[variable]
+        
+    # TODO, update workflow task file if new is provided
 
     recipe, msg = __build_wr_object(configuration, **recipe)
     if not recipe:
