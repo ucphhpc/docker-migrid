@@ -1314,6 +1314,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertEqual(pattern_id, msg)
         self.assertFalse(os.path.exists(parameter_path))
 
+# TODO, test that updated workflow recipes task files are updated properly
+
     # def test_recipe_pattern_association_creation_pattern_first(self):
     #     pattern_attributes = {'name': 'association test pattern',
     #                           'vgrid': self.test_vgrid,
