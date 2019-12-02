@@ -287,6 +287,10 @@ def get_job_ids_with_specified_project_name(
     return matching_job_ids
 
 
+def get_jobs_with():
+    pass
+
+
 def fields_to_mrsl(configuration, user_arguments_dict, external_dict):
     """Generate mRSL from fields"""
     spec = []

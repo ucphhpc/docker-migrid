@@ -302,6 +302,7 @@ class Configuration:
     vgrid_resources = 'resources'
     vgrid_triggers = 'triggers'
     vgrid_settings = 'settings'
+    vgrid_recent_job_queue = 'jobqueue'
     vgrid_sharelinks = 'sharelinks'
     vgrid_imagesettings = 'imagesettings'
     vgrid_monitor = 'monitor'
