@@ -49,7 +49,7 @@ from shared.vgridkeywords import get_trigger_keywords_dict, \
     get_settings_keywords_dict
 
 
-JOB_QUEUE_COUNT = 5
+JOB_QUEUE_COUNT = 100
 
 JOB_CLIENT = 'client_id'
 JOB_ID = 'job_id'
