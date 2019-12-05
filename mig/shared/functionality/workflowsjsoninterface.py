@@ -40,7 +40,6 @@ from shared.safeinput import REJECT_UNSET, valid_workflow_pers_id, \
     valid_workflow_input_paths, valid_workflow_output, valid_workflow_recipes,\
     valid_workflow_variables, valid_workflow_attributes, valid_workflow_type, \
     valid_workflow_operation, valid_sid, validated_input, html_escape
-from shared.job import get_jobs_with, JOB_TYPES, JOB
 from shared.workflows import WORKFLOW_TYPES, WORKFLOW_CONSTRUCT_TYPES, \
     WORKFLOW_PATTERN, valid_session_id, get_workflow_with,\
     load_workflow_sessions_db, create_workflow, delete_workflow,\
@@ -80,12 +79,11 @@ def type_value_checker(type_value):
     Validate that the provided workflow type is allowed. A ValueError
     Exception will be raised if type_value is invalid.
     :param type_value: The type to be checked. Valid types are
-    'workflowpattern', 'workflowrecipe', 'any', 'manual_trigger',
-    'cancel_job', 'resubmit_job', 'pattern_graph', 'job', and 'queue'
+    'workflowpattern', 'workflowrecipe', 'any', and 'manual_trigger'.
     :return: No return
     """
     valid_types = WORKFLOW_TYPES + WORKFLOW_ACTION_TYPES +\
-                  WORKFLOW_SEARCH_TYPES + JOB_TYPES
+                  WORKFLOW_SEARCH_TYPES
 
     if type_value not in valid_types:
         raise ValueError("Workflow type '%s' is not valid"
@@ -192,16 +190,8 @@ def workflow_api_read(configuration, workflow_session,
     _logger.debug("W_API: search: (%s, %s, %s)" % (workflow_session,
                                                    workflow_type,
                                                    workflow_attributes))
-    if workflow_type in JOB_TYPES:
-        first = False
-        if workflow_type == JOB:
-            first = True
-        return get_jobs_with(workflow_session['owner'],
-                             configuration.mrsl_files_dir,
-                             _logger,
-                             first=first,
-                             **workflow_attributes)
-    elif workflow_type in WORKFLOW_TYPES:
+
+    if workflow_type in WORKFLOW_TYPES:
         workflows = get_workflow_with(configuration,
                                       workflow_session['owner'],
                                       user_query=True,
@@ -217,7 +207,7 @@ def workflow_api_read(configuration, workflow_session,
                                workflow_type=workflow_type,
                                **workflow_attributes)
     return (False, "Invalid workflow read api type: '%s', valid are: '%s'" %
-            (workflow_type, ', '.join(WORKFLOW_TYPES + JOB_TYPES)))
+            (workflow_type, ', '.join(WORKFLOW_TYPES)))
 
 
 def workflow_api_update(configuration, workflow_session,

@@ -30,13 +30,14 @@
 import fnmatch
 import os
 import re
+import time
 
 from shared.base import valid_dir_input
 from shared.defaults import default_vgrid, keyword_owners, keyword_members, \
     keyword_all, keyword_auto, keyword_never, keyword_any, keyword_none, \
     csrf_field, default_vgrid_settings_limit, vgrid_nest_sep, _dot_vgrid
 from fileio import make_symlink, move, check_readonly, check_writable, \
-    check_write_access
+    check_write_access, unpickle
 from shared.findtype import is_user, is_resource
 from shared.handlers import get_csrf_limit, make_csrf_token
 from shared.html import html_post_helper
@@ -57,6 +58,42 @@ VALID_JOB_QUEUE = {
     JOB_CLIENT: str,
     JOB_ID: str
 }
+
+
+def get_vgrid_recent_jobs(configuration, vgrid_name, json_serializable=False):
+    """Retrieves all jobs in a vgrid recent job queue. This should be all jobs
+    run as part of a vgrid and is not limited to one users submissions. """
+    job_queue = vgrid_recent_jobs(vgrid_name, configuration)
+
+    jobs = []
+    for queue_entry in job_queue:
+        entry_client = queue_entry[JOB_CLIENT]
+        entry_id = queue_entry[JOB_ID]
+        path = os.path.abspath(
+            os.path.join(configuration.mrsl_files_dir, entry_client, entry_id)
+        )
+
+        job_dict = unpickle(path, configuration.logger)
+
+        if not job_dict:
+            continue
+
+        # convert timestamps as they are not json serializable
+        if json_serializable:
+            for key, value in job_dict.items():
+                if isinstance(value, time.struct_time):
+                    job_dict[key] = \
+                        time.strftime('%Y-%m-%d %H:%M:%S', job_dict[key])
+            if 'EXECUTION_HISTORY' in job_dict:
+                for entry in job_dict['EXECUTION_HISTORY']:
+                    for key, value in entry.items():
+                        if isinstance(value, time.struct_time):
+                            entry[key] = \
+                                time.strftime('%Y-%m-%d %H:%M:%S', entry[key])
+
+        jobs.append(job_dict)
+    return jobs
+
 
 def vgrid_add_remove_table(client_id,
                            vgrid_name,

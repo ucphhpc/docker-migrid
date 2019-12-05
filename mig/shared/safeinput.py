@@ -59,6 +59,11 @@ VALID_WORKFLOW_ATTRIBUTES = [
     'parameterize_over'
 ]
 
+VALID_JOB_ATTRIBUTES = [
+    'job_id',
+    'vgrid'
+]
+
 # Accented character constant helpers - the allowed set of accented characters
 # is chosen based which of these constants is used as the include_accented
 # option to some of the validator functions.
@@ -903,6 +908,41 @@ def valid_workflow_operation(operation):
 def valid_workflow_type(type):
     """Verify that the supplied workflow type only contains letters"""
     valid_ascii(type, extra_chars='_')
+    
+
+def valid_job_id(id):
+    """Verify that the supplied id only contains characters valid in a job
+    id."""
+    # TODO expand this?
+    valid_ascii(id, extra_chars='_.')
+
+
+def valid_job_vgrid(vgrid):
+    """Verify that supplied vgrid only contains characters that
+    we consider valid in a vgrid name."""
+    valid_vgrid_name(vgrid)
+
+
+def valid_job_attributes(attributes):
+    """Verify that supplied attributes dictionary only contains entries that
+      we consider valid job attribute keys.
+      """
+    if not isinstance(attributes, dict):
+        raise InputException("Expects job attributes to be a dictionary")
+
+    for _key, _value in attributes.items():
+        if _key not in VALID_JOB_ATTRIBUTES:
+            raise InputException("Job attribute '%s' is illegal" % _key)
+
+
+def valid_job_type(type):
+    """Verify that the supplied job type only contains letters + _ """
+    valid_ascii(type, extra_chars='_')
+
+
+def valid_job_operation(operation):
+    """Verify that the supplied job operation only contains letters + _ """
+    valid_ascii(operation, extra_chars='_')
 
 
 def filter_ascii(contents):
