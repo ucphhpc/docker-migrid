@@ -183,7 +183,14 @@ def job_api_read(configuration, workflow_session, job_type=JOB,
 
         job_list = \
             get_vgrid_recent_jobs(configuration, vgrid, json_serializable=True)
-        return  (True, job_list)
+
+        _logger.info("Found %d jobs" % len(job_list))
+
+        job_dict = {}
+        for job in job_list:
+            job_dict[job['JOB_ID']] = job
+
+        return  (True, job_dict)
     else:
         if 'job_id' not in job_attributes:
             return (False, "Can't read single job without 'job_id' attribute")
@@ -199,20 +206,6 @@ def job_api_read(configuration, workflow_session, job_type=JOB,
             vgrid=vgrid,
             only_user_jobs=False
         )
-
-
-    # if job_type in JOB_TYPES:
-    #     first = False
-    #     if workflow_type == JOB:
-    #         first = True
-    #     return get_jobs_with(workflow_session['owner'],
-    #                          configuration.mrsl_files_dir,
-    #                          _logger,
-    #                          first=first,
-    #                          **workflow_attributes)
-    # return (False, "Invalid workflow read api type: '%s', valid are: '%s'" %
-    #         (workflow_type, ', '.join(WORKFLOW_TYPES + JOB_TYPES)))
-    return (True, 'job_api_read response')
 
 
 def job_api_update(configuration, workflow_session, job_type=JOB,
@@ -404,15 +397,15 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.OK)
     # Read
     if operation == JOB_API_READ:
-        jobs, msg = job_api_read(configuration, workflow_session,
+        status, jobs = job_api_read(configuration, workflow_session,
                                  job_type, **job_attributes)
-        if not jobs:
+        if not status:
             output_objects.append(
                 {'object_type': 'error_text',
-                 'text': msg})
+                 'text': jobs})
             return (output_objects, returnvalues.OK)
 
-        output_objects.append({'object_type': 'job_list', 'jobs': msg})
+        output_objects.append({'object_type': 'job_dict', 'jobs': jobs})
         return (output_objects, returnvalues.OK)
 
     # Update

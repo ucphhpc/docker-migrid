@@ -32,7 +32,7 @@ import os
 import re
 import time
 
-from shared.base import valid_dir_input
+from shared.base import valid_dir_input, client_id_dir
 from shared.defaults import default_vgrid, keyword_owners, keyword_members, \
     keyword_all, keyword_auto, keyword_never, keyword_any, keyword_none, \
     csrf_field, default_vgrid_settings_limit, vgrid_nest_sep, _dot_vgrid
@@ -63,18 +63,32 @@ VALID_JOB_QUEUE = {
 def get_vgrid_recent_jobs(configuration, vgrid_name, json_serializable=False):
     """Retrieves all jobs in a vgrid recent job queue. This should be all jobs
     run as part of a vgrid and is not limited to one users submissions. """
-    job_queue = vgrid_recent_jobs(vgrid_name, configuration)
+
+    status, job_queue = vgrid_recent_jobs(vgrid_name, configuration)
+
+    if not status:
+        msg = "Could not retreive job queue for vgrid '%s'" % vgrid_name
+        configuration.logger.error(msg)
+        return (False, msg)
+
 
     jobs = []
     for queue_entry in job_queue:
+        configuration.logger.info("Inspecting %s" % queue_entry)
+
         entry_client = queue_entry[JOB_CLIENT]
         entry_id = queue_entry[JOB_ID]
         path = os.path.abspath(
-            os.path.join(configuration.mrsl_files_dir, entry_client, entry_id)
+            os.path.join(configuration.mrsl_files_dir,
+                         client_id_dir(entry_client), entry_id) + '.mRSL'
         )
 
-        job_dict = unpickle(path, configuration.logger)
-
+        try:
+            job_dict = unpickle(path, configuration.logger)
+        except Exception:
+            msg = "Could not load job queue file '%s'" % path
+            configuration.logger.error(msg)
+            return (False, msg)
         if not job_dict:
             continue
 

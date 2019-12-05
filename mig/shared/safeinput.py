@@ -910,11 +910,11 @@ def valid_workflow_type(type):
     valid_ascii(type, extra_chars='_')
     
 
-def valid_job_id(id):
-    """Verify that the supplied id only contains characters valid in a job
-    id."""
-    # TODO expand this?
-    valid_ascii(id, extra_chars='_.')
+# def valid_job_id(id):
+#     """Verify that the supplied id only contains characters valid in a job
+#     id."""
+#     # TODO expand this?
+#     valid_ascii(id, extra_chars='_.')
 
 
 def valid_job_vgrid(vgrid):
