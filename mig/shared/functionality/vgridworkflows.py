@@ -129,8 +129,8 @@ def main(client_id, user_arguments_dict):
     if not vgrid_is_owner_or_member(vgrid_name, client_id,
                                     configuration):
         output_objects.append({'object_type': 'error_text',
-                               'text': '''You must be an owner or member of %s vgrid to
-access the workflows.'''
+                               'text': '''You must be an owner or member of 
+                               %s vgrid to access the workflows.'''
                                % vgrid_name})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
@@ -154,8 +154,8 @@ access the workflows.'''
         if operation == "show":
             add_ready += '%s;' % refresh_call
         add_ready += '''
-              /* Init variables helper as foldable but closed and with individual
-              heights */
+              /* Init variables helper as foldable but closed and with 
+              individual heights */
               $(".variables-accordion").accordion({
                                            collapsible: true,
                                            active: false,
@@ -234,6 +234,16 @@ access the workflows.'''
                         dest_path = os.path.join(trigger_job_final_dir,
                                                  filename)
                         move_file(src_path, dest_path, configuration)
+
+                        logger.info(
+                            "DELETE ME: The triggered job '%s' with id '%s' "
+                            "and user '%s'. This job was origionaly created "
+                            "from a '%s' event at '%s'."
+                            % (filename, trigger_job['jobid'],
+                               trigger_job['owner'], trigger_job['event_type'],
+                               trigger_job['src_path'])
+                        )
+                        # PROVENANCE, update history here
                     else:
                         logger.error('Trigger job: %s, unknown state: %s'
                                      % (trigger_job['jobid'],

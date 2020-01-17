@@ -20,7 +20,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
+# USA.
 #
 # -- END_HEADER ---
 #
@@ -38,7 +39,8 @@ from shared.conf import get_configuration_object
 from shared.functional import validate_input_and_cert, REJECT_UNSET
 from shared.handlers import safe_handler, get_csrf_limit
 from shared.init import initialize_main_variables
-from shared.job import new_job, fields_to_mrsl, create_job_object_from_pickled_mrsl
+from shared.job import new_job, fields_to_mrsl, \
+    create_job_object_from_pickled_mrsl
 from shared.mrslkeywords import get_job_specs, get_keywords_dict
 
 
@@ -48,8 +50,7 @@ def signature():
     show_fields = get_job_specs(configuration)
 
     for (key, specs) in show_fields:
-        if not defaults.has_key(key):
-
+        if key not in defaults:
             # make sure required fields are set but do not overwrite
 
             if specs['Required']:
