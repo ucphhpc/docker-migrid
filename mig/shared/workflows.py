@@ -2203,7 +2203,8 @@ def __prepare_template(configuration, template, **kwargs):
         if r_key not in kwargs:
             kwargs[r_key] = ''
 
-    # Prepare job executable
+    # Prepare job executable. Note thet CPUCOUNT, NODECOUNT and MEMORY must
+    # be more than zero for the job to be considered feasible
     template_mrsl = \
         """
 ::EXECUTE::
@@ -2215,8 +2216,8 @@ def __prepare_template(configuration, template, **kwargs):
 ::RETRIES::
 0
 
-::MEMORY::
-0
+::MEMORY:: 
+256
 
 ::DISK::
 0
@@ -2225,10 +2226,10 @@ def __prepare_template(configuration, template, **kwargs):
 0
 
 ::CPUCOUNT::
-0
+1
 
 ::NODECOUNT::
-0
+1
 
 ::VGRID::
 +TRIGGERVGRIDNAME+
