@@ -211,6 +211,9 @@ def create_job_script(
 
         (mount_private_key, mount_public_key) = generate_ssh_rsa_key_pair()
 
+        logger.info("DELETE ME - private key: %s" % mount_private_key)
+        logger.info("DELETE ME - public key: %s" % mount_public_key)
+
         # Generate known_hosts
 
         if not os.path.exists(configuration.user_sftp_key_pub):
@@ -225,7 +228,7 @@ def create_job_script(
         sftp_address = configuration.user_sftp_show_address
         sftp_port = configuration.user_sftp_show_port
         sftp_addresses = socket.gethostbyname_ex(sftp_address or
-                                                 socket.getfqdn())
+                                                socket.getfqdn())
         mount_known_hosts = "%s,[%s]:%s" % (sftp_addresses[0],
                                             sftp_addresses[0], sftp_port)
         for list_idx in xrange(1, len(sftp_addresses)):
@@ -720,7 +723,7 @@ def gen_job_script(
                                          sftp_address, sftp_port,
                                          'mount_status'))
         job_array.append(generator.print_on_error('mount_status', '0',
-                                                  'failded to mount job home'))
+                                                  'failed to mount job home'))
         job_array.append(generator.log_on_error('mount_status', '0',
                                                 'system: mount'))
     job_array.append(generator.comment('execute!'))

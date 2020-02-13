@@ -235,15 +235,19 @@ def main(client_id, user_arguments_dict):
                                                  filename)
                         move_file(src_path, dest_path, configuration)
 
-                        logger.info(
-                            "DELETE ME: The triggered job '%s' with id '%s' "
-                            "and user '%s'. This job was origionaly created "
-                            "from a '%s' event at '%s'."
-                            % (filename, trigger_job['jobid'],
-                               trigger_job['owner'], trigger_job['event_type'],
-                               trigger_job['src_path'])
-                        )
-                        # PROVENANCE, update history here
+                        if 'event_type' in trigger_job \
+                                and 'src_path' in trigger_job:
+                            logger.info(
+                                "DELETE ME: The triggered job '%s' with id "
+                                "'%s' and user '%s' has completed. This job "
+                                "was originally created from a '%s' event at "
+                                "'%s'."
+                                % (filename, trigger_job['jobid'],
+                                   trigger_job['owner'],
+                                   trigger_job['event_type'],
+                                   trigger_job['src_path'])
+                            )
+                            # PROVENANCE, update history here
                     else:
                         logger.error('Trigger job: %s, unknown state: %s'
                                      % (trigger_job['jobid'],

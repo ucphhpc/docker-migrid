@@ -1004,6 +1004,7 @@ while True:
                             executing_queue.queue_length())
                     logger.info('empty job script created')
             else:
+                logger.info("DELETE ME - new job about to be scheduled: %s" % job_dict)
 
                 # a job has been scheduled to be executed on this
                 # resource: change status in the mRSL file
@@ -1306,6 +1307,23 @@ while True:
 
             executing_queue.dequeue_job_by_id(job_id)
             msg += '%s removed from executing queue.' % job_id
+
+        # Generate job history if triggered job
+        if job_dict:
+            logger.info("DELETE ME: job_dict: %s" % job_dict)
+            if 'event_type' in job_dict \
+                    and 'src_path' in job_dict:
+                logger.info(
+                    "DELETE ME: The triggered job '%s' with id "
+                    "'%s' and user '%s' has completed. This job "
+                    "was originally created from a '%s' event at "
+                    "'%s'."
+                    % (job_id, job_dict['jobid'],
+                       job_dict['owner'],
+                       job_dict['event_type'],
+                       job_dict['src_path'])
+                )
+                # PROVENANCE, update history here
 
         # print msg
 

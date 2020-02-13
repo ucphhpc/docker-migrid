@@ -234,7 +234,8 @@ def fix_missing(config_file, verbose=True):
 
     workflows_section = {'vgrid_tasks_home': '.workflow_tasks_home/',
                          'vgrid_patterns_home': '.workflow_patterns_home/',
-                         'vgrid_recipes_home': '.workflow_recipes_home/'}
+                         'vgrid_recipes_home': '.workflow_recipes_home/',
+                         'vgrid_history_home': '.workflow_history_home/'}
 
     defaults = {
         'GLOBAL': global_section,
@@ -331,6 +332,7 @@ class Configuration:
     workflows_vgrid_tasks_home = ''
     workflows_vgrid_patterns_home = ''
     workflows_vgrid_recipes_home = ''
+    workflows_vgrid_history_home = ''
     site_landing_page = ''
     site_skin = ''
     site_collaboration_links = ''
@@ -1394,6 +1396,9 @@ location.""" % self.config_file
         if config.has_option('WORKFLOWS', 'vgrid_recipes_home'):
             self.workflows_vgrid_recipes_home = config.get(
                 'WORKFLOWS', 'vgrid_recipes_home')
+        if config.has_option('WORKFLOWS', 'vgrid_history_home'):
+            self.workflows_vgrid_history_home = config.get(
+                'WORKFLOWS', 'vgrid_history_home')
 
         if config.has_option('SITE', 'images'):
             self.site_images = config.get('SITE', 'images')

@@ -60,6 +60,7 @@ from shared.vgridaccess import get_vgrid_map, VGRIDS, user_vgrid_access
 WRITE_LOCK = 'write.lock'
 WORKFLOW_PATTERN = 'workflowpattern'
 WORKFLOW_RECIPE = 'workflowrecipe'
+WORKFLOW_HISTORY = 'workflowhistory'
 WORKFLOW_ANY = 'any'
 WORKFLOW_API_DB_NAME = 'workflow_api_db'
 WORKFLOW_TYPES = [WORKFLOW_PATTERN, WORKFLOW_RECIPE, WORKFLOW_ANY]
@@ -1026,7 +1027,8 @@ def init_workflow_home(configuration, vgrid, workflow_type=WORKFLOW_PATTERN):
     Creates directories in which to save workflow object data.
     :param configuration: The MiG configuration object.
     :param vgrid: The MiG VGrid
-    :param workflow_type: The MiG workflow type.
+    :param workflow_type: The MiG workflow type. Can be workflowpattern,
+    workflowrecipe, or workflowhistory.
     :return: (Tuple (boolean, string)) The first value is True if the required
     directory has been created or already exists, and is False if it cannot be
     created. If False, then an accompanying error message is provided in the
@@ -1043,6 +1045,9 @@ def init_workflow_home(configuration, vgrid, workflow_type=WORKFLOW_PATTERN):
     elif workflow_type == WORKFLOW_RECIPE:
         path = os.path.join(vgrid_path,
                             configuration.workflows_vgrid_recipes_home)
+    elif workflow_type == WORKFLOW_HISTORY:
+        path = os.path.join(vgrid_path,
+                            configuration.workflows_vgrid_history_home)
 
     if not path:
         return (False, "Failed to setup init workflow home '%s' in vgrid '%s'"
@@ -1683,7 +1688,7 @@ def __create_workflow_pattern_entry(configuration, client_id, vgrid,
     # Create a trigger of each associated input path with an empty `template`
     for path in workflow_pattern['input_paths']:
         trigger, msg = create_workflow_trigger(configuration, client_id, vgrid,
-                                               path)
+                                               path, persistence_id)
         if not trigger:
             return (False, msg)
 
@@ -1963,7 +1968,7 @@ def __update_workflow_pattern(configuration, client_id, vgrid,
         # Create empty trigger for path
         for path in missing_paths:
             trigger, msg = create_workflow_trigger(configuration, client_id,
-                                                   vgrid, path)
+                                                   vgrid, path, persistence_id)
             if not trigger:
                 return (False, msg)
 
@@ -2204,7 +2209,7 @@ def __prepare_template(configuration, template, **kwargs):
             kwargs[r_key] = ''
 
     # Prepare job executable. Note thet CPUCOUNT, NODECOUNT and MEMORY must
-    # be more than zero for the job to be considered feasible
+    # be more than zero for the job to be considered feasible.
     template_mrsl = \
         """
 ::EXECUTE::
@@ -2231,11 +2236,11 @@ def __prepare_template(configuration, template, **kwargs):
 ::NODECOUNT::
 1
 
-::VGRID::
-+TRIGGERVGRIDNAME+
-
 ::MOUNT::
 +TRIGGERVGRIDNAME+ +TRIGGERVGRIDNAME+
+
+::VGRID::
++TRIGGERVGRIDNAME+
 
 ::ENVIRONMENT::
 LC_ALL=en_US.utf8
@@ -2652,7 +2657,7 @@ def __delete_task_parameter_file(configuration, vgrid, pattern):
     return delete_file(path, _logger, allow_missing=True)
 
 
-def create_workflow_trigger(configuration, client_id, vgrid, path,
+def create_workflow_trigger(configuration, client_id, vgrid, path, pattern,
                             arguments=None, templates=None):
     """
     Creates a workflow trigger for a given path.
@@ -2660,6 +2665,7 @@ def create_workflow_trigger(configuration, client_id, vgrid, path,
     :param client_id: The MiG user to own the trigger.
     :param vgrid: The MiG VGrid containing trigger.
     :param path: Path against which events will be tested to determine if
+    :param path: Persistence id of the pattern this trigger is associated with
     trigger fires or not. Paths are relative to the containing VGrid.
     :param arguments: [optional] (list) list of additional trigger arguments.
     :param templates: [optional] (list) list of additional trigger templates.
@@ -2696,6 +2702,7 @@ def create_workflow_trigger(configuration, client_id, vgrid, path,
     rule_dict = {
         'rule_id': rule_id,
         'vgrid_name': vgrid,
+        'pattern_id': pattern,
         'path': norm_path,
         'changes': ['created', 'modified'],
         'run_as': client_id,
