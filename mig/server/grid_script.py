@@ -1004,8 +1004,6 @@ while True:
                             executing_queue.queue_length())
                     logger.info('empty job script created')
             else:
-                logger.info("DELETE ME - new job about to be scheduled: %s" % job_dict)
-
                 # a job has been scheduled to be executed on this
                 # resource: change status in the mRSL file
 
