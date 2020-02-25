@@ -1456,7 +1456,9 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                 'out_prefix': 'dir/{PREFIX}.hdf5',
                 'out_extension': 'dir/{EXTENSION}.hdf5',
                 'out_vgrid': 'dir/{VGRID}.hdf5',
-                'out_job': 'dir/{JOB}.hdf5'
+                'out_job': 'dir/{JOB}.hdf5',
+                'out_unspecified': 'dir/{UNSPECIFIED}.hdf5',
+                'out_lowercase': 'dir/{path}.hdf5'
             },
             'recipes': [self.test_recipe_name],
             'variables': {
@@ -1468,8 +1470,10 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                 'var_prefix': 'dir/{PREFIX}.hdf5',
                 'var_extension': 'dir/{EXTENSION}.hdf5',
                 'var_vgrid': 'dir/{VGRID}.hdf5',
-                'var_job': 'dir/{JOB}.hdf5'
-            }
+                'var_job': 'dir/{JOB}.hdf5',
+                'var_unspecified': 'dir/{UNSPECIFIED}.hdf5',
+                'var_lowercase': 'dir/{path}.hdf5'
+        }
         }
 
         expected_params = {
@@ -1483,6 +1487,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
             'out_extension': 'ENV_out_extension',
             'out_vgrid': 'ENV_out_vgrid',
             'out_job': 'ENV_out_job',
+            'out_unspecified': 'Generic/dir/{UNSPECIFIED}.hdf5',
+            'out_lowercase': 'Generic/dir/{path}.hdf5',
             'var_path': 'ENV_var_path',
             'var_rel_path': 'ENV_var_rel_path',
             'var_dir': 'ENV_var_dir',
@@ -1492,6 +1498,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
             'var_extension': 'ENV_var_extension',
             'var_vgrid': 'ENV_var_vgrid',
             'var_job': 'ENV_var_job',
+            'var_unspecified': 'dir/{UNSPECIFIED}.hdf5',
+            'var_lowercase': 'dir/{path}.hdf5',
         }
 
         created, pattern_id = create_workflow(self.configuration,
