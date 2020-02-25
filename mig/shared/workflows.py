@@ -2751,6 +2751,8 @@ def create_workflow_trigger(configuration, client_id, vgrid, path, pattern,
         'rule_id': rule_id,
         'vgrid_name': vgrid,
         'pattern_id': pattern['persistence_id'],
+        # Some variables will only be defined at job creation, and so are
+        # passed to the final job as additional environment variables.
         'environment_vars': environment_variables,
         'path': norm_path,
         'changes': ['created', 'modified'],

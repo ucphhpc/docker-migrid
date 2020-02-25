@@ -915,7 +915,8 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
                     mrsl_fd.truncate(0)
 
                     # If rule requires additional environment vars, add them
-                    # here
+                    # to the job definition here. This could be moved inside
+                    # the fill_mrsl_template function instead.
                     add_env_vars = rule.get('environment_vars', None)
                     if add_env_vars:
                         env_var_str = ''
