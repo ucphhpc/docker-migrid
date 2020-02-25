@@ -1241,13 +1241,13 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_file': 'hdf5_input',
                               'output': {
                                   'processed_data':
-                                      'pattern_0_output/{FILENAME}.hdf5'},
+                                      'pattern_0_output/name.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
 
         expected_params = {
             'hdf5_input': 'ENV_WORKFLOW_INPUT_PATH',
-            'processed_data': 'ENV_processed_data',
+            'processed_data': 'Generic/pattern_0_output/name.hdf5',
             'iterations': 20
         }
 
@@ -1293,13 +1293,13 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_file': 'hdf5_input',
                               'output': {
                                   'processed_data':
-                                      'pattern_0_output/{FILENAME}.hdf5'},
+                                      'pattern_0_output/name.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
 
         expected_params = {
             'hdf5_input': 'ENV_WORKFLOW_INPUT_PATH',
-            'processed_data': 'ENV_processed_data',
+            'processed_data': 'Generic/pattern_0_output/name.hdf5',
             'iterations': 20
         }
 
@@ -1398,7 +1398,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_file': 'hdf5_input',
                               'output': {
                                   'processed_data':
-                                      'pattern_0_output/{FILENAME}.hdf5'},
+                                      'pattern_0_output/name.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
 
@@ -1440,6 +1440,94 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertTrue(deleted)
         self.assertEqual(pattern_id, msg)
         self.assertFalse(os.path.exists(parameter_path))
+
+    def test_create_pattern_substitutions(self):
+        pattern_attributes = {
+            'name': self.test_pattern_name,
+            'vgrid': self.test_vgrid,
+            'input_paths': ['input_dir/*.hdf5'],
+            'input_file': 'hdf5_input',
+            'output': {
+                'out_path': 'dir/{PATH}.hdf5',
+                'out_rel_path': 'dir/{REL_PATH}.hdf5',
+                'out_dir': 'dir/{DIR}.hdf5',
+                'out_rel_dir': 'dir/{REL_DIR}.hdf5',
+                'out_filename': 'dir/{FILENAME}.hdf5',
+                'out_prefix': 'dir/{PREFIX}.hdf5',
+                'out_extension': 'dir/{EXTENSION}.hdf5',
+                'out_vgrid': 'dir/{VGRID}.hdf5',
+                'out_job': 'dir/{JOB}.hdf5'
+            },
+            'recipes': [self.test_recipe_name],
+            'variables': {
+                'var_path': 'dir/{PATH}.hdf5',
+                'var_rel_path': 'dir/{REL_PATH}.hdf5',
+                'var_dir': 'dir/{DIR}.hdf5',
+                'var_rel_dir': 'dir/{REL_DIR}.hdf5',
+                'var_filename': 'dir/{FILENAME}.hdf5',
+                'var_prefix': 'dir/{PREFIX}.hdf5',
+                'var_extension': 'dir/{EXTENSION}.hdf5',
+                'var_vgrid': 'dir/{VGRID}.hdf5',
+                'var_job': 'dir/{JOB}.hdf5'
+            }
+        }
+
+        expected_params = {
+            'hdf5_input': 'ENV_WORKFLOW_INPUT_PATH',
+            'out_path': 'ENV_out_path',
+            'out_rel_path': 'ENV_out_rel_path',
+            'out_dir': 'ENV_out_dir',
+            'out_rel_dir': 'ENV_out_rel_dir',
+            'out_filename': 'ENV_out_filename',
+            'out_prefix': 'ENV_out_prefix',
+            'out_extension': 'ENV_out_extension',
+            'out_vgrid': 'ENV_out_vgrid',
+            'out_job': 'ENV_out_job',
+            'var_path': 'ENV_var_path',
+            'var_rel_path': 'ENV_var_rel_path',
+            'var_dir': 'ENV_var_dir',
+            'var_rel_dir': 'ENV_var_rel_dir',
+            'var_filename': 'ENV_var_filename',
+            'var_prefix': 'ENV_var_prefix',
+            'var_extension': 'ENV_var_extension',
+            'var_vgrid': 'ENV_var_vgrid',
+            'var_job': 'ENV_var_job',
+        }
+
+        created, pattern_id = create_workflow(self.configuration,
+                                              self.username,
+                                              WORKFLOW_PATTERN,
+                                              **pattern_attributes)
+        self.logger.info(pattern_id)
+        self.assertTrue(created)
+        workflow = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_PATTERN,
+                                     **pattern_attributes)
+        self.assertIsNotNone(workflow)
+        self.assertEqual(len(workflow), 1)
+
+        parameter_path = get_task_parameter_path(self.configuration,
+                                                 self.test_vgrid,
+                                                 workflow[0])
+        self.assertTrue(os.path.exists(parameter_path))
+        parameters = load(parameter_path, 'yaml', 'r')
+        self.assertIsNotNone(parameters)
+        self.logger.info(parameters)
+
+        self.assertIn(pattern_attributes['input_file'], parameters)
+        self.assertEqual(
+            parameters[pattern_attributes['input_file']],
+            'ENV_WORKFLOW_INPUT_PATH')
+
+        for k, v in pattern_attributes['variables'].items():
+            self.assertIn(k, parameters)
+            self.assertEqual(parameters[k], expected_params[k])
+
+        for k, v in pattern_attributes['output'].items():
+            self.assertIn(k, parameters)
+            self.assertEqual(parameters[k], expected_params[k])
 
 # TODO, test that updated workflow recipes task files are updated properly
 

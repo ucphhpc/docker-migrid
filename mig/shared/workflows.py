@@ -89,8 +89,8 @@ job_env_vars_map = {
     'PREFIX': 'ENV_WORKFLOW_INPUT_PREFIX',
     'EXTENSION': 'ENV_WORKFLOW_INPUT_EXTENSION',
     'VGRID': 'ENV_WORKFLOW_VGRID_NAME',
+    'JOB': 'ENV_JOB_ID'
     # 'USER': '',
-    # 'JOB_ID': ''
 }
 
 vgrid_env_vars_map = {
@@ -101,7 +101,8 @@ vgrid_env_vars_map = {
     'ENV_WORKFLOW_INPUT_FILENAME': '+TRIGGERFILENAME+',
     'ENV_WORKFLOW_INPUT_PREFIX': '+TRIGGERPREFIX+',
     'ENV_WORKFLOW_INPUT_EXTENSION': '+TRIGGEREXTENSION+',
-    'ENV_WORKFLOW_VGRID_NAME': '+TRIGGERVGRIDNAME+'
+    'ENV_WORKFLOW_VGRID_NAME': '+TRIGGERVGRIDNAME+',
+    'ENV_JOB_ID': '+JOBID+'
 }
 
 # A persistent correct pattern
@@ -2625,13 +2626,6 @@ def __create_task_parameter_file(configuration, vgrid, pattern,
     parameter_dict = {}
     if input_file:
         parameter_dict.update({input_file: "ENV_WORKFLOW_INPUT_PATH"})
-
-    # Ensure that output variables are based of the vgrid root dir
-
-    # output = pattern.get('output', VALID_PATTERN['output'])
-    # parameter_dict.update(
-    #     {key: os.path.join(vgrid, value) for key, value in output.items()}
-    # )
 
     for var_name, var_value \
             in pattern.get('variables', VALID_PATTERN['variables']).items():
