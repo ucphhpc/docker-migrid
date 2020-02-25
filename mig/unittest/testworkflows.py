@@ -86,7 +86,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_paths': ['initial_data/*hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
 
@@ -136,7 +137,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_paths': ['initial_data/*hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
 
@@ -164,7 +166,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_paths': ['initial_data/*hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20},
                               'persistence_id': 'persistence0123456789'}
@@ -193,7 +196,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_paths': ['input_dir/*.hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
 
@@ -209,8 +213,9 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                                 'vgrid': self.test_vgrid,
                                 'input_paths': ['input_dir/*txt'],
                                 'input_file': 'hdf5_input',
-                                'output': {'processed_data':
-                                               'pattern_1_output/*.hdf5'},
+                                'output': {
+                                    'processed_data':
+                                        'pattern_1_output/{FILENAME}.hdf5'},
                                 'recipes': [recipe_name],
                                 'variables': {'iterations': 35}}
 
@@ -235,7 +240,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_paths': ['input_dir/*.hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
 
@@ -351,7 +357,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_paths': ['input_dir/*.hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
 
@@ -470,7 +477,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_paths': ['input_dir/*.hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
 
@@ -525,13 +533,81 @@ class WorkflowsFunctionsTest(unittest.TestCase):
 
         self.assertDictEqual(trigger, u_trigger)
 
+    def test_update_pattern_recipe_swap(self):
+        pattern_attributes = {'name': self.test_pattern_name,
+                              'vgrid': self.test_vgrid,
+                              'input_paths': ['input_dir/*.hdf5'],
+                              'input_file': 'hdf5_input',
+                              'output': {
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
+                              'recipes': [self.test_recipe_name],
+                              'variables': {'iterations': 20}}
+
+        created, pattern_id = create_workflow(self.configuration,
+                                              self.username,
+                                              workflow_type=WORKFLOW_PATTERN,
+                                              **pattern_attributes)
+        self.logger.info(pattern_id)
+        self.assertTrue(created)
+
+        workflow = get_workflow_with(self.configuration,
+                                     self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_PATTERN,
+                                     **{'persistence_id': pattern_id})
+
+        trigger_id = next(iter(list(workflow[0]['trigger_recipes'])))
+        trigger, msg = get_workflow_trigger(self.configuration,
+                                            self.test_vgrid,
+                                            trigger_id)
+        # Assert empty trigger
+        self.assertEqual(trigger['path'], pattern_attributes['input_paths'][0])
+        self.assertEqual(trigger['vgrid_name'], pattern_attributes['vgrid'])
+        self.assertEqual(trigger['templates'], [])
+
+        new_attributes = {'recipes': ['new_recipe'],
+                          'vgrid': self.test_vgrid,
+                          'persistence_id': pattern_id}
+
+        updated, u_pattern_id = update_workflow(self.configuration,
+                                                self.username,
+                                                workflow_type=WORKFLOW_PATTERN,
+                                                **new_attributes)
+        self.logger.info(u_pattern_id)
+        self.assertTrue(updated)
+        self.assertEqual(pattern_id, u_pattern_id)
+
+        u_workflow = get_workflow_with(self.configuration,
+                                       client_id=self.username,
+                                       user_query=True,
+                                       workflow_type=WORKFLOW_PATTERN,
+                                       **{'persistence_id': u_pattern_id})
+        self.assertEqual(len(u_workflow), 1)
+
+        self.assertEqual(len(u_workflow[0]['trigger_recipes']), 1)
+
+        self.assertEqual(
+            list(list(u_workflow[0]['trigger_recipes'].values())[0])[0],
+            new_attributes['recipes'][0])
+
+        # Ensure trigger is the same
+        u_trigger_id = next(iter(list(u_workflow[0]['trigger_recipes'])))
+        self.assertEqual(trigger_id, u_trigger_id)
+        u_trigger, msg = get_workflow_trigger(self.configuration,
+                                              self.test_vgrid,
+                                              u_trigger_id)
+
+        self.assertDictEqual(trigger, u_trigger)
+
     def test_update_pattern_without_persistence_id(self):
         pattern_attributes = {'name': self.test_pattern_name,
                               'vgrid': self.test_vgrid,
                               'input_paths': ['input_dir/*.hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
 
@@ -629,7 +705,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_paths': ['input_dir/*.hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
 
@@ -678,7 +755,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_paths': ['input_dir/*.hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
 
@@ -732,7 +810,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_paths': ['input_dir/*.hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
 
@@ -839,7 +918,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_paths': ['input_dir/*.hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
 
@@ -888,7 +968,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_paths': ['input_dir/*.hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
 
@@ -972,7 +1053,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_paths': ['input_dir/*.hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [],
                               'variables': {'iterations': 20}}
 
@@ -1158,9 +1240,16 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_paths': ['initial_data/*hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
+
+        expected_params = {
+            'hdf5_input': 'ENV_WORKFLOW_INPUT_PATH',
+            'processed_data': 'ENV_processed_data',
+            'iterations': 20
+        }
 
         created, pattern_id = create_workflow(self.configuration,
                                               self.username,
@@ -1183,11 +1272,19 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         parameters = load(parameter_path, 'yaml', 'r')
         self.assertIsNotNone(parameters)
         self.logger.info(parameters)
+
         self.assertIn(pattern_attributes['input_file'], parameters)
-        self.assertTrue(set(pattern_attributes['variables'].items())
-                        .issubset(set(parameters.items())))
-        self.assertTrue(set(pattern_attributes['output'])
-                        .issubset(set(parameters)))
+        self.assertEqual(
+            parameters[pattern_attributes['input_file']],
+            'ENV_WORKFLOW_INPUT_PATH')
+
+        for k, v in pattern_attributes['variables'].items():
+            self.assertIn(k, parameters)
+            self.assertEqual(parameters[k], expected_params[k])
+
+        for k, v in pattern_attributes['output'].items():
+            self.assertIn(k, parameters)
+            self.assertEqual(parameters[k], expected_params[k])
 
     def test_update_pattern_parameter_file(self):
         pattern_attributes = {'name': self.test_pattern_name,
@@ -1195,9 +1292,16 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_paths': ['initial_data/*hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
+
+        expected_params = {
+            'hdf5_input': 'ENV_WORKFLOW_INPUT_PATH',
+            'processed_data': 'ENV_processed_data',
+            'iterations': 20
+        }
 
         created, pattern_id = create_workflow(self.configuration,
                                               self.username,
@@ -1219,20 +1323,37 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertTrue(os.path.exists(parameter_path))
         parameters = load(parameter_path, 'yaml', 'r')
         self.assertIsNotNone(parameters)
+
         self.assertIn(pattern_attributes['input_file'], parameters)
-        self.assertTrue(set(pattern_attributes['variables'].items())
-                        .issubset(set(parameters.items())))
-        self.assertTrue(set(pattern_attributes['output'])
-                        .issubset(set(parameters)))
+        self.assertEqual(
+            parameters[pattern_attributes['input_file']],
+            'ENV_WORKFLOW_INPUT_PATH')
+
+        for k, v in pattern_attributes['variables'].items():
+            self.assertIn(k, parameters)
+            self.assertEqual(parameters[k], expected_params[k])
+
+        for k, v in pattern_attributes['output'].items():
+            self.assertIn(k, parameters)
+            self.assertEqual(parameters[k], expected_params[k])
 
         # Update workflow
         new_attributes = {'persistence_id': pattern_id,
                           'vgrid': self.test_vgrid,
                           'input_file': 'new_attribute',
-                          'output': {'processed_data': 'new_path/bla.npy',
-                                     'another_output': 'second_path/bla2.npy'},
+                          'output': {
+                              'processed_data': 'new_path/bla.npy',
+                              'another_output': 'second_path/{PATH}.npy'},
                           'variables': {'iterations': 1000,
                                         'additional': 'test'}}
+
+        new_expected_params = {
+            'new_attribute': 'ENV_WORKFLOW_INPUT_PATH',
+            'processed_data': 'Generic/new_path/bla.npy',
+            'another_output': 'ENV_another_output',
+            'iterations': 1000,
+            'additional': 'test'
+        }
 
         updated, u_pattern_id = update_workflow(self.configuration,
                                                 self.username,
@@ -1256,14 +1377,19 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertTrue(os.path.exists(parameter_path))
         parameters = load(parameter_path, 'yaml', 'r')
         self.assertIsNotNone(parameters)
+
         self.assertIn(new_attributes['input_file'], parameters)
+        self.assertEqual(
+            parameters[new_attributes['input_file']],
+            'ENV_WORKFLOW_INPUT_PATH')
+
         for k, v in new_attributes['variables'].items():
             self.assertIn(k, parameters)
-            self.assertEqual(parameters[k], v)
+            self.assertEqual(parameters[k], new_expected_params[k])
 
         for k, v in new_attributes['output'].items():
             self.assertIn(k, parameters)
-            self.assertEqual(parameters[k], os.path.join(self.test_vgrid, v))
+            self.assertEqual(parameters[k], new_expected_params[k])
 
     def test_delete_pattern_parameter_file(self):
         pattern_attributes = {'name': self.test_pattern_name,
@@ -1271,7 +1397,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                               'input_paths': ['initial_data/*hdf5'],
                               'input_file': 'hdf5_input',
                               'output': {
-                                  'processed_data': 'pattern_0_output/*.hdf5'},
+                                  'processed_data':
+                                      'pattern_0_output/{FILENAME}.hdf5'},
                               'recipes': [self.test_recipe_name],
                               'variables': {'iterations': 20}}
 
@@ -1322,7 +1449,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
     #                           'input_file': 'hdf5_input',
     #                           'trigger_paths': ['initial_data/*hdf5'],
     #                           'output': {
-    #                               'processed_data': 'pattern_0_output/*.hdf5'},
+    #                           'processed_data':
+    #                               'pattern_0_output/{FILENAME}.hdf5'},
     #                           'recipes': ['association test recipe'],
     #                           'variables': {'iterations': 20}}
     #
@@ -1376,7 +1504,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
     #                           'input_file': 'hdf5_input',
     #                           'trigger_paths': ['initial_data/*hdf5'],
     #                           'output': {
-    #                               'processed_data': 'pattern_0_output/*.hdf5'},
+    #                           'processed_data':
+    #                               'pattern_0_output/{FILENAME}.hdf5'},
     #                           'recipes': ['association test recipe'],
     #                           'variables': {'iterations': 20}}
     #
@@ -1404,7 +1533,8 @@ class WorkflowsFunctionsTest(unittest.TestCase):
     #                           'input_file': 'hdf5_input',
     #                           'trigger_paths': ['initial_data/*hdf5'],
     #                           'output': {
-    #                               'processed_data': 'pattern_0_output/*.hdf5'},
+    #                               'processed_data':
+    #                                  'pattern_0_output/{FILENAME}.hdf5'},
     #                           'recipes': ['association test recipe'],
     #                           'variables': {'iterations': 20}}
     #

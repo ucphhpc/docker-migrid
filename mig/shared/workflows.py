@@ -2014,8 +2014,8 @@ def __update_workflow_pattern(configuration, client_id, vgrid,
 
         for name, rule_id in existing_recipes:
             # Remove recipe
-            if id in remove_recipes:
-                pattern['trigger_recipes'].pop(id)
+            if name in remove_recipes:
+                pattern['trigger_recipes'][rule_id].pop(name)
 
         for name in missing_recipes:
             # Add existing or recipe placeholder
@@ -2623,16 +2623,37 @@ def __create_task_parameter_file(configuration, vgrid, pattern,
 
     input_file = pattern.get('input_file', VALID_PATTERN['input_file'])
     parameter_dict = {}
+    if input_file:
+        parameter_dict.update({input_file: "ENV_WORKFLOW_INPUT_PATH"})
+
+    # Ensure that output variables are based of the vgrid root dir
+
+    # output = pattern.get('output', VALID_PATTERN['output'])
+    # parameter_dict.update(
+    #     {key: os.path.join(vgrid, value) for key, value in output.items()}
+    # )
+
     for var_name, var_value \
             in pattern.get('variables', VALID_PATTERN['variables']).items():
-        if var_name == input_file:
-            parameter_dict[var_name] = "ENV_WORKFLOW_INPUT_PATH"
-        else:
-            # TODO change this to recursive search through any parameter type
+        if var_name != input_file:
+            # TODO change this to recursive search through any parameter
+            #  type
             for env_var in job_env_vars:
                 full_env_var = "{%s}" % env_var
-                if full_env_var in var_value:
-                    var_value = "%s_%s" % (env_var, var_name)
+                if isinstance(var_value, str) and full_env_var in var_value:
+                    var_value = "ENV_%s" % var_name
+            parameter_dict[var_name] = var_value
+
+    for var_name, var_value \
+            in pattern.get('output', VALID_PATTERN['output']).items():
+        if var_name != input_file:
+            # TODO change this to recursive search through any parameter
+            #  type
+            var_value = os.path.join(vgrid, var_value)
+            for env_var in job_env_vars:
+                full_env_var = "{%s}" % env_var
+                if isinstance(var_value, str) and full_env_var in var_value:
+                    var_value = "ENV_%s" % var_name
             parameter_dict[var_name] = var_value
 
     try:
@@ -2726,21 +2747,34 @@ def create_workflow_trigger(configuration, client_id, vgrid, path, pattern,
                         % rule_id)
         return (False, "Failed to create trigger, conflicting rule_id")
 
-    # TODO Identify required job parameters as environment variables
     job_env_vars = [item for item in job_env_vars_map.keys()]
 
     environment_variables = {}
-    for var_name, var_value in pattern['variables'].items():
-        if var_name == pattern['input_file']:
-            continue
-        # TODO change this to recursive search through any parameter type
-        for env_var in job_env_vars:
-            full_env_var = "{%s}" % env_var
-            if full_env_var in var_value:
-                environment_variables["%s_%s" % (env_var, var_name)] = \
-                    var_value.replace(
-                        full_env_var,
-                        vgrid_env_vars_map[job_env_vars_map[env_var]])
+    if 'variables' in pattern:
+        for var_name, var_value in pattern['variables'].items():
+            if var_name == pattern['input_file']:
+                continue
+            # TODO change this to recursive search through any parameter type
+            for env_var in job_env_vars:
+                full_env_var = "{%s}" % env_var
+                if isinstance(var_value, str) and full_env_var in var_value:
+                    environment_variables[var_name] = \
+                        var_value.replace(
+                            full_env_var,
+                            vgrid_env_vars_map[job_env_vars_map[env_var]])
+
+    if 'output' in pattern:
+        for var_name, var_value in pattern['output'].items():
+            if var_name != pattern['input_file']:
+                # TODO change this to recursive search through any parameter
+                #  type
+                for env_var in job_env_vars:
+                    full_env_var = "{%s}" % env_var
+                    if isinstance(var_value, str) and full_env_var in var_value:
+                        environment_variables[var_name] = \
+                            var_value.replace(
+                                full_env_var,
+                                vgrid_env_vars_map[job_env_vars_map[env_var]])
 
     # See addvgridtrigger.py#86 NOTE about normalizing trigger path
     norm_path = os.path.normpath(path.strip()).lstrip(os.sep)
