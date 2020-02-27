@@ -350,7 +350,11 @@ def get_job_with_id(configuration, job_id, client_id=None, vgrid=None,
                 break
             if len(matches) > 1:
                 break
-            return (True, matches[0])
+
+            job_dict = unpickle(matches[0], configuration.logger)
+
+            if job_dict:
+                return (True, job_dict)
 
     # If we don't know the vgrid we need to search through all mrsl files
     path = os.path.abspath(
@@ -362,7 +366,11 @@ def get_job_with_id(configuration, job_id, client_id=None, vgrid=None,
         return (False, "Could not locate job file for job '%s'." % job_id)
     if len(matches) > 1:
         return (False, "Multiple matches for job file for job '%s'." % job_id)
-    return (True, matches[0])
+
+    job_dict = unpickle(matches[0], configuration.logger)
+
+    if job_dict:
+        return (True, job_dict)
 
 
 def fields_to_mrsl(configuration, user_arguments_dict, external_dict):
