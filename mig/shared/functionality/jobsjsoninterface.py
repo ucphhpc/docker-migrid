@@ -247,11 +247,8 @@ def job_api_update(configuration, workflow_session, job_type=JOB,
     client_id = workflow_session['owner']
     job_id = job_attributes['JOB_ID']
 
-    client_dir = client_id_dir(client_id)
-
-    file_path = os.path.join(
-        configuration.mrsl_files_dir, client_dir, job_id + '.mRSL')
-    job = unpickle(file_path, _logger)
+    job = get_job_with_id(configuration, job_id, client_id=client_id, 
+                          only_user_jobs=False)
 
     if not job:
         msg = "Could not open job file for job '%s'" % job_id
@@ -270,6 +267,9 @@ def job_api_update(configuration, workflow_session, job_type=JOB,
                 _logger.error(msg)
                 return (False, msg)
 
+            job_user_dir = client_id_dir(job['USER_CERT'])
+            file_path = os.path.join(
+                configuration.mrsl_files_dir, job_user_dir, job_id + '.mRSL')
             if not unpickle_and_change_status(file_path, new_state, _logger):
                 _logger.error('%s could not cancel job: %s'
                               % (client_id, job_id))

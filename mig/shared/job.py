@@ -313,12 +313,16 @@ def get_job_with_id(configuration, job_id, client_id=None, vgrid=None,
     if only_user_jobs and not client_id:
         return (False, "Cannot retrieve a job without 'client_id' being set. ")
 
+    job_file = job_id
+    if not job_file.endswith('.mRSL'):
+        job_file += '.mRSL'
+
     # If client id is provided we can jump straight to the file without
     # needing to search
     if client_id:
         path = os.path.abspath(
             os.path.join(configuration.mrsl_files_dir,
-                         client_id_dir(client_id), job_id)
+                         client_id_dir(client_id), job_file)
         )
 
         if os.path.exists(path):
@@ -329,7 +333,7 @@ def get_job_with_id(configuration, job_id, client_id=None, vgrid=None,
 
         if only_user_jobs:
             return (False, "Could not locate job file '%s' for user '%s'"
-                    % (job_id, client_id))
+                    % (job_file, client_id))
 
     users = []
     # If vgrid is known we can just search through the users on that vgrid.
@@ -342,7 +346,7 @@ def get_job_with_id(configuration, job_id, client_id=None, vgrid=None,
             users += member_status
         for user in users:
             path = os.path.abspath(
-                os.path.join(configuration.mrsl_files_dir, user, job_id)
+                os.path.join(configuration.mrsl_files_dir, user, job_file)
             )
 
             matches = glob(path)
@@ -358,14 +362,15 @@ def get_job_with_id(configuration, job_id, client_id=None, vgrid=None,
 
     # If we don't know the vgrid we need to search through all mrsl files
     path = os.path.abspath(
-        os.path.join(configuration.mrsl_files_dir, '*', job_id)
+        os.path.join(configuration.mrsl_files_dir, '*', job_file)
     )
 
     matches = glob(path)
     if not matches:
-        return (False, "Could not locate job file for job '%s'." % job_id)
+        return (False, "Could not locate job file for job '%s'." % job_file)
     if len(matches) > 1:
-        return (False, "Multiple matches for job file for job '%s'." % job_id)
+        return (False,
+                "Multiple matches for job file for job '%s'." % job_file)
 
     job_dict = unpickle(matches[0], configuration.logger)
 
