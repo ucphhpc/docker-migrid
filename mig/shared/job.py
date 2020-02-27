@@ -317,7 +317,8 @@ def get_job_with_id(configuration, job_id, client_id=None, vgrid=None,
     # needing to search
     if client_id:
         path = os.path.abspath(
-            os.path.join(configuration.mrsl_files_dir, client_id, job_id)
+            os.path.join(configuration.mrsl_files_dir,
+                         client_id_dir(client_id), job_id)
         )
 
         if os.path.exists(path):
