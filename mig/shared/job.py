@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # job - Core job helper functions
-# Copyright (C) 2003-2016  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #

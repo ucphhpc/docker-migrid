@@ -245,12 +245,17 @@ def job_api_update(configuration, workflow_session, job_type=JOB,
     _logger = configuration.logger
 
     client_id = workflow_session['owner']
-    job_id = job_attributes['JOB_ID']
 
-    job = get_job_with_id(configuration, job_id, client_id=client_id, 
+    job_id = job_attributes.get('JOB_ID', None)
+    if not job_id:
+        msg = "No job id provided in update"
+        _logger.error(msg)
+        return (False, msg)
+
+    status, job = get_job_with_id(configuration, job_id, client_id=client_id,
                           only_user_jobs=False)
 
-    if not job:
+    if not status:
         msg = "Could not open job file for job '%s'" % job_id
         _logger.error(msg)
         return (False, msg)

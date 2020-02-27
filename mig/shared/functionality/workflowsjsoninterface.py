@@ -5,7 +5,7 @@
 #
 # workflowsjsoninterface.py - JSON interface for
 # managing workflows via cgisid requests
-# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
+# Copyright (C) 2019-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #

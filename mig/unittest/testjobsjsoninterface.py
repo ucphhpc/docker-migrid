@@ -31,14 +31,11 @@ from shared.conf import get_configuration_object
 from shared.defaults import default_vgrid
 from shared.fileio import makedirs_rec, remove_rec
 from shared.functionality.jobsjsoninterface import job_api_create, \
-    job_api_delete, job_api_read, job_api_update
-from shared.pwhash import generate_random_ascii
-from shared.validstring import possible_workflow_session_id
+    job_api_read, job_api_update
+from shared.job import JOB, QUEUE
 from shared.workflows import touch_workflow_sessions_db, \
     load_workflow_sessions_db, create_workflow_session_id, \
-    delete_workflow_sessions_db, new_workflow_session_id, \
-    delete_workflow_session_id, reset_workflows, get_workflow_with, \
-    WORKFLOW_PATTERN, WORKFLOW_RECIPE, WORKFLOW_ANY
+    delete_workflow_sessions_db, reset_workflows
 
 this_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -59,6 +56,13 @@ class JobJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         if not os.path.exists(vgrid_file_path):
             self.assertTrue(makedirs_rec(vgrid_file_path, self.configuration,
                                          accept_existing=True))
+        # Ensure that the mrsl_files home exists
+        mrsl_file_path = os.path.join(self.configuration.mrsl_files_dir,
+                                      self.username)
+        if not os.path.exists(mrsl_file_path):
+            self.assertTrue(
+                makedirs_rec(mrsl_file_path, self.configuration,
+                             accept_existing=True))
         self.assertTrue(os.path.exists(vgrid_file_path))
 
         self.configuration.workflows_db_home = this_path
@@ -93,6 +97,12 @@ class JobJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         if os.path.exists(vgrid_file_path):
             self.assertTrue(remove_rec(vgrid_file_path, self.configuration))
         self.assertFalse(os.path.exists(vgrid_file_path))
+        # Remove tmp mrsl_files
+        mrsl_file_path = os.path.join(configuration.mrsl_files_dir,
+                                      self.username)
+        if os.path.exists(mrsl_file_path):
+            self.assertTrue(remove_rec(mrsl_file_path, self.configuration))
+        self.assertFalse(os.path.exists(mrsl_file_path))
         configuration.workflows_db_home = this_path
         configuration.workflows_db = \
             os.path.join(this_path, 'test_sessions_db.pickle')
@@ -104,9 +114,68 @@ class JobJSONInterfaceAPIFunctionsTest(unittest.TestCase):
         self.assertTrue(reset_workflows(configuration, vgrid=test_vgrid))
         configuration.site_enable_workflows = False
 
-    # TODO actually run some tests here
-    def test_read_job_queue(self):
-        pass
+    def test_job_create(self):
+        job = {'EXECUTE': "echo 'hello world",
+               'MEMORY': '1',
+               'DISK': '1',
+               'CPUTIME': '1'}
+
+        created, job_id = job_api_create(self.configuration,
+                                         self.workflow_session,
+                                         JOB,
+                                         **job)
+        self.logger.info(job_id)
+        self.assertTrue(created)
+
+    def test_job_read(self):
+        job_attributes = {'EXECUTE': "echo 'hello world",
+               'MEMORY': '1',
+               'DISK': '1',
+               'CPUTIME': '1'}
+
+        created, job_id = job_api_create(self.configuration,
+                                         self.workflow_session,
+                                         JOB,
+                                         **job_attributes)
+        self.logger.info(job_id)
+        self.assertTrue(created)
+
+        status, job = job_api_read(self.configuration,
+                                self.workflow_session,
+                                JOB,
+                                **{'job_id': job_id})
+
+        self.assertTrue(status)
+        self.assertIsInstance(job, dict)
+        # Check internal attributes
+        self.assertEqual(job['JOB_ID'], job_id)
+        self.assertEqual(job['EXECUTE'], ["echo 'hello world"])
+        self.assertEqual(job['MEMORY'], 1)
+        self.assertEqual(job['DISK'], 1)
+        self.assertEqual(job['CPUTIME'], 1)
+
+    def test_job_update(self):
+        job_attributes = {'EXECUTE': "echo 'hello world",
+                          'MEMORY': '1',
+                          'DISK': '1',
+                          'CPUTIME': '1'}
+
+        created, job_id = job_api_create(self.configuration,
+                                         self.workflow_session,
+                                         JOB,
+                                         **job_attributes)
+        self.logger.info(job_id)
+        self.assertTrue(created)
+
+        new_attributes = {'JOB_ID': job_id,
+                          'STATUS': 'CANCELED'}
+
+        status, updated = job_api_update(self.configuration,
+                                      self.workflow_session,
+                                      JOB,
+                                      **new_attributes)
+
+        self.assertTrue(status)
 
 
 if __name__ == '__main__':
