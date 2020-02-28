@@ -373,10 +373,12 @@ def main(client_id, user_arguments_dict):
         output_objects.append({'object_type': 'error_text', 'text': msg})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
-    job_attributes = accepted.get('attributes', None)
-    job_type = accepted.get('type', None)
-    operation = accepted.get('operation', None)
-    workflow_session_id = accepted.get('workflowsessionid', None)
+    # Should use 'accepted' here, but all data jumbled together into one big
+    # dict, easier to access json data by known keys
+    job_attributes = json_data.get('attributes', None)
+    job_type = json_data.get('type', None)
+    operation = json_data.get('operation', None)
+    workflow_session_id = json_data.get('workflowsessionid', None)
 
     if not valid_session_id(configuration, workflow_session_id):
         output_objects.append({'object_type': 'error_text',
