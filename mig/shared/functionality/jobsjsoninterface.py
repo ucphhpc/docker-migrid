@@ -316,11 +316,11 @@ def main(client_id, user_arguments_dict):
     # Ensure that the output format is in JSON
     user_arguments_dict['output_format'] = ['json']
     user_arguments_dict.pop('__DELAYED_INPUT__', None)
-    (configuration, _logger, output_objects, op_name) = \
+    (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(client_id, op_title=False, op_header=False,
                                   op_menu=False)
 
-    _logger.info("Got job json request for client '%s' with arguments '%s'"
+    logger.info("Got job json request for client '%s' with arguments '%s'"
                 % (client_id, user_arguments_dict))
 
     if not configuration.site_enable_workflows:
@@ -348,7 +348,7 @@ def main(client_id, user_arguments_dict):
     except ValueError:
         msg = "An invalid format was supplied to: '%s', requires a JSON " \
               "compatible format" % op_name
-        _logger.error(msg)
+        logger.error(msg)
         output_objects.append({'object_type': 'error_text',
                                'text': msg})
         return (output_objects, returnvalues.CLIENT_ERROR)
@@ -367,7 +367,7 @@ def main(client_id, user_arguments_dict):
         list_wrap=True)
 
     if not accepted or rejected:
-        _logger.error("A validation error occurred: '%s'" % rejected)
+        logger.error("A validation error occurred: '%s'" % rejected)
         msg = "Invalid input was supplied to the job API: %s" % rejected
         # TODO, Transform error messages to something more readable
         output_objects.append({'object_type': 'error_text', 'text': msg})
@@ -388,7 +388,7 @@ def main(client_id, user_arguments_dict):
     try:
         workflow_sessions_db = load_workflow_sessions_db(configuration)
     except IOError:
-        _logger.info("Workflow sessions db didn't load, creating new db")
+        logger.info("Workflow sessions db didn't load, creating new db")
         if not touch_workflow_sessions_db(configuration, force=True):
             output_objects.append(
                 {'object_type': 'error_text',
@@ -401,7 +401,7 @@ def main(client_id, user_arguments_dict):
             workflow_sessions_db = load_workflow_sessions_db(configuration)
 
     if workflow_session_id not in workflow_sessions_db:
-        _logger.error("Workflow session '%s' from user '%s' not found in "
+        logger.error("Workflow session '%s' from user '%s' not found in "
                       "database" % (workflow_session_id, client_id))
         configuration.auth_logger.error(
             "Workflow session '%s' provided by user '%s' but not present in "
@@ -420,7 +420,7 @@ def main(client_id, user_arguments_dict):
         if not created:
             output_objects.append({'object_type': 'error_text',
                                    'text': msg})
-            _logger.error("Returning error msg '%s'" % msg)
+            logger.error("Returning error msg '%s'" % msg)
             return (output_objects, returnvalues.CLIENT_ERROR)
         output_objects.append({'object_type': 'text', 'text': msg})
         return (output_objects, returnvalues.OK)
