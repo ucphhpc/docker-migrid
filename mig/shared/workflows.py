@@ -2244,11 +2244,18 @@ def __prepare_template(configuration, template, **kwargs):
 ::OUTPUTFILES::
 %(output_files)s%(sep)sjob_output/+JOBID+/%(output_files)s
 
+::MAXFILL::
+MEMORY
+CPUTIME
+DISK
+CPUCOUNT
+NODECOUNT
+
 ::RETRIES::
 0
 
 ::MEMORY:: 
-256
+0
 
 ::DISK::
 0

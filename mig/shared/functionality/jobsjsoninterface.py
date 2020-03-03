@@ -140,8 +140,19 @@ def job_api_create(configuration, workflow_session, job_type=JOB,
 
     client_id = workflow_session['owner']
     external_dict = get_keywords_dict(configuration)
+
     if 'vgrid' in job_attributes:
-        job_attributes.pop('vgrid')
+        msg = "Cannot create new job without specifying a VGrid for it to be " \
+              "attached to. "
+        return (False, msg)
+
+    # User is vgrid owner or member
+    success, msg, _ = init_vgrid_script_list(vgrid, client_id,
+                                             configuration)
+    if not success:
+        return (False, msg)
+
+    job_attributes.pop('vgrid')
 
     mrsl = fields_to_mrsl(configuration, job_attributes, external_dict)
 
@@ -194,11 +205,18 @@ def job_api_read(configuration, workflow_session, job_type=JOB,
     """
     _logger = configuration.logger
 
-    if job_type == QUEUE:
-        if 'vgrid' not in job_attributes:
-            return (False, "Can't read job queue without 'vgrid' attribute")
-        vgrid = job_attributes['vgrid']
+    if 'vgrid' not in job_attributes:
+        return (False, "Can't read jobs without 'vgrid' attribute")
+    vgrid = job_attributes['vgrid']
 
+    # User is vgrid owner or member
+    client_id = workflow_session['owner']
+    success, msg, _ = init_vgrid_script_list(vgrid, client_id,
+                                             configuration)
+    if not success:
+        return (False, msg)
+
+    if job_type == QUEUE:
         job_list = \
             get_vgrid_recent_jobs(configuration, vgrid, json_serializable=True)
 
@@ -213,15 +231,11 @@ def job_api_read(configuration, workflow_session, job_type=JOB,
         if 'job_id' not in job_attributes:
             return (False, "Can't read single job without 'job_id' attribute")
 
-        vgrid=None
-        if 'vgrid' in job_attributes:
-            vgrid = job_attributes['vgrid']
-
         return get_job_with_id(
             configuration,
             job_attributes['job_id'],
-            client_id=workflow_session['owner'],
-            vgrid=vgrid,
+            vgrid,
+            workflow_session['owner'],
             only_user_jobs=False
         )
 
@@ -250,6 +264,17 @@ def job_api_update(configuration, workflow_session, job_type=JOB,
     if not job_id:
         msg = "No job id provided in update"
         _logger.error(msg)
+        return (False, msg)
+
+    if 'vgrid' not in job_attributes:
+        return (False, "Can't update job without 'vgrid' attribute")
+    vgrid = job_attributes['vgrid']
+
+    # User is vgrid owner or member
+    client_id = workflow_session['owner']
+    success, msg, _ = init_vgrid_script_list(vgrid, client_id,
+                                             configuration)
+    if not success:
         return (False, msg)
 
     status, job = get_job_with_id(configuration, job_id, client_id=client_id,
@@ -414,6 +439,19 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     workflow_session = workflow_sessions_db.get(workflow_session_id)
+
+    if 'vgrid' not in job_attributes:
+        msg = "Cannot create new job without specifying a VGrid for it to be " \
+              "attached to. "
+        return (False, msg)
+
+    # User is vgrid owner or member
+    success, msg, _ = init_vgrid_script_list(vgrid, client_id,
+                                             configuration)
+    if not success:
+        return (False, msg)
+
+    job_attributes.pop('vgrid')
 
     # Create
     if operation == JOB_API_CREATE:
