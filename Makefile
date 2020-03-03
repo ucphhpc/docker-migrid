@@ -2,7 +2,7 @@ OWNER=nielsbohr
 IMAGE=migrid
 TAG=edge
 
-CHECKOUT=4398
+CHECKOUT=4588
 
 all: init build
 
@@ -14,7 +14,7 @@ init:
 	mkdir -p MiG-exe
 
 build:
-	docker build -t ${OWNER}/${IMAGE}:${TAG} --build-arg MIG_CHECKOUT=${CHECKOUT} .
+	docker build -t ${OWNER}/${IMAGE}:${TAG} --build-arg CHECKOUT=${CHECKOUT} .
 
 clean:
 	rm -rf ./certs
