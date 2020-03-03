@@ -37,8 +37,8 @@ from glob import glob
 from shared.base import client_id_dir
 from shared.fileio import send_message_to_grid_script, unpickle
 from shared.mrslparser import parse
-from shared.vgrid import vgrid_owners, vgrid_members
-from shared.vgridaccess import OWNERS, MEMBERS, VGRIDS
+from shared.vgrid import init_vgrid_script_list
+from shared.vgridaccess import get_vgrid_map, OWNERS, MEMBERS, VGRIDS
 
 JOB = 'job'
 QUEUE = 'queue'
