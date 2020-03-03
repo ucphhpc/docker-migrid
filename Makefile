@@ -8,7 +8,7 @@ build:
 	mkdir -p ./httpd
 	mkdir -p ./mig
 	mkdir -p ./state
-	docker build -t ${OWNER}/${IMAGE}:${TAG} --build-arg MIG_CHECKOUT=${CHECKOUT} .
+	docker build -t ${OWNER}/${IMAGE}:${TAG} --build-arg CHECKOUT=${CHECKOUT} .
 
 clean:
 	rm -rf ./certs
