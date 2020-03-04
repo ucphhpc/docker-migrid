@@ -358,7 +358,6 @@ def get_job_with_id(configuration, job_id, vgrid, client_id,
     if vgrid:
         vgrid_map = get_vgrid_map(configuration)[VGRIDS][vgrid]
 
-        configuration.logger.info('DELETE ME - vgrid_map: %s' % vgrid_map)
         users += vgrid_map[OWNERS]
         users += vgrid_map[MEMBERS]
         for user in users:
