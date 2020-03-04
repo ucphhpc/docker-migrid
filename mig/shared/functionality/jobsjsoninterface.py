@@ -444,20 +444,28 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     workflow_session = workflow_sessions_db.get(workflow_session_id)
+    client_id = workflow_session['owner']
 
     if 'vgrid' not in job_attributes:
+        logger.info("Invalid json job interaction. user '%s' does not specify "
+                    "a vgrid in '%s'" % (client_id, job_attributes.keys()))
         msg = "Cannot create new job without specifying a VGrid for it to be " \
               "attached to. "
-        return (False, msg)
+        output_objects.append({'object_type': 'error_text',
+                               'text': msg})
+        return (output_objects, returnvalues.CLIENT_ERROR)
     vgrid = job_attributes['vgrid']
 
     # User is vgrid owner or member
     success, msg, _ = init_vgrid_script_list(vgrid, client_id,
                                              configuration)
-    if not success:
-        return (False, msg)
 
-    job_attributes.pop('vgrid')
+    if not success:
+        logger.error("Illegal access attempt by user '%s' to vgrid '%s'. %s"
+                     % (client_id, vgrid, msg))
+        output_objects.append({'object_type': 'error_text',
+                               'text': msg})
+        return (output_objects, returnvalues.CLIENT_ERROR)
 
     # Create
     if operation == JOB_API_CREATE:
