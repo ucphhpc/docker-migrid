@@ -34,7 +34,7 @@ end = {'object_type': 'end', 'required': [], 'optional': []}
 timing_info = {'object_type': 'timing_info', 'required': [],
                'optional': []}
 title = {'object_type': 'title', 'required': ['text'],
-         'optional': ['meta', 'style', 'javascript', 'bodyfunctions']}
+         'optional': ['meta', 'style', 'script']}
 text = {'object_type': 'text', 'required': ['text'], 'optional': []}
 verbatim = {'object_type': 'verbatim', 'required': ['text'],
             'optional': []}
@@ -119,8 +119,8 @@ runtimeenvironment = {
 # TODO, add the explicit fields that it uses
 workflow = {
     'object_type': 'workflow',
-    #'required': [],
-    #'optional': [workflowpattern, workflowrecipe]
+    # 'required': [],
+    # 'optional': [workflowpattern, workflowrecipe]
 }
 job_dict = {
     'object_type': 'job_dict'
@@ -299,6 +299,8 @@ user_stats = {'object_type': 'user_stats', 'required':
               ['disk', 'jobs', 'resources', 'certificate'], 'optional': []}
 openid_status = {'object_type': 'openid_status', 'required':
                  ['server', 'status', 'error'], 'optional': []}
+seafile_status = {'object_type': 'seafile_status', 'required':
+                 ['server', 'status', 'error'], 'optional': ['data']}
 service = {'object_type': 'service', 'required': ['name', 'targetlink'],
            'optional': []}
 services = {'object_type': 'services',
@@ -471,6 +473,7 @@ valid_types_list = [
     vgrid_list,
     user_stats,
     openid_status,
+    seafile_status,
     service,
     services,
     table_pager,

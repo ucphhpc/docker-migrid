@@ -241,7 +241,7 @@ function ajax_freezedb(permanent_freeze, keyword_final) {
                                                                 editlink+
                                                                 dellink)+
                           base_td(arch.name)+base_td(arch.created)+
-                          base_td(arch.flavor)+base_td(arch.state)+
+                          attr_td(arch.flavor, "class='flavor'")+base_td(arch.state)+
                           center_td(arch.frozenfiles)+"</tr>";
                       //console.debug("append entry: "+entry);
                       table_entries += entry;
@@ -419,22 +419,29 @@ function ajax_showfreeze(freeze_id, flavor, checksum_list, keyword_updating,
   });
 }
 
-function ajax_vgridman(vgrid_label, vgrid_links) {
-    console.debug("load vgrids");
+function ajax_vgridman(vgrid_label, vgrid_links, caching) {
+    console.debug("load vgrids - with caching "+caching);
     var tbody_elem = $("#vgridtable tbody");
-    //console.debug("empty table");
-    $(tbody_elem).empty();
+    var pending_updates = false;
+    var loading_msg = "Loading "+vgrid_label+"s ...";
+    /* Force caching to boolean if e.g. left out */
+    if (!caching) {
+        caching = false;
+        loading_msg = "Updating "+vgrid_label+"s - may take a while";
+    }
     $("#ajax_status").addClass("spinner iconleftpad");
-    $("#ajax_status").html("Loading "+vgrid_label+"s ...");
+    $("#ajax_status").html(loading_msg);
     /* Request vgrid list in the background and handle as soon as
     results come in */
     $.ajax({
-      url: "?output_format=json;operation=list",
+      url: "?output_format=json;operation=list;caching="+caching,
       type: "GET",
       dataType: "json",
       cache: false,
       success: function(jsonRes, textStatus) {
           console.debug("got response from list");
+          //console.debug("empty table");
+          $(tbody_elem).empty();
           var chunk_size = 200;
           var table_entries = "", error = "";
           var i, j, k;
@@ -446,8 +453,11 @@ function ajax_vgridman(vgrid_label, vgrid_links) {
                   console.error("list: "+jsonRes[i].text);
                   error += jsonRes[i].text;
               } else if (jsonRes[i].object_type === "vgrid_list") {
+                  if (caching) {
+                      pending_updates = jsonRes[i].pending_updates;
+                  }
                   var vgrids = jsonRes[i].vgrids;
-                  for (j=0; j<vgrids.length; j++) {
+                  for (j=0; j < vgrids.length; j++) {
                       vgrid = vgrids[j];
                       //console.info("found vgrid: "+vgrid.name);
                       var viewlink = format_link(vgrid.viewvgridlink);
@@ -549,6 +559,14 @@ function ajax_vgridman(vgrid_label, vgrid_links) {
           if (error) {
               $("#ajax_status").append("<span class=\'errortext\'>"+
                                        "Error: "+error+"</span>");
+          } else if (pending_updates) {
+              /* NOTE: pending vgrid map update detected - background update */
+              $("#ajax_status").append("<span class=\'infotext\'>"+
+                                       "Loaded cached "+vgrid_label+
+                                       "s - update pending</span>");
+              setTimeout(function() {
+                  ajax_vgridman(vgrid_label, vgrid_links, false);
+              }, 3000);
           }
           $("#vgridtable").trigger("update");
 
@@ -560,22 +578,29 @@ function ajax_vgridman(vgrid_label, vgrid_links) {
   });
 }
 
-function ajax_resman() {
-    console.debug("load resources");
+function ajax_resman(caching) {
+    console.debug("load resources - with caching "+caching);
     var tbody_elem = $("#resourcetable tbody");
-    //console.debug("empty table");
-    $(tbody_elem).empty();
+    var pending_updates = false;
+    var loading_msg = "Loading resources ...";
+    /* Force caching to boolean if e.g. left out */
+    if (!caching) {
+        caching = false;
+        loading_msg = "Updating resources - may take a while";
+    }
     $("#ajax_status").addClass("spinner iconleftpad");
-    $("#ajax_status").html("Loading resources ...");
+    $("#ajax_status").html(loading_msg);
     /* Request resource list in the background and handle as soon as
     results come in */
     $.ajax({
-      url: "?output_format=json;operation=list",
+      url: "?output_format=json;operation=list;caching="+caching,
       type: "GET",
       dataType: "json",
       cache: false,
       success: function(jsonRes, textStatus) {
           console.debug("got response from list");
+          //console.debug("empty table");
+          $(tbody_elem).empty();
           var chunk_size = 200;
           var table_entries = "", error = "";
           var i, j, k;
@@ -587,6 +612,9 @@ function ajax_resman() {
                   console.error("list: "+jsonRes[i].text);
                   error += jsonRes[i].text;
               } else if (jsonRes[i].object_type === "resource_list") {
+                  if (caching) {
+                      pending_updates = jsonRes[i].pending_updates;
+                  }
                   var resources = jsonRes[i].resources;
                   for (j=0; j<resources.length; j++) {
                       resource = resources[j];
@@ -635,6 +663,13 @@ function ajax_resman() {
           if (error) {
               $("#ajax_status").append("<span class=\'errortext\'>"+
                                        "Error: "+error+"</span>");
+          } else if (pending_updates) {
+              /* NOTE: pending resource map update detected - background update */
+              $("#ajax_status").append("<span class=\'infotext\'>"+
+                                       "Loaded cached resources - update pending</span>");
+              setTimeout(function() {
+                  ajax_resman(false);
+              }, 3000);
           }
           $("#resourcetable").trigger("update");
 
@@ -646,22 +681,29 @@ function ajax_resman() {
   });
 }
 
-function ajax_people(protocols) {
-    console.debug("load users");
+function ajax_people(protocols, caching) {
+    console.debug("load users - with caching "+caching);
     var tbody_elem = $("#usertable tbody");
-    //console.debug("empty table");
-    $(tbody_elem).empty();
+    var pending_updates = false;
+    var loading_msg = "Loading users ...";
+    /* Force caching to boolean if e.g. left out */
+    if (!caching) {
+        caching = false;
+        loading_msg = "Updating users - may take a while";
+    }
     $("#ajax_status").addClass("spinner iconleftpad");
-    $("#ajax_status").html("Loading users ...");
+    $("#ajax_status").html(loading_msg);
     /* Request user list in the background and handle as soon as
     results come in */
     $.ajax({
-      url: "?output_format=json;operation=list",
+      url: "?output_format=json;operation=list;caching="+caching,
       type: "GET",
       dataType: "json",
       cache: false,
       success: function(jsonRes, textStatus) {
           console.debug("got response from list");
+          //console.debug("empty table");
+          $(tbody_elem).empty();
           var chunk_size = 200;
           var table_entries = "", error = "";
           var i, j, k;
@@ -673,13 +715,16 @@ function ajax_people(protocols) {
                   console.error("list: "+jsonRes[i].text);
                   error += jsonRes[i].text;
               } else if (jsonRes[i].object_type === "user_list") {
+                  if (caching) {
+                      pending_updates = jsonRes[i].pending_updates;
+                  }
                   var users = jsonRes[i].users;
                   for (j=0; j<users.length; j++) {
                       usr = users[j];
                       //console.info("found user: "+usr.name);
                       var viewlink = format_link(usr.userdetailslink);
                       var sendlink = "";
-                      entry = "<tr>"+base_td(usr.name)+center_td(viewlink);
+                      entry = "<tr>"+base_td(usr.pretty_id)+center_td(viewlink);
                       for (k=0; k<protocols.length; k++) {
                           proto = protocols[k];
                           link_name = "send"+proto+"link";
@@ -710,6 +755,13 @@ function ajax_people(protocols) {
           if (error) {
               $("#ajax_status").append("<span class=\'errortext\'>"+
                                        "Error: "+error+"</span>");
+          } else if (pending_updates) {
+              /* NOTE: pending vgrid map update detected - background update */
+              $("#ajax_status").append("<span class=\'infotext\'>"+
+                                       "Loaded cached users - update pending</span>");
+              setTimeout(function() {
+                  ajax_people(protocols, false);
+              }, 3000);
           }
           $("#usertable").trigger("update");
 
@@ -792,4 +844,65 @@ function ajax_workflowjobs(vgrid_name, flags) {
                             "#ajax_status");
       }
   });
+}
+
+function ajax_gdp_project_users(callback, project_name) {
+    console.debug("ajax_gdp_project_users: " + project_name);
+    var result = { OK: [], WARNING: [], ERROR: [] };
+    var target_op = "gdpman";
+    console.info("Lookup CSRF token for " + target_op);
+
+    var jsonSettings = {
+        base_vgrid_name: project_name,
+        output_format: "json",
+        action: "list_project_users"
+    };
+    if (csrf_map[target_op] !== undefined) {
+        jsonSettings[csrf_field] = csrf_map[target_op];
+        console.info("Found CSRF token " + jsonSettings["_csrf"]);
+    } else {
+        console.info("No CSRF token for " + target_op);
+    }
+
+    $.ajax({
+        url: target_op + ".py",
+        data: jsonSettings,
+        type: "POST",
+        dataType: "json",
+        cache: false,
+        success: function(jsonRes) {
+            for (var i = 0; i < jsonRes.length; i++) {
+                //console.debug("jsonRes: " + JSON.stringify(jsonRes[i]));
+                if (jsonRes[i].object_type === "list") {
+                    for (var j = 0; j < jsonRes[i].list.length; j++) {
+                        console.debug("ajax_gdp_project_users[" + j + "]: "
+                            + JSON.stringify(jsonRes[i].list[j])
+                        );
+                        result.OK.push(jsonRes[i].list[j]);
+                    }
+                } else if (jsonRes[i]["object_type"] === "warning") {
+                    console.warning(
+                        "ajax_gdp_project_users: " + jsonRes[i].text
+                    );
+                    result.WARNING.push(jsonRes[i].text);
+                } else if (jsonRes[i]["object_type"] === "error_text") {
+                    console.error("ajax_gdp_project_users: " + jsonRes[i].text);
+                    result.ERROR.push(jsonRes[i].text);
+                }
+            }
+            callback(project_name, result);
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.error(
+                "ajax_gdp_project_users: " +
+                    "status: " +
+                    textStatus +
+                    "error: " +
+                    errorThrown
+            );
+            result.ERROR.push(textStatus);
+            result.ERROR.push(errorThrown);
+            callback(project_name, result);
+        }
+    });
 }

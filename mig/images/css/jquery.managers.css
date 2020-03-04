@@ -27,6 +27,12 @@
 
 */
 
+/* Make space for menu in UI V2 */
+.global-container.menu {
+	/* width: calc(100% - 178px);*/
+        padding-left: 168px;
+}
+
 /* Shared fm_filemanager and fm_filechooser settings */
 #fm_filemanager, #fm_filechooser {
     background: #eee;
@@ -70,12 +76,13 @@ h1.fileman-title {
 #fm_filelisting tbody div { display: none; }
 #fm_filelisting table {
     padding: 2px;
+    border-spacing: 0;
 }
 #fm_filelisting tbody tr.odd:hover, #jm_jobmanager tbody tr.odd:hover {
-    background-color: #ffdd4d;
+    color: #444;
 }
 #fm_filelisting tbody tr.even:hover, #jm_jobmanager tbody tr.even:hover {
-    background-color: #ffdd7f;
+    color: #444;
 }
 #jm_jobmanager tbody tr.odd.ui-selected { background-color: #ffdd4d; }
 #jm_jobmanager tbody tr.even.ui-selected { background-color: #ffdd7f; }
@@ -368,6 +375,18 @@ tbody tr td div.sortkey { display: none; }
     padding: 0;
     margin: 0;
 }
+.fm_files .fm_size {
+    width: 80px;
+}
+.fm_files .fm_type {
+    width: 50px;
+}
+.fm_files .fm_date {
+    width: 120px;
+}
+.fm_files .fm_toolbox {
+    width: 10px;
+}
 .fm_toolbar {
     float: right;
     width: 74%;
@@ -453,21 +472,46 @@ tbody tr td div.sortkey { display: none; }
     font-size: 12px;
     font-weight: bold; 
 }
+#fm_options {
+    padding: 0;
+    margin: 0;
+    float: left;
+    width: 30%;
+}
+
 #fm_statusinfo {
     padding: 0;
     margin: 0;
-    float: right;
-    width: 74%;
+    float: left;
+    width: 44%;
+}
+#fm_toggle_dotfiles, #fm_toggle_touchscreen {
+    vertical-align: middle;
+}
+/* NOTE: these are needed for vertical text centering and alignment with sliders */
+#fm_statusbar span {
+    height: 20px;
+    line-height: 20px;
+    vertical-align: middle;
 }
 
-.fm_dotfile {
-    display: none;
+
+.more-button {
+  width: auto;
+  border-radius: 16px;
+  padding: 2px 4px;
+  border: none;
+  border-style: none;
+  cursor: pointer;
+  box-shadow: none;
+  color: #666;
+  background-color: #eee;
 }
-/*
-* html #fm_statusbar {
-  height: 1px;
+.more-button:hover {
+  color: #333;
+  background-color: #ccc;
 }
-*/
+
 UL.jqueryFileTree {
     /*
     font-family: Verdana, sans-serif;
@@ -760,6 +804,29 @@ background: url(/images/icons/code.png) left center no-repeat;
     display: inline;
 }
 
+/* Manager with table and pager */
+.pager span.pager-nav-wrap.icon {
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+}
+.pager span.refresh.icon {
+    background: url(/images/icons/arrow_refresh.png) center center no-repeat;
+}
+.pager span.first.icon {
+    background: url(/images/icons/arrow_first.png) center center no-repeat;
+}
+.pager span.prev.icon {
+    background: url(/images/icons/arrow_left.png) center center no-repeat;
+}
+.pager span.next.icon {
+    background: url(/images/icons/arrow_right.png) center center no-repeat;
+}
+.pager span.last.icon {
+    background: url(/images/icons/arrow_last.png) center center no-repeat;
+}
+
+
 /* use similar colors in tabs as in navmenu */
 /*
 .vm-tabs li.ui-state-default { 
@@ -831,11 +898,16 @@ background: url(/images/icons/code.png) left center no-repeat;
 .form_container td.fill_space {
     width: 40%;
 }
-.form_container input, .form_container textarea, .form_container fill_space {
+.form_container input:not([type="checkbox"]):not([type="submit"]), .form_container textarea,
+.form_container select, .form_container fill_space {
     width: 98%;
     display: block;
     padding: 2px;
 }
+.form_container select, .form_container textarea {
+    width: 99%;
+}
+
 #submit_button {
     width: auto;
 }
@@ -856,6 +928,11 @@ background: url(/images/icons/code.png) left center no-repeat;
     padding-left: 10px;
     text-align: left;
 }
+
+/* TODO: investigate a modern pure-css solution for this 
+   https://fabriceleven.com/design/clever-way-to-change-the-drop-down-selector-arrow-icon/
+   https://stackoverflow.com/questions/1895476/how-do-i-style-a-select-dropdown-with-only-css
+*/
 
 /* -------------------- Select Box Styles: bavotasan.com Method (with special adaptations by ericrasch.com) */
 /* -------------------- Source: http://bavotasan.com/2011/style-select-box-using-only-css/ */
@@ -888,23 +965,92 @@ background: url(/images/icons/code.png) left center no-repeat;
 }
 
 /* -------------------- Colors: Background */
-.gm_select {
-    background-color: #679c5b;
+.html-select, .gm_select {
+    background-color: #666;
 }
 
 /* -------------------- Colors: Text */
-.gm_select select {
+.html-select, .gm_select select {
     color: #fff;
 }
 
 /* Set the desired color for the focus state */
-.gm_select select:focus {
-    background-color: #679c5b;
+.html-select select:focus, .gm_select select:focus {
+    background-color: #666;
     color: #fff;
 }
 
 /* Make M$ IE and EDGE behave like other browsers */
-.gm_select select:focus::-ms-value {
-    background: #679c5b;
+.html-select select:focus::-ms-value, .gm_select select:focus::-ms-value {
+    background: #666;
     color:  #fff;
+}
+
+
+/* V2 Apps */
+/* Home with app grid */
+.app-grid {
+    display: grid;
+    grid-gap: 10px;
+    grid-template-columns: repeat(auto-fill, 150px);
+}
+.app-grid .app__btn, .app-grid .add-app__btn {
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    text-align: center;
+    cursor: pointer;
+    transition: 0.3s;
+    border-radius: 4px;
+}
+.app-grid > *, .app-grid > * a  {
+    color: #444;
+    background-color: #FFF;
+    border-color: #444;
+    border-radius: 4px;
+    height: 150px;
+}
+.app-grid > *:hover, .app-grid > *:hover a {
+    background-color: #444;
+    color: #FFF;
+    border-radius: 4px;
+}
+.app-grid h3 {
+    /* Make sure icon and title fits on app buttons */
+    font-size: 12px;
+}
+/* Expand add-app boxes without link and make room for checkbox */
+.app-grid .app__btn.mandatory {
+    padding-top: 56px;
+    padding-bottom: 50px;
+}
+.app-grid .app__btn.optional {
+    padding-top: 34px;
+    padding-bottom: 50px;
+}
+.app-grid span.fas {
+    display: inline-block;
+    vertical-align: middle;
+    background-size: 16px 16px;
+    background-repeat: no-repeat;
+    background-position: center;
+    height: 20px;
+    width: 20px;
+}
+.app-grid a {
+    text-decoration: none;
+    display: block;
+    height: 100px;
+    width: auto;
+    padding-top: 50px;
+}
+.app-grid h3 {
+    display: inline-block;
+    border: 0;
+    vertical-align: middle;
+}
+
+/* Cloud button grid layout */
+.manage-cloud-instance, .cloud-instance-input {
+    display: grid;
+    grid-gap: 10px;
+    grid-template-columns: repeat(auto-fill, 48%);
 }

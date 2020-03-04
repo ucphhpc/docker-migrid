@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # safeinput - user input validation functions
-# Copyright (C) 2003-2018  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -42,7 +42,7 @@ from unicodedata import category, normalize, name as unicode_name
 
 from shared.base import force_unicode, force_utf8
 from shared.defaults import src_dst_sep, user_id_charset, user_id_max_length, \
-    session_id_charset, session_id_length, w_id_length
+    session_id_charset, session_id_length, workflow_id_length
 from shared.validstring import valid_user_path
 from shared.valuecheck import lines_value_checker, \
     max_jobs_value_checker
@@ -113,6 +113,11 @@ VALID_JOB_NAME_CHARACTERS = VALID_FQDN_CHARACTERS + '_+@%'
 VALID_BASE_VGRID_NAME_CHARACTERS = VALID_FQDN_CHARACTERS + '_ '
 VALID_VGRID_NAME_CHARACTERS = VALID_BASE_VGRID_NAME_CHARACTERS + '/'
 VALID_ARCHIVE_NAME_CHARACTERS = VALID_FQDN_CHARACTERS + '_ '
+# Do not allow space in cloud labels as it makes ssh helpers cumbersome
+VALID_CLOUD_LABEL_CHARACTERS = VALID_FQDN_CHARACTERS + '+_=@'
+# We do allow space in image names
+VALID_CLOUD_NAME_CHARACTERS = VALID_CLOUD_LABEL_CHARACTERS + ' '
+VALID_CLOUD_INSTANCE_ID_CHARACTERS = VALID_CLOUD_NAME_CHARACTERS + ':'
 REJECT_UNSET = 'MUST_BE_SET_AND_NO_DEFAULT_VALUE'
 ALLOW_UNSAFE = \
     'THIS INPUT IS NOT VERIFIED: DO NOT EVER PRINT IT UNESCAPED! '
@@ -812,11 +817,62 @@ def valid_gdp_ref_value(ref_value):
     __valid_contents(ref_value, letters + digits + '+-=/.:_')
 
 
+def valid_cloud_instance_id(
+    instance_id,
+    min_length=0,
+    max_length=255,
+    extra_chars='',
+):
+    """Verify that supplied instance ID, only contains characters that we
+    consider valid. Cloud IDs are generated using user email and user specified
+    name and a session ID, so it may contain FQDN chars, email chars and simple
+    separators.
+    """
+
+    valid_chars = VALID_CLOUD_INSTANCE_ID_CHARACTERS + extra_chars
+    __valid_contents(instance_id, valid_chars, min_length, max_length)
+
+
+def valid_cloud_label(
+    cloud_label,
+    min_length=0,
+    max_length=64,
+    extra_chars='',
+):
+    """Verify that supplied cloud instance label, only contains characters that
+    we consider valid. Cloud labels are entered by users, so they should be
+    relatively flexible.
+    IMPORTANT: We avoid colon (:) and space to avoid collisions with the saved
+    instance_id format and to avoid ssh choking on word breaks.
+    """
+
+    valid_chars = VALID_CLOUD_LABEL_CHARACTERS + extra_chars
+    __valid_contents(cloud_label, valid_chars, min_length, max_length)
+
+
+def valid_cloud_name(
+    cloud_name,
+    min_length=0,
+    max_length=64,
+    extra_chars='',
+):
+    """Verify that supplied cloud name, only contains characters that we
+    consider valid. Cloud names are the colon-separated parts contained in
+    cloud instance_id and they are either decided by cloud admins or entered
+    by users, so they should be relatively flexible.
+    IMPORTANT: We avoid colon (:) to avoid collisions with the saved
+    instance_id format.
+    """
+
+    valid_chars = VALID_CLOUD_NAME_CHARACTERS + extra_chars
+    __valid_contents(cloud_name, valid_chars, min_length, max_length)
+
+
 def valid_workflow_pers_id(persistence_id):
     """Verify that supplied persistence_id only contains characters that
     we consider valid in a workflow persistence id.
     """
-    valid_sid(persistence_id, w_id_length, w_id_length)
+    valid_sid(persistence_id, workflow_id_length, workflow_id_length)
 
 
 def valid_workflow_vgrid(vgrid):

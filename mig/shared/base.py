@@ -33,7 +33,7 @@ import os
 # IMPORTANT: do not import any other MiG modules here - to avoid import loops
 from shared.defaults import sandbox_names, _user_invisible_files, \
     _user_invisible_dirs, _vgrid_xgi_scripts, cert_field_order, \
-    valid_gdp_auth_scripts, valid_gdp_anon_scripts
+    gdp_distinguished_field, valid_gdp_auth_scripts, valid_gdp_anon_scripts
 
 _id_sep, _dir_sep, _id_space, _dir_space = '/', '+', ' ', '_'
 _key_val_sep = '='
@@ -107,6 +107,12 @@ def fill_distinguished_name(user):
         if not setting:
             setting = 'NA'
         user['distinguished_name'] += '/%s=%s' % (val, setting)
+
+    setting = user.get(gdp_distinguished_field, '')
+    if setting:
+        user['distinguished_name'] += '/%s=%s' \
+            % (gdp_distinguished_field, setting)
+
     return user
 
 
@@ -139,6 +145,20 @@ def extract_field(distinguished_name, field_name):
     """Extract field_name value from client_id if included"""
     user = distinguished_name_to_user(distinguished_name)
     return user.get(field_name, None)
+
+
+def pretty_format_user(distinguished_name, hide_email=True):
+    """Format distinguished_name of a user to a human-friendly display format,
+    and optionally include the email address.
+    """
+    user_dict = distinguished_name_to_user(distinguished_name)
+    if hide_email:
+        user_dict['email'] = 'email hidden'
+    else:
+        # NOTE: obfuscate email by replacing with html entities
+        for (src, dst) in [('@', '&#064;'), ('.', '&#046;')]:
+            user_dict['email'] = user_dict.get('email', '').replace(src, dst)
+    return "%(full_name)s, %(organization)s &lt;%(email)s&gt;" % user_dict
 
 
 def sandbox_resource(unique_resource_name):

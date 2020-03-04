@@ -86,7 +86,8 @@ from shared.griddaemons import default_max_user_hits, \
     default_user_abuse_hits, default_proto_abuse_hits, \
     default_username_validator, refresh_user_creds, update_login_map, \
     login_map_lookup, hit_rate_limit, expire_rate_limit, \
-    handle_auth_attempt
+    validate_auth_attempt
+from shared.html import openid_page_template
 from shared.logger import daemon_logger, register_hangup_handler
 from shared.pwhash import make_scramble
 from shared.safeinput import valid_distinguished_name, valid_password, \
@@ -479,8 +480,11 @@ Invalid '%s' input: %s
             try:
                 request = self.server.openid.decodeRequest(query)
             except server.ProtocolError, why:
-                logger.error("handleAllow got broken request: %s" % why)
-                self.displayResponse(why)
+                # NOTE: Do not send exception to displayResponse
+                #       password might be written to screen !!!
+                msg = "handleAllow got broken request"
+                logger.error("%s: %s, error: %s" % (msg, query, why))
+                self.displayResponse(msg)
                 return
 
         logger.debug("handleAllow with last request %s from user %s" %
@@ -535,7 +539,7 @@ Invalid '%s' input: %s
 
             # Update rate limits and write to auth log
 
-            (authorized, _) = handle_auth_attempt(
+            (authorized, _) = validate_auth_attempt(
                 configuration,
                 'openid',
                 'password',
@@ -625,7 +629,11 @@ Invalid '%s' input: %s
             # Pass any errors from previous login attempts on for display
             request.error = query.get('err', '')
         except server.ProtocolError, why:
-            self.displayResponse(why)
+            # NOTE: Do not send exception to displayResponse
+            #       password might be written to screen !!!
+            msg = "serverEndPoint got broken request"
+            logger.error("%s: %s, error: %s" % (msg, query, why))
+            self.displayResponse(msg)
             return
 
         if request is None:
@@ -833,7 +841,7 @@ Invalid '%s' input: %s
 
             # Update rate limits and write to auth log
 
-            (authorized, _) = handle_auth_attempt(
+            (authorized, _) = validate_auth_attempt(
                 configuration,
                 'openid',
                 'password',
@@ -1104,7 +1112,6 @@ Invalid '%s' input: %s
             mdata = {
                 'expected_user': expected_user,
                 'user': self.user,
-                'err_msg': err_msg,
             }
             msg = '''\
             <p>A site has asked for an identity belonging to
@@ -1118,6 +1125,7 @@ Invalid '%s' input: %s
                 'trust_root': request.trust_root,
                 'expected_user': expected_user,
                 'server_base': self.server.server_base,
+                'err_msg': err_msg,
             }
             form = '''\
             <table>
@@ -1322,34 +1330,43 @@ Invalid '%s' input: %s
             </div>
             ''' % form
 
-        default_css = os.path.join(configuration.migserver_https_sid_url,
-                                   configuration.site_default_css.lstrip('/'))
-        static_css = os.path.join(configuration.migserver_https_sid_url,
-                                  configuration.site_static_css.lstrip('/'))
-        custom_css = os.path.join(configuration.migserver_https_sid_url,
-                                  configuration.site_custom_css.lstrip('/'))
-        skin_base = os.path.join(configuration.migserver_https_sid_url,
-                                 configuration.site_skin_base.lstrip('/'))
-        fav_icon = os.path.join(configuration.migserver_https_sid_url,
-                                configuration.site_fav_icon.lstrip('/'))
-        logo_center = configuration.site_logo_center.strip()
-
-        creds_logo = os.path.join(configuration.migserver_https_sid_url,
-                                  configuration.site_credits_image.lstrip('/'))
-        contents = {
+        # If not in proxy mode we must use artwork and style from SID vhost
+        show_address = configuration.user_openid_show_address
+        real_address = configuration.user_openid_address
+        if show_address == real_address:
+            logger.debug('using SID URLs')
+            url_prefix = configuration.migserver_https_sid_url
+            # Template generator uses configuration CSS values directly - fake them
+            url_targets = ['site_default_css', 'site_static_css',
+                           'site_custom_css', 'site_skin_base',
+                           'site_fav_icon', 'site_logo_left',
+                           'site_logo_center', 'site_logo_right',
+                           'site_credits_image'
+                           ]
+            for target in url_targets:
+                tmp_val = getattr(configuration, target).lstrip('/')
+                tmp_val = tmp_val.replace(url_prefix, '')
+                if tmp_val:
+                    tmp_val = os.path.join(url_prefix, tmp_val)
+                    setattr(configuration, target, tmp_val)
+        else:
+            logger.debug('using plain proxied URLs')
+        fill_helpers = {
             'title': configuration.short_title + ' OpenID Server - ' + title,
             'short_title': configuration.short_title,
             'head_extras': head_extras,
             'body': body,
             'user_link': user_link,
             'root_url': '/%s/' % self.server.server_base,
-            'site_default_css': default_css,
-            'site_static_css': static_css,
-            'site_custom_css': custom_css,
-            'site_skin_base': skin_base,
-            'site_fav_icon': fav_icon,
-            'site_logo_center': logo_center,
-            'credits_logo': creds_logo,
+            'site_default_css': configuration.site_default_css,
+            'site_static_css': configuration.site_static_css,
+            'site_custom_css': configuration.site_custom_css,
+            'site_skin_base': configuration.site_skin_base,
+            'site_fav_icon': configuration.site_fav_icon,
+            'site_logo_left': configuration.site_logo_left,
+            'site_logo_center': configuration.site_logo_center,
+            'site_logo_right': configuration.site_logo_right,
+            'credits_logo': configuration.site_credits_image,
             'credits_text': configuration.site_credits_text,
         }
 
@@ -1357,98 +1374,8 @@ Invalid '%s' input: %s
         self.writeUserHeader()
         self.send_header('Content-type', 'text/html')
         self.end_headers()
-
-        html = '''<!DOCTYPE html>
-<html>
-  <head>
-    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
-    <title>%(title)s</title>
-    %(head_extras)s
-
-<!-- site default style -->
-<link rel="stylesheet" type="text/css" href="%(site_default_css)s" media="screen"/>
-
-<!-- site basic skin style -->
-<link rel="stylesheet" type="text/css" href="%(site_static_css)s" media="screen"/>
-
-<!-- override with any site-specific styles -->
-<link rel="stylesheet" type="text/css" href="%(site_custom_css)s" media="screen"/>
-
-<!-- site skin style -->
-<link rel="stylesheet" type="text/css" href="%(site_skin_base)s/ui-theme.css" media="screen"/>
-<link rel="stylesheet" type="text/css" href="%(site_skin_base)s/ui-theme.custom.css" media="screen"/>
-
-<link rel="icon" type="image/vnd.microsoft.icon" href="%(site_fav_icon)s"/>
-</head>
-<body class="staticpage openid">
-<div id="topspace">
-</div>
-<div id="toplogo" class="staticpage">
-<div id="toplogoleft" class="staticpage">
-</div>
-<div id="toplogocenter" class="staticpage">
-<img src="%(site_skin_base)s/banner-logo.jpg" id="logoimagecenter"
-     class="staticpage" alt="site logo center"/>
-<span id="logotitle" class="staticpage">
-%(short_title)s OpenID Server
-</span>
-</div>
-<div id="toplogoright" class="staticpage">
-</div>
-</div>
-<div class="contentblock staticpage" id="nomenu">
-<div class="precontentwidgets">
-<!-- begin user supplied pre content widgets -->
-<!-- empty -->
-<!-- end user supplied pre content widgets -->
-</div>
-<div id="migheader">
-
-</div>
-    <div id="content" class="staticpage">
-    <div class="banner staticpage">
-      <div class="container righttext staticpage">
-          You are %(user_link)s
-      </div>
-    </div>
-%(body)s
-  </div>
-</div>''' % contents
-        # mimic footer from shared.html
-        html += '''
-<div id="bottomlogo" class="staticpage">
-<!-- NOTE: sync with shared.html -->
-<div id="bottomlogoleft">
-<div id="support">
-<img src="%s" id="supportimage" alt=""/>
-<div class="supporttext i18n" lang="en">
-%s
-</div>
-</div>
-</div>
-<div id="bottomlogoright">
-<div id="privacy">
-<img src="%s" id="privacyimage" alt=""/>
-<div class="privacytext i18n" lang="en">
-%s
-</div>
-</div>
-<div id="credits">
-<img src="%s" id="creditsimage" alt=""/>
-<div class="creditstext i18n" lang="en">
-%s
-</div>
-</div>
-</div>
-</div>
-<div id="bottomspace" class="staticpage">
-</div>
-</body>
-</html>
-''' % (configuration.site_support_image, configuration.site_support_text,
-            configuration.site_privacy_image, configuration.site_privacy_text,
-            configuration.site_credits_image, configuration.site_credits_text)
-        self.wfile.write(html)
+        page_template = openid_page_template(configuration, head_extras)
+        self.wfile.write(page_template % fill_helpers)
 
 
 def limited_accept(self, *args, **kwargs):

@@ -48,7 +48,7 @@ from shared.safeinput import REJECT_UNSET, valid_sid, validated_input, \
 from shared.job import JOB_TYPES, JOB, QUEUE, get_job_with_id, fields_to_mrsl
 from shared.workflows import valid_session_id, load_workflow_sessions_db, \
     touch_workflow_sessions_db
-from shared.vgrid import get_vgrid_recent_jobs
+from shared.vgrid import get_vgrid_recent_jobs, init_vgrid_script_list
 
 JOB_API_CREATE = 'create'
 JOB_API_READ = 'read'
@@ -141,14 +141,14 @@ def job_api_create(configuration, workflow_session, job_type=JOB,
     client_id = workflow_session['owner']
     external_dict = get_keywords_dict(configuration)
 
-    if 'vgrid' in job_attributes:
+    if 'vgrid' not in job_attributes:
         msg = "Cannot create new job without specifying a VGrid for it to be " \
               "attached to. "
         return (False, msg)
+    vgrid = job_attributes['vgrid']
 
     # User is vgrid owner or member
-    success, msg, _ = init_vgrid_script_list(vgrid, client_id,
-                                             configuration)
+    success, msg, _ = init_vgrid_script_list(vgrid, client_id, configuration)
     if not success:
         return (False, msg)
 
@@ -277,8 +277,13 @@ def job_api_update(configuration, workflow_session, job_type=JOB,
     if not success:
         return (False, msg)
 
-    status, job = get_job_with_id(configuration, job_id, client_id=client_id,
-                          only_user_jobs=False)
+    status, job = get_job_with_id(
+        configuration,
+        job_id,
+        vgrid,
+        client_id,
+        only_user_jobs=False
+    )
 
     if not status:
         msg = "Could not open job file for job '%s'" % job_id
@@ -444,6 +449,7 @@ def main(client_id, user_arguments_dict):
         msg = "Cannot create new job without specifying a VGrid for it to be " \
               "attached to. "
         return (False, msg)
+    vgrid = job_attributes['vgrid']
 
     # User is vgrid owner or member
     success, msg, _ = init_vgrid_script_list(vgrid, client_id,

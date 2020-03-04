@@ -91,9 +91,9 @@ session_id_length = session_id_bytes * 2
 session_id_charset = digits + 'abcdef'
 
 # Workflow IDs, is a 24 character random string
-w_id_bytes = 12
-w_id_length = w_id_bytes * 2
-w_id_charset = digits + 'abcdef'
+workflow_id_bytes = 12
+workflow_id_length = workflow_id_bytes * 2
+workflow_id_charset = digits + 'abcdef'
 
 # 2FA secret tokens are 32 chars (implicitly from base32 charset)
 twofactor_key_bytes = 32
@@ -151,6 +151,7 @@ user_keys_dir = 'keys'
 sharelinks_filename = 'sharelinks'
 seafile_ro_dirname = 'seafile_readonly'
 twofactor_key_name = 'twofactor_key'
+twofactor_interval_name = 'twofactor_interval'
 # Trash really goes to this location but only accessible through link
 trash_destdir = '.trash'
 trash_linkname = 'Trash'
@@ -365,6 +366,8 @@ CRACK_USERNAME_REGEX = '(root|bin|daemon|adm|admin|administrator|superadmin|lp|o
 CRACK_WEB_REGEX = '((HNAP1|GponForm|provisioning|provision|prov|polycom|yealink|CertProv|phpmyadmin|admin|cfg|wp|wordpress|cms|blog|old|new|test|dev|tmp|temp|remote|mgmt|properties|authenticate|tmui|ddem|a2billing|vtigercrm|secure|rpc|recordings|dana-na)(/.*|)|.*(Login|login|configuration|header|admin)\.(php|jsp|asp))'
 
 # GDP mode settings
+gdp_distinguished_field  = "GDP"
+
 # NOTE: these are Xgi-bin scripts to allow
 valid_gdp_auth_scripts = [
     'autocreate.py',
@@ -378,7 +381,7 @@ valid_gdp_auth_scripts = [
     'mkdir.py',
     'mv.py',
     'rm.py',
-    'settings.py',
+    'setup.py',
     'settingsaction.py',
     'twofactor.py',
     'uploadchunked.py',

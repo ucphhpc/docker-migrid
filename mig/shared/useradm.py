@@ -45,9 +45,9 @@ from shared.defaults import user_db_filename, keyword_auto, ssh_conf_dir, \
     settings_filename, profile_filename, default_css_filename, \
     widgets_filename, seafile_ro_dirname, authkeys_filename, \
     authpasswords_filename, authdigests_filename, cert_field_order, \
-    davs_conf_dir, twofactor_filename
+    twofactor_filename
 from shared.fileio import filter_pickled_list, filter_pickled_dict, \
-    make_symlink, delete_symlink
+    make_symlink, delete_symlink, acquire_file_lock, release_file_lock
 from shared.modified import mark_user_modified
 from shared.refunctions import list_runtime_environments, \
     update_runtimeenv_owner
@@ -63,8 +63,8 @@ from shared.vgrid import vgrid_add_owners, vgrid_remove_owners, \
     vgrid_add_members, vgrid_remove_members, in_vgrid_share, \
     vgrid_sharelinks, vgrid_add_sharelinks
 from shared.vgridaccess import get_resource_map, get_vgrid_map, \
-    refresh_user_map, refresh_resource_map, refresh_vgrid_map, VGRIDS, \
-    OWNERS, MEMBERS
+    force_update_user_map, force_update_resource_map, force_update_vgrid_map, \
+    VGRIDS, OWNERS, MEMBERS
 from shared.twofactorkeywords import get_twofactor_specs
 
 ssh_authkeys = os.path.join(ssh_conf_dir, authkeys_filename)
@@ -93,17 +93,35 @@ def init_user_adm():
     return (args, app_dir, db_path)
 
 
-def load_user_db(db_path):
+def lock_user_db(db_path, exclusive=True):
+    """Lock user db"""
+    db_lock_path = '%s.lock' % db_path
+    return acquire_file_lock(db_lock_path, exclusive=exclusive)
+
+
+def load_user_db(db_path, do_lock=True):
     """Load pickled user DB"""
 
-    return load(db_path)
+    if do_lock:
+        flock = lock_user_db(db_path, exclusive=False)
+    try:
+        result = load(db_path)
+    except Exception, exc:
+        if do_lock:
+            release_file_lock(flock)
+        raise
+
+    if do_lock:
+        release_file_lock(flock)
+
+    return result
 
 
-def load_user_dict(logger, user_id, db_path, verbose=False):
+def load_user_dict(logger, user_id, db_path, verbose=False, do_lock=True):
     """Load user dictionary from user DB"""
 
     try:
-        user_db = load_user_db(db_path)
+        user_db = load_user_db(db_path, do_lock=do_lock)
         if verbose:
             print 'Loaded existing user DB from: %s' % db_path
     except Exception, err:
@@ -115,10 +133,19 @@ def load_user_dict(logger, user_id, db_path, verbose=False):
     return user_db.get(user_id, None)
 
 
-def save_user_db(user_db, db_path):
+def save_user_db(user_db, db_path, do_lock=True):
     """Save pickled user DB"""
 
-    dump(user_db, db_path)
+    if do_lock:
+        flock = lock_user_db(db_path)
+    try:
+        dump(user_db, db_path)
+    except Exception, exc:
+        if do_lock:
+            release_file_lock(flock)
+        raise
+    if do_lock:
+        release_file_lock(flock)
 
 
 def delete_dir(path, verbose=False):
@@ -205,10 +232,11 @@ def create_user(
     force=False,
     verbose=False,
     ask_renew=True,
-    default_renew=False
+    default_renew=False,
+    do_lock=True,
 ):
     """Add user"""
-
+    flock = None
     user_db = {}
     if conf_path:
         if isinstance(conf_path, basestring):
@@ -238,97 +266,116 @@ def create_user(
 
     if verbose:
         print 'User ID: %s\n' % client_id
+
+    if do_lock:
+        flock = lock_user_db(db_path)
+
     if not os.path.exists(db_path):
-        raise Exception("Missing user DB: '%s'" % db_path)
-    else:
-        try:
-            user_db = load(db_path)
+        print 'User DB in %s does not exist - okay if first user' % db_path
+        create_answer = raw_input('Create new user DB? [Y/n] ')
+        if create_answer.lower().startswith('n'):
+            if do_lock:
+                release_file_lock(flock)
+            raise Exception("Missing user DB: '%s'" % db_path)
+        # Dump empty DB
+        save_user_db(user_db, db_path, do_lock=False)
+
+    try:
+        user_db = load_user_db(db_path, do_lock=False)
+        if verbose:
+            print 'Loaded existing user DB from: %s' % db_path
+    except Exception, err:
+        if not force:
+            if do_lock:
+                release_file_lock(flock)
+            raise Exception("Failed to load user DB: '%s'" % db_path)
+
+    # Prevent alias clashes by preventing addition of new users with same
+    # alias. We only allow renew of existing user.
+
+    # TODO: If check is required for GDP then use get_short_id instead of
+    #       user[configuration.user_openid_alias]
+    #       val[configuration.user_openid_alias]
+
+    if not configuration.site_enable_gdp and \
+            configuration.user_openid_providers and \
+            configuration.user_openid_alias:
+        user_aliases = dict([(key, val[configuration.user_openid_alias])
+                             for (key, val) in user_db.items()])
+        alias = user[configuration.user_openid_alias]
+        if alias in user_aliases.values() and \
+                user_aliases.get(client_id, None) != alias:
+            if do_lock:
+                release_file_lock(flock)
             if verbose:
-                print 'Loaded existing user DB from: %s' % db_path
-        except Exception, err:
-            if not force:
-                raise Exception("Failed to load user DB: '%s'" % db_path)
+                print 'Attempting create_user with conflicting alias %s' \
+                      % alias
+            raise Exception(
+                'A conflicting user with alias %s already exists' % alias)
 
-        # Prevent alias clashes by preventing addition of new users with same
-        # alias. We only allow renew of existing user.
-
-        # TODO: If check is required for GDP then use get_short_id instead of
-        #       user[configuration.user_openid_alias]
-        #       val[configuration.user_openid_alias]
-
-        if not configuration.site_enable_gdp and \
-                configuration.user_openid_providers and \
-                configuration.user_openid_alias:
-            user_aliases = dict([(key, val[configuration.user_openid_alias])
-                                 for (key, val) in user_db.items()])
-            alias = user[configuration.user_openid_alias]
-            if alias in user_aliases.values() and \
-                    user_aliases.get(client_id, None) != alias:
-                if verbose:
-                    print 'Attempting create_user with conflicting alias %s' \
-                          % alias
-                raise Exception(
-                    'A conflicting user with alias %s already exists' % alias)
-
-        if user_db.has_key(client_id):
-            if ask_renew:
-                print 'User DB entry for "%s" already exists' % client_id
-                renew_answer = raw_input('Renew existing entry? [Y/n] ')
-                renew = not renew_answer.lower().startswith('n')
-            else:
-                renew = default_renew
-            if renew:
-                user['old_password'] = user_db[client_id]['password']
-                # MiG OpenID users without password recovery have empty
-                # password value and on renew we then leave any saved cert
-                # password alone.
-                # External OpenID users do not provide a password so again any
-                # existing password should be left alone on renewal.
-                if not user['password']:
-                    user['password'] = user['old_password']
-                password_changed = (user['old_password'] != user['password'])
-                if password_changed:
-                    if authorized:
-                        print "User authorized password update"
-                    elif not user['old_password']:
-                        print "User requested password - previously disabled"
-                    else:
-                        print """User '%s' exists with *different* password!
+    if user_db.has_key(client_id):
+        if ask_renew:
+            print 'User DB entry for "%s" already exists' % client_id
+            renew_answer = raw_input('Renew existing entry? [Y/n] ')
+            renew = not renew_answer.lower().startswith('n')
+        else:
+            renew = default_renew
+        if renew:
+            user['old_password'] = user_db[client_id]['password']
+            # MiG OpenID users without password recovery have empty
+            # password value and on renew we then leave any saved cert
+            # password alone.
+            # External OpenID users do not provide a password so again any
+            # existing password should be left alone on renewal.
+            if not user['password']:
+                user['password'] = user['old_password']
+            password_changed = (user['old_password'] != user['password'])
+            if password_changed:
+                if authorized:
+                    print "User authorized password update"
+                elif not user['old_password']:
+                    print "User requested password - previously disabled"
+                else:
+                    print """User '%s' exists with *different* password!
 Generally users with an existing account should sign up again through Xgi-bin
 using their existing credentials to authorize password changes.""" % client_id
-                        accept_answer = raw_input(
-                            'Accept password change? [y/N] ')
-                        authorized = accept_answer.lower().startswith('y')
-                        if not authorized:
-                            if verbose:
-                                print """Renewal request supplied a different
+                    accept_answer = raw_input(
+                        'Accept password change? [y/N] ')
+                    authorized = accept_answer.lower().startswith('y')
+                    if not authorized:
+                        if do_lock:
+                            release_file_lock(flock)
+                        if verbose:
+                            print """Renewal request supplied a different
 password and you didn't accept change anyway - nothing more to do"""
-                            err = """Cannot renew account using a new password!
+                        err = """Cannot renew account using a new password!
 Please tell user to use the original password or request renewal using Xgi-bin
 with certificate or OpenID authentication to authorize the change."""
-                            raise Exception(err)
-                if verbose:
-                    print 'Renewing existing user'
-                # Take old user details and override fields with new ones but
-                # ONLY if actually set. This leaves any openid_names and roles
-                # alone on cert re-signup after openid signup.
-                updated_user = user_db[client_id]
-                for (key, val) in user.items():
-                    if key in ('auth', 'openid_names') and \
-                            not isinstance(val, basestring) and \
-                            isinstance(val, list):
-                        val_list = updated_user.get(key, [])
-                        val_list += [i for i in val if not i in val_list]
-                        updated_user[key] = val_list
-                    elif val:
-                        updated_user[key] = val
-                user.clear()
-                user.update(updated_user)
-            elif not force:
-                if verbose:
-                    print 'Nothing more to do for existing user %s' % client_id
-                raise Exception('Nothing more to do for existing user %s'
-                                % client_id)
+                        raise Exception(err)
+            if verbose:
+                print 'Renewing existing user'
+            # Take old user details and override fields with new ones but
+            # ONLY if actually set. This leaves any openid_names and roles
+            # alone on cert re-signup after openid signup.
+            updated_user = user_db[client_id]
+            for (key, val) in user.items():
+                if key in ('auth', 'openid_names') and \
+                        not isinstance(val, basestring) and \
+                        isinstance(val, list):
+                    val_list = updated_user.get(key, [])
+                    val_list += [i for i in val if not i in val_list]
+                    updated_user[key] = val_list
+                elif val:
+                    updated_user[key] = val
+            user.clear()
+            user.update(updated_user)
+        elif not force:
+            if do_lock:
+                release_file_lock(flock)
+            if verbose:
+                print 'Nothing more to do for existing user %s' % client_id
+            raise Exception('Nothing more to do for existing user %s'
+                            % client_id)
 
     # Add optional OpenID usernames to user (pickle may include some already)
 
@@ -352,14 +399,19 @@ with certificate or OpenID authentication to authorize the change."""
 
     try:
         user_db[client_id] = user
-        dump(user_db, db_path)
+        save_user_db(user_db, db_path, do_lock=False)
         if verbose:
             print 'User %s was successfully added/updated in user DB!'\
                   % client_id
     except Exception, err:
+        if do_lock:
+            release_file_lock(flock)
+        print err
         if not force:
             raise Exception('Failed to add %s to user DB: %s'
                             % (client_id, err))
+    if do_lock:
+        release_file_lock(flock)
 
     home_dir = os.path.join(configuration.user_home, client_dir)
     settings_dir = os.path.join(configuration.user_settings, client_dir)
@@ -590,7 +642,8 @@ The %(short_title)s admins
     return user
 
 
-def fix_user_sharelinks(old_id, client_id, conf_path, db_path, verbose=False):
+def fix_user_sharelinks(old_id, client_id, conf_path, db_path,
+                        verbose=False, do_lock=True):
     """Update sharelinks left-over from legacy version of edit_user"""
     user_db = {}
     if conf_path:
@@ -610,7 +663,7 @@ def fix_user_sharelinks(old_id, client_id, conf_path, db_path, verbose=False):
             if isinstance(db_path, dict):
                 user_db = db_path
             else:
-                user_db = load_user_db(db_path)
+                user_db = load_user_db(db_path, do_lock=do_lock)
                 if verbose:
                     print 'Loaded existing user DB from: %s' % db_path
         except Exception, err:
@@ -710,9 +763,11 @@ def edit_user(
     force=False,
     verbose=False,
     meta_only=False,
+    do_lock=True,
 ):
     """Edit user"""
 
+    flock = None
     user_db = {}
     if conf_path:
         if isinstance(conf_path, basestring):
@@ -728,20 +783,27 @@ def edit_user(
     if verbose:
         print 'User ID: %s\n' % client_id
 
+    if do_lock:
+        flock = lock_user_db(db_path)
+
     if os.path.exists(db_path):
         try:
             if isinstance(db_path, dict):
                 user_db = db_path
             else:
-                user_db = load_user_db(db_path)
+                user_db = load_user_db(db_path, do_lock=False)
                 if verbose:
                     print 'Loaded existing user DB from: %s' % db_path
         except Exception, err:
             if not force:
+                if do_lock:
+                    release_file_lock(flock)
                 raise Exception('Failed to load user DB: %s' % err)
 
         if not user_db.has_key(client_id):
             if not force:
+                if do_lock:
+                    release_file_lock(flock)
                 raise Exception("User DB entry '%s' doesn't exist!"
                                 % client_id)
 
@@ -758,12 +820,16 @@ def edit_user(
         new_id = user_dict["distinguished_name"]
         if not meta_only:
             if user_db.has_key(new_id):
+                if do_lock:
+                    release_file_lock(flock)
                 raise Exception("Edit aborted: new user already exists!")
             _logger.info("Force old user renew to fix missing files")
             create_user(old_user, conf_path, db_path, force, verbose,
-                        ask_renew=False, default_renew=True)
+                        ask_renew=False, default_renew=True, do_lock=False)
             del user_db[client_id]
         elif new_id != client_id:
+            if do_lock:
+                release_file_lock(flock)
             raise Exception("Edit aborted: illegal meta_only ID change! %s %s"
                             % (client_id, new_id))
         else:
@@ -771,16 +837,21 @@ def edit_user(
                                                                 changes))
 
         user_db[new_id] = user_dict
-        save_user_db(user_db, db_path)
+        save_user_db(user_db, db_path, do_lock=False)
         if verbose:
             print 'User %s was successfully edited in user DB!'\
                   % client_id
     except Exception, err:
+        if do_lock:
+            release_file_lock(flock)
         import traceback
         print traceback.format_exc()
         if not force:
             raise Exception('Failed to edit %s with %s in user DB: %s'
                             % (client_id, changes, err))
+
+    if do_lock:
+        release_file_lock(flock)
 
     if meta_only:
         return user_dict
@@ -802,13 +873,18 @@ def edit_user(
 
     # Rename user dirs recursively
 
-    for base_dir in (configuration.user_home,
-                     configuration.user_settings,
-                     configuration.user_cache,
-                     configuration.mrsl_files_dir,
-                     configuration.freeze_home,
-                     configuration.resource_pending):
+    user_dirs = [configuration.user_home,
+                 configuration.user_settings,
+                 configuration.user_cache]
 
+    if configuration.site_enable_jobs:
+        user_dirs.append(configuration.mrsl_files_dir)
+    if configuration.site_enable_freeze:
+        user_dirs.append(configuration.freeze_home)
+    if configuration.site_enable_resources:
+        user_dirs.append(configuration.resource_pending)
+
+    for base_dir in user_dirs:
         old_path = os.path.join(base_dir, client_dir)
         new_path = os.path.join(base_dir, new_client_dir)
         try:
@@ -838,34 +914,38 @@ def edit_user(
 
     # Loop through resource map and update user resource ownership
 
-    res_map = get_resource_map(configuration)
-    for (res_id, res) in res_map.items():
-        if client_id in res[OWNERS]:
-            (add_status, err) = resource_add_owners(configuration, res_id,
-                                                    [new_id])
-            if not add_status:
+    if configuration.site_enable_resources:
+        force_update_resource_map(configuration)
+        res_map = get_resource_map(configuration)
+        for (res_id, res) in res_map.items():
+            if client_id in res[OWNERS]:
+                (add_status, err) = resource_add_owners(configuration, res_id,
+                                                        [new_id])
+                if not add_status:
+                    if verbose:
+                        print 'Could not add new %s owner of %s: %s' \
+                              % (new_id, res_id, err)
+                    continue
+                (del_status, err) = resource_remove_owners(configuration, res_id,
+                                                           [client_id])
+                if not del_status:
+                    if verbose:
+                        print 'Could not remove old %s owner of %s: %s' \
+                              % (client_id, res_id, err)
+                    continue
                 if verbose:
-                    print 'Could not add new %s owner of %s: %s' \
-                          % (new_id, res_id, err)
-                continue
-            (del_status, err) = resource_remove_owners(configuration, res_id,
-                                                       [client_id])
-            if not del_status:
-                if verbose:
-                    print 'Could not remove old %s owner of %s: %s' \
-                          % (client_id, res_id, err)
-                continue
-            if verbose:
-                print 'Updated %s owner from %s to %s' % (res_id, client_id,
-                                                          new_id)
+                    print 'Updated %s owner from %s to %s' % (res_id, client_id,
+                                                              new_id)
 
     # Loop through vgrid map and update user owner/membership
     # By using the high level add/remove API the corresponding vgrid components
     # get properly updated, too
 
+    force_update_vgrid_map(configuration)
     vgrid_map = get_vgrid_map(configuration, recursive=False)
     for (vgrid_name, vgrid) in vgrid_map[VGRIDS].items():
         if client_id in vgrid[OWNERS]:
+
             (add_status, err) = vgrid_add_owners(configuration, vgrid_name,
                                                  [new_id])
             if not add_status:
@@ -958,11 +1038,12 @@ def edit_user(
                 ask_renew=False, default_renew=True)
     _logger.info("Force access map updates to avoid web stall")
     _logger.info("Force update user map")
-    refresh_user_map(configuration)
-    _logger.info("Force update resource map")
-    refresh_resource_map(configuration)
+    force_update_user_map(configuration)
+    if configuration.site_enable_resources:
+        _logger.info("Force update resource map")
+        force_update_resource_map(configuration)
     _logger.info("Force update vgrid map")
-    refresh_vgrid_map(configuration)
+    force_update_vgrid_map(configuration)
     return user_dict
 
 
@@ -972,9 +1053,11 @@ def delete_user(
     db_path,
     force=False,
     verbose=False,
+    do_lock=True
 ):
     """Delete user"""
 
+    flock = None
     user_db = {}
     if conf_path:
         if isinstance(conf_path, basestring):
@@ -991,34 +1074,46 @@ def delete_user(
     if verbose:
         print 'User ID: %s\n' % client_id
 
+    if do_lock:
+        flock = lock_user_db(db_path)
+
     if os.path.exists(db_path):
         try:
             if isinstance(db_path, dict):
                 user_db = db_path
             else:
-                user_db = load_user_db(db_path)
+                user_db = load_user_db(db_path, do_lock=False)
                 if verbose:
                     print 'Loaded existing user DB from: %s' % db_path
         except Exception, err:
             if not force:
+                if do_lock:
+                    release_file_lock(flock)
                 raise Exception('Failed to load user DB: %s' % err)
 
         if not user_db.has_key(client_id):
             if not force:
+                if do_lock:
+                    release_file_lock(flock)
                 raise Exception("User DB entry '%s' doesn't exist!"
                                 % client_id)
 
     try:
         user_dict = user_db.get(client_id, user)
         del user_db[client_id]
-        save_user_db(user_db, db_path)
+        save_user_db(user_db, db_path, do_lock=False)
         if verbose:
             print 'User %s was successfully removed from user DB!'\
                   % client_id
     except Exception, err:
         if not force:
+            if do_lock:
+                release_file_lock(flock)
             raise Exception('Failed to remove %s from user DB: %s'
                             % (client_id, err))
+
+    if do_lock:
+        release_file_lock(flock)
 
     # Remove any OpenID symlinks
 
@@ -1058,13 +1153,13 @@ def expand_openid_alias(alias_id, configuration):
     return client_id
 
 
-def get_openid_user_map(configuration):
+def get_openid_user_map(configuration, do_lock=True):
     """Translate user DB to OpenID mapping between a verified login URL and a
     pseudo certificate DN.
     """
     id_map = {}
     db_path = os.path.join(configuration.mig_server_home, user_db_filename)
-    user_map = load_user_db(db_path)
+    user_map = load_user_db(db_path, do_lock=do_lock)
     user_alias = configuration.user_openid_alias
     for cert_id in user_map.keys():
         for oid_provider in configuration.user_openid_providers:
@@ -1082,7 +1177,8 @@ def get_openid_user_map(configuration):
     return id_map
 
 
-def get_openid_user_dn(configuration, login_url, user_check=True):
+def get_openid_user_dn(configuration, login_url,
+                       user_check=True, do_lock=True):
     """Translate OpenID user identified by login_url into a distinguished_name
     on the cert format.
     We first lookup the login_url suffix in the user_home to find a matching
@@ -1090,7 +1186,7 @@ def get_openid_user_dn(configuration, login_url, user_check=True):
     into the corresponding distinguished name.
     If we don't succeed we try looking up the user from an optional openid
     login alias from the configuration and return the corresponding
-    distinguished name. 
+    distinguished name.
     As a last resort we check if login_url (suffix) is already on the cert
     distinguished name or cert dir format and return the distinguished name
     format if so.
@@ -1122,7 +1218,7 @@ def get_openid_user_dn(configuration, login_url, user_check=True):
         return distinguished_name
     elif configuration.user_openid_alias:
         db_path = os.path.join(configuration.mig_server_home, user_db_filename)
-        user_map = load_user_db(db_path)
+        user_map = load_user_db(db_path, do_lock=do_lock)
         user_alias = configuration.user_openid_alias
         _logger.debug('user_map')
         for (distinguished_name, user) in user_map.items():
@@ -1152,10 +1248,10 @@ def get_openid_user_dn(configuration, login_url, user_check=True):
         return ''
 
 
-def get_full_user_map(configuration):
+def get_full_user_map(configuration, do_lock=True):
     """Load complete user map including any OpenID aliases"""
     db_path = os.path.join(configuration.mig_server_home, user_db_filename)
-    user_map = load_user_db(db_path)
+    user_map = load_user_db(db_path, do_lock=do_lock)
     oid_aliases = get_openid_user_map(configuration)
     for (alias, cert_id) in oid_aliases.items():
         user_map[alias] = user_map.get(cert_id, {})
@@ -1221,6 +1317,7 @@ def migrate_users(
     force=False,
     verbose=False,
     prune_dupes=False,
+    do_lock=True,
 ):
     """Migrate all user data for possibly old format users to new format:
 
@@ -1235,6 +1332,7 @@ def migrate_users(
     update member files for all membership vgrids
     """
 
+    flock = None
     user_db = {}
     if conf_path:
         if isinstance(conf_path, basestring):
@@ -1244,15 +1342,20 @@ def migrate_users(
     else:
         configuration = get_configuration_object()
 
+    if do_lock:
+        flock = lock_user_db(db_path)
+
     if os.path.exists(db_path):
         try:
             if isinstance(db_path, dict):
                 user_db = db_path
             else:
-                user_db = load_user_db(db_path)
+                user_db = load_user_db(db_path, do_lock=False)
                 if verbose:
                     print 'Loaded existing user DB from: %s' % db_path
         except Exception, err:
+            if do_lock:
+                release_file_lock(flock)
             if not force:
                 raise Exception('Failed to load user DB: %s' % err)
 
@@ -1276,6 +1379,8 @@ def migrate_users(
         if new_id in user_db.keys():
             if not prune_dupes:
                 if not force:
+                    if do_lock:
+                        release_file_lock(flock)
                     raise Exception('new ID %s already exists in user DB!'
                                     % new_id)
             else:
@@ -1286,6 +1391,8 @@ def migrate_users(
         elif old_id in latest.keys():
             if not prune_dupes:
                 if not force:
+                    if do_lock:
+                        release_file_lock(flock)
                     raise Exception('old ID %s is not unique in user DB!'
                                     % old_id)
             else:
@@ -1309,7 +1416,11 @@ def migrate_users(
                 del user_db[prune_id]
         else:
             latest[old_id] = (client_id, user)
-    save_user_db(user_db, db_path)
+    save_user_db(user_db, db_path, do_lock=False)
+
+    if do_lock:
+        release_file_lock(flock)
+        flock = None
 
     # Now update the remaining users, i.e. those in latest
     for (client_id, user) in latest.values():
@@ -1381,13 +1492,22 @@ def migrate_users(
         # Finally update user DB now that file system was updated
 
         try:
+            if do_lock:
+                flock = lock_user_db(db_path)
+            user_db = load_user_db(db_path, do_lock=False)
             del user_db[client_id]
             user_db[new_id] = user
-            save_user_db(user_db, db_path)
+            save_user_db(user_db, db_path, do_lock=False)
+            if do_lock:
+                release_file_lock(flock)
+                flock = None
             if verbose:
                 print 'User %s was successfully updated in user DB!'\
                       % client_id
         except Exception, err:
+            if do_lock and flock:
+                release_file_lock(flock)
+                flock = None
             if not force:
                 raise Exception('Failed to update %s in user DB: %s'
                                 % (client_id, err))
@@ -1398,6 +1518,7 @@ def fix_entities(
     db_path,
     force=False,
     verbose=False,
+    do_lock=True,
 ):
     """Update owners/members for all resources and vgrids to use new format IDs
     where possible"""
@@ -1416,7 +1537,7 @@ def fix_entities(
             if isinstance(db_path, dict):
                 user_db = db_path
             else:
-                user_db = load_user_db(db_path)
+                user_db = load_user_db(db_path, do_lock=do_lock)
                 if verbose:
                     print 'Loaded existing user DB from: %s' % db_path
         except Exception, err:
@@ -1455,11 +1576,12 @@ def fix_userdb_keys(
     db_path,
     force=False,
     verbose=False,
+    do_lock=True,
 ):
     """Fix any old leftover colon separated keys in user DB by replacing them
     with the new DN form from the associated user dict.
     """
-
+    flock = None
     user_db = {}
     if conf_path:
         if isinstance(conf_path, basestring):
@@ -1469,16 +1591,21 @@ def fix_userdb_keys(
     else:
         configuration = get_configuration_object()
 
+    if do_lock:
+        flock = lock_user_db(db_path)
+
     if os.path.exists(db_path):
         try:
             if isinstance(db_path, dict):
                 user_db = db_path
             else:
-                user_db = load_user_db(db_path)
+                user_db = load_user_db(db_path, do_lock=False)
                 if verbose:
                     print 'Loaded existing user DB from: %s' % db_path
         except Exception, err:
             if not force:
+                if do_lock:
+                    release_file_lock(flock)
                 raise Exception('Failed to load user DB: %s' % err)
 
     for (client_id, user) in user_db.items():
@@ -1486,6 +1613,8 @@ def fix_userdb_keys(
         old_id = client_id
         new_id = user['distinguished_name']
         if old_id == new_id:
+            if verbose:
+                print 'user %s is already updated to new format' % client_id
             continue
         if verbose:
             print 'updating user on old format %s to new format %s' \
@@ -1494,14 +1623,18 @@ def fix_userdb_keys(
         try:
             del user_db[client_id]
             user_db[new_id] = user
-            save_user_db(user_db, db_path)
+            save_user_db(user_db, db_path, do_lock=False)
             if verbose:
                 print 'User %s was successfully updated in user DB!'\
                       % client_id
         except Exception, err:
             if not force:
+                if do_lock:
+                    release_file_lock(flock)
                 raise Exception('Failed to update %s in user DB: %s'
                                 % (client_id, err))
+    if do_lock:
+        release_file_lock(flock)
 
 
 def default_search():
@@ -1513,7 +1646,8 @@ def default_search():
     return search_filter
 
 
-def search_users(search_filter, conf_path, db_path, verbose=False):
+def search_users(search_filter, conf_path, db_path,
+                 verbose=False, do_lock=True):
     """Search for matching users"""
 
     if conf_path:
@@ -1529,7 +1663,7 @@ def search_users(search_filter, conf_path, db_path, verbose=False):
         if isinstance(db_path, dict):
             user_db = db_path
         else:
-            user_db = load_user_db(db_path)
+            user_db = load_user_db(db_path, do_lock=do_lock)
             if verbose:
                 print 'Loaded existing user DB from: %s' % db_path
     except Exception, err:
@@ -1560,8 +1694,8 @@ def search_users(search_filter, conf_path, db_path, verbose=False):
     return (configuration, hits)
 
 
-def _user_general_notify(user_id, targets, conf_path, db_path, verbose=False,
-                         get_fields=[]):
+def _user_general_notify(user_id, targets, conf_path, db_path,
+                         verbose=False, get_fields=[], do_lock=True):
     """Find notification addresses for user_id and targets"""
 
     password, errors = '', []
@@ -1577,7 +1711,7 @@ def _user_general_notify(user_id, targets, conf_path, db_path, verbose=False,
         if isinstance(db_path, dict):
             user_db = db_path
         else:
-            user_db = load_user_db(db_path)
+            user_db = load_user_db(db_path, do_lock=do_lock)
             if verbose:
                 print 'Loaded existing user DB from: %s' % db_path
     except Exception, err:
@@ -1657,7 +1791,7 @@ def user_migoid_notify(user_id, targets, conf_path, db_path, verbose=False,
 
 
 def user_password_check(user_id, conf_path, db_path, verbose=False,
-                        override_policy=None):
+                        override_policy=None, do_lock=True):
     """Check password policy compliance for user_id. If the optional
     override_policy is left unset the configuration policy value will be used
     otherwise the given value is used"""
@@ -1675,7 +1809,7 @@ def user_password_check(user_id, conf_path, db_path, verbose=False,
         if isinstance(db_path, dict):
             user_db = db_path
         else:
-            user_db = load_user_db(db_path)
+            user_db = load_user_db(db_path, do_lock=do_lock)
             if verbose:
                 print 'Loaded existing user DB from: %s' % db_path
     except Exception, err:
@@ -1779,7 +1913,8 @@ def req_password_check(req_path, conf_path, db_path, verbose=False,
     return (configuration, errors)
 
 
-def user_twofactor_status(user_id, conf_path, db_path, fields, verbose=False):
+def user_twofactor_status(user_id, conf_path, db_path, fields,
+                          verbose=False, do_lock=True):
     """Check twofactor status for user_id"""
 
     errors = []
@@ -1795,7 +1930,7 @@ def user_twofactor_status(user_id, conf_path, db_path, fields, verbose=False):
         if isinstance(db_path, dict):
             user_db = db_path
         else:
-            user_db = load_user_db(db_path)
+            user_db = load_user_db(db_path, do_lock=do_lock)
             if verbose:
                 print 'Loaded existing user DB from: %s' % db_path
     except Exception, err:

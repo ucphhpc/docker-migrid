@@ -38,10 +38,10 @@ from shared.functional import validate_input_and_cert
 from shared.gdp import ensure_user, get_projects, get_users, \
     get_active_project_client_id, project_accept_user, project_create, \
     project_invite_user, project_login, project_logout, project_remove_user, \
-    validate_user
+    validate_user, get_project_users
 from shared.handlers import safe_handler, get_csrf_limit, make_csrf_token
-from shared.html import themed_styles, jquery_ui_js, twofactor_wizard_html, \
-    twofactor_wizard_js, twofactor_token_html
+from shared.html import twofactor_wizard_html, twofactor_wizard_js, \
+    twofactor_token_html
 from shared.httpsclient import extract_client_openid
 from shared.init import initialize_main_variables, find_entry
 from shared.settings import load_twofactor, parse_and_save_twofactor
@@ -167,13 +167,14 @@ def html_tmpl(
         status_msg):
     """HTML main template for GDP manager"""
 
-    fill_entries = {}
-    fill_entries['csrf_field'] = csrf_field
-    fill_entries['csrf_token'] = csrf_token
+    fill_entries = {'csrf_field': csrf_field,
+                    'csrf_token': csrf_token,
+                    }
 
     twofactor_enabled = False
     create_projects = False
     accepted_projects = False
+    info_projects = False
     invited_projects = False
     invite_projects = False
     remove_projects = False
@@ -197,10 +198,9 @@ def html_tmpl(
             create_projects = True
         if user_dict and vgrid_manage_allowed(configuration,
                                               user_dict):
-            invite_projects = get_projects(
-                configuration, client_id, 'accepted', owner_only=True)
-            remove_projects = get_projects(
-                configuration, client_id, 'accepted', owner_only=True)
+            info_projects = invite_projects = remove_projects = \
+                get_projects(configuration, client_id,
+                             'accepted', owner_only=True)
         accepted_projects = get_projects(configuration, client_id,
                                          'accepted')
         invited_projects = get_projects(configuration, client_id, 'invited')
@@ -211,7 +211,9 @@ def html_tmpl(
                   invited_projects]:
         if entry and isinstance(entry, dict):
             known_projects.update(entry)
-    await_projects = (not create_projects and not known_projects)
+    await_projects = (twofactor_enabled
+                      and not create_projects
+                      and not known_projects)
 
     # Generate html
 
@@ -219,9 +221,10 @@ def html_tmpl(
     html = ""
     if configuration.site_enable_twofactor:
         html += """
-<div id='help_dialog' class='centertext hidden'></div>
+<div id='info_dialog' class='hidden'></div>
+<div id='help_dialog' class='hidden'></div>
 <div id='otp_verify_dialog' title='Verify Authenticator App Token'
-   class='centertext hidden'>
+   class='hidden'>
 """
         # NOTE: wizard needs dialog with form outside the main settings form
         # because nested forms cause problems
@@ -251,6 +254,9 @@ def html_tmpl(
         <ul class='fillwidth padspace'>"""
     if accepted_projects:
         html += """<li><a href='#access'>Access Project</a></li>"""
+        tab_count += 1
+    if info_projects:
+        html += """<li><a href='#info'>Project info</a></li>"""
         tab_count += 1
     if create_projects:
         html += """<li><a href='#create'>Create Project</a></li>"""
@@ -358,6 +364,56 @@ def html_tmpl(
         </table>
         </div>"""
 
+    # Show project information selectbox
+
+    if info_projects:
+        html += \
+            """
+        <div id='info'>"""
+        html += status_html
+        html += \
+            """
+        <table class='gm_projects_table' style='border-spacing=0;'>
+        <thead>
+            <tr>
+                <th>Project info:</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>
+                <div class='styled-select gm_select semi-square'>
+                <select name='info_base_vgrid_name'>
+                <option value=''>Choose project</option>
+                <option value=''>───────</option>"""
+        for project in sorted(info_projects.keys()):
+            html += \
+                """
+                <option value='%s'>%s</option>""" \
+                % (project, project)
+        html += \
+            """
+                <option value=''>───────</option>
+                </select>
+                </div>
+            </td></tr>
+        </tbody>
+        </table>
+        <table class='gm_projects_table' style='border-spacing=0;'>
+        <thead>
+            <tr>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>
+                <!-- NOTE: must have href for correct cursor on mouse-over -->
+                <a class='ui-button' id='info' href='#' onclick='showProjectInfo(); return false;'>Info</a>
+                <a class='ui-button' id='logout' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
+            </td></tr>
+        </tbody>
+        </table>
+        </div>"""
+
     # Show project invitations selectbox
 
     if invited_projects:
@@ -376,7 +432,7 @@ def html_tmpl(
         <tbody>
             <tr><td>
                 <div class='styled-select gm_select semi-square'>
-                <select name='accept_user_base_vgrid_name' onChange='selectAcceptUserProject(value);'>
+                <select name='accept_user_base_vgrid_name' onChange='selectAcceptUserProject();'>
                 <option value=''>Choose project</option>
                 <option value=''>───────</option>"""
         for project in sorted(invited_projects.keys()):
@@ -431,7 +487,7 @@ def html_tmpl(
         <tbody>
             <tr><td>
                 <div class='styled-select gm_select semi-square'>
-                <select name='invite_user_base_vgrid_name' onChange='selectInviteUserProject(value);'>
+                <select name='invite_user_base_vgrid_name' onChange='selectInviteUserProject();'>
                 <option value=''>Choose project</option>
                 <option value=''>───────</option>"""
         for project in sorted(invite_projects.keys()):
@@ -495,7 +551,7 @@ def html_tmpl(
         <tbody>
             <tr><td>
                 <div class='styled-select gm_select semi-square'>
-                <select name='remove_user_base_vgrid_name' onChange='selectRemoveUserProject(value);'>
+                <select name='remove_user_base_vgrid_name' onChange='selectRemoveUserProject();'>
                 <option value=''>Choose project</option>
                 <option value=''>───────</option>"""
         for project in sorted(remove_projects.keys()):
@@ -509,14 +565,16 @@ def html_tmpl(
                 </select>
                 </div>
                 </td></tr>
-            <tr>
+            <tr id='user_desc' style='display: none;'>
                 <td>
-                User ID:
+                User:
                 </td>
-            </tr><tr>
+            </tr><tr id='user' style='display: none;'>
                 <td>
-                <input name='remove_user_short_id' required placeholder='Registered Email of User'
-                    title='Email of user to remove' type='email' size='30'/>
+                <div class='styled-select gm_select semi-square'>
+                <select name='remove_user_short_id'>
+                </select>
+                </div>
             </td></tr>
             """
 
@@ -733,7 +791,8 @@ def html_tmpl(
         </thead>
         <tbody>
         """
-        b32_key, otp_uri = get_twofactor_secrets(configuration, client_id)
+        b32_key, otp_interval, otp_uri = \
+            get_twofactor_secrets(configuration, client_id)
         # We limit key exposure by not showing it in clear and keeping it
         # out of backend dictionary with indirect generation only.
 
@@ -746,6 +805,7 @@ def html_tmpl(
         else:
             enable_hint = 'enable it below'
         fill_helpers.update({'otp_uri': otp_uri, 'b32_key': b32_key,
+                             'otp_interval': otp_interval,
                              'check_url': check_url, 'demand_twofactor':
                              'demand', 'enable_hint': enable_hint})
 
@@ -800,9 +860,9 @@ def html_tmpl(
 def html_logout_tmpl(configuration, csrf_token):
     """HTML logout template for GDP manager"""
 
-    fill_entries = {}
-    fill_entries['csrf_field'] = csrf_field
-    fill_entries['csrf_token'] = csrf_token
+    fill_entries = {'csrf_field': csrf_field,
+                    'csrf_token': csrf_token,
+                    }
 
     html = \
         """
@@ -827,13 +887,21 @@ def html_logout_tmpl(configuration, csrf_token):
     return html
 
 
-def js_tmpl(configuration):
-    """Javascript to include in the page header"""
+def js_tmpl_parts(configuration, csrf_token):
+    """Javascript parts to include in the page header"""
 
     (tfa_import, tfa_init, tfa_ready) = twofactor_wizard_js(configuration)
+    fill_entries = {'csrf_field': csrf_field,
+                    'csrf_token': csrf_token,
+                    'tfa_init': tfa_init,
+                    'tfa_ready': tfa_ready,
+                    }
     js_import = ''
+    js_import += '<script type="text/javascript" src="/images/js/jquery.ajaxhelpers.js"></script>'
     js_import += tfa_import
     js_init = """
+    var csrf_field = '%(csrf_field)s';
+    var csrf_map = {'gdpman': '%(csrf_token)s'};
     var preselected_tab = 0;
     var category_map = {};
 
@@ -844,20 +912,61 @@ def js_tmpl(configuration):
         $('.'+category_id+'_section.'+project_action+' .category_ref').prop('disabled', true);
         $('.'+category_id+'_section.'+project_action+' .category_ref').prop('disabled', false);
     }
-    function selectInviteUserProject(project_name) {
+    function selectInviteUserProject() {
+        var project_name = $('#invite_user select[name=invite_user_base_vgrid_name]').val();
         /* Helper to switch category fields on project select in invite_user tab */
         var category_id = category_map[project_name];
         selectRef('invite_user', category_id);
     }
-    function selectAcceptUserProject(project_name) {
+    function selectAcceptUserProject() {
+        var project_name = $('#accept_user select[name=accept_user_base_vgrid_name]').val();
         /* Helper to switch category fields on project select in accept_user tab */
         var category_id = category_map[project_name];
         selectRef('accept_user', category_id);
     }
-    function selectRemoveUserProject(project_name) {
+    function renderSelectRemoveUserFromProject(project_name, project_participants) {
+        /* Helper to render user select in remove_user tab */
+        var select;
+        var option;
+        var option_desc;
+        var option_value;
+        select = $('#remove_user select[name=remove_user_short_id]');
+        select.children().remove().end();
+        if (project_participants.OK.length == 0) {
+            option = new Option('No participants found', '', true, true);
+            select.append(option);
+        }
+        else if (project_participants.OK.length > 0) {
+            option = new Option('Choose participant', '', true, true);
+            select.append(option);
+            option = new Option('───────', '', false, false);
+            select.append(option);
+            for (var i=0; i<project_participants.OK.length; i++ ) {
+                option_desc = project_participants.OK[i].name 
+                            + ' (' + project_participants.OK[i].email + ')';
+                option_value = project_participants.OK[i].short_id;
+                option = new Option(option_desc, option_value, false, false);
+                select.append(option);
+            }
+            option = new Option('───────', '', false, false);
+            select.append(option);
+        }
+        $('#remove_user tr[id=user_desc]').show();
+        $('#remove_user tr[id=user]').show();
+    }
+
+    function selectRemoveUserProject() {
+        var project_name = $('#remove_user select[name=remove_user_base_vgrid_name]').val();
         /* Helper to switch category fields on project select in remove_user tab */
         var category_id = category_map[project_name];
         selectRef('remove_user', category_id);
+        /* Helper to generate user select in remove_user tab */
+        $('#remove_user tr[id=user_desc]').hide();
+        $('#remove_user tr[id=user]').hide();
+        if (project_name !== '') {
+            ajax_gdp_project_users(renderSelectRemoveUserFromProject,
+                                     project_name);   
+        }
     }
     function extractProject(project_action) {
         var project_name = '';
@@ -875,14 +984,25 @@ def js_tmpl(configuration):
         return project_name;
     }
     function extractUser(project_action) {
-        var user_name = $('#gm_project_form input[name='+project_action+'_short_id]').val();
-        /* TODO: switch to select drop-down in remove user? */
-        if (! $('#gm_project_form input[name='+project_action+'_short_id]')[0].checkValidity()) {
+        var user_name = '';
+        var err_help = 'selected';
+        
+        if (project_action === 'remove_user') {
+            user_name = $('#gm_project_form select[name='+project_action+'_short_id]').val();
+        }
+        else if (! $('#gm_project_form input[name='+project_action+'_short_id]')[0].checkValidity()) {
+            user_name = '';
+            err_help = 'provided or not on required format';
             console.error('user field is missing or not on required format!');
-            //console.debug(project_action+'_short_id: '+user_name);
-            showError('Value Error', 'User missing or not on required format!');
+        } 
+        else {
+            user_name = $('#gm_project_form input[name='+project_action+'_short_id]').val();
+        }
+        if (!user_name) {
+            showError('Input Error', 'No User '+err_help+'!');
             return null;
         }
+        
         return user_name;
     }
     function extractCategory(project_action, project_name) {
@@ -1014,34 +1134,84 @@ def js_tmpl(configuration):
             $('#gm_project_submit_form').submit();
         }
     }
+    function showProjectInfoDialog(project_name, project_participants) {
+        var html = '';
+        var body = '';
+        html += '<p><b>Project participants:</b></p>';
 
-   function showHelp(title, msg) {
+
+        if (project_participants.ERROR.length > 0) {
+            for (var i=0; i<project_participants.ERROR.length; i++) {
+                body += '<p class=\"errortext\">' +
+                        'Error: '+project_participants.ERROR[i]+'</p>';
+            }
+        }
+        if (project_participants.WARNING.length > 0) {
+            for (var i=0; i<project_participants.WARNING.length; i++) {
+                body += '<p class=\"warningtext\">' +
+                        'Warning: '+ project_participants.WARNING[i]+'</p>';
+            }
+        }
+        if (project_participants.OK.length > 0) {
+            for (var i=0; i<project_participants.OK.length; i++) {
+                body += '<p>'+project_participants.OK[i].name+' ('+project_participants.OK[i].email+')</p>';
+            }
+        }
+        if (body === '') {
+            body += '<p>No participants found</p>';
+        }
+        html += body;
+        $('#info_dialog').dialog('option', 'title', project_name);
+        $('#info_dialog').html('<p>'+html+'</p>');
+        $('#info_dialog').dialog('open');
+
+    }
+
+    function showProjectInfo() {
+        var project_name = extractProject('info');
+        if (project_name === null) {
+            return;
+        }
+        ajax_gdp_project_users(showProjectInfoDialog, project_name);
+    }
+    function showHelp(title, msg) {
         $('#help_dialog').dialog('option', 'title', title);
         $('#help_dialog').html('<p>'+msg+'</p>');
         $('#help_dialog').dialog('open');
     }
-   function showError(title, msg) {
+    function showError(title, msg) {
         console.error(msg);
         showHelp(title, '<span class=\"warningtext\">'+msg+'</span>');
     }
 
-%s
-    """ % tfa_init
+%(tfa_init)s
+    """ % fill_entries
     js_ready = """
         $('#project-tabs').tabs({
             collapsible: false,
             active: preselected_tab
         });
-
+        $('#info_dialog').dialog(
+              { autoOpen: false, 
+                width: 500, 
+                height: 500, 
+                modal: true, 
+                closeOnEscape: true,
+                overflow: scroll,
+                buttons: { 'Ok': function() { $(this).dialog('close'); }}
+              });
         $('#help_dialog').dialog(
-              { autoOpen: false, width: 500, modal: true, closeOnEscape: true,
+              { autoOpen: false, 
+                width: 500, 
+                modal: true, 
+                closeOnEscape: true,
+
                 buttons: { 'Ok': function() { $(this).dialog('close'); }}
               });
 
-    %s
-    """ % tfa_ready
-
-    return jquery_ui_js(configuration, js_import, js_init, js_ready)
+    %(tfa_ready)s
+    """ % fill_entries
+    return (js_import, js_init, js_ready)
 
 
 def main(client_id, user_arguments_dict, environ=None):
@@ -1072,6 +1242,7 @@ def main(client_id, user_arguments_dict, environ=None):
         return (accepted, returnvalues.CLIENT_ERROR)
     (_, identity) = extract_client_openid(configuration, environ,
                                           lookup_dn=False)
+    output_format = accepted['output_format'][-1].strip()
     _csrf = accepted['_csrf'][-1].strip()
     action = accepted['action'][-1].strip()
     base_vgrid_name = accepted['base_vgrid_name'][-1].strip()
@@ -1088,21 +1259,26 @@ def main(client_id, user_arguments_dict, environ=None):
 
     # Generate header, title, css and js
 
-    title_text = '%s %s Management' % (configuration.short_title,
-                                       configuration.site_vgrid_label)
-    title_entry = find_entry(output_objects, 'title')
-    title_entry['text'] = title_text
-    title_entry['style'] = themed_styles(configuration)
-    title_entry['javascript'] = js_tmpl(configuration, )
+    if output_format != 'json':
+        title_text = '%s %s Management' % (configuration.short_title,
+                                           configuration.site_vgrid_label)
+        title_entry = find_entry(output_objects, 'title')
+        title_entry['text'] = title_text
+        add_import, add_init, add_ready = js_tmpl_parts(configuration,
+                                                        csrf_token)
+        title_entry['script']['advanced'] = add_import
+        title_entry['script']['init'] = add_init
+        title_entry['script']['ready'] = add_ready
 
-    output_objects.append({'object_type': 'header',
-                           'class': 'gdpman-title', 'text': title_text})
+        output_objects.append({'object_type': 'header',
+                               'class': 'gdpman-title', 'text': title_text})
 
     # Validate Access
 
     if not configuration.site_enable_gdp:
         output_objects.append({'object_type': 'error_text',
-                               'text': """%s Management disabled on this site.
+                               'text': """GDP Project Management disabled on
+this site.
 Please contact the site admins %s if you think it should be enabled.
 """ % configuration.admin_email})
         return (output_objects, returnvalues.ERROR)
@@ -1197,31 +1373,34 @@ Please contact the site admins %s if you think it should be enabled.
     (status, ensure_msg) = ensure_user(configuration, client_addr, client_id)
 
     if status and not action or action == 'logout':
+        redirect_url = ""
         active_project_client_id = get_active_project_client_id(
             configuration, client_id, 'https')
-
-        if active_project_client_id or action == 'logout':
-            project_logout(configuration,
-                           'https',
-                           client_addr,
-                           client_id,
-                           autologout=True)
+        if action == 'logout':
+            if active_project_client_id:
+                project_logout(configuration,
+                               'https',
+                               client_addr,
+                               client_id,
+                               autologout=True)
             return_url = req_url
-            if action == 'logout':
-                return_query_dict = None
-            else:
-                return_query_dict = user_arguments_dict
-
+            return_query_dict = None
+            redirect_url = openid_autologout_url(configuration,
+                                                 identity,
+                                                 client_id,
+                                                 return_url,
+                                                 return_query_dict)
+        elif active_project_client_id:
+            dest_op_name = 'fileman'
+            redirect_url = environ.get('REQUEST_URI',
+                                       '').split('?')[0].replace(op_name,
+                                                                 dest_op_name)
+        if redirect_url:
             html = """
-            <a id='autologout' href='%s'></a>
+            <a id='redirect' href='%s'></a>
             <script type='text/javascript'>
-                document.getElementById('autologout').click();
-            </script>""" \
-                % openid_autologout_url(configuration,
-                                        identity,
-                                        client_id,
-                                        return_url,
-                                        return_query_dict)
+                document.getElementById('redirect').click();
+            </script>""" % redirect_url
 
             output_objects.append({'object_type': 'html_form',
                                    'text': html})
@@ -1472,15 +1651,26 @@ Please contact the site admins %s if you think it should be enabled.
                 action_msg = 'OK: %s' % msg
             else:
                 action_msg = 'ERROR: %s' % msg
+        elif action == 'list_project_users':
+            output_objects.append({'object_type': 'list',
+                                   'list': get_project_users(
+                                       configuration,
+                                       base_vgrid_name,
+                                       skip_users=[client_id],
+                                       project_state='accepted',
+                                   )})
+
         elif action:
             action_msg = 'ERROR: Unknown action: %s' % action
 
         if not action_msg:
             action_msg = validate_msg
-        html = html_tmpl(configuration, action, client_id, csrf_token,
-                         action_msg)
-        # html += html_logout_tmpl(configuration, csrf_token)
-        output_objects.append({'object_type': 'html_form',
-                               'text': html})
+
+        if output_format != 'json':
+            html = html_tmpl(configuration, action, client_id, csrf_token,
+                             action_msg)
+            # html += html_logout_tmpl(configuration, csrf_token)
+            output_objects.append({'object_type': 'html_form',
+                                   'text': html})
 
     return (output_objects, returnvalues.OK)

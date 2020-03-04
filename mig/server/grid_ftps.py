@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # grid_ftps - secure ftp server wrapping ftp in tls/ssl and mapping user home
-# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
+# Copyright (C) 2014-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -96,7 +96,7 @@ from shared.griddaemons import default_max_user_hits, \
     default_max_secret_hits, default_username_validator, \
     get_fs_path, acceptable_chmod, refresh_user_creds, refresh_share_creds, \
     update_login_map, login_map_lookup, hit_rate_limit, expire_rate_limit, \
-    check_twofactor_session, handle_auth_attempt
+    check_twofactor_session, validate_auth_attempt
 from shared.tlsserver import hardened_openssl_context
 from shared.logger import daemon_logger, register_hangup_handler
 from shared.pwhash import make_scramble
@@ -245,7 +245,9 @@ class MiGUserAuthorizer(DummyAuthorizer):
             logger.debug("refresh user %s" % username)
             self._update_logins(configuration, username)
             if not self.has_user(username):
-                invalid_user = True
+                if not os.path.islink(
+                        os.path.join(daemon_conf['root_dir'], username)):
+                    invalid_user = True
                 entries = []
             else:
                 # list of User login objects for username
@@ -267,7 +269,7 @@ class MiGUserAuthorizer(DummyAuthorizer):
 
         # Update rate limits and write to auth log
 
-        (authorized, disconnect) = handle_auth_attempt(
+        (authorized, disconnect) = validate_auth_attempt(
             configuration,
             'ftps',
             'password',
@@ -528,13 +530,21 @@ unless it is available in mig/server/MiGserver.conf
     info_msg = "Listening on address '%s' and port %d" % (address, ctrl_port)
     logger.info(info_msg)
     print info_msg
-    try:
-        start_service(configuration)
-    except KeyboardInterrupt:
-        info_msg = "Received user interrupt"
-        logger.info(info_msg)
-        print info_msg
-        configuration.daemon_conf['stop_running'].set()
+    while True:
+        try:
+            start_service(configuration)
+        except KeyboardInterrupt:
+            info_msg = "Received user interrupt"
+            logger.info(info_msg)
+            print info_msg
+            configuration.daemon_conf['stop_running'].set()
+            break
+        except Exception, exc:
+            err_msg = "Received unexpected error: %s" % exc
+            logger.error(err_msg)
+            print err_msg
+            # Throttle a bit
+            time.sleep(5)
     info_msg = "Leaving with no more workers active"
     logger.info(info_msg)
     print info_msg

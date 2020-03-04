@@ -38,7 +38,7 @@ from ConfigParser import ConfigParser
 
 from shared.defaults import CSRF_MINIMAL, CSRF_WARN, CSRF_MEDIUM, CSRF_FULL, \
     POLICY_NONE, POLICY_WEAK, POLICY_MEDIUM, POLICY_HIGH, POLICY_CUSTOM, \
-    freeze_flavors, duplicati_protocol_choices
+    freeze_flavors, duplicati_protocol_choices, default_css_filename
 from shared.logger import Logger, SYSLOG_GDP
 from shared.html import menu_items, vgrid_items
 from shared.fileio import read_file, load_json
@@ -90,6 +90,7 @@ def fix_missing(config_file, verbose=True):
         'sessid_to_mrsl_link_home': '~/state/sessid_to_mrsl_link_home/',
         'sessid_to_jupyter_mount_link_home': '~/state/sessid_to_jupyter_mount_link_home/',
         'mig_system_files': '~/state/mig_system_files/',
+        'mig_system_run': '~/state/mig_system_run/',
         'wwwpublic': '~/state/wwwpublic/',
         'vm_home': '~/state/vm_home',
         'server_cert': '~/certs/cert.pem',
@@ -116,6 +117,7 @@ def fix_missing(config_file, verbose=True):
         'site_vgrid_creators': 'distinguished_name:.*',
         'site_vgrid_managers': 'distinguished_name:.*',
         'site_vgrid_label': 'VGrid',
+        'site_cloud_access': 'distinguished_name:.*',
         'site_signup_methods': '',
         'site_login_methods': '',
         'site_csrf_protection': '',
@@ -167,6 +169,7 @@ def fix_missing(config_file, verbose=True):
         'user_seafile_auth': ['password'],
         'user_seafile_ro_access': False,
         'user_duplicati_protocols': [],
+        'user_cloud_console_access': [],
         'user_cloud_ssh_auth': ['publickey'],
         'user_cloud_alias': '',
         'user_imnotify_address': '',
@@ -218,8 +221,8 @@ def fix_missing(config_file, verbose=True):
     monitor_section = {'sleep_secs': '60',
                        'sleep_update_totals': '600',
                        'slackperiod': '600'}
-    settings_section = {'language': 'English', 'submitui': ['fields',
-                                                            'textarea', 'files']}
+    settings_section = {'language': 'English', 'user_interface': ['V2', 'V3'],
+                        'submitui': ['fields', 'textarea', 'files']}
     feasibility_section = {'resource_seen_within_hours': '24',
                            'skip_validation': '',
                            'job_cond_green': 'ARCHITECTURE PLATFORM \
@@ -342,6 +345,7 @@ class Configuration:
     site_vgrid_creators = [('distinguished_name', '.*')]
     site_vgrid_managers = [('distinguished_name', '.*')]
     site_vgrid_label = 'VGrid'
+    site_cloud_access = [('distinguished_name', '.*')]
     # Allowed signup and login methods in prioritized order
     site_signup_methods = ['extcert']
     site_login_methods = ['extcert']
@@ -404,6 +408,7 @@ class Configuration:
     user_seafile_alias = ''
     user_seafile_ro_access = True
     user_duplicati_protocols = []
+    user_cloud_console_access = []
     user_cloud_ssh_auth = ['publickey']
     user_cloud_alias = ''
     user_openid_address = ''
@@ -446,6 +451,7 @@ class Configuration:
     sessid_to_mrsl_link_home = ''
     sessid_to_jupyter_mount_link_home = ''
     mig_system_files = ''
+    mig_system_run = ''
     empty_job_name = ''
     migserver_http_url = ''
     migserver_https_mig_cert_url = ''
@@ -515,6 +521,7 @@ class Configuration:
 
     expire_peer = 600
     language = ['English']
+    user_interface = ['V2', 'V3']
     submitui = ['fields', 'textarea', 'files']
 
     # directory for usage records, initially None (means: do not generate)
@@ -650,6 +657,8 @@ location.""" % self.config_file
                                                        'sessid_to_mrsl_link_home')
             self.mig_system_files = config.get('GLOBAL',
                                                'mig_system_files')
+            self.mig_system_run = config.get('GLOBAL',
+                                               'mig_system_run')
             self.empty_job_name = config.get('GLOBAL', 'empty_job_name')
             self.migserver_http_url = config.get('GLOBAL',
                                                  'migserver_http_url')
@@ -687,6 +696,11 @@ location.""" % self.config_file
             self.short_title = config.get('SITE', 'short_title')
         else:
             self.short_title = "MiG"
+        if config.has_option('SITE', 'user_interface'):
+            self.user_interface = config.get(
+                'SITE', 'user_interface').split()
+        else:
+            self.user_interface = ['V2']
         if config.has_option('GLOBAL', 'admin_list'):
             # Parse semi-colon separated list of admins with optional spaces
             admins = config.get('GLOBAL', 'admin_list')
@@ -998,6 +1012,9 @@ location.""" % self.config_file
                 'SITE', 'enable_cloud')
         else:
             self.site_enable_cloud = False
+        if config.has_option('GLOBAL', 'user_cloud_console_access'):
+            self.user_cloud_console_access = config.get(
+                'GLOBAL', 'user_cloud_console_access').split()
         if config.has_option('GLOBAL', 'user_cloud_ssh_auth'):
             self.user_cloud_ssh_auth = config.get('GLOBAL',
                                                   'user_cloud_ssh_auth').split()
@@ -1216,6 +1233,15 @@ location.""" % self.config_file
                                               config.options(section)})
 
         self.cloud_services = []
+        # List of service options with default and override map
+        override_map_keys = ['service_user', 'service_max_user_instances',
+                             'service_image_alias', 'service_allowed_images',
+                             'service_flavor_id', 'service_key_id',
+                             'service_network_id', 'service_sec_group_id',
+                             'service_floating_network_id',
+                             'service_availability_zone',
+                             'service_jumphost_address',
+                             'service_jumphost_user']
         # Load generated cloud sections
         for section in config.sections():
             if 'CLOUD_' in section:
@@ -1228,10 +1254,18 @@ location.""" % self.config_file
                         if content:
                             config.set(section, 'service_desc', content)
 
-                self.cloud_services.append({option: config.get(section,
-                                                               option)
-                                            for option in
-                                            config.options(section)})
+                service = {option: config.get(section, option) for option in
+                           config.options(section)}
+                # Parse all sections with default and map override using
+                # a semi-colon separated list of key=val pairs
+                for name in override_map_keys:
+                    raw_val = service.get('%s_map' % name, '')
+                    map_parts = raw_val.split(';')
+                    entry_pairs = [i.split('=', 1) for i in map_parts if \
+                                   i.find('=') != -1]
+                    entry_map = dict(entry_pairs)
+                    service['%s_map' % name] = entry_map
+                self.cloud_services.append(service)
 
         if config.has_option('GLOBAL', 'vgrid_owners'):
             self.vgrid_owners = config.get('GLOBAL', 'vgrid_owners')
@@ -1404,10 +1438,10 @@ location.""" % self.config_file
             self.site_images = config.get('SITE', 'images')
         else:
             self.site_images = "/images"
-        if config.has_option('SITE', 'styles'):
-            self.site_styles = config.get('SITE', 'styles')
+        if config.has_option('SITE', 'assets'):
+            self.site_assets = config.get('SITE', 'assets')
         else:
-            self.site_styles = self.site_images
+            self.site_assets = "/assets"
         if config.has_option('SITE', 'landing_page'):
             self.site_landing_page = config.get('SITE', 'landing_page')
         else:
@@ -1416,8 +1450,8 @@ location.""" % self.config_file
             self.site_skin = config.get('SITE', 'skin')
         else:
             self.site_skin = 'migrid-basic'
-        # Used in skin urls
-        self.site_skin_base = os.path.join(self.site_images, 'skin',
+        # Used in skin urls (assets just has a symlink for now)
+        self.site_skin_base = os.path.join(self.site_assets, 'skin',
                                            self.site_skin)
         if config.has_option('SITE', 'user_redirect'):
             self.site_user_redirect = config.get('SITE', 'user_redirect')
@@ -1488,6 +1522,9 @@ location.""" % self.config_file
             self.site_vgrid_managers = [i.split(':', 2) for i in req]
         if config.has_option('SITE', 'vgrid_label'):
             self.site_vgrid_label = config.get('SITE', 'vgrid_label').strip()
+        if config.has_option('SITE', 'cloud_access'):
+            req = config.get('SITE', 'cloud_access').split()
+            self.site_cloud_access = [i.split(':', 2) for i in req]
         if config.has_option('SITE', 'signup_methods'):
             self.site_signup_methods = config.get('SITE',
                                                   'signup_methods').split()
@@ -1530,6 +1567,17 @@ location.""" % self.config_file
             self.site_enable_wsgi = config.getboolean('SITE', 'enable_wsgi')
         else:
             self.site_enable_wsgi = False
+        if config.has_option('SITE', 'enable_widgets'):
+            self.site_enable_widgets = config.getboolean(
+                'SITE', 'enable_widgets')
+        else:
+            self.site_enable_widgets = False
+        if config.has_option('SITE', 'enable_styling'):
+            self.site_enable_styling = config.getboolean(
+                'SITE', 'enable_styling')
+        else:
+            self.site_enable_styling = False
+            self.site_user_css = ''
         if config.has_option('SITE', 'enable_griddk'):
             self.site_enable_griddk = config.getboolean(
                 'SITE', 'enable_griddk')
@@ -1648,6 +1696,24 @@ location.""" % self.config_file
         # Fall back to server_fqdn if not set or no valid entries
         if not self.site_transfers_from:
             self.site_transfers_from = [self.server_fqdn]
+        if config.has_option('SITE', 'quickstart_snippet_url'):
+            self.site_quickstart_snippet_url = config.get(
+                'SITE', 'quickstart_snippet_url')
+        else:
+            self.site_quickstart_snippet_url = '/public/quickstart-snippet.html'
+        if config.has_option('SITE', 'faq_snippet_url'):
+            self.site_faq_snippet_url = config.get('SITE', 'faq_snippet_url')
+        else:
+            self.site_faq_snippet_url = '/public/faq-snippet.html'
+        if config.has_option('SITE', 'about_snippet_url'):
+            self.site_about_snippet_url = config.get(
+                'SITE', 'about_snippet_url')
+        else:
+            self.site_about_snippet_url = '/public/about-snippet.html'
+        if config.has_option('SITE', 'status_url'):
+            self.site_status_url = config.get('SITE', 'status_url')
+        else:
+            self.site_status_url = '/public/status.html'
         # Fall back to a static 'random' salt string since we need it to
         # remain constant
         static_rand = 'w\xff\xcft\xaf/\x089 B\x1eG\x84i\x97a'
@@ -1680,19 +1746,20 @@ location.""" % self.config_file
         if config.has_option('SITE', 'default_css'):
             self.site_default_css = config.get('SITE', 'default_css')
         else:
-            self.site_default_css = '%s/default.css' % self.site_styles
+            self.site_default_css = '%s/default.css' % self.site_images
         if config.has_option('SITE', 'static_css'):
             self.site_static_css = config.get('SITE', 'static_css')
         else:
-            self.site_static_css = '%s/static-skin.css' % self.site_styles
+            self.site_static_css = '%s/static-skin.css' % self.site_images
         if config.has_option('SITE', 'custom_css'):
             self.site_custom_css = config.get('SITE', 'custom_css')
         else:
-            self.site_custom_css = '%s/site-custom.css' % self.site_styles
+            self.site_custom_css = '%s/site-custom.css' % self.site_images
         if config.has_option('SITE', 'user_css'):
             self.site_user_css = config.get('SITE', 'user_css')
         else:
-            self.site_user_css = '%s/.default.css' % self.site_user_redirect
+            self.site_user_css = '%s/%s' % (self.site_user_redirect,
+                                            default_css_filename)
         if config.has_option('SITE', 'fav_icon'):
             self.site_fav_icon = config.get('SITE', 'fav_icon')
         else:
@@ -1722,6 +1789,7 @@ location.""" % self.config_file
             self.site_support_image = config.get('SITE', 'support_image')
         else:
             self.site_support_image = '%s/icons/help.png' % self.site_images
+
         if config.has_option('SITE', 'privacy_text'):
             self.site_privacy_text = config.get('SITE', 'privacy_text')
         else:

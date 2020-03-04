@@ -67,6 +67,9 @@ if '__main__' == __name__:
         'seafhttp_base',
         'jupyter_services',
         'jupyter_services_desc',
+        'cloud_fqdn',
+        'cloud_services',
+        'cloud_services_desc',
         'user',
         'group',
         'apache_version',
@@ -102,6 +105,7 @@ if '__main__' == __name__:
         'skin',
         'short_title',
         'secscan_addr',
+        'user_interface',
     ]
     int_names = [
         'apache_worker_procs',
@@ -146,6 +150,7 @@ if '__main__' == __name__:
         'enable_vmachines',
         'enable_preview',
         'enable_jupyter',
+        'enable_cloud',
         'enable_gdp',
         'enable_hsts',
         'enable_vhost_certs',

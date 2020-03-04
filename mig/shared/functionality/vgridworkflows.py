@@ -45,7 +45,7 @@ from shared.defaults import keyword_all, keyword_auto, \
 from shared.events import get_path_expand_map
 from shared.fileio import unpickle, makedirs_rec, move_file
 from shared.functional import validate_input_and_cert, REJECT_UNSET
-from shared.html import jquery_ui_js, man_base_js, man_base_html, themed_styles
+from shared.html import man_base_js, man_base_html
 from shared.init import initialize_main_variables, find_entry
 from shared.parseflags import verbose
 from shared.vgrid import vgrid_add_remove_table, vgrid_is_owner_or_member, \
@@ -129,8 +129,8 @@ def main(client_id, user_arguments_dict):
     if not vgrid_is_owner_or_member(vgrid_name, client_id,
                                     configuration):
         output_objects.append({'object_type': 'error_text',
-                               'text': '''You must be an owner or member of 
-                               %s vgrid to access the workflows.'''
+                               'text': '''You must be an owner or member of %s vgrid to
+access the workflows.'''
                                % vgrid_name})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
@@ -154,8 +154,8 @@ def main(client_id, user_arguments_dict):
         if operation == "show":
             add_ready += '%s;' % refresh_call
         add_ready += '''
-              /* Init variables helper as foldable but closed and with 
-              individual heights */
+              /* Init variables helper as foldable but closed and with individual
+              heights */
               $(".variables-accordion").accordion({
                                            collapsible: true,
                                            active: false,
@@ -168,9 +168,9 @@ def main(client_id, user_arguments_dict):
               $(".workflow-tabs").tabs();
               $("#logarea").scrollTop($("#logarea")[0].scrollHeight);
         '''
-        title_entry['style'] = themed_styles(configuration)
-        title_entry['javascript'] = jquery_ui_js(configuration, add_import,
-                                                 add_init, add_ready)
+        title_entry['script']['advanced'] += add_import
+        title_entry['script']['init'] += add_init
+        title_entry['script']['ready'] += add_ready
         output_objects.append({'object_type': 'html_form',
                                'text': man_base_html(configuration)})
 
@@ -234,20 +234,6 @@ def main(client_id, user_arguments_dict):
                         dest_path = os.path.join(trigger_job_final_dir,
                                                  filename)
                         move_file(src_path, dest_path, configuration)
-
-                        if 'event_type' in trigger_job \
-                                and 'src_path' in trigger_job:
-                            logger.info(
-                                "DELETE ME: The triggered job '%s' with id "
-                                "'%s' and user '%s' has completed. This job "
-                                "was originally created from a '%s' event at "
-                                "'%s'."
-                                % (filename, trigger_job['jobid'],
-                                   trigger_job['owner'],
-                                   trigger_job['event_type'],
-                                   trigger_job['src_path'])
-                            )
-                            # PROVENANCE, update history here
                     else:
                         logger.error('Trigger job: %s, unknown state: %s'
                                      % (trigger_job['jobid'],

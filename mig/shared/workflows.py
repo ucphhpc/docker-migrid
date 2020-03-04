@@ -40,8 +40,8 @@ except ImportError:
 
 from shared.base import force_utf8_rec
 from shared.conf import get_configuration_object
-from shared.defaults import src_dst_sep, w_id_charset, \
-    w_id_length, session_id_length, session_id_charset, default_vgrid
+from shared.defaults import src_dst_sep, workflow_id_charset, \
+    workflow_id_length, session_id_length, session_id_charset, default_vgrid
 from shared.fileio import delete_file, write_file, makedirs_rec, touch
 from shared.map import load_system_map
 from shared.modified import check_workflow_p_modified, \
@@ -479,7 +479,8 @@ def __generate_persistence_id():
     random ascii characters.
     :return: (function call to 'generate_random_ascii')
     """
-    return generate_random_ascii(w_id_length, charset=w_id_charset)
+    return generate_random_ascii(workflow_id_length,
+                                 charset=workflow_id_charset)
 
 
 def __generate_task_file_name():
@@ -488,7 +489,8 @@ def __generate_task_file_name():
     characters.
     :return: (function call to 'generate_random_ascii')
     """
-    return generate_random_ascii(w_id_length, charset=w_id_charset)
+    return generate_random_ascii(workflow_id_length,
+                                 charset=workflow_id_charset)
 
 
 def __correct_user_input(configuration, input, required_input=None,
@@ -2245,10 +2247,10 @@ def __prepare_template(configuration, template, **kwargs):
 %(output_files)s%(sep)sjob_output/+JOBID+/%(output_files)s
 
 ::MAXFILL::
-MEMORY
+CPUCOUNT
 CPUTIME
 DISK
-CPUCOUNT
+MEMORY
 NODECOUNT
 
 ::RETRIES::
@@ -2264,10 +2266,10 @@ NODECOUNT
 0
 
 ::CPUCOUNT::
-1
+0
 
 ::NODECOUNT::
-1
+0
 
 ::MOUNT::
 +TRIGGERVGRIDNAME+ +TRIGGERVGRIDNAME+

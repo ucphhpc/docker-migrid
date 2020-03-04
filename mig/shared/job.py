@@ -20,8 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
-# USA.
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 # -- END_HEADER ---
 #
@@ -46,7 +45,6 @@ JOB_TYPES = [
     JOB,
     QUEUE
 ]
-
 
 class Job:
     """Job objects"""
@@ -112,7 +110,6 @@ def get_job_id(configuration):
             return -1
     return val
 
-
 def fill_mrsl_template(
     job_template,
     mrsl_fd_or_path,
@@ -173,7 +170,6 @@ def fill_mrsl_template(
                      (exc, job_template))
         return False
     return True
-
 
 def new_job(
     filename,

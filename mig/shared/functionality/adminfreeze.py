@@ -36,8 +36,8 @@ from shared.defaults import upload_tmp_dir, trash_linkname, csrf_field, \
 from shared.freezefunctions import get_frozen_archive, brief_freeze
 from shared.functional import validate_input_and_cert
 from shared.handlers import get_csrf_limit, make_csrf_token
-from shared.html import jquery_ui_js, man_base_js, man_base_html, \
-    fancy_upload_js, fancy_upload_html, themed_styles
+from shared.html import man_base_js, man_base_html, fancy_upload_js, \
+    fancy_upload_html, themed_styles
 from shared.init import initialize_main_variables, find_entry
 
 
@@ -289,11 +289,14 @@ function init_dialogs() {
 function init_page() {
     init_dialogs();
 }
+
     ''' % (upload_tmp_dir, trash_linkname, csrf_token)
     add_ready += '''
          // do sequenced initialisation (separate function)
          init_page();
     '''
+
+    # TODO: can we update style inline to avoid explicit themed_styles?
     title_entry['style'] = themed_styles(configuration,
                                          base=['jquery.contextmenu.css',
                                                'jquery.managers.contextmenu.css',
@@ -302,9 +305,12 @@ function init_page() {
                                                'jquery.fileupload.css',
                                                'jquery.fileupload-ui.css'],
                                          skin=['fileupload-ui.custom.css',
-                                               'xbreadcrumbs.custom.css'])
-    title_entry['javascript'] = jquery_ui_js(configuration, add_import,
-                                             add_init, add_ready)
+                                               'xbreadcrumbs.custom.css'],
+                                         user_settings=title_entry.get(
+                                             'user_settings', {}))
+    title_entry['script']['advanced'] += add_import
+    title_entry['script']['init'] += add_init
+    title_entry['script']['ready'] += add_ready
 
     if flavor == 'freeze':
         fill_helpers['freeze_name'] = fill_helpers.get('freeze_name', '')
@@ -352,18 +358,31 @@ so please be careful when filling in the details.
     files_form = """
 <!-- and now this... we do not want to see it, except in a dialog: -->
 <div id='fm_filechooser' style='display:none'>
-    <div class='fm_path_breadcrumbs'>
-        <ul id='fm_xbreadcrumbs' class='xbreadcrumbs'>
-        </ul>
-    </div>
-    <div class='fm_buttonbar'>
-        <ul id='fm_buttons' class='buttonbar'>
-        <!-- dynamically modified by js to show optional buttons -->
-        <li class='datatransfersbutton hidden' title='Manage Data Transfers'>&nbsp;</li>
-        <li class='sharelinksbutton hidden' title='Manage Share Links'>&nbsp;</li>
-        <li class='parentdirbutton' title='Open Parent Directory'>&nbsp;</li>
-        <li class='refreshbutton' title='Refresh'>&nbsp;</li>
-        </ul>
+    <div class='tree-container container-fluid'>
+        <div class='tree-row row'>
+            <div class='tree-header col-3'></div>
+            <div class='fm_path_breadcrumbs col-6'>
+                <ul id='fm_xbreadcrumbs' class='xbreadcrumbs'><!-- dynamic --></ul>
+            </div>
+            <div class='fm_buttonbar col-3 d-none d-lg-block'>
+                <ul id='fm_buttons' class='buttonbar'>
+                    <!-- dynamically modified by js to show optional buttons -->
+                    <li class='datatransfersbutton hidden' title='Manage Data Transfers'>&nbsp;</li>
+                    <li class='sharelinksbutton hidden' title='Manage Share Links'>&nbsp;</li>
+                    <li class='parentdirbutton' title='Open Parent Directory'>&nbsp;</li>
+                    <li class='refreshbutton' title='Refresh'>&nbsp;</li>
+                </ul>
+            </div>
+            <div class='fm_buttonbar-big col-6 d-block d-lg-none hidden'>
+                <ul id='fm_buttons' class='buttonbar'>
+                    <!-- dynamically modified by js to show optional buttons -->
+                    <li class='datatransfersbutton hidden' title='Manage Data Transfers'>&nbsp;</li>
+                    <li class='sharelinksbutton hidden' title='Manage Share Links'>&nbsp;</li>
+                    <li class='parentdirbutton' title='Open Parent Directory'>&nbsp;</li>
+                    <li class='refreshbutton' title='Refresh'>&nbsp;</li>
+                </ul>
+            </div>
+        </div>
     </div>
     <div class='fm_addressbar'>
         <input type='hidden' value='/' name='fm_current_path' />
@@ -379,10 +398,11 @@ so please be careful when filling in the details.
         <table id='fm_filelisting' style='font-size:13px; border-spacing=0;'>
             <thead>
                 <tr>
-                    <th>Name</th>
-                    <th style='width: 80px;'>Size</th>
-                    <th style='width: 50px;'>Type</th>
-                    <th style='width: 120px;'>Date Modified</th>
+                    <th class='fm_name'>Name</th>
+                    <th class='fm_size'>Size</th>
+                    <th class='fm_type'>Type</th>
+                    <th class='fm_date'>Date Modified</th>
+                    <th class='fm_toolbox'>...</th>
                 </tr>
             </thead>
             <tbody>
@@ -390,14 +410,11 @@ so please be careful when filling in the details.
             </tbody>
          </table>
     </div>
-    <div id='fm_statusbar'>
-        <div id='fm_statusprogress'><div class='progress-label'>Loading...</div></div>
-        <div id='fm_statusinfo'>&nbsp;</div>
-    </div>
-    <div id='fm_options'><input id='fm_touchscreen' type='checkbox'>
-    Enable touch screen interface (all clicks trigger menu)
-    <input id='fm_dotfiles' type='checkbox'>
-    Show hidden files and dirs
+    <div id='fm_statusbar' class='col-lg-12'>
+        <div id='fm_statusprogress' class=' col-lg-3'>
+            <div class='progress-label'>Loading...</div>
+        </div>
+        <div id='fm_statusinfo' class='col-lg-9'>&nbsp;</div>
     </div>
 </div>
 <div id='cmd_dialog' title='Command output' style='display: none;'></div>
@@ -516,5 +533,10 @@ about including any of them.
             'text': 'View details',
             'target': '_blank',
         })
+
+    # Spacing
+    output_objects.append({'object_type': 'html_form', 'text': '''
+            <div class="vertical-spacer"></div>
+    '''})
 
     return (output_objects, returnvalues.OK)

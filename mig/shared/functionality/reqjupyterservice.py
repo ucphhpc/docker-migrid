@@ -32,7 +32,7 @@ it passes the Remote-User header with the client_id's email.
 The second request takes the newly instantiated ssh keyset and passes it to the
 jupyterhub server via the Mount header.
 Subsequently any potentially old keysets for this user is removed and the new
-keyset is commited to the users configuration.jupyter_mount_files_dir
+keyset is committed to the users configuration.jupyter_mount_files_dir
 directory. Finally this active keyset is linked to the directory where the sftp
 will check for a valid keyset and the users homedrive is linked to the same
 location.
@@ -53,7 +53,6 @@ import requests
 
 import shared.returnvalues as returnvalues
 from shared.base import client_id_dir, extract_field
-from shared.conf import get_configuration_object
 from shared.defaults import session_id_bytes
 from shared.fileio import make_symlink, pickle, unpickle, write_file, \
     delete_symlink, delete_file
@@ -86,6 +85,7 @@ def is_active(pickle_state, timeout=7200):
         active = False
     return active
 
+
 def to_unix_account(input_str):
     """
     Extracts a set of valid characters from input_str and returns a
@@ -100,6 +100,7 @@ def to_unix_account(input_str):
     if not valid_unix_name:
         return None
     return valid_unix_name[:32]
+
 
 def mig_to_mount_adapt(mig):
     """
@@ -116,6 +117,7 @@ def mig_to_mount_adapt(mig):
     }
     return mount
 
+
 def mig_to_user_adapt(mig):
     """
     :param mig: expects a dictionary containing a USER_CERT key that defines
@@ -130,6 +132,21 @@ def mig_to_user_adapt(mig):
         if unix_name:
             user['UNIX_NAME'] = unix_name
     return user
+
+
+def mig_to_workflows_adapt(mig):
+    """
+    :param mig: expects a dictionary containing mig state keys including,
+    WORKFLOWS_URL, WORKFLOWS_SESSIONID.
+    :return: returns a dictionary
+    """
+    workflows = {}
+    if 'WORKFLOWS_URL' in mig:
+        workflows.update({'WORKFLOWS_URL': mig['WORKFLOWS_URL']})
+    if 'WORKFLOWS_SESSION_ID' in mig:
+        workflows.update({'WORKFLOWS_SESSION_ID': mig['WORKFLOWS_SESSION_ID']})
+    return workflows
+
 
 def remove_jupyter_mount(jupyter_mount_path, configuration):
     """
@@ -185,7 +202,7 @@ def get_newest_mount(jupyter_mounts):
 
 def get_host_from_service(configuration, service):
     """
-    Returns a URL from one of the services avilable hosts,
+    Returns a URL from one of the services available hosts,
     if no active host is found None is returned.
     :param configuration: The MiG Configuration object
     :param service: A service object that an active hosts should be found from
@@ -204,8 +221,8 @@ def get_host_from_service(configuration, service):
                 session.get(hosts[rng])
                 return hosts[rng]
         except requests.ConnectionError as err:
-            _logger.error("Failed to establish connection to %s error %s",
-                          hosts[rng], err)
+            _logger.error("Failed to establish connection to %s error %s" %
+                          (hosts[rng], err))
             hosts.pop(rng)
     return None
 
@@ -222,16 +239,16 @@ def jupyter_host(configuration, output_objects, user, url):
     to the client
     """
     _logger = configuration.logger
-    _logger.info(
-        "User: %s finished, redirecting to the jupyter host at: %s" % (user, url))
+    _logger.info("User: %s finished, redirecting to the jupyter host at: %s"
+                 % (user, url))
     headers = [('Location', url), ('Remote-User', user)]
     output_objects.append({'object_type': 'start', 'headers': headers})
     return (output_objects, returnvalues.OK)
 
 
-def reset():
-    """
-    Helper function to clean up all jupyter directories and mounts
+def reset(configuration):
+    """Helper function to clean up all jupyter directories and mounts
+    :param configuration: the MiG Configuration object
     """
     configuration = get_configuration_object()
     auth_path = os.path.join(configuration.mig_system_files,
@@ -258,8 +275,7 @@ def valid_jupyter_service(configuration, service):
     _logger = configuration.logger
     if not isinstance(service, dict):
         _logger.error('The jupyter service %s has an incorrect structure %s,'
-                      ' requires dictionary' % (
-                          service, type(service)))
+                      ' requires dictionary' % (service, type(service)))
         return False
 
     if 'service_name' not in service:
@@ -302,7 +318,7 @@ def main(client_id, user_arguments_dict):
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
 
-    logger.debug("User: %s executing %s", client_id, op_name)
+    logger.debug("User: %s executing %s" % (client_id, op_name))
     if not configuration.site_enable_jupyter:
         output_objects.append(
             {'object_type': 'error_text', 'text':
@@ -410,15 +426,15 @@ def main(client_id, user_arguments_dict):
                            os.listdir(mnt_path)
                            if jfile.endswith('.jupyter_mount')]
 
-    logger.info("User: %s mount files: %s", client_id,
-                "\n".join(jupyter_mount_files))
-    logger.debug("Remote-User %s", remote_user)
+    logger.info("User: %s mount files: %s"
+                % (client_id, "\n".join(jupyter_mount_files)))
+    logger.debug("Remote-User %s" % remote_user)
     active_mounts = []
     for jfile in jupyter_mount_files:
         jupyter_dict = unpickle(jfile, logger)
         if not jupyter_dict:
             # Remove failed unpickle
-            logger.error("Failed to unpickle %s removing it", jfile)
+            logger.error("Failed to unpickle %s removing it" % jfile)
             remove_jupyter_mount(jfile, configuration)
         else:
             # Mount has been timed out
@@ -428,8 +444,9 @@ def main(client_id, user_arguments_dict):
                 # Valid mount
                 active_mounts.append({'path': jfile, 'state': jupyter_dict})
 
-    logger.debug("User: %s active keys: %s", client_id,
-                 "\n".join([mount['path'] for mount in active_mounts]))
+    logger.debug("User: %s active keys: %s" %
+                 (client_id,
+                  "\n".join([mount['path'] for mount in active_mounts])))
 
     # If multiple are active, remove oldest
     active_mount, old_mounts = get_newest_mount(active_mounts)
@@ -439,25 +456,35 @@ def main(client_id, user_arguments_dict):
     # A valid active key is already present redirect straight to the jupyter
     # service, pass most recent mount information
     if active_mount is not None:
-        session_id = get_workflow_session_id(configuration, client_id)
-        if not session_id:
-            session_id = create_workflow_session_id(configuration, client_id)
-        # TODO get this dynamically
-        url = configuration.migserver_https_sid_url + \
-              '/cgi-sid/workflowsjsoninterface.py?output_format=json'
-
         mount_dict = mig_to_mount_adapt(active_mount['state'])
         user_dict = mig_to_user_adapt(active_mount['state'])
-        session_dict = {
-            'Session_id': session_id,
-            'URL': url
-        }
-        logger.debug("Existing header values, Mount: %s User: %s",
-                     (mount_dict, user_dict))
+        logger.debug("Existing header values, Mount: %s User: %s"
+                     % (mount_dict, user_dict))
+
         auth_header = {'Remote-User': remote_user}
         json_data = {'data': {'Mount': mount_dict,
-                              'User': user_dict,
-                              'Session': session_dict}}
+                              'User': user_dict}}
+
+        if configuration.site_enable_workflows:
+            workflows_dict = mig_to_workflows_adapt(active_mount['state'])
+            if not workflows_dict:
+                # No cached workflows session could be found -> refresh with a
+                # one
+                workflow_session_id = get_workflow_session_id(configuration,
+                                                              client_id)
+                if not workflow_session_id:
+                    workflow_session_id = create_workflow_session_id(configuration,
+                                                                     client_id)
+                # TODO get this dynamically
+                url = configuration.migserver_https_sid_url + \
+                    '/cgi-sid/workflowsjsoninterface.py?output_format=json'
+                workflows_dict = {
+                    'WORKFLOWS_URL': url,
+                    'WORKFLOWS_SESSION_ID': workflow_session_id}
+
+            logger.debug("Existing header values, Workflows: %s"
+                         % workflows_dict)
+            json_data['workflows_data'] = {'Session': workflows_dict}
 
         with requests.session() as session:
             # Authenticate and submit data
@@ -465,14 +492,17 @@ def main(client_id, user_arguments_dict):
             if response.status_code == 200:
                 response = session.post(url_data, json=json_data)
                 if response.status_code != 200:
-                    logger.error("Jupyter: User %s failed to submit data %s to %s",
-                                 (client_id, json_data, url_data))
+                    logger.error(
+                        "Jupyter: User %s failed to submit data %s to %s"
+                        % (client_id, json_data, url_data))
             else:
-                logger.error("Jupyter: User %s failed to authenticate against %s",
-                             (client_id, url_auth))
+                logger.error(
+                    "Jupyter: User %s failed to authenticate against %s"
+                    % (client_id, url_auth))
 
         # Redirect client to jupyterhub
-        return jupyter_host(configuration, output_objects, remote_user, url_home)
+        return jupyter_host(configuration, output_objects, remote_user,
+                            url_home)
 
     # Create a new keyset
     # Create login session id
@@ -480,7 +510,8 @@ def main(client_id, user_arguments_dict):
                                        charset='0123456789abcdef')
 
     # Generate private/public keys
-    (mount_private_key, mount_public_key) = generate_ssh_rsa_key_pair()
+    (mount_private_key, mount_public_key) = generate_ssh_rsa_key_pair(
+        encode_utf8=True)
 
     # Known hosts
     sftp_addresses = socket.gethostbyname_ex(
@@ -500,8 +531,8 @@ def main(client_id, user_arguments_dict):
                                 + '.authorized_keys'), logger, umask=027)
 
     logger.debug("User: %s - Creating a new jupyter mount keyset - "
-                 "private_key: %s public_key: %s ", client_id,
-                 mount_private_key, mount_public_key)
+                 "private_key: %s public_key: %s "
+                 % (client_id, mount_private_key, mount_public_key))
 
     jupyter_dict = {
         'MOUNT_HOST': configuration.short_title,
@@ -520,16 +551,35 @@ def main(client_id, user_arguments_dict):
     if client_email:
         jupyter_dict.update({'USER_EMAIL': client_email})
 
+    if configuration.site_enable_workflows:
+        workflow_session_id = get_workflow_session_id(configuration, client_id)
+        if not workflow_session_id:
+            workflow_session_id = create_workflow_session_id(configuration,
+                                                             client_id)
+        # TODO get this dynamically
+        url = configuration.migserver_https_sid_url + \
+            '/cgi-sid/workflowsjsoninterface.py?output_format=json'
+        jupyter_dict.update({
+            'WORKFLOWS_URL': url,
+            'WORKFLOWS_SESSION_ID': workflow_session_id
+        })
+
     # Only post the required keys, adapt to API expectations
     mount_dict = mig_to_mount_adapt(jupyter_dict)
     user_dict = mig_to_user_adapt(jupyter_dict)
-    logger.debug("User: %s Mount header: %s", client_id, mount_dict)
-    logger.debug("User: %s User header: %s", client_id, user_dict)
+    workflows_dict = mig_to_workflows_adapt(jupyter_dict)
+    logger.debug("User: %s Mount header: %s" % (client_id, mount_dict))
+    logger.debug("User: %s User header: %s" % (client_id, user_dict))
+    if workflows_dict:
+        logger.debug("User: %s Workflows header: %s" % (client_id,
+                                                        workflows_dict))
 
     # Auth and pass a new set of valid mount keys
     auth_header = {'Remote-User': remote_user}
     json_data = {'data': {'Mount': mount_dict,
                           'User': user_dict}}
+    if workflows_dict:
+        json_data['workflows_data'] = {'Session': workflows_dict}
 
     # First login
     with requests.session() as session:
@@ -538,11 +588,11 @@ def main(client_id, user_arguments_dict):
         if response.status_code == 200:
             response = session.post(url_data, json=json_data)
             if response.status_code != 200:
-                logger.error("Jupyter: User %s failed to submit data %s to %s",
-                             (client_id, json_data, url_data))
+                logger.error("Jupyter: User %s failed to submit data %s to %s"
+                             % (client_id, json_data, url_data))
         else:
-            logger.error("Jupyter: User %s failed to authenticate against %s",
-                         (client_id, url_auth))
+            logger.error("Jupyter: User %s failed to authenticate against %s"
+                         % (client_id, url_auth))
 
     # Update pickle with the new valid key
     jupyter_mount_state_path = os.path.join(mnt_path,
@@ -566,14 +616,16 @@ def main(client_id, user_arguments_dict):
 
 
 if __name__ == "__main__":
+    from shared.conf import get_configuration_object
     if not os.environ.get('MIG_CONF', ''):
         conf_path = os.path.join(os.path.dirname(sys.argv[0]),
                                  '..', '..', 'server', 'MiGserver.conf')
         os.environ['MIG_CONF'] = conf_path
+    conf = get_configuration_object()
     request_uri = "/dag/user/rasmus.munk@nbi.ku.dk"
     if sys.argv[1:]:
         if sys.argv[1] == 'reset':
-            reset()
+            reset(conf)
             exit(0)
         request_uri = sys.argv[1]
     os.environ['REQUEST_URI'] = request_uri
