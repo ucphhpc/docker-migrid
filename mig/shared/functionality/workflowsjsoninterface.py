@@ -349,7 +349,7 @@ def main(client_id, user_arguments_dict):
         output_objects.append({'object_type': 'error_text', 'text': msg})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
-    # Should use 'accepted' here, but all data jumbled together into one big
+    # Chould use 'accepted' here, but all data jumbled together into one big
     # dict, easier to access json data by known keys
     workflow_attributes = json_data.get('attributes', None)
     workflow_type = json_data.get('type', None)

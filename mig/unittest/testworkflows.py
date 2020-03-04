@@ -1272,7 +1272,6 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         parameters = load(parameter_path, 'yaml', 'r')
         self.assertIsNotNone(parameters)
         self.logger.info(parameters)
-
         self.assertIn(pattern_attributes['input_file'], parameters)
         self.assertEqual(
             parameters[pattern_attributes['input_file']],
@@ -1323,7 +1322,6 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertTrue(os.path.exists(parameter_path))
         parameters = load(parameter_path, 'yaml', 'r')
         self.assertIsNotNone(parameters)
-
         self.assertIn(pattern_attributes['input_file'], parameters)
         self.assertEqual(
             parameters[pattern_attributes['input_file']],
@@ -1377,7 +1375,6 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertTrue(os.path.exists(parameter_path))
         parameters = load(parameter_path, 'yaml', 'r')
         self.assertIsNotNone(parameters)
-
         self.assertIn(new_attributes['input_file'], parameters)
         self.assertEqual(
             parameters[new_attributes['input_file']],

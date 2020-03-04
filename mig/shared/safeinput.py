@@ -147,7 +147,7 @@ float_extras = integer_extras + '.'
 password_extras = ' -_#.,:;!@%/()[]{}+=?<>'
 # Absolute length limits for all passwords - further restricted in backends
 password_min_len = 4
-password_max_len = 64
+password_max_len = 256
 dn_max_len = 96
 
 valid_integer_chars = digits + integer_extras
@@ -964,13 +964,6 @@ def valid_workflow_operation(operation):
 def valid_workflow_type(type):
     """Verify that the supplied workflow type only contains letters"""
     valid_ascii(type, extra_chars='_')
-    
-
-# def valid_job_id(id):
-#     """Verify that the supplied id only contains characters valid in a job
-#     id."""
-#     # TODO expand this?
-#     valid_ascii(id, extra_chars='_.')
 
 
 def valid_job_vgrid(vgrid):
@@ -1599,6 +1592,12 @@ def guess_type(name):
             __type_map[key] = valid_gdp_ref_id
         for key in ('gdp_ref_value', ):
             __type_map[key] = valid_gdp_ref_value
+        for key in ('instance_id', ):
+            __type_map[key] = valid_cloud_instance_id
+        for key in ('cloud_id', 'instance_image', ):
+            __type_map[key] = valid_cloud_name
+        for key in ('instance_label', ):
+            __type_map[key] = valid_cloud_label
 
     # Return type checker from __type_map with fall back to alphanumeric
 
@@ -1721,7 +1720,7 @@ def validate_dict_values(
     if key not in fields:
         err = 'unexpected field: %s' % key
         rejected_v[key] = ((html_escape(key),
-                           html_escape(str(err))))
+                            html_escape(str(err))))
         return accepted_v, rejected_v
 
     for _key, _value in values.items():
@@ -1764,9 +1763,14 @@ def validate_values(
         values = [values]
 
     for entry in values:
+        # Never show actual passwords in output
+        show_val = entry
+        if type_checks.get(key, None) is valid_password:
+            show_val = '*' * len(entry)
+
         if key not in fields:
             err = 'unexpected field: %s' % key
-            bad_values.append((html_escape(entry),
+            bad_values.append((html_escape(show_val),
                                html_escape(str(err))))
             continue
         if key not in type_checks:
@@ -1776,7 +1780,7 @@ def validate_values(
             type_checks[key](entry)
         except Exception, err:
             # Probably illegal type hint
-            bad_values.append((html_escape(entry),
+            bad_values.append((html_escape(show_val),
                                html_escape(str(err))))
             continue
         if key not in value_checks:
@@ -1786,7 +1790,7 @@ def validate_values(
             value_checks[key](entry)
         except Exception, err:
             # Value check failed
-            bad_values.append((html_escape(entry),
+            bad_values.append((html_escape(show_val),
                                html_escape(str(err))))
             continue
         ok_values.append(entry)

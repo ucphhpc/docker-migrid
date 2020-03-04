@@ -81,7 +81,7 @@ def html_post():
             <input id="jm_autorefresh" type="checkbox">Enable automatic refresh
         </div>
     </div>
-
+  
     <div id="cmd_helper" title="Command output" style="display: none;"></div>
 '''
     return html
@@ -144,7 +144,7 @@ def js_tmpl(csrf_map={}):
     (js_import, js_init, js_ready) = js_tmpl_parts(csrf_map)
     js = '''
 %s
-
+    
 <script type="text/javascript">
     %s
 
@@ -183,7 +183,7 @@ def main(client_id, user_arguments_dict):
 
     if not configuration.site_enable_jobs:
         output_objects.append({'object_type': 'error_text', 'text':
-            '''Job execution is not enabled on this system'''})
+                               '''Job execution is not enabled on this system'''})
         return (output_objects, returnvalues.SYSTEM_ERROR)
 
     status = returnvalues.OK
