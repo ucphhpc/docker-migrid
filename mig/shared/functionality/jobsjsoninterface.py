@@ -49,7 +49,7 @@ from shared.safeinput import REJECT_UNSET, valid_sid, validated_input, \
 from shared.job import JOB_TYPES, JOB, QUEUE, get_job_with_id, fields_to_mrsl
 from shared.workflows import valid_session_id, load_workflow_sessions_db, \
     touch_workflow_sessions_db
-from shared.vgrid import get_vgrid_recent_jobs, init_vgrid_script_list
+from shared.vgrid import get_vgrid_workflow_jobs, init_vgrid_script_list
 
 JOB_API_CREATE = 'create'
 JOB_API_READ = 'read'
@@ -219,7 +219,7 @@ def job_api_read(configuration, workflow_session, job_type=JOB,
 
     if job_type == QUEUE:
         job_list = \
-            get_vgrid_recent_jobs(configuration, vgrid, json_serializable=True)
+            get_vgrid_workflow_jobs(configuration, vgrid, json_serializable=True)
 
         _logger.info("Found %d jobs" % len(job_list))
 
