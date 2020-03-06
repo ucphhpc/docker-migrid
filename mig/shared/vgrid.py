@@ -62,9 +62,11 @@ VALID_JOB_QUEUE = {
 }
 
 
-def get_vgrid_workflow_jobs(configuration, vgrid_name, json_serializable=False):
+def get_vgrid_workflow_jobs(
+        configuration, vgrid_name, json_serializable=False
+):
     """Retrieves all jobs in a vgrid workflow job queue. This should be all
-    jobs run as part of a vgrid and is not limited to one users
+    jobs run as part of a MEOW workflow and is not limited to one users
     submissions. """
 
     status, job_queue = vgrid_workflow_jobs(vgrid_name, configuration)
@@ -1124,7 +1126,7 @@ def vgrid_settings(vgrid_name, configuration, recursive=True, allow_missing=True
 
 def vgrid_workflow_jobs(vgrid_name, configuration, recursive=True,
                         allow_missing=True):
-    """Extract workfl jobs list for a vgrid."""
+    """Extract workflow jobs list for a vgrid."""
     return vgrid_list(vgrid_name, 'jobqueue', configuration, recursive)
 
 

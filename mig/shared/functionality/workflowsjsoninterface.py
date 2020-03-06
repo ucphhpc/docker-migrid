@@ -328,7 +328,6 @@ def main(client_id, user_arguments_dict):
 
     # Input data
     data = sys.stdin.read()
-
     try:
         json_data = json.loads(data, object_hook=force_utf8_rec)
     except ValueError:

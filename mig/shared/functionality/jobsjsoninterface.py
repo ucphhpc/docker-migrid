@@ -218,8 +218,9 @@ def job_api_read(configuration, workflow_session, job_type=JOB,
         return (False, msg)
 
     if job_type == QUEUE:
-        job_list = \
-            get_vgrid_workflow_jobs(configuration, vgrid, json_serializable=True)
+        job_list = get_vgrid_workflow_jobs(
+            configuration, vgrid, json_serializable=True
+        )
 
         _logger.info("Found %d jobs" % len(job_list))
 
@@ -379,14 +380,8 @@ def main(client_id, user_arguments_dict):
 
     # Input data
     data = sys.stdin.read()
-
-    logger.error('DM data: %s' % data)
-
     try:
         json_data = json.loads(data, object_hook=force_utf8_rec)
-
-        logger.error('DM json data: %s' % json_data)
-
     except ValueError:
         msg = "An invalid format was supplied to: '%s', requires a JSON " \
               "compatible format" % op_name
@@ -473,7 +468,6 @@ def main(client_id, user_arguments_dict):
                                              configuration)
 
     if not success:
-        # TODO Also triggers if attempt access vgrid that doesn't exist. clear this up, plus in other similar points
         logger.error("Illegal access attempt by user '%s' to vgrid '%s'. %s"
                      % (client_id, vgrid, msg))
         output_objects.append({'object_type': 'error_text',

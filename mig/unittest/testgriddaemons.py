@@ -34,8 +34,8 @@ import logging
 from shared.griddaemons.ratelimits import default_max_user_hits, \
     expire_rate_limit, hit_rate_limit, update_rate_limit
 from shared.griddaemons.sessions import active_sessions, \
-    get_active_session, get_open_sessions, track_open_session, \
-    track_close_session, track_close_expired_sessions
+    clear_sessions, get_active_session, get_open_sessions, \
+    track_open_session, track_close_session, track_close_expired_sessions
 
 # TODO: Add unit test for validate_auth_attempt ?
 
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     invalid_id = 'root'
     print "Running unit test on rate limit functions"
     print "Force expire all"
-    (_, _, _, expired) = expire_rate_limit(conf, test_proto, fail_cache=0)
+    expired = expire_rate_limit(conf, test_proto, fail_cache=0)
     print "Expired: %s" % expired
     this_pw = test_pw
     print "Emulate rate limit"
@@ -91,8 +91,8 @@ if __name__ == "__main__":
     print "Blocked: %s" % hit
     time.sleep(2)
     print "Force expire some entries"
-    (_, _, _, expired) = expire_rate_limit(conf, test_proto,
-                                           fail_cache=default_max_user_hits)
+    expired = expire_rate_limit(conf, test_proto,
+                                fail_cache=default_max_user_hits)
     print "Expired: %s" % expired
     print "Test reset on success"
     hit = hit_rate_limit(conf, test_proto, test_address, test_id)
@@ -111,6 +111,10 @@ if __name__ == "__main__":
     hit = hit_rate_limit(conf, test_proto, test_address, invalid_id)
     print "Blocked: %s" % hit
     print "Test active session counting"
+    active_count = active_sessions(conf, test_proto, test_id)
+    print "Open sessions: %d" % active_count
+    print "Clear sessions"
+    clear_sessions(conf, test_proto)
     active_count = active_sessions(conf, test_proto, test_id)
     print "Open sessions: %d" % active_count
     print "Track open session"
