@@ -39,6 +39,7 @@ import shared.returnvalues as returnvalues
 from shared.base import force_utf8_rec, client_id_dir
 from shared.fileio import unpickle, unpickle_and_change_status, \
     send_message_to_grid_script
+from shared.handlers import correct_handler
 from shared.init import initialize_main_variables
 from shared.job import new_job
 from shared.mrslkeywords import get_keywords_dict
@@ -350,8 +351,13 @@ def main(client_id, user_arguments_dict):
         initialize_main_variables(client_id, op_title=False, op_header=False,
                                   op_menu=False)
 
-    logger.info("Got job json request for client '%s' with arguments '%s'"
-                % (client_id, user_arguments_dict))
+    if not correct_handler('POST'):
+        msg = "Interaction from %s not POST request" % client_id
+        logger.error(msg)
+        output_objects.append({
+            'object_type': 'error_text',
+            'text': msg})
+        return (output_objects, returnvalues.SYSTEM_ERROR)
 
     if not configuration.site_enable_workflows:
         output_objects.append({
@@ -373,8 +379,14 @@ def main(client_id, user_arguments_dict):
 
     # Input data
     data = sys.stdin.read()
+
+    logger.error('DM data: %s' % data)
+
     try:
         json_data = json.loads(data, object_hook=force_utf8_rec)
+
+        logger.error('DM json data: %s' % json_data)
+
     except ValueError:
         msg = "An invalid format was supplied to: '%s', requires a JSON " \
               "compatible format" % op_name
@@ -461,6 +473,7 @@ def main(client_id, user_arguments_dict):
                                              configuration)
 
     if not success:
+        # TODO Also triggers if attempt access vgrid that doesn't exist. clear this up, plus in other similar points
         logger.error("Illegal access attempt by user '%s' to vgrid '%s'. %s"
                      % (client_id, vgrid, msg))
         output_objects.append({'object_type': 'error_text',
