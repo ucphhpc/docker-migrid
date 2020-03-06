@@ -1121,7 +1121,8 @@ def vgrid_settings(vgrid_name, configuration, recursive=True, allow_missing=True
     return (status, output)
 
 
-def vgrid_recent_jobs(vgrid_name, configuration, recursive=True):
+def vgrid_recent_jobs(vgrid_name, configuration, recursive=True,
+                      allow_missing=True):
     """Extract recent jobs list for a vgrid."""
     return vgrid_list(vgrid_name, 'jobqueue', configuration, recursive)
 
