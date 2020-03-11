@@ -31,7 +31,7 @@ reset:
 	rm -rf ./httpd
 	rm -rf ./state
 	if [ "$$(docker volume ls -q -f 'name=${NAME}*')" != "" ]; then\
-		docker volume rm -f $$(docker volume ls -q -f 'name=${NAME}**');\
+		docker volume rm -f $$(docker volume ls -q -f 'name=${NAME}*');\
 	fi
 
 push:
