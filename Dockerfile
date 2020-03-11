@@ -1,4 +1,4 @@
-FROM centos:latest
+FROM centos:7
 
 # Centos image default yum configs prevent docs installation
 # https://superuser.com/questions/784451/centos-on-docker-how-to-install-doc-files
@@ -30,19 +30,6 @@ RUN yum update -y \
     rsyslog \
     openssh-clients \
     lsof
-
-RUN yum install -y \
-    python2-devel \
-    python2-pip \
-    python36-devel \
-    python36-pip \
-    conda
-
-RUN python2 -m pip install --upgrade pip \
-    && python3 -m pip install --upgrade pip
-
-# Install systemwide papermill
-RUN python3 -m pip install papermill notebook_parameterizer
 
 # Apache OpenID (provided by epel)
 RUN yum install -y mod_auth_openid
@@ -187,8 +174,8 @@ RUN pip2 install --user \
     pytest
 
 # Install and configure MiG
-ARG MIG_CHECKOUT=4332
-RUN svn checkout -r $MIG_CHECKOUT https://svn.code.sf.net/p/migrid/code/trunk .
+ARG CHECKOUT=4634
+RUN svn checkout -r $CHECKOUT https://svn.code.sf.net/p/migrid/code/trunk .
 
 USER root
 RUN chown -R $USER:$USER $MIG_ROOT/mig
@@ -222,11 +209,9 @@ RUN ./generateconfs.py \
     --enable_crontab=True \
     --enable_imnotify=True \
     --enable_hsts=True \
-    --enable_jupyter=True \
-    --enable_sftp=True \
-    --enable_sftp_subsys=False \
-    --jupyter_services="dag.http://dag" \
-    --jupyter_services_desc="{'dag': 'Hello from dag'}" \
+    --enable_jupyter=False \
+    --enable_sftp=False \
+    --enable_sftp_subsys=True \
     --base_fqdn=$DOMAIN \
     --public_fqdn=www.$DOMAIN \
     --public_port=80 \
