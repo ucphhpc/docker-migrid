@@ -451,7 +451,6 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     workflow_session = workflow_sessions_db.get(workflow_session_id)
-    client_id = workflow_session['owner']
 
     if 'vgrid' not in job_attributes:
         logger.info("Invalid json job interaction. user '%s' does not specify "
@@ -466,7 +465,6 @@ def main(client_id, user_arguments_dict):
     # User is vgrid owner or member
     success, msg, _ = init_vgrid_script_list(vgrid, client_id,
                                              configuration)
-
     if not success:
         logger.error("Illegal access attempt by user '%s' to vgrid '%s'. %s"
                      % (client_id, vgrid, msg))
