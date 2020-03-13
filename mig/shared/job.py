@@ -364,6 +364,14 @@ def get_job_with_id(configuration, job_id, vgrid, caller_id,
             job_dict = unpickle(matches[0], configuration.logger)
 
             if job_dict:
+                # Check that job is in the appropriate vgrid. If it is a
+                # trigger job it will be only attached to the triggering vgrid
+                if 'VGRID' not in job_dict:
+                    return (False,
+                            'Job is not attached to any particular VGrid')
+                if job_dict['VGRID'] != [vgrid]:
+                    return (False,
+                            'Job is not only attached to the vgrid %s' % vgrid)
                 return (True, job_dict)
 
     return (False, "Could not locate job file for job '%s'." % job_file)
