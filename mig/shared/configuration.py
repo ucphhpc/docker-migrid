@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # configuration - configuration wrapper
-# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -1021,6 +1021,11 @@ location.""" % self.config_file
         if config.has_option('GLOBAL', 'user_cloud_alias'):
             self.user_cloud_alias = config.get('GLOBAL',
                                                'user_cloud_alias')
+        if config.has_option('SITE', 'enable_gravatars'):
+            self.site_enable_gravatars = config.getboolean(
+                'SITE', 'enable_gravatars')
+        else:
+            self.site_enable_gravatars = True
         if config.has_option('SITE', 'enable_twofactor'):
             self.site_enable_twofactor = config.getboolean(
                 'SITE', 'enable_twofactor')
@@ -1714,6 +1719,12 @@ location.""" % self.config_file
             self.site_status_url = config.get('SITE', 'status_url')
         else:
             self.site_status_url = '/public/status.html'
+
+        if config.has_option('SITE', 'enable_sitestatus'):
+            self.site_enable_sitestatus = config.getboolean('SITE',
+                                                            'enable_sitestatus')
+        else:
+            self.site_enable_sitestatus = True
         if config.has_option('SITE', 'status_events'):
             self.site_status_events = config.get('SITE', 'status_events')
         else:

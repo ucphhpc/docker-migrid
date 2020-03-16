@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # install - MiG server install helpers
-# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -265,6 +265,8 @@ def generate_confs(
     enable_twofactor_strict_address=False,
     enable_cracklib=False,
     enable_openid=False,
+    enable_gravatars=True,
+    enable_sitestatus=True,
     user_interface="V2 V3",
     mig_oid_provider='',
     ext_oid_provider='',
@@ -311,6 +313,7 @@ def generate_confs(
     landing_page=None,
     skin='migrid-basic',
     short_title='MiG',
+    vgrid_label='VGrid',
     secscan_addr='UNSET',
 ):
     """Generate Apache and MiG server confs with specified variables"""
@@ -397,6 +400,8 @@ def generate_confs(
         str(enable_twofactor_strict_address)
     user_dict['__ENABLE_CRACKLIB__'] = str(enable_cracklib)
     user_dict['__ENABLE_OPENID__'] = str(enable_openid)
+    user_dict['__ENABLE_GRAVATARS__'] = str(enable_gravatars)
+    user_dict['__ENABLE_SITESTATUS__'] = str(enable_sitestatus)
     user_dict['__USER_INTERFACE__'] = user_interface
     user_dict['__MIG_OID_PROVIDER_BASE__'] = mig_oid_provider
     user_dict['__MIG_OID_PROVIDER_ID__'] = mig_oid_provider
@@ -449,6 +454,7 @@ def generate_confs(
     user_dict['__DISTRO__'] = distro
     user_dict['__SKIN__'] = skin
     user_dict['__SHORT_TITLE__'] = short_title
+    user_dict['__VGRID_LABEL__'] = vgrid_label
     user_dict['__SECSCAN_ADDR__'] = secscan_addr
     user_dict['__PUBLIC_ALIAS_LISTEN__'] = listen_clause
 
@@ -1278,6 +1284,11 @@ ssh-keygen -f %(__DAEMON_KEYCERT__)s -y > %(__DAEMON_PUBKEY__)s""" % user_dict
     user_dict['__FAIL2BAN_DAEMON_PORTS__'] = ','.join(
         [str(i) for i in sorted_ports])
 
+    # Alias vgrid_label variations as aliases for vgrid pub page URL
+    vgrid_aliases = [vgrid_label, vgrid_label.lower(), vgrid_label.upper()]
+    vgrid_aliases = [i for i in vgrid_aliases if i != 'vgrid']
+    user_dict['__VGRID_ALIAS_REGEX__'] = '(%s)' % '|'.join(vgrid_aliases)
+
     # Collect final variable values for log
     sorted_keys = user_dict.keys()
     sorted_keys.sort()
@@ -1613,6 +1624,8 @@ def create_user(
     enable_twofactor_strict_address = False
     enable_cracklib = False
     enable_openid = False
+    enable_gravatars = True
+    enable_sitestatus = True
     enable_wsgi = True
     wsgi_procs = 5
     enable_jobs = True
@@ -1750,6 +1763,8 @@ echo '/home/%s/state/sss_home/MiG-SSS/hda.img      /home/%s/state/sss_home/mnt  
         enable_twofactor,
         enable_cracklib,
         enable_openid,
+        enable_gravatars,
+        enable_sitestatus,
         user_interface,
         mig_oid_provider,
         ext_oid_provider,

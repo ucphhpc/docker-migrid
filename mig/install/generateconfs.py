@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # generateconfs - create custom MiG server configuration files
-# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -106,6 +106,7 @@ if '__main__' == __name__:
         'short_title',
         'secscan_addr',
         'user_interface',
+        'vgrid_label',
     ]
     int_names = [
         'apache_worker_procs',
@@ -165,6 +166,8 @@ if '__main__' == __name__:
         'enable_twofactor_strict_address',
         'enable_cracklib',
         'enable_openid',
+        'enable_gravatars',
+        'enable_sitestatus',
         'daemon_pubkey_from_dns',
         'seafile_ro_access',
     ]
