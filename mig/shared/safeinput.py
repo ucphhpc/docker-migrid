@@ -59,6 +59,12 @@ VALID_WORKFLOW_ATTRIBUTES = [
     'parameterize_over'
 ]
 
+VALID_PARAM_OVER_ATTRIBUTES = [
+    'start',
+    'stop',
+    'increment'
+]
+
 VALID_JOB_ATTRIBUTES = [
     'job_id',
     'vgrid'
@@ -225,8 +231,10 @@ def __valid_contents(
            include_accented == COMMON_ACCENTED and char in accented_chars or \
            include_accented == ANY_ACCENTED and category(char) in _ACCENT_CATS:
             continue
-        raise InputException("found invalid character: '%s' (allowed: %s)"
-                             % (char, valid_chars))
+        raise InputException("DM found invalid character: '%s' in %s (allowed: %s)"
+                             % (char, contents, valid_chars))
+        # raise InputException("found invalid character: '%s' (allowed: %s)"
+        #                      % (char, valid_chars))
 
 
 def __filter_contents(contents, valid_chars, include_accented=NO_ACCENTED,
@@ -300,6 +308,11 @@ def valid_numeric(contents, min_length=0, max_length=-1):
 
     __valid_contents(contents, digits, min_length, max_length)
 
+
+def valid_numeric_with_decimels(contents, min_length=0, max_length=-1):
+    """Verify that supplied contents only contain numeric characters or '.'"""
+
+    __valid_contents(contents, digits + '.', min_length, max_length)
 
 def valid_alphanumeric(contents, min_length=0, max_length=-1, extra_chars=''):
     """Verify that supplied contents only contain alphanumeric characters"""
@@ -936,10 +949,38 @@ def valid_workflow_variables(vars):
         raise InputException("Workflow attribute '%s' must "
                              "be of type: '%s'" % (vars, dict))
     for _key, _value in vars.items():
-        valid_alphanumeric(_key, extra_chars='_-{}')
+        valid_alphanumeric(_key, extra_chars='_-')
         # Essentially no validation since this is a python variable
         # value, don't evaluate this.
         valid_free_text(_value)
+
+
+def valid_workflow_param_over(params):
+    """Verify that supplied params dictionary only contains keys and values
+    that we consider valid.
+    """
+    if not isinstance(params, dict):
+        raise InputException("Workflow attribute '%s' must "
+                             "be of type: '%s'" % (params, dict))
+
+    for _name, _param in params.items():
+        valid_alphanumeric(_name, extra_chars='_-')
+
+        if not isinstance(_param, dict):
+            raise InputException("Workflow parameterize over attribute '%s' "
+                                 "must be of type: '%s'" % (_param, dict))
+
+        for _key, _value in _param.items():
+            if _key not in VALID_PARAM_OVER_ATTRIBUTES:
+                raise InputException(
+                    "Workflow attribute '%s' is illegal" % _key)
+
+        for _key in VALID_PARAM_OVER_ATTRIBUTES:
+            if _key not in _param:
+                raise InputException(
+                    "Workflow attribute '%s' is missing" % _key)
+
+            valid_numeric_with_decimels(_param[_key], min_length=1)
 
 
 def valid_workflow_attributes(attributes):

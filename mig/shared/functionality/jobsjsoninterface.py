@@ -411,8 +411,8 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     job_type = accepted.pop('type', [None])[0]
-    operation = accepted.pop('operation', None)
-    workflow_session_id = accepted.pop('workflowsessionid', None)
+    operation = accepted.pop('operation', None)[0]
+    workflow_session_id = accepted.pop('workflowsessionid', None)[0]
     job_attributes = {}
     for key, value in accepted.items():
         if key in json_data['attributes']:
