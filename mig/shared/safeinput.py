@@ -59,10 +59,14 @@ VALID_WORKFLOW_ATTRIBUTES = [
     'parameterize_over'
 ]
 
+PARAM_START = 'start'
+PARAM_STOP = 'stop'
+PARAM_JUMP = 'increment'
+
 VALID_PARAM_OVER_ATTRIBUTES = [
-    'start',
-    'stop',
-    'increment'
+    PARAM_START,
+    PARAM_STOP,
+    PARAM_JUMP
 ]
 
 VALID_JOB_ATTRIBUTES = [
@@ -231,10 +235,8 @@ def __valid_contents(
            include_accented == COMMON_ACCENTED and char in accented_chars or \
            include_accented == ANY_ACCENTED and category(char) in _ACCENT_CATS:
             continue
-        raise InputException("DM found invalid character: '%s' in %s (allowed: %s)"
-                             % (char, contents, valid_chars))
-        # raise InputException("found invalid character: '%s' (allowed: %s)"
-        #                      % (char, valid_chars))
+        raise InputException("found invalid character: '%s' (allowed: %s)"
+                             % (char, valid_chars))
 
 
 def __filter_contents(contents, valid_chars, include_accented=NO_ACCENTED,
@@ -303,16 +305,11 @@ def valid_ascii(contents, min_length=0, max_length=-1, extra_chars=''):
     __valid_contents(contents, letters + extra_chars, min_length, max_length)
 
 
-def valid_numeric(contents, min_length=0, max_length=-1):
+def valid_numeric(contents, min_length=0, max_length=-1, extra_chars=''):
     """Verify that supplied contents only contain numeric characters"""
 
-    __valid_contents(contents, digits, min_length, max_length)
+    __valid_contents(contents, digits + extra_chars, min_length, max_length)
 
-
-def valid_numeric_with_decimels(contents, min_length=0, max_length=-1):
-    """Verify that supplied contents only contain numeric characters or '.'"""
-
-    __valid_contents(contents, digits + '.', min_length, max_length)
 
 def valid_alphanumeric(contents, min_length=0, max_length=-1, extra_chars=''):
     """Verify that supplied contents only contain alphanumeric characters"""
@@ -980,7 +977,20 @@ def valid_workflow_param_over(params):
                 raise InputException(
                     "Workflow attribute '%s' is missing" % _key)
 
-            valid_numeric_with_decimels(_param[_key], min_length=1)
+            valid_numeric(_param[_key], extra_chars='-.', min_length=1)
+
+        # TODO expand this to allow more than just upwards loops
+        if not float(_param[PARAM_START]) < float(_param[PARAM_STOP]):
+            raise InputException(
+                "Cannot parameterise between start '%s' and  end '%s' as end "
+                "value is not bigger than the start value"
+                % (_param[PARAM_START], _param[PARAM_STOP]))
+
+        if not float(_param[PARAM_JUMP]) > 0:
+            raise InputException(
+                "Cannot parameterise with an increment of '%s'. Must be "
+                "positive and non-zero. " % _param[PARAM_JUMP]
+            )
 
 
 def valid_workflow_attributes(attributes):
