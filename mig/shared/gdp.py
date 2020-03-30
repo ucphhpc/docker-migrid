@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # gdp - helper functions related to GDP actions
-# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -72,6 +72,11 @@ skip_client_id_rewrite = [
     'autocreate.py',
     'autologout.py',
     'gdpman.py',
+    # NOTE: we allow authenticated semi-automatic cert/oid renew
+    'reqcert.py',
+    'reqcertaction.py',
+    'reqoid.py',
+    'reqoidaction.py',
     'rmvgridmember.py',
     'twofactor.py',
     'vgridman.py',
@@ -603,7 +608,7 @@ def __send_project_action_confirmation(configuration,
     #                                                    project_name))
     status = True
     target_dict = {}
-    if action == "create":
+    if action == "create_project":
         target_dict['registrant'] = login
     elif action == "invite_user":
         target_dict['registrant'] = login
@@ -766,13 +771,22 @@ def __send_project_action_confirmation(configuration,
     # Send project action mail
 
     if status:
-        recipients = login
+        mail_fill = {'short_title': configuration.short_title, 'action':
+                     action, 'project_name': project_name}
+        recipients = "%s" % login
         for admin in notify:
-            recipients = '%s, %s %s' % (recipients, admin['name'],
-                                        admin['email'])
-        subject = "%s project %s: %r" % (configuration.short_title, action,
-                                         project_name)
-        message = ''
+            recipients += ', %s %s' % (admin['name'], admin['email'])
+        mail_fill['recipients'] = recipients
+
+        subject = "%(short_title)s project %(action)s: %(project_name)r" % \
+                  mail_fill
+        message = """*** IMPORTANT: direct replies to this automated message will NOT be read! ***
+
+This message from %(short_title)s is sent to %(recipients)s
+in reaction to the %(action)s for %(project_name)s .
+
+Attached you'll find the details registered in relation to the operation.
+        """ % mail_fill
         status = send_email(
             recipients,
             subject,
@@ -796,7 +810,7 @@ def __send_project_create_confirmation(configuration,
                                        project_name,
                                        category_dict):
     """Send project create confirmation to *login* and GDP admins"""
-    return __send_project_action_confirmation(configuration, "create", login,
+    return __send_project_action_confirmation(configuration, "create_project", login,
                                               '', project_name, category_dict)
 
 
@@ -1465,12 +1479,12 @@ def get_projects(configuration, client_id, state, owner_only=False):
     return result
 
 
-def get_project_users(configuration,
-                      project_name,
-                      skip_users=[],
-                      project_state=None,
-                      do_lock=True):
-    """Generate a list of project participants, each entry on the format:
+def get_project_info(configuration,
+                     project_name,
+                     skip_users=[],
+                     project_state=None,
+                     do_lock=True):
+    """Extract of project info including list of participants, each entry on the format:
     {'name': str,
     'email': str,
     'short_id': str,
@@ -1478,12 +1492,15 @@ def get_project_users(configuration,
     'project_client_id': str}
     """
     _logger = configuration.logger
-    # _logger.debug("get_project_users: project_name: "
+    # _logger.debug("get_project_info: project_name: "
     #    + "%s, skip_users: %s, project_state: %s, do_lock: %s" \
     #    % (project_name, skip_users, project_state, do_lock))
     user_db = __load_user_db(configuration, do_lock=do_lock)
 
-    result = []
+    users = []
+    # TODO: extract additional project info like workzone, expiry, etc.
+    result = {'project_name': project_name, 'project_state': project_state,
+              'users': users}
     for client_id in user_db.keys():
         if client_id in skip_users:
             continue
@@ -1493,7 +1510,7 @@ def get_project_users(configuration,
         if project \
                 and (project_state is None
                      or project_state == project.get('state', None)):
-            result.append({
+            users.append({
                 'name': extract_field(client_id, 'full_name'),
                 'email': extract_field(client_id, 'email'),
                 'short_id': __short_id_from_client_id(configuration, client_id),
@@ -1799,7 +1816,7 @@ def project_invite_user(
     real_action = 'invite_user'
     target = client_id
     if in_create:
-        real_action = 'create'
+        real_action = 'create_project'
         target = None
 
     # Get login handle (email) from client_id
@@ -2612,7 +2629,7 @@ def project_accept_user(
     add_user_status = False
     real_action = 'accept_user'
     if in_create:
-        real_action = 'create'
+        real_action = 'create_project'
 
     # Get login handle (email) from client_id
 
@@ -3178,7 +3195,7 @@ def project_create(
     rollback_dirs = {}
     vgrid_label = '%s' % configuration.site_vgrid_label
     ref_pairs = [(i['ref_id'], i['value']) for i in
-                 category_dict.get('references', {}).get("create", [])]
+                 category_dict.get('references', {}).get("create_project", [])]
     ok_msg = "Created project: %r" % project_name
     err_msg = "Failed to create project: %r" % project_name
     log_ok_msg = "GDP: User: %r from ip: %s, created project: %r" % (

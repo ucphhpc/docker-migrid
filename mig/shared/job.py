@@ -144,7 +144,6 @@ def fill_mrsl_template(
     # If rule requires additional environment vars, add them to the job
     # definition here.
     env_var_str = ''
-
     add_env_vars = rule.get('environment_vars', None)
     if add_env_vars:
         for name, value in add_env_vars.items():

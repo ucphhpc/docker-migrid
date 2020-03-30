@@ -90,7 +90,6 @@ from shared.vgrid import vgrid_valid_entities, vgrid_add_workflow_jobs, \
 from shared.vgridaccess import check_vgrid_access
 from shared.workflows import get_wp_map, CONF
 
-
 # Global trigger rule dictionaries with rules for all VGrids
 
 all_rules = {}

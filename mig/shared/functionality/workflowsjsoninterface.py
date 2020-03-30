@@ -363,7 +363,6 @@ def main(client_id, user_arguments_dict):
     operation = accepted.pop('operation', None)[0]
     workflow_session_id = accepted.pop('workflowsessionid', None)[0]
     workflow_attributes = {}
-
     for key, value in accepted.items():
         if key in json_data['attributes']:
             workflow_attributes[key] = value

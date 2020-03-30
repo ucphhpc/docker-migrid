@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # userguidescreens - selenium-based web client to grab user guide screenshots
-# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -36,14 +36,17 @@ import os
 import sys
 import time
 import traceback
+from urlparse import urlparse
 
 from migcore import init_driver, ucph_login, mig_login, shared_twofactor, \
     shared_logout, save_screen, scroll_to_elem, doubleclick_elem, \
     select_item_by_index
 
-setup_sections = [('sftp', 'SFTP'), ('webdavs', 'WebDAVS'), ('ftps', 'FTPS'),
-                  ('duplicati', 'Duplicati'), ('twofactor', '2-Factor Auth'),
-                  ('seafile', 'Seafile')]
+# Which Setup sections to include on SIF (where 2FA is moved to gdpman)
+setup_sections = [('sftp', 'SFTP'), ('webdavs', 'WebDAVS')]
+# Additional setup sections on non-SIF hosts
+extra_setup_sections = [('ftps', 'FTPS'), ('twofactor', '2-Factor Auth'),
+                        ('duplicati', 'Duplicati'), ('seafile', 'Seafile')]
 
 
 def ajax_wait(driver, name, class_name="spinner"):
@@ -71,10 +74,27 @@ def ajax_wait(driver, name, class_name="spinner"):
 def management_actions(driver, url, login, passwd, callbacks):
     """Run user actions for section of same name"""
     # Go through all manager tabs in turn
-    for nav_name in ["Access project", "Create project", "Accept invitation",
-                     "Two-Factor Auth"]:
+    manage_tabs = ["Access Project",
+                   "Project Info",
+                   "Create Project",
+                   "Invite Participant",
+                   "Accept Invitation",
+                   "Remove Participant",
+                   "Await Invitation",
+                   "Two-Factor Auth"]
+    sample_category = "personal_data"
+    sample_workzone = "123-4567/00-1234",
+    sample_project = "X-Ray_Tissue_Scans"
+    sample_int_part = "vinter@nbi.ku.dk"
+    sample_ext_part = "bardino@migrid.org"
+    for nav_name in manage_tabs:
         navmenu = driver.find_element_by_id('project-tabs')
-        link = navmenu.find_element_by_link_text(nav_name)
+        # Try to find manage tab (availability depends on state and role)
+        try:
+            link = navmenu.find_element_by_link_text(nav_name)
+        except Exception, exc:
+            print "Warning: no %r tab found - might be okay" % nav_name
+            continue
         # print "DEBUG: found %s link: %s" % (nav_name, link)
         link.click()
         # ajax_wait(driver, nav_name, "ui-progressbar")
@@ -82,15 +102,95 @@ def management_actions(driver, url, login, passwd, callbacks):
         if callbacks.get(state, None):
             print "INFO: callback for: %s" % state
             callbacks[state](driver, state)
-    # Go to Access project tab and open first project
-    nav_name = "Access project"
+
+    # Additional concrete project manipulation unless on SIF
+    if not url.startswith('https://sif'):
+        # Go to Create project tab and create a project
+        nav_name = "Create Project"
+        try:
+            navmenu = driver.find_element_by_id('project-tabs')
+            link = navmenu.find_element_by_link_text(nav_name)
+            # print "DEBUG: found %s link: %s" % (nav_name, link)
+            link.click()
+            # ajax_wait(driver, nav_name, "ui-progressbar")
+            # NOTE: locate the relevant workzone in category ref section
+            active_tab = driver.find_element_by_id('create_project_tab')
+            # NOTE: project name field is shared for all categories
+            workzone_entry = active_tab.find_element_by_id(
+                'create_project_%s_workzone_id' % sample_category)
+            workzone_entry.send_keys(sample_workzone)
+            proj_entry = active_tab.find_element_by_name(
+                'create_project_base_vgrid_name')
+            proj_entry.send_keys(sample_project)
+            state = '%s-filled' % nav_name.lower().replace(' ', '-')
+            if callbacks.get(state, None):
+                print "INFO: callback for: %s" % state
+                callbacks[state](driver, state)
+
+            create_button = active_tab.find_element_by_id(
+                'create_project_button')
+            # TODO: actually submit form to create project?
+            # create_button.click()
+        except Exception, exc:
+            print "Warning: could not test %r tab: %s" % (nav_name, exc)
+
+        # Go to Invite project tab and invite a colleague to project
+        nav_name = "Invite Participant"
+        try:
+            navmenu = driver.find_element_by_id('project-tabs')
+            link = navmenu.find_element_by_link_text(nav_name)
+            # print "DEBUG: found %s link: %s" % (nav_name, link)
+            link.click()
+            # ajax_wait(driver, nav_name, "ui-progressbar")
+            active_tab = driver.find_element_by_id('invite_user_tab')
+            dropdown_container = active_tab.find_element_by_class_name(
+                'gm_select')
+            proj_dropdown = navmenu.find_element_by_name(
+                'invite_user_base_vgrid_name')
+            # NOTE: we expect first real project to match sample category
+            select_item_by_index(driver, proj_dropdown, 2)
+            # ajax_wait(driver, nav_name, "ui-progressbar")
+            active_tab = driver.find_element_by_id('invite_user_tab')
+            terms_checkbox = active_tab.find_element_by_id(
+                'invite_user_%s_user_terms' % sample_category)
+            terms_checkbox.click()
+            workzone_entry = active_tab.find_element_by_id(
+                'invite_user_%s_workzone_id' % sample_category)
+            # NOTE: user id field is shared for all categories
+            invite_entry = active_tab.find_element_by_name(
+                'invite_user_short_id')
+            for (label, email) in [('int', sample_int_part),
+                                   ('ext', sample_ext_part)]:
+                invite_entry.clear()
+                invite_entry.send_keys(email)
+                workzone_entry.clear()
+                workzone_entry.send_keys(sample_workzone)
+                state = '%s-%s-filled' % (
+                    nav_name.lower().replace(' ', '-'), label)
+                if callbacks.get(state, None):
+                    print "INFO: callback for: %s" % state
+                    callbacks[state](driver, state)
+
+                invite_button = active_tab.find_element_by_id(
+                    'invite_user_button')
+                # TODO: actually submit form to invite to project?
+                # invite_button.click()
+        except Exception, exc:
+            print "Warning: could not test %r tab: %s" % (nav_name, exc)
+
+
+def access_project_actions(driver, url, login, passwd, callbacks):
+    """Run user actions for section of same name"""
+    # Go to access project tab and open first project
+    nav_name = "Access Project"
     navmenu = driver.find_element_by_id('project-tabs')
     link = navmenu.find_element_by_link_text(nav_name)
     # print "DEBUG: found %s link: %s" % (nav_name, link)
     link.click()
     # ajax_wait(driver, nav_name, "ui-progressbar")
     dropdown_container = navmenu.find_element_by_class_name('gm_select')
-    proj_dropdown = navmenu.find_element_by_name('access_base_vgrid_name')
+    proj_dropdown = navmenu.find_element_by_name(
+        'access_project_base_vgrid_name')
     select_item_by_index(driver, proj_dropdown, 2)
     link = driver.find_element_by_link_text('Login')
     link.click()
@@ -396,7 +496,11 @@ def setup_actions(driver, url, login, passwd, callbacks):
         callbacks[state](driver, state)
 
     for (key, name) in setup_sections:
-        sub_link = driver.find_element_by_link_text(name)
+        # Search inside page content to avoid Seafile nav menu interference
+        content_anchor = driver.find_element_by_id("content")
+        sub_link = content_anchor.find_element_by_link_text(name)
+        sub_link = driver.find_element_by_id(
+            "content").find_element_by_link_text(name)
         # print "DEBUG: found webdaws link: %s" % webdaws
         sub_link.click()
         # Wait for Seafile server status lookup
@@ -418,6 +522,76 @@ def jupyter_actions(driver, url, login, passwd, callbacks):
     link.click()
     # ajax_wait(driver, nav_name)
     state = 'jupyter-ready'
+    if callbacks.get(state, None):
+        print "INFO: callback for: %s" % state
+        callbacks[state](driver, state)
+
+
+def cloud_actions(driver, url, login, passwd, callbacks):
+    """Run user actions for section of same name"""
+    nav_name = "Cloud"
+    navmenu = driver.find_element_by_class_name('navmenu')
+    link = navmenu.find_element_by_link_text(nav_name)
+    # print "DEBUG: found %s link: %s" % (nav_name, link)
+    link.click()
+    # ajax_wait(driver, nav_name)
+    state = 'cloud-ready'
+    if callbacks.get(state, None):
+        print "INFO: callback for: %s" % state
+        callbacks[state](driver, state)
+
+
+def people_actions(driver, url, login, passwd, callbacks):
+    """Run user actions for section of same name"""
+    nav_name = "People"
+    navmenu = driver.find_element_by_class_name('navmenu')
+    link = navmenu.find_element_by_link_text(nav_name)
+    # print "DEBUG: found %s link: %s" % (nav_name, link)
+    link.click()
+    ajax_wait(driver, nav_name)
+    state = 'people-ready'
+    if callbacks.get(state, None):
+        print "INFO: callback for: %s" % state
+        callbacks[state](driver, state)
+
+
+def crontab_actions(driver, url, login, passwd, callbacks):
+    """Run user actions for section of same name"""
+    nav_name = "Schedule Tasks"
+    navmenu = driver.find_element_by_class_name('navmenu')
+    link = navmenu.find_element_by_link_text(nav_name)
+    # print "DEBUG: found %s link: %s" % (nav_name, link)
+    link.click()
+    # ajax_wait(driver, nav_name)
+    state = 'crontab-ready'
+    if callbacks.get(state, None):
+        print "INFO: callback for: %s" % state
+        callbacks[state](driver, state)
+
+
+def datatransfer_actions(driver, url, login, passwd, callbacks):
+    """Run user actions for section of same name"""
+    nav_name = "Data Transfers"
+    navmenu = driver.find_element_by_class_name('navmenu')
+    link = navmenu.find_element_by_link_text(nav_name)
+    # print "DEBUG: found %s link: %s" % (nav_name, link)
+    link.click()
+    # ajax_wait(driver, nav_name)
+    state = 'datatransfer-ready'
+    if callbacks.get(state, None):
+        print "INFO: callback for: %s" % state
+        callbacks[state](driver, state)
+
+
+def sharelink_actions(driver, url, login, passwd, callbacks):
+    """Run user actions for section of same name"""
+    nav_name = "Share Links"
+    navmenu = driver.find_element_by_class_name('navmenu')
+    link = navmenu.find_element_by_link_text(nav_name)
+    # print "DEBUG: found %s link: %s" % (nav_name, link)
+    link.click()
+    # ajax_wait(driver, nav_name)
+    state = 'sharelink-ready'
     if callbacks.get(state, None):
         print "INFO: callback for: %s" % state
         callbacks[state](driver, state)
@@ -447,27 +621,40 @@ def main():
     """Main"""
     argc = len(sys.argv) - 1
     if argc < 4:
-        print "USAGE: %s browser url openid login [password]" % sys.argv[0]
+        print "USAGE: %s browser url openid login [password] [2FAkey]" % sys.argv[0]
         return 1
 
+    reopen_stdin = False
     browser = sys.argv[1]
     url = sys.argv[2]
     openid = sys.argv[3]
     login = sys.argv[4]
     if argc > 4:
-        passwd = sys.argv[5]
+        if sys.argv[5] == '-':
+            passwd = sys.stdin.readline().strip()
+            reopen_stdin = True
+        else:
+            passwd = sys.argv[5]
     else:
         passwd = getpass.getpass()
     if argc > 5:
-        twofactor_key = sys.argv[6]
+        if sys.argv[6] == '-':
+            twofactor_key = sys.stdin.readline().strip()
+            reopen_stdin = True
+        else:
+            twofactor_key = sys.argv[6]
     else:
         twofactor_key = getpass.getpass("2FA *key*: ")
 
+    if reopen_stdin:
+        sys.stdin = open('/dev/tty')
+
     # Screenshot helpers
     mig_calls, ucph_calls, action_calls, logout_calls = {}, {}, {}, {}
+    sys_prefix = urlparse(url).netloc.split('.', 1)[0]
     base_path = os.path.join('screenshots', browser)
-    mig_path = os.path.join(base_path, 'mig-%s.png')
-    ucph_path = os.path.join(base_path, 'ucph-%s.png')
+    mig_path = os.path.join(base_path, 'mig-' + sys_prefix + '_%s.png')
+    ucph_path = os.path.join(base_path, 'ucph-' + sys_prefix + '_%s.png')
     if openid.lower() == 'ucph':
         active_path = ucph_path
     elif openid.lower() == 'mig':
@@ -481,6 +668,37 @@ def main():
     except:
         # probably already there
         pass
+
+    if url.find('sif') != -1:
+        active_setup_sections = [] + setup_sections
+        all_sections = [
+            ('Management', management_actions),
+            ('Access Project', access_project_actions),
+            ('Files', files_actions),
+            ('Setup', setup_actions)
+        ]
+    else:
+
+        # TODO: add more (sub-)sections ?
+
+        # Enable additional setup sections on non-SIF hosts
+        active_setup_sections = setup_sections + extra_setup_sections
+
+        all_sections = [
+            ('Home', home_actions),
+            ('Files', files_actions),
+            ('Workgroups', workgroups_actions),
+            #('Archives', archives_actions),
+            ('Settings', settings_actions),
+            ('Setup', setup_actions),
+            ('Jupyter', jupyter_actions),
+            ('Cloud', cloud_actions),
+            ('People', people_actions),
+            ('Schedule Tasks', crontab_actions),
+            ('Share Links', sharelink_actions),
+            ('Data Transfers', datatransfer_actions),
+        ]
+
     for name in ('login-ready', 'login-filled'):
         mig_calls[name] = lambda driver, name: save_screen(
             driver, active_path % name)
@@ -492,10 +710,20 @@ def main():
                         'archive-empty', 'archive-fileman', 'archive-filled',
                         'archive-submitted', 'archive-finalized', 'archive-view',
                         'archive-register', 'settings-ready', 'setup-ready']
-    callback_targets += ['setup-%s-ready' % sub for (sub, _) in setup_sections]
-    callback_targets += ['access-project-ready', 'create-project-ready',
-                         'accept-invitation-ready', 'two-factor-auth-ready',
-                         'jupyter-ready']
+    callback_targets += ['setup-%s-ready' %
+                         sub for (sub, _) in active_setup_sections]
+    callback_targets += ['jupyter-ready', 'cloud-ready', 'people-ready',
+                         'crontab-ready', 'datatransfer-ready',
+                         'sharelink-ready']
+    callback_targets += ['access-project-ready', 'project-info-ready',
+                         'create-project-ready', 'create-project-filled',
+                         'invite-participant-ready',
+                         'invite-participant-int-filled',
+                         'invite-participant-ext-filled',
+                         'accept-invitation-ready',
+                         'remove-participant-ready',
+                         'await-invitation',
+                         'two-factor-auth-ready']
     for name in callback_targets:
         action_calls[name] = lambda driver, name: save_screen(
             driver, active_path % name)
@@ -528,25 +756,6 @@ def main():
 
         # Now proceed with actual actions to document in turn
 
-        # TODO: add Schedule Tasks, Jupyter, ... ?
-
-        if url.find('sif') != -1:
-            all_sections = [
-                ('Management', management_actions),
-                ('Files', files_actions),
-                ('Settings', settings_actions),
-                ('Setup', setup_actions)
-            ]
-        else:
-            all_sections = [
-                ('Home', home_actions),
-                ('Files', files_actions),
-                ('Workgroups', workgroups_actions),
-                #('Archives', archives_actions),
-                ('Settings', settings_actions),
-                ('Setup', setup_actions),
-                ('Jupyter', jupyter_actions)
-            ]
         section_names = [name for (name, _) in all_sections]
         print "Run user guide actions for: %s" % ', '.join(section_names)
         status = user_actions(driver, url, login, passwd,
@@ -555,11 +764,18 @@ def main():
 
         print "Proceed as you wish while logged in or request stop in console"
         action = None
-        while action not in ['quit', 'exit', 'stop']:
+        stop_actions = ['quit', 'exit', 'stop']
+        while action not in stop_actions:
             action = raw_input('action: ')
+            # Prevent IndexError
+            action_args = action.split()[1:]
             if action.startswith('save'):
-                name = action.split('save ', 1)[1]
-                save_screen(driver, active_path % name)
+                if not action_args:
+                    print "You need to provide a file name argument for save"
+                    continue
+                save_screen(driver, active_path % action_args[0])
+            elif action not in stop_actions:
+                print "Unknown action: %r" % action
             else:
                 time.sleep(1)
 
@@ -574,6 +790,12 @@ def main():
     except Exception as exc:
         print "Unexpected exception: %s" % exc
         print traceback.format_exc()
+
+    # Needed to clean up e.g. rust_mozprofile.* tmp dirs
+    try:
+        driver.quit()
+    except Exception as exc:
+        print "Unexpected exception in quit: %s" % exc
 
 
 if __name__ == "__main__":

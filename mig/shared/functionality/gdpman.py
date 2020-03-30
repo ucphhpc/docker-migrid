@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # gdpman - entry point with project access and management for GDP-enabled sites
-# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -38,7 +38,7 @@ from shared.functional import validate_input_and_cert
 from shared.gdp import ensure_user, get_projects, get_users, \
     get_active_project_client_id, project_accept_user, project_create, \
     project_invite_user, project_login, project_logout, project_remove_user, \
-    validate_user, get_project_users
+    validate_user, get_project_info
 from shared.handlers import safe_handler, get_csrf_limit, make_csrf_token
 from shared.html import twofactor_wizard_html, twofactor_wizard_js, \
     twofactor_token_html
@@ -89,6 +89,8 @@ def fill_category(configuration, category_id, action, ref_dict):
     for ref_fill in category_dict.get('references', {}).get(action, []):
         key = ref_fill['ref_id']
         if not ref_dict.has_key(key):
+            _logger.error('no %s %s value in ref dict: %s' %
+                          (category_id, key, ref_dict))
             raise ValueError('no %s value' % key)
         ref_fill['value'] = ref_dict[key]
     _logger.debug('filled %s dict: %s' % (category_id, category_dict))
@@ -127,26 +129,26 @@ def html_category_fields(configuration, action):
 </span>""" % ref_fill
 
             fields += """
-        <tr class='%(action)s %(category_id)s_section category_section %(hidden)s'>
+        <tr class='%(action)s ref_title %(category_id)s_section category_section %(hidden)s'>
             <td>
             %(ref_name)s: %(ref_help_html)s<br/>
             </td>
         </tr>
-        <tr class='%(action)s %(category_id)s_section category_section %(hidden)s'>
+        <tr class='%(action)s ref_value %(category_id)s_section category_section %(hidden)s'>
             <td>
             <div class='ref_field'>
             """ % ref_fill
             if ref_fill.get('ref_type', 'text') == "checkbox":
                 fields += """
-                <!-- NOTE: make a checkbox with ref_id and name --> 
-                <input id='%(action)s_%(ref_id)s' class='%(category_id)s_ref category_ref'
+                <!-- NOTE: make a checkbox with ref_id and name -->
+                <input id='%(action)s_%(category_id)s_%(ref_id)s' class='%(category_id)s_ref category_ref'
                     name='%(action)s_%(ref_id)s' required title='%(ref_help)s'
                     type='checkbox' /> %(ref_text)s
                 """ % ref_fill
             else:
                 fields += """
             <!-- NOTE: keep a single field for ref with ref_id in name -->
-            <input id='%(action)s_%(ref_id)s' class='%(category_id)s_ref category_ref'
+            <input id='%(action)s_%(category_id)s_%(ref_id)s' class='%(category_id)s_ref category_ref'
                 name='%(action)s_%(ref_id)s' required pattern='%(ref_pattern)s'
                 placeholder='%(ref_name)s' title='%(ref_help)s'
                 type='text' size='30' />
@@ -246,6 +248,11 @@ def html_tmpl(
     # Show project tabs
 
     tab_count = 0
+    # TODO: do we really want this rigid preselect, which breaks #tab-id nav?
+    #       Please refer to e.g. /wsgi-bin/datatransfer.py#keys-tab to see it
+    #       in action.
+    # TODO: investigate showing all tabs but using 'disabled' list in tabs init
+    #       In that way we can avoid a lot of book-keeping and await_project.
     preselected_tab = 0
 
     html += \
@@ -253,39 +260,40 @@ def html_tmpl(
         <div id='project-tabs'>
         <ul class='fillwidth padspace'>"""
     if accepted_projects:
-        html += """<li><a href='#access'>Access Project</a></li>"""
+        html += """<li><a href='#access_project_tab'>Access Project</a></li>"""
         tab_count += 1
     if info_projects:
-        html += """<li><a href='#info'>Project info</a></li>"""
+        html += """<li><a href='#project_info_tab'>Project Info</a></li>"""
         tab_count += 1
     if create_projects:
-        html += """<li><a href='#create'>Create Project</a></li>"""
-        if action == 'create':
+        html += """<li><a href='#create_project_tab'>Create Project</a></li>"""
+        if action == 'create_project':
             preselected_tab = tab_count
         tab_count += 1
     if invite_projects:
-        html += """<li><a href='#invite_user'>Invite Participant</a></li>"""
+        html += """<li><a href='#invite_user_tab'>Invite Participant</a></li>"""
         if action == 'invite_user':
             preselected_tab = tab_count
         tab_count += 1
     if invited_projects:
-        html += """<li><a href='#accept_user'>Accept Invitation</a></li>"""
+        html += """<li><a href='#accept_user_tab'>Accept Invitation</a></li>"""
         if action == 'accept_user':
             preselected_tab = tab_count
         tab_count += 1
     if remove_projects:
-        html += """<li><a href='#remove_user'>Remove Participant</a></li>"""
+        html += """<li><a href='#remove_user_tab'>Remove Participant</a></li>"""
         if action == 'remove_user':
             preselected_tab = tab_count
         tab_count += 1
     if await_projects:
-        html += """<li><a href='#await'>Await Invitation</a></li>"""
-        if action == 'await':
+        html += """<li><a href='#await_project_tab'>Await Invitation</a></li>"""
+        if action == 'await_project':
             preselected_tab = tab_count
         tab_count += 1
     if configuration.site_enable_twofactor:
-        html += """<li><a href='#twofactor'>Two-Factor Auth</a></li>"""
-        if action == 'twofactor':
+        html += """<li><a href='#twofactor_auth_tab'>Two-Factor Auth</a></li>"""
+        # TODO: should it check for enable2fa instead of twofactor_auth?
+        if action == 'twofactor_auth':
             preselected_tab = tab_count
         tab_count += 1
 
@@ -301,25 +309,29 @@ def html_tmpl(
         </script>""" % (preselected_tab, category_map)
 
     if status_msg:
+        if status_msg.upper().startswith("ERROR: "):
+            status_class = "errortext"
+        else:
+            status_class = "infotext"
         status_html += \
             """
-        <table class='gm_projects_table' style='border-spacing=0;'>
+        <table class='gm_projects_table gdp_action_status' style='border-spacing=0;'>
         <thead>
             <tr>
                 <th>Status:</th>
             </tr>
         </thead>
         <tbody>
-        <tr><td id='status_msg'>%s</td></tr>
+        <tr><td id='status_msg' class='%s'>%s</td></tr>
         </tbody>
-        </table>""" % status_msg
+        </table>""" % (status_class, status_msg)
 
     # Show login projects selectbox
 
     if accepted_projects:
         html += \
             """
-        <div id='access'>"""
+        <div id='access_project_tab'>"""
         html += status_html
         html += \
             """
@@ -332,7 +344,7 @@ def html_tmpl(
         <tbody>
             <tr><td>
                 <div class='styled-select gm_select semi-square'>
-                <select name='access_base_vgrid_name'>
+                <select name='access_project_base_vgrid_name'>
                 <option value=''>Choose project</option>
                 <option value=''>───────</option>"""
         for project in sorted(accepted_projects.keys()):
@@ -357,8 +369,8 @@ def html_tmpl(
         <tbody>
             <tr><td>
                 <!-- NOTE: must have href for correct cursor on mouse-over -->
-                <a class='ui-button' id='access' href='#' onclick='submitform(\"access\"); return false;'>Login</a>
-                <a class='ui-button' id='logout' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
+                <a class='ui-button' id='access_project_button' href='#' onclick='submitform(\"access_project\"); return false;'>Login</a>
+                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
             </td></tr>
         </tbody>
         </table>
@@ -369,7 +381,7 @@ def html_tmpl(
     if info_projects:
         html += \
             """
-        <div id='info'>"""
+        <div id='project_info_tab'>"""
         html += status_html
         html += \
             """
@@ -382,7 +394,7 @@ def html_tmpl(
         <tbody>
             <tr><td>
                 <div class='styled-select gm_select semi-square'>
-                <select name='info_base_vgrid_name'>
+                <select name='project_info_base_vgrid_name'>
                 <option value=''>Choose project</option>
                 <option value=''>───────</option>"""
         for project in sorted(info_projects.keys()):
@@ -407,8 +419,8 @@ def html_tmpl(
         <tbody>
             <tr><td>
                 <!-- NOTE: must have href for correct cursor on mouse-over -->
-                <a class='ui-button' id='info' href='#' onclick='showProjectInfo(); return false;'>Info</a>
-                <a class='ui-button' id='logout' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
+                <a class='ui-button' id='project_info_button' href='#' onclick='showProjectInfo(); return false;'>Info</a>
+                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
             </td></tr>
         </tbody>
         </table>
@@ -419,7 +431,7 @@ def html_tmpl(
     if invited_projects:
         html += \
             """
-        <div id='accept_user'>"""
+        <div id='accept_user_tab'>"""
         html += status_html
         html +=  \
             """
@@ -462,8 +474,8 @@ def html_tmpl(
         <tbody>
             <tr><td>
                 <!-- NOTE: must have href for correct cursor on mouse-over -->
-                <a class='ui-button' id='accept_user' href='#' onclick='submitform(\"accept_user\"); return false;'>Accept</a>
-                <a class='ui-button' id='logout' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
+                <a class='ui-button' id='accept_user_button' href='#' onclick='submitform(\"accept_user\"); return false;'>Accept</a>
+                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
             </td></tr>
         </tbody>
         </table>
@@ -474,7 +486,7 @@ def html_tmpl(
     if invite_projects:
         html += \
             """
-        <div id='invite_user'>"""
+        <div id='invite_user_tab'>"""
         html += status_html
         html +=  \
             """
@@ -525,8 +537,8 @@ def html_tmpl(
         <tbody>
             <tr><td>
                 <!-- NOTE: must have href for correct cursor on mouse-over -->
-                <a class='ui-button' id='invite_user' href='#' onclick='submitform(\"invite_user\"); return false;'>Invite</a>
-                <a class='ui-button' id='logout' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
+                <a class='ui-button' id='invite_user_button' href='#' onclick='submitform(\"invite_user\"); return false;'>Invite</a>
+                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
             </td></tr>
         </tbody>
         </table>
@@ -538,7 +550,7 @@ def html_tmpl(
     if remove_projects:
         html += \
             """
-        <div id='remove_user'>"""
+        <div id='remove_user_tab'>"""
         html += status_html
         html +=  \
             """
@@ -592,8 +604,8 @@ def html_tmpl(
         <tbody>
             <tr><td>
                 <!-- NOTE: must have href for correct cursor on mouse-over -->
-                <a class='ui-button' id='remove_user' href='#' onclick='submitform(\"remove_user\"); return false;'>Remove</a>
-                <a class='ui-button' id='logout' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
+                <a class='ui-button' id='remove_user_button' href='#' onclick='submitform(\"remove_user\"); return false;'>Remove</a>
+                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
             </td></tr>
         </tbody>
         </table>
@@ -604,7 +616,7 @@ def html_tmpl(
 
     if create_projects:
         html += """
-        <div id='create'>"""
+        <div id='create_project_tab'>"""
         html += status_html
         html += """
         <table class='gm_projects_table' style='border-spacing=0;'>
@@ -629,11 +641,11 @@ def html_tmpl(
                 specs['hidden'] = 'hidden'
 
             category_html += """
-<input id='%(category_id)s_radio' name='create_category' type='radio'
-    value='%(category_id)s' onClick='selectRef(\"create\", \"%(category_id)s\");'/>
+<input id='%(category_id)s_radio' name='create_project_category' type='radio'
+    value='%(category_id)s' onClick='selectRef(\"create_project\", \"%(category_id)s\");'/>
     <span class='category_title'>%(category_title)s</span>
             """ % specs
-            for ref_dict in category_entry.get('references', {}).get('create',
+            for ref_dict in category_entry.get('references', {}).get('create_project',
                                                                      []):
                 # Copy to avoid changing
                 ref_fill = {}
@@ -654,27 +666,27 @@ def html_tmpl(
     </span>""" % ref_fill
 
                 ref_html += """
-            <tr class='create %(category_id)s_section category_section %(hidden)s'>
+            <tr class='create_project ref_title %(category_id)s_section category_section %(hidden)s'>
                 <td>
                 %(ref_name)s: %(ref_help_html)s<br/>
                 </td>
             </tr>
-            <tr class='create %(category_id)s_section category_section %(hidden)s'>
+            <tr class='create_project ref_value %(category_id)s_section category_section %(hidden)s'>
                 <td>
                 <div class='ref_field'>
                 """ % ref_fill
                 if ref_fill.get('ref_type', 'text') == "checkbox":
                     ref_html += """
-                <!-- NOTE: make a checkbox with ref_id and name --> 
-                <input id='create_%(ref_id)s' class='%(category_id)s_ref category_ref'
-                    name='create_%(ref_id)s' required title='%(ref_help)s'
+                <!-- NOTE: make a checkbox with ref_id and name -->
+                <input id='create_project_%(category_id)s_%(ref_id)s' class='%(category_id)s_ref category_ref'
+                    name='create_project_%(ref_id)s' required title='%(ref_help)s'
                     type='checkbox' /> %(ref_text)s
                 """ % ref_fill
                 else:
                     ref_html += """
-                <!-- NOTE: keep a single field for ref with ref_id in name --> 
-                <input id='create_%(ref_id)s' class='%(category_id)s_ref category_ref'
-                    name='create_%(ref_id)s' required pattern='%(ref_pattern)s'
+                <!-- NOTE: keep a single field for ref with ref_id in name -->
+                <input id='create_project_%(category_id)s_%(ref_id)s' class='%(category_id)s_ref category_ref'
+                    name='create_project_%(ref_id)s' required pattern='%(ref_pattern)s'
                     placeholder='%(ref_name)s' title='%(ref_help)s'
                     type='text' size='30' />
                 """ % ref_fill
@@ -712,7 +724,7 @@ def html_tmpl(
             </tr>
             <tr>
                 <td>
-                <input name='create_base_vgrid_name' type='text' size='30'
+                <input name='create_project_base_vgrid_name' type='text' size='30'
                 required pattern='.+' placeholder='%s Name'
                 title='A name for your project or data set'/>
             </td></tr>
@@ -727,8 +739,8 @@ def html_tmpl(
         <tbody>
             <tr><td>
                 <!-- NOTE: must have href for correct cursor on mouse-over -->
-                <a class='ui-button' id='create' href='#' onclick='submitform(\"create\"); return false;'>Create</a>
-                <a class='ui-button' id='logout' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
+                <a class='ui-button' id='create_project_button' href='#' onclick='submitform(\"create_project\"); return false;'>Create</a>
+                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
             </td></tr>
         </tbody>
         </table>
@@ -740,7 +752,7 @@ def html_tmpl(
     if await_projects:
         html += \
             """
-        <div id='await'>"""
+        <div id='await_project_tab'>"""
         html += status_html
         html +=  \
             """
@@ -762,7 +774,7 @@ def html_tmpl(
             </td></tr>
             <tr><td>
                 <!-- NOTE: must have href for correct cursor on mouse-over -->
-                <a class='ui-button' id='logout' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
+                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
             </td></tr>
         </tbody>
         </table>
@@ -780,7 +792,7 @@ def html_tmpl(
 
         html += \
             """
-        <div id='twofactor'>
+        <div id='twofactor_auth_tab'>
             """
         html += """
         <table class='gm_projects_table' style='border-spacing=0;'>
@@ -817,13 +829,13 @@ def html_tmpl(
         if not twofactor_enabled:
             html += """<tr class='otp_ready hidden'><td>
         Enable 2-factor authentication and<br/>
-        <a class='ui-button' href='#' onclick='submitform(\"enable2fa\"); return false;'>Start Using %(site)s</a>
+        <a class='ui-button' id='enable2fa_button' href='#' onclick='submitform(\"enable2fa\"); return false;'>Start Using %(site)s</a>
 </td></tr>
 """
 
         html += """
         <tr><td>
-                <a class='ui-button' id='logout' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
+                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
             </td></tr>
 </tbody>
 </table>
@@ -878,7 +890,7 @@ def html_logout_tmpl(configuration, csrf_token):
     <tbody>
         <tr><td>
             <!-- NOTE: must have href for correct cursor on mouse-over -->
-            <a class='genericbutton' id='access' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
+            <a class='genericbutton' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
         </td></tr>
     </tbody>
     </table>
@@ -899,6 +911,7 @@ def js_tmpl_parts(configuration, csrf_token):
     js_import = ''
     js_import += '<script type="text/javascript" src="/images/js/jquery.ajaxhelpers.js"></script>'
     js_import += tfa_import
+    # TODO: move this code to stand-alone js file
     js_init = """
     var csrf_field = '%(csrf_field)s';
     var csrf_map = {'gdpman': '%(csrf_token)s'};
@@ -913,13 +926,13 @@ def js_tmpl_parts(configuration, csrf_token):
         $('.'+category_id+'_section.'+project_action+' .category_ref').prop('disabled', false);
     }
     function selectInviteUserProject() {
-        var project_name = $('#invite_user select[name=invite_user_base_vgrid_name]').val();
+        var project_name = $('#invite_user_tab select[name=invite_user_base_vgrid_name]').val();
         /* Helper to switch category fields on project select in invite_user tab */
         var category_id = category_map[project_name];
         selectRef('invite_user', category_id);
     }
     function selectAcceptUserProject() {
-        var project_name = $('#accept_user select[name=accept_user_base_vgrid_name]').val();
+        var project_name = $('#accept_user_tab select[name=accept_user_base_vgrid_name]').val();
         /* Helper to switch category fields on project select in accept_user tab */
         var category_id = category_map[project_name];
         selectRef('accept_user', category_id);
@@ -930,7 +943,7 @@ def js_tmpl_parts(configuration, csrf_token):
         var option;
         var option_desc;
         var option_value;
-        select = $('#remove_user select[name=remove_user_short_id]');
+        select = $('#remove_user_tab select[name=remove_user_short_id]');
         select.children().remove().end();
         if (project_participants.OK.length == 0) {
             option = new Option('No participants found', '', true, true);
@@ -942,7 +955,7 @@ def js_tmpl_parts(configuration, csrf_token):
             option = new Option('───────', '', false, false);
             select.append(option);
             for (var i=0; i<project_participants.OK.length; i++ ) {
-                option_desc = project_participants.OK[i].name 
+                option_desc = project_participants.OK[i].name
                             + ' (' + project_participants.OK[i].email + ')';
                 option_value = project_participants.OK[i].short_id;
                 option = new Option(option_desc, option_value, false, false);
@@ -951,27 +964,27 @@ def js_tmpl_parts(configuration, csrf_token):
             option = new Option('───────', '', false, false);
             select.append(option);
         }
-        $('#remove_user tr[id=user_desc]').show();
-        $('#remove_user tr[id=user]').show();
+        $('#remove_user_tab tr[id=user_desc]').show();
+        $('#remove_user_tab tr[id=user]').show();
     }
 
     function selectRemoveUserProject() {
-        var project_name = $('#remove_user select[name=remove_user_base_vgrid_name]').val();
+        var project_name = $('#remove_user_tab select[name=remove_user_base_vgrid_name]').val();
         /* Helper to switch category fields on project select in remove_user tab */
         var category_id = category_map[project_name];
         selectRef('remove_user', category_id);
         /* Helper to generate user select in remove_user tab */
-        $('#remove_user tr[id=user_desc]').hide();
-        $('#remove_user tr[id=user]').hide();
+        $('#remove_user_tab tr[id=user_desc]').hide();
+        $('#remove_user_tab tr[id=user]').hide();
         if (project_name !== '') {
-            ajax_gdp_project_users(renderSelectRemoveUserFromProject,
-                                     project_name);   
+            ajax_gdp_project_info(renderSelectRemoveUserFromProject,
+                                     project_name);
         }
     }
     function extractProject(project_action) {
         var project_name = '';
         var err_help = 'selected'
-        if (project_action === 'create') {
+        if (project_action === 'create_project') {
             project_name = $('#gm_project_form input[name='+project_action+'_base_vgrid_name]').val();
             err_help = 'name provided';
         } else {
@@ -986,7 +999,7 @@ def js_tmpl_parts(configuration, csrf_token):
     function extractUser(project_action) {
         var user_name = '';
         var err_help = 'selected';
-        
+
         if (project_action === 'remove_user') {
             user_name = $('#gm_project_form select[name='+project_action+'_short_id]').val();
         }
@@ -994,7 +1007,7 @@ def js_tmpl_parts(configuration, csrf_token):
             user_name = '';
             err_help = 'provided or not on required format';
             console.error('user field is missing or not on required format!');
-        } 
+        }
         else {
             user_name = $('#gm_project_form input[name='+project_action+'_short_id]').val();
         }
@@ -1002,7 +1015,7 @@ def js_tmpl_parts(configuration, csrf_token):
             showError('Input Error', 'No User '+err_help+'!');
             return null;
         }
-        
+
         return user_name;
     }
     function extractCategory(project_action, project_name) {
@@ -1012,7 +1025,7 @@ def js_tmpl_parts(configuration, csrf_token):
             /* No project selected (already handled elsewhere) */
             console.error('project_name unset - cannot extract category!');
             return null;
-        } else if (project_action === 'create') {
+        } else if (project_action === 'create_project') {
             category_name = $('#gm_project_form input[name='+project_action+'_category]:checked').val();
             err_help = 'selected';
         } else {
@@ -1045,7 +1058,7 @@ def js_tmpl_parts(configuration, csrf_token):
         var valid_fields = true;
         $('#gm_project_form .'+category_name+'_section.'+project_action+' input:enabled').each(
                 function() {
-                    var ref_id = $(this).attr('id').replace(project_action+'_', '');
+                    var ref_id = $(this).attr('id').replace(project_action+'_', '').replace(category_name+'_', '');
                     var ref_val = $(this).val();
                     //console.debug('checking: '+ref_id+': '+ref_val);
                     var valid_value = $(this)[0].checkValidity();
@@ -1070,7 +1083,7 @@ def js_tmpl_parts(configuration, csrf_token):
             function() {
                 var ref_id, ref_val, field;
                 if ($(this).val() !== '') {
-                    ref_id = $(this).attr('id').replace(project_action+'_', '');
+                    ref_id = $(this).attr('id').replace(project_action+'_', '').replace(category_name+'_', '');
                     ref_val = $(this).val();
                     //console.debug('set '+ref_id+': '+ref_val);
                     /* NOTE: add ref input fields dynamically */
@@ -1090,7 +1103,7 @@ def js_tmpl_parts(configuration, csrf_token):
     function submitform(project_action) {
         /* Clear any stale data from previous form submits first */
         $('#gm_project_submit_form').trigger('reset');
-        if (project_action == 'access') {
+        if (project_action == 'access_project') {
             var project_name = extractProject(project_action);
             if (!handleStaticFields(project_action, project_name, '', '')) return false;
             $('#gm_project_submit_form').submit();
@@ -1118,7 +1131,7 @@ def js_tmpl_parts(configuration, csrf_token):
             if (!handleDynamicFields(project_action, category_name)) return false;
             $('#gm_project_submit_form').submit();
         }
-        else if (project_action == 'create') {
+        else if (project_action == 'create_project') {
             var project_name = extractProject(project_action);
             var category_name = extractCategory(project_action, project_name);
             if (!handleStaticFields(project_action, project_name, '', category_name)) return false;
@@ -1168,11 +1181,11 @@ def js_tmpl_parts(configuration, csrf_token):
     }
 
     function showProjectInfo() {
-        var project_name = extractProject('info');
+        var project_name = extractProject('project_info');
         if (project_name === null) {
             return;
         }
-        ajax_gdp_project_users(showProjectInfoDialog, project_name);
+        ajax_gdp_project_info(showProjectInfoDialog, project_name);
     }
     function showHelp(title, msg) {
         $('#help_dialog').dialog('option', 'title', title);
@@ -1192,18 +1205,18 @@ def js_tmpl_parts(configuration, csrf_token):
             active: preselected_tab
         });
         $('#info_dialog').dialog(
-              { autoOpen: false, 
-                width: 500, 
-                height: 500, 
-                modal: true, 
+              { autoOpen: false,
+                width: 500,
+                height: 500,
+                modal: true,
                 closeOnEscape: true,
                 overflow: scroll,
                 buttons: { 'Ok': function() { $(this).dialog('close'); }}
               });
         $('#help_dialog').dialog(
-              { autoOpen: false, 
-                width: 500, 
-                modal: true, 
+              { autoOpen: false,
+                width: 500,
+                modal: true,
                 closeOnEscape: true,
 
                 buttons: { 'Ok': function() { $(this).dialog('close'); }}
@@ -1441,7 +1454,7 @@ Please contact the site admins %s if you think it should be enabled.
         # Entry page
 
         action_msg = ''
-        if action == 'access':
+        if action == 'access_project':
 
             # Project login
 
@@ -1506,6 +1519,7 @@ Please contact the site admins %s if you think it should be enabled.
                     status = False
                     msg = "missing reference: %s" % err
 
+            if status:
                 (status, msg) = project_accept_user(configuration, client_addr,
                                                     client_id, base_vgrid_name,
                                                     category_entry)
@@ -1559,6 +1573,7 @@ Please contact the site admins %s if you think it should be enabled.
                     status = False
                     msg = "missing reference: %s" % err
 
+            if status:
                 invite_client_id = gdp_users[username]
                 (status, msg) = project_invite_user(configuration,
                                                     client_addr,
@@ -1609,6 +1624,7 @@ Please contact the site admins %s if you think it should be enabled.
                     status = False
                     msg = "missing reference: %s" % err
 
+            if status:
                 remove_client_id = gdp_users[username]
                 (status, msg) = project_remove_user(configuration,
                                                     client_addr,
@@ -1621,7 +1637,7 @@ Please contact the site admins %s if you think it should be enabled.
             else:
                 action_msg = 'ERROR: %s' % msg
 
-        elif action == 'create':
+        elif action == 'create_project':
 
             # Project create
 
@@ -1651,9 +1667,9 @@ Please contact the site admins %s if you think it should be enabled.
                 action_msg = 'OK: %s' % msg
             else:
                 action_msg = 'ERROR: %s' % msg
-        elif action == 'list_project_users':
-            output_objects.append({'object_type': 'list',
-                                   'list': get_project_users(
+        elif action == 'project_info':
+            output_objects.append({'object_type': 'project_info',
+                                   'info': get_project_info(
                                        configuration,
                                        base_vgrid_name,
                                        skip_users=[client_id],
