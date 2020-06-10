@@ -38,7 +38,7 @@ from ConfigParser import ConfigParser
 
 from shared.defaults import CSRF_MINIMAL, CSRF_WARN, CSRF_MEDIUM, CSRF_FULL, \
     POLICY_NONE, POLICY_WEAK, POLICY_MEDIUM, POLICY_HIGH, POLICY_CUSTOM, \
-    freeze_flavors, duplicati_protocol_choices, default_css_filename
+    freeze_flavors, duplicati_protocol_choices, default_css_filename, keyword_any
 from shared.logger import Logger, SYSLOG_GDP
 from shared.html import menu_items, vgrid_items
 from shared.fileio import read_file, load_json
@@ -90,6 +90,7 @@ def fix_missing(config_file, verbose=True):
         'sessid_to_mrsl_link_home': '~/state/sessid_to_mrsl_link_home/',
         'sessid_to_jupyter_mount_link_home': '~/state/sessid_to_jupyter_mount_link_home/',
         'mig_system_files': '~/state/mig_system_files/',
+        'mig_system_storage': '~/state/mig_system_storage',
         'mig_system_run': '~/state/mig_system_run/',
         'wwwpublic': '~/state/wwwpublic/',
         'vm_home': '~/state/vm_home',
@@ -336,6 +337,7 @@ class Configuration:
     workflows_vgrid_patterns_home = ''
     workflows_vgrid_recipes_home = ''
     workflows_vgrid_history_home = ''
+    site_autolaunch_page = ''
     site_landing_page = ''
     site_skin = ''
     site_collaboration_links = ''
@@ -451,6 +453,7 @@ class Configuration:
     sessid_to_mrsl_link_home = ''
     sessid_to_jupyter_mount_link_home = ''
     mig_system_files = ''
+    mig_system_storage = ''
     mig_system_run = ''
     empty_job_name = ''
     migserver_http_url = ''
@@ -523,6 +526,8 @@ class Configuration:
     language = ['English']
     user_interface = ['V2', 'V3']
     submitui = ['fields', 'textarea', 'files']
+    # Init user default page with no selection to use site landing page
+    default_page = ['']
 
     # directory for usage records, initially None (means: do not generate)
 
@@ -657,6 +662,8 @@ location.""" % self.config_file
                                                        'sessid_to_mrsl_link_home')
             self.mig_system_files = config.get('GLOBAL',
                                                'mig_system_files')
+            self.mig_system_storage = config.get('GLOBAL',
+                                             'mig_system_storage')
             self.mig_system_run = config.get('GLOBAL',
                                              'mig_system_run')
             self.empty_job_name = config.get('GLOBAL', 'empty_job_name')
@@ -710,7 +717,15 @@ location.""" % self.config_file
         if config.has_option('GLOBAL', 'admin_email'):
             self.admin_email = config.get('GLOBAL', 'admin_email')
         else:
-            self.admin_email = []
+            fqdn = 'localhost'
+            user = 'mig'
+            try:
+                fqdn = socket.getfqdn()
+                user = os.environ['USER']
+            except:
+                pass
+            self.admin_email = '%s@%s' % (user, fqdn)
+
         if config.has_option('GLOBAL', 'ca_fqdn'):
             self.ca_fqdn = config.get('GLOBAL', 'ca_fqdn')
         if config.has_option('GLOBAL', 'ca_user'):
@@ -1026,6 +1041,12 @@ location.""" % self.config_file
                 'SITE', 'enable_gravatars')
         else:
             self.site_enable_gravatars = True
+        # Whether to enforce account expire strictly in IO daemons
+        if config.has_option('SITE', 'io_account_expire'):
+            self.site_io_account_expire = config.getboolean(
+                'SITE', 'io_account_expire')
+        else:
+            self.site_io_account_expire = False
         if config.has_option('SITE', 'enable_twofactor'):
             self.site_enable_twofactor = config.getboolean(
                 'SITE', 'enable_twofactor')
@@ -1447,10 +1468,14 @@ location.""" % self.config_file
             self.site_assets = config.get('SITE', 'assets')
         else:
             self.site_assets = "/assets"
+        if config.has_option('SITE', 'autolaunch_page'):
+            self.site_autolaunch_page = config.get('SITE', 'autolaunch_page')
+        else:
+            self.site_autolaunch_page = '/cgi-bin/autolaunch.py'
         if config.has_option('SITE', 'landing_page'):
             self.site_landing_page = config.get('SITE', 'landing_page')
         else:
-            self.site_landing_page = '/cgi-bin/dashboard.py'
+            self.site_landing_page = '/cgi-bin/home.py'
         if config.has_option('SITE', 'skin'):
             self.site_skin = config.get('SITE', 'skin')
         else:
@@ -1496,6 +1521,14 @@ location.""" % self.config_file
             self.site_user_menu = [i for i in req if menu_items.has_key(i)]
         else:
             self.site_user_menu = []
+
+        # Init helper for user default page select
+        # NOTE: we keep it simple - do not include site_user_menu entries here
+        for page in self.site_default_menu:
+            # Additional pages we want to exclude as default page
+            if not page in ['seafile', 'settings', 'setup', 'logout'] + self.default_page:
+                self.default_page.append(page)
+
         if config.has_option('SITE', 'collaboration_links'):
             valid = ['default', 'simple', 'advanced']
             req = config.get('SITE', 'collaboration_links').split()
@@ -1715,6 +1748,11 @@ location.""" % self.config_file
                 'SITE', 'about_snippet_url')
         else:
             self.site_about_snippet_url = '/public/about-snippet.html'
+        if config.has_option('SITE', 'tips_snippet_url'):
+            self.site_tips_snippet_url = config.get(
+                'SITE', 'tips_snippet_url')
+        else:
+            self.site_tips_snippet_url = '/public/tips-snippet.html'
         if config.has_option('SITE', 'status_url'):
             self.site_status_url = config.get('SITE', 'status_url')
         else:
@@ -1733,7 +1771,7 @@ location.""" % self.config_file
             self.site_status_system_match = config.get(
                 'SITE', 'status_system_match').split()
         else:
-            self.site_status_system_match = ['ALL']
+            self.site_status_system_match = [keyword_any]
         # Fall back to a static 'random' salt string since we need it to
         # remain constant
         static_rand = 'w\xff\xcft\xaf/\x089 B\x1eG\x84i\x97a'
@@ -1869,6 +1907,60 @@ location.""" % self.config_file
                         not ext_oid_url in locations:
                     locations.append(ext_oid_url)
             self.myfiles_py_location = ' '.join(locations)
+
+        # Force-disable all incompatible or unsafe features in GDP mode
+        if self.site_enable_gdp:
+            # NOTE: ftps COULD be enabled with GDP tweaks like for sftp/webdavs
+            self.site_enable_ftps = False
+            # NOTE: jupyter and cloud require GDP compatible hosts and tweaks
+            self.site_enable_jupyter = False
+            self.site_enable_cloud = False
+            # NOTE: unlimited transfers or sharelinks are a huge leak risk
+            #       deposit-only versions COULD be developed
+            self.site_enable_transfers = False
+            self.site_enable_sharelinks = False
+            # NOTE: compute jobs will require vast modifications to support GDP
+            self.site_enable_resources = False
+            self.site_enable_jobs = False
+            self.site_enable_sshmux = False
+            self.site_enable_preview = False
+            self.site_enable_vmachines = False
+            self.site_enable_sandboxes = False
+            # NOTE: every operation must be clearly logged with explicit actor
+            #       so at least analyse thoroughly before GDP-enabling these.
+            self.site_enable_crontab = False
+            self.site_enable_events = False
+            self.site_enable_workflows = False
+            # NOTE: duplicati+seafile rely on local files which may be an issue
+            #       so at least analyse thoroughly before GDP-enabling.
+            self.site_enable_duplicati = False
+            self.site_enable_seafile = False
+            # NOTE: GDPR lifetime is likely in conflict with freeze promises
+            #       but a restricted freeze version COULD be developed.
+            self.site_enable_freeze = False
+            # NOTE: disable other probably harmless but non-essential features
+            self.site_enable_imnotify = False
+            self.site_enable_griddk = False
+            self.site_enable_styles = False
+            self.site_enable_widgets = False
+            self.site_enable_gravatars = False
+
+        # Filter disabled features from vgrid links
+        exclude_features = []
+        if not self.site_enable_jobs:
+            exclude_features += ['monitor']
+        if not self.site_enable_events:
+            exclude_features += ['workflows']
+        if not self.trac_admin_path:
+            exclude_features += ['tracker']
+        if not self.hg_path:
+            exclude_features += ['scm']
+        def_links = self.site_default_vgrid_links
+        def_links = [i for i in def_links if i not in exclude_features]
+        self.site_default_vgrid_links = def_links
+        adv_links = self.site_advanced_vgrid_links
+        adv_links = [i for i in adv_links if i not in exclude_features]
+        self.site_advanced_vgrid_links = adv_links
 
         # set test modes if requested
 

@@ -181,16 +181,25 @@ Please contact the %(site)s team for details about expire policies.
             txt += frame_template % request_text
         elif request_type in accept_mapper.keys():
             kind = accept_mapper[request_type]
-            header = '%s %s admission note' % (configuration.short_title, kind)
+            if 'vgrid' == kind:
+                show_kind = configuration.site_vgrid_label
+            else:
+                show_kind = kind
+            header = '%s %s admission note' % (configuration.short_title,
+                                               show_kind)
             txt += """This is a %s admission note sent on behalf of %s:
-""" % (kind, from_id)
+""" % (show_kind, from_id)
             txt += frame_template % request_text
         elif request_type in reject_mapper.keys():
             kind = reject_mapper[request_type]
+            if 'vgrid' == kind:
+                show_kind = configuration.site_vgrid_label
+            else:
+                show_kind = kind
             header = '%s %s access rejection note' \
-                % (configuration.short_title, kind)
+                % (configuration.short_title, show_kind)
             txt += """This is a %s access rejection note sent on behalf of %s:
-""" % (kind, from_id)
+""" % (show_kind, from_id)
             txt += frame_template % request_text
         elif request_type in entity_mapper.keys():
             entity = entity_mapper[request_type]
@@ -792,11 +801,12 @@ def send_system_notification(user_id, category, message, configuration):
         logger.warning("System notify helper is disabled in configuration!")
         return False
     if not user_id:
-        logger.error("Invalid user_id: %s" % user_id)
+        logger.error("Invalid user_id: %r" % user_id)
         return False
     client_id = expand_openid_alias(user_id, configuration)
     if not client_id or not extract_field(client_id, 'email'):
-        logger.error("send_system_notification: Invalid user_id: %s" % user_id)
+        logger.warning(
+            "send_system_notification: Invalid user_id: %r" % user_id)
         return False
     if not isinstance(category, list):
         logger.error("send_system_notification: category must be a list")

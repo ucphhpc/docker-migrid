@@ -730,6 +730,15 @@ background: url(/images/icons/code.png) left center no-repeat;
 .ext_xml { background: url(/images/icons/code.png) left center no-repeat; }
 .ext_zip { background: url(/images/icons/zip.png) left center no-repeat; }
 
+.twofactor.authlogo {
+    background-image: url(/images/icons/2fa-code.png);
+    background-position: center;
+    background-size: 120px;
+    background-repeat: no-repeat;
+    width: 100%;
+    height: 124px;
+}
+
 .ui-draggable-dragging {
     /*background-color: red;*/
 }
@@ -1047,6 +1056,42 @@ background: url(/images/icons/code.png) left center no-repeat;
     border: 0;
     vertical-align: middle;
 }
+
+/* V2 Account request form */
+/* form with field grid */
+#account-request-grid .form-row {
+    display: grid;
+    grid-gap: 10px;
+    grid-template-columns: repeat(auto-fill, 32%);
+    margin: 10px 0px;
+}
+#account-request-grid .form-row.single-entry {
+    grid-template-columns: repeat(auto-fill, 98%);
+}
+#account-request-grid .form-row .single-entry .form-cell{
+    width: 98%;
+    display: block;
+}
+#account-request-grid .form-row select {
+    width: 100%;
+}
+
+/* Tips in Home page below apps */
+#tips-container {
+    width: auto;
+}
+#tips-content .tips-entry h4 {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 700;
+    padding-top: 5px;
+    padding-bottom: 0;
+    margin: 0;
+}
+#tips-content .tips-entry p {
+    font-size: 14px;
+}
+
 
 /* Cloud button grid layout */
 .manage-cloud-instance, .cloud-instance-input {
