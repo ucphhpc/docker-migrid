@@ -34,7 +34,7 @@ from shared.functional import validate_input_and_cert
 from shared.handlers import get_csrf_limit, make_csrf_token
 from shared.html import man_base_js, man_base_html, html_post_helper
 from shared.init import initialize_main_variables, find_entry
-from shared.modified import pending_vgrids_update
+from shared.modified import check_vgrids_modified
 from shared.useradm import get_full_user_map
 from shared.vgrid import vgrid_create_allowed
 from shared.vgridaccess import get_vgrid_map, VGRIDS, OWNERS, MEMBERS, SETTINGS
@@ -181,16 +181,14 @@ resources.''' % label})
     if operation in list_operations:
         logger.info("get vgrid map with caching %s" % caching)
         vgrid_map = get_vgrid_map(configuration, caching=caching)
-        # NOTE: use simple pending check if caching to avoid lock during update
+        member_list['pending_updates'] = False
         if caching:
-            pending_updates = pending_vgrids_update(configuration)
-        else:
-            pending_updates = False
-        if pending_updates:
-            logger.debug("found pending cache updates: %s" % pending_updates)
-        else:
-            logger.debug("no pending cache updates")
-        member_list['pending_updates'] = pending_updates
+            modified_vgrids, _ = check_vgrids_modified(configuration)
+            if modified_vgrids:
+                logger.info("pending cache updates: %s" % modified_vgrids)
+                member_list['pending_updates'] = True
+            else:
+                logger.info("no pending cache updates")
 
         vgrid_list = vgrid_map[VGRIDS].keys()
 

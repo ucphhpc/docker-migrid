@@ -41,10 +41,9 @@ body.staticpage {
   border-right: 1px solid #CCC;
   border-left: 1px solid #CCC;
 }
-/* Hide systemwarn announcement 'hack' for reqoid and similar narrow pages
-   where it almost always leads to overflow. */
-body.staticpage #logotitle span.systemwarn {
-    display: none;
+/* Wider page for reqoid etc. still allowing e.g. brief inline warnings */
+body.staticpage.wide {
+  width: 1284px;
 }
 
 .home-nav-logo {
@@ -112,7 +111,7 @@ div.loginfield, div.signupfield {
   background-color: #46743c;
   margin: 0px 4px;
   font-size: 12px;
-  width: 440px;
+  width: 460px;
   border-radius: 4px;
 }
 div.loginfield > h2, div.signupfield > h2 {

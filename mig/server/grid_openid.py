@@ -79,7 +79,6 @@ from openid.server import server
 from openid.store.filestore import FileOpenIDStore
 from openid.consumer import discover
 
-from shared.accountstate import check_account_accessible
 from shared.base import client_id_dir, cert_field_map
 from shared.conf import get_configuration_object
 from shared.defaults import user_db_filename
@@ -244,8 +243,8 @@ class OpenIDHTTPServer(HTTPServer):
         """Expire old entries in the volatile helper dictionaries"""
         if self.last_expire + self.min_expire_delay < time.time():
             self.last_expire = time.time()
-            expire_rate_limit(configuration, "openid",
-                              expire_delay=self.min_expire_delay)
+            expire_rate_limit(configuration, "openid", 
+                expire_delay=self.min_expire_delay)
             if self.hash_cache:
                 self.hash_cache.clear()
             if self.scramble_cache:
@@ -465,7 +464,6 @@ Invalid '%s' input: %s
         secret = None
         exceeded_rate_limit = False
         invalid_username = False
-        account_accessible = False
         valid_password = False
         daemon_conf = configuration.daemon_conf
         max_user_hits = daemon_conf['auth_limits']['max_user_hits']
@@ -538,8 +536,6 @@ Invalid '%s' input: %s
                     logger.debug("no password in query")
                     self.password = None
                 if self.checkLogin(self.user, self.password, client_ip):
-                    account_accessible = check_account_accessible(
-                        configuration, self.user, 'openid')
                     valid_password = True
 
             # Update rate limits and write to auth log
@@ -553,7 +549,6 @@ Invalid '%s' input: %s
                 tcp_port,
                 secret=secret,
                 invalid_username=invalid_username,
-                account_accessible=account_accessible,
                 skip_twofa_check=True,
                 authtype_enabled=True,
                 valid_auth=valid_password,
@@ -752,6 +747,23 @@ Invalid '%s' input: %s
             allowed = entry.password
             if allowed is None or not password:
                 continue
+            # Refuse access for expired accounts unless disabled in conf
+            if entry.user_dict and configuration.user_openid_enforce_expire:
+                now = time.time()
+                try:
+                    expire = int(entry.user_dict['expire'])
+                except Exception, exc:
+                    logger.error("could not extract account expire: %s" % exc)
+                    expire = -1
+                logger.debug("Check expire for account %s: %d vs %d" %
+                             (username, expire, now))
+                if expire < now:
+                    logger.warning("Ignore expired %s account login from %s" %
+                                   (username, addr))
+                    continue
+                else:
+                    logger.debug("Continue auth for active account %s from %s"
+                                 % (username, addr))
             # print "DEBUG: Check password against allowed %s" % allowed
             # NOTE: We always enforce password policy here to refuse weak
             #       legacy passwords.
@@ -786,7 +798,6 @@ Invalid '%s' input: %s
         secret = None
         exceeded_rate_limit = False
         invalid_username = False
-        account_accessible = False
         valid_password = False
         daemon_conf = configuration.daemon_conf
         max_user_hits = daemon_conf['auth_limits']['max_user_hits']
@@ -822,8 +833,6 @@ Invalid '%s' input: %s
                     self.password = None
 
                 if self.checkLogin(self.user, self.password, client_ip):
-                    account_accessible = check_account_accessible(
-                        configuration, self.user, 'openid')
                     valid_password = True
                     if not self.query['success_to']:
                         self.query['success_to'] = '%s/id/' \
@@ -842,7 +851,6 @@ Invalid '%s' input: %s
                 tcp_port,
                 secret=secret,
                 invalid_username=invalid_username,
-                account_accessible=account_accessible,
                 skip_twofa_check=True,
                 authtype_enabled=True,
                 valid_auth=valid_password,

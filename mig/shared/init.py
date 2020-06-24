@@ -28,7 +28,6 @@
 """Script initialization helper functions"""
 
 import os
-import time
 
 from shared.base import requested_page, extract_field
 from shared.conf import get_configuration_object
@@ -78,7 +77,7 @@ def find_entry(output_objects, kind):
 def initialize_main_variables(client_id, op_title=True, op_header=True,
                               op_menu=True):
     """Script initialization is identical for most scripts in 
-    shared/functionality. This function should be called in most cases.
+    shared/functionalty. This function should be called in most cases.
     """
 
     configuration = get_configuration_object()
@@ -86,9 +85,7 @@ def initialize_main_variables(client_id, op_title=True, op_header=True,
     output_objects = []
     start_entry = make_start_entry()
     output_objects.append(start_entry)
-    req_page = requested_page()
-    op_name = os.path.splitext(os.path.basename(req_page))[0]
-    req_vhost = req_page
+    op_name = os.path.splitext(os.path.basename(requested_page()))[0]
 
     if op_title:
         skipwidgets = not configuration.site_enable_widgets or not client_id
@@ -141,8 +138,7 @@ def initialize_main_variables(client_id, op_title=True, op_header=True,
                 # These data are used for display in own profile view only
                 profile_image_list = user_profile.get('PUBLIC_IMAGE', [])
                 if profile_image_list:
-                    # TODO: copy profile image e.g. to /user_home/avatars/X
-                    #       and use it from there instead
+                    # TODO: copy profile image to /public/avatars/X and use it
                     profile_image = os.path.join(configuration.site_user_redirect,
                                                  profile_image_list[-1])
                 else:

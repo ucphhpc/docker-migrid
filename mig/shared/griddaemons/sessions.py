@@ -62,8 +62,7 @@ def _load_sessions(configuration, proto, do_lock=True):
     if do_lock:
         sessions_lock = _acquire_sessions_lock(
             configuration, proto, exclusive=False)
-    # NOTE: file is typically on tmpfs so it may or may not exist at this point
-    result = unpickle(sessions_filepath, logger, allow_missing=True)
+    result = unpickle(sessions_filepath, logger)
     if do_lock:
         _release_sessions_lock(sessions_lock)
 

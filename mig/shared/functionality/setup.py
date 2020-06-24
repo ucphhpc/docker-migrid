@@ -28,10 +28,8 @@
 """Provide all the client access setup subpages"""
 
 import os
-import time
 
 import shared.returnvalues as returnvalues
-from shared.accountstate import account_expire_info
 from shared.auth import get_twofactor_secrets
 from shared.base import client_alias, client_id_dir, extract_field, get_xgi_bin
 from shared.defaults import seafile_ro_dirname, duplicati_conf_dir, csrf_field, \
@@ -219,32 +217,11 @@ def main(client_id, user_arguments_dict):
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     save_html = save_settings_html(configuration)
-    (expire_warn, expire_time, renew_days, extend_days) = account_expire_info(
-        configuration, client_id)
-    expire_html = ''
-    if expire_warn:
-        expire_warn_msg = '''<p class="warningtext">
-NOTE: your %s account access including efficient file service access expires on
-%s. You can always repeat sign up to extend general access with another %s days.
-%s  
-</p>'''
-        auto_renew_msg = '''Alternatively simply either hit Save below now
-<em>or</em> log in here again after that date to quickly extend your access for
-%s days.'''
-        expire_date = time.ctime(expire_time)
-        logger.debug("warn about expire on %s" % expire_date)
-        extend_msg = ''
-        if extend_days > 0:
-            extend_msg = auto_renew_msg % extend_days
-        expire_html = expire_warn_msg % (configuration.short_title,
-                                         expire_date, renew_days, extend_msg)
-
     form_method = 'post'
     csrf_limit = get_csrf_limit(configuration)
     fill_helpers = {'site': configuration.short_title,
                     'form_method': form_method, 'csrf_field': csrf_field,
-                    'csrf_limit': csrf_limit, 'save_html': save_html,
-                    'expire_html': expire_html}
+                    'csrf_limit': csrf_limit, 'save_html': save_html}
 
     if 'sftp' in topic_list:
 
@@ -295,9 +272,8 @@ fingerprint <tt>%s</tt> first time you connect.''' % ' or '.join(fingerprints)
 
 <p>
 You can configure SFTP login to your %(site)s account for efficient file
-access. On Windows, Mac OS X and Linux/UN*X you can install and use SSHFS for
-transparent access to your data like on a network drive, and some Linux
-distributions even natively integrate SFTP access in the file manager.
+access. On Linux/UN*X it also allows transparent access through SSHFS, and some
+Linux distributions even natively integrate SFTP access in the file manager.
 </p>
 <h3>Login Details</h3>
 
@@ -418,7 +394,6 @@ value="%(default_authpassword)s" />
 '''
 
         html += '''
-%(expire_html)s
 %(save_html)s
 <input type="submit" value="Save SFTP Settings" />
 '''
@@ -582,7 +557,6 @@ value="%(default_authpassword)s" />
 '''
 
         html += '''
-%(expire_html)s
 %(save_html)s
 <input type="submit" value="Save WebDAVS Settings" />
 
@@ -755,7 +729,6 @@ value="%(default_authpassword)s" />
 '''
 
         html += '''
-%(expire_html)s
 %(save_html)s
 <input type="submit" value="Save FTPS Settings" />
 
@@ -1409,8 +1382,7 @@ value="%(default_authpassword)s" />
             # TODO: we might want to protect QR code with repeat basic login
             #       or a simple timeout since last login (cookie age).
             html += twofactor_wizard_html(configuration)
-            check_url = '/%s/twofactor.py?action=check' % get_xgi_bin(
-                configuration)
+            check_url = '/%s/twofactor.py' % get_xgi_bin(configuration)
             fill_helpers.update({'otp_uri': otp_uri, 'b32_key': b32_key,
                                  'otp_interval': otp_interval,
                                  'check_url': check_url, 'demand_twofactor':
@@ -1419,30 +1391,23 @@ value="%(default_authpassword)s" />
 
         twofactor_entries = get_twofactor_specs(configuration)
         html += '''
-        <tr class="otp_wizard otp_ready hidden"><td>
+        <tr class="otp_ready hidden"><td>
         <input type="hidden" name="topic" value="twofactor" />
         </td></tr>
-        <tr class="otp_wizard otp_ready hidden"><td>
+        <tr class="otp_ready hidden"><td>
         </td></tr>
         '''
         for (keyword, val) in twofactor_entries:
             if val.get('Editor', None) == 'hidden':
                 continue
-            # Mark the dependent options to ease hiding when not relevant
-            val['__extra_class__'] = ''
-            if val.get('Context', None) == 'twofactor':
-                val['__extra_class__'] = 'provides-twofactor-base'
-            if val.get('Context', None) == 'twofactor_dep':
-                val['__extra_class__'] = 'requires-twofactor-base manual-show'
             entry = """
-            <tr class='otp_wizard otp_ready hidden %(__extra_class__)s'>
-            <td class='title'>
+            <tr class='otp_ready hidden'><td class='title'>
             %(Title)s
             </td></tr>
-            <tr class='otp_wizard otp_ready hidden %(__extra_class__)s'><td>
+            <tr class='otp_ready hidden'><td>
             %(Description)s
             </td></tr>
-            <tr class='otp_wizard otp_ready hidden %(__extra_class__)s'><td>
+            <tr class='otp_ready hidden'><td>
             """ % val
             if val['Type'] == 'multiplestrings':
                 try:
@@ -1506,6 +1471,14 @@ value="%(default_authpassword)s" />
                 current_choice = ''
                 if current_twofactor_dict.has_key(keyword):
                     current_choice = current_twofactor_dict[keyword]
+                #entry += '<select class="styled-select semi-square html-select" name="%s">' % keyword
+                # for choice in valid_choices:
+                #    selected = ''
+                #    if choice == current_choice:
+                #        selected = 'selected'
+                #    entry += '<option %s value="%s">%s</option>'\
+                #             % (selected, choice, choice)
+                #entry += '</select><br />'
                 checked = ''
                 if current_choice == True:
                     checked = 'checked'
@@ -1518,7 +1491,7 @@ value="%(default_authpassword)s" />
             </td></tr>
             """ % entry
 
-        html += '''<tr class="otp_wizard otp_ready hidden"><td>
+        html += '''<tr class="otp_ready hidden"><td>
         %(save_html)s
         <input type="submit" value="Save 2-Factor Auth Settings" />
         <br/>

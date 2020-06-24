@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # home - home page
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -56,12 +56,6 @@ def html_tmpl(configuration, client_id, title_entry, csrf_map={}, chroot=''):
 					<div class="home-page__header col-12">
 						<p class="sub-title">Tools from %(short_title)s helps you with storage, sharing and archiving of data. %(short_title)s delivers centralised storage space for personal and shared files.</p>
 					</div>
-
-                                        <div id="tips-container" class="col-12 invert-theme">
-                                            <div id="tips-content" class="tips-placeholder">
-                                                <!-- NOTE: filled by AJAX .. init for space -->
-                                            </div>
-                                        </div>
             ''' % fill_helpers
     html += render_apps(configuration, title_entry, active_menu)
     html += '''
@@ -234,9 +228,6 @@ def main(client_id, user_arguments_dict):
         $("#add-app__window").hide();
     }
     '''
-    add_ready += '''
-                load_tips("%s");
-    ''' % configuration.site_tips_snippet_url
     title_entry['script']['advanced'] += add_import
     title_entry['script']['init'] += add_init
     title_entry['script']['ready'] += add_ready

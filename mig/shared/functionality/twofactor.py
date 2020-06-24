@@ -46,7 +46,7 @@ from shared.auth import twofactor_available, load_twofactor_key, \
 from shared.defaults import twofactor_cookie_ttl
 from shared.functional import validate_input
 from shared.init import initialize_main_variables
-from shared.html import twofactor_token_html, themed_styles, themed_scripts
+from shared.html import twofactor_token_html, themed_styles
 from shared.settings import load_twofactor
 from shared.twofactorkeywords import get_keywords_dict as twofactor_defaults
 
@@ -54,7 +54,7 @@ from shared.twofactorkeywords import get_keywords_dict as twofactor_defaults
 def signature():
     """Signature of the main function"""
 
-    defaults = {'action': ['auth'], 'token': [None], 'redirect_url': ['']}
+    defaults = {'token': [None], 'redirect_url': ['']}
     return ['text', defaults]
 
 
@@ -73,13 +73,6 @@ def main(client_id, user_arguments_dict, environ=None):
     (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(
         client_id, op_header=False, op_title=False, op_menu=client_id)
-    # IMPORTANT: no title in init above so we MUST call it immediately here
-    #            or basic styling will break on e.g. the check token result.
-    styles = themed_styles(configuration)
-    scripts = themed_scripts(configuration, logged_in=False)
-    output_objects.append(
-        {'object_type': 'title', 'text': '2-Factor Authentication',
-         'skipmenu': True, 'style': styles, 'script': scripts})
 
     # Extract raw data first
     if environ is None:
@@ -99,7 +92,6 @@ def main(client_id, user_arguments_dict, environ=None):
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
 
-    action = accepted['action'][-1]
     token = accepted['token'][-1]
     redirect_url = accepted['redirect_url'][-1]
     check_only = False
@@ -107,6 +99,13 @@ def main(client_id, user_arguments_dict, environ=None):
     # logger.debug("User: %s executing %s with redirect url %s" %
     #             (client_id, op_name, redirect_url))
     # logger.debug("env: %s" % environ)
+
+    # IMPORTANT: no title in init above so we MUST call it immediately here
+    #            or basic styling will break on e.g. the check token result.
+    styles = themed_styles(configuration)
+    output_objects.append(
+        {'object_type': 'title', 'text': '2-Factor Authentication',
+         'skipmenu': True, 'style': styles})
 
     if not configuration.site_enable_twofactor:
         output_objects.append({'object_type': 'error_text', 'text':
@@ -159,13 +158,9 @@ def main(client_id, user_arguments_dict, environ=None):
                                twofactor_defaults(configuration).items()])
 
     # NOTE: twofactor_defaults field availability depends on configuration
-    if action == 'auth' and not redirect_url:
+    if not redirect_url:
         # This is the 2FA setup check mode
-        require_twofactor = True
-    elif action == 'check':
         check_only = True
-        require_twofactor = True
-    elif action == 'renew':
         require_twofactor = True
     elif user_id.startswith(configuration.user_mig_oid_provider) and \
             twofactor_dict.get('MIG_OID_TWOFACTOR', False):
@@ -267,44 +262,26 @@ def main(client_id, user_arguments_dict, environ=None):
         logger.info("saved 2FA session for %s in %s"
                     % (client_id, session_key))
 
-    if (action == 'auth' and redirect_url) \
-            or action == 'renew':
+    if redirect_url:
         headers.append(tuple(str(cookie).split(': ', 1)))
         output_objects.append({'object_type': 'start', 'headers': headers})
         output_objects.append({'object_type': 'script_status'})
-    if (action == 'auth' and redirect_url):
-        reply_status = ""
-        reply_msg = ""
-    elif action == 'auth' and not redirect_url:
-        reply_status = "error"
-        reply_msg = "Missing redirect_url"
-    elif action == 'check':
-        reply_status = "ok"
-        reply_msg = "Correct token provided!"
-    elif action == 'renew':
-        reply_status = "ok"
-        reply_msg = "Twofactor session renewed!"
     else:
-        reply_status = "error"
-        reply_msg = "Unknown action: %r" % action
-    if reply_status:
+        # NOTE: we keep actual result in plain text for json extract
         output_objects.append({'object_type': 'html_form', 'text': '''
 <!-- Keep similar spacing -->
 <div class="twofactorbg">
 <div id="twofactorstatus" class="twofactorstatus">
-<div class="%s leftpad">
-''' % reply_status})
-        # NOTE: we keep actual result in plain text for json extract
-        output_objects.append({'object_type': 'text', 'text': reply_msg})
+<div class="ok leftpad">
+'''})
+        output_objects.append({'object_type': 'text', 'text':
+                               'Correct token provided!'})
         output_objects.append({'object_type': 'html_form', 'text': '''
-</div>'''})
-        if action == 'check':
-            output_objects.append({'object_type': 'html_form', 'text': '''
+</div>
 <p>
-<a href="?action=check">Test again</a> or <a href="javascript:close();">close</a> this
+<a href="">Test again</a> or <a href="javascript:close();">close</a> this
 tab/window and proceed.
-</p>'''})
-        output_objects.append({'object_type': 'html_form', 'text': '''
+</p>
 </div>
 </div>'''})
     # logger.debug("return from %s for %s with headers: %s" %

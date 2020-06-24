@@ -204,7 +204,7 @@ def home_actions(driver, url, login, passwd, callbacks):
     link = navmenu.find_element_by_link_text(nav_name)
     # print "DEBUG: found %s link: %s" % (nav_name, link)
     link.click()
-    ajax_wait(driver, nav_name, "tips-loading")
+    # ajax_wait(driver, nav_name)
     state = 'home-ready'
     if callbacks.get(state, None):
         print "INFO: callback for: %s" % state

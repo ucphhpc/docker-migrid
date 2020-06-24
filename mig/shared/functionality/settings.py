@@ -44,7 +44,7 @@ from shared.functional import validate_input_and_cert
 from shared.handlers import get_csrf_limit, make_csrf_token
 from shared.html import man_base_js, man_base_html, console_log_javascript, \
     twofactor_wizard_html, twofactor_wizard_js, twofactor_token_html, \
-    legacy_user_interface, save_settings_js, save_settings_html, menu_items
+    legacy_user_interface, save_settings_js, save_settings_html
 from shared.init import initialize_main_variables, find_entry, extract_menu
 from shared.settings import load_settings, load_widgets, load_profile, \
     load_ssh, load_davs, load_ftps, load_seafile, load_duplicati, load_cloud, \
@@ -88,7 +88,7 @@ cloud_edit = cm_options.copy()
 def signature():
     """Signature of the main function"""
 
-    defaults = {'topic': [], 'caching': ['true']}
+    defaults = {'topic': []}
     return ['html_form', defaults]
 
 
@@ -214,7 +214,6 @@ def main(client_id, user_arguments_dict):
                 and not configuration.site_enable_gdp:
             valid_topics.append('twofactor')
 
-    caching = (accepted['caching'][-1].lower() in ('true', 'yes'))
     topic_list = accepted['topic']
     topic_list = [topic for topic in topic_list if topic in valid_topics]
     # Default to general or general+profile if no valid topics given
@@ -391,14 +390,8 @@ def main(client_id, user_arguments_dict):
                         selected = ''
                         if choice == current_choice:
                             selected = 'selected'
-                        display_choice = choice
-                        if keyword == 'DEFAULT_PAGE':
-                            display_choice = menu_items.get(
-                                choice, {}).get('title', choice)
-                            if choice == 'vgrids':
-                                display_choice = "%ss" % configuration.site_vgrid_label
                         entry += '<option %s value="%s">%s</option>'\
-                            % (selected, choice, display_choice)
+                            % (selected, choice, choice)
                     entry += '</select><br />'
                 else:
                     entry += ''
@@ -453,7 +446,7 @@ def main(client_id, user_arguments_dict):
 
             current_profile_dict = {}
 
-        all_vgrids = get_vgrid_map_vgrids(configuration, caching=caching)
+        all_vgrids = get_vgrid_map_vgrids(configuration)
         configuration.vgrids_allow_email = all_vgrids
         configuration.vgrids_allow_im = all_vgrids
         images = []
@@ -2011,8 +2004,7 @@ value="%(default_authpassword)s" />
             # TODO: we might want to protect QR code with repeat basic login
             #       or a simple timeout since last login (cookie age).
             html += twofactor_wizard_html(configuration)
-            check_url = '/%s/twofactor.py?action=check' % get_xgi_bin(
-                configuration)
+            check_url = '/%s/twofactor.py' % get_xgi_bin(configuration)
             fill_helpers.update({'otp_uri': otp_uri, 'b32_key': b32_key,
                                  'otp_interval': otp_interval,
                                  'check_url': check_url, 'demand_twofactor':

@@ -128,11 +128,6 @@ menu_items['vmconnect'] = {'class': 'vmconnect fas fa-plug', 'url': 'vmconnect.p
 menu_items['logout'] = {'class': 'logout fas fa-sign-out-alt',
                         'url': 'logout.py', 'title': 'Logout',
                         'legacy_only': True, 'hover': 'Logout'}
-# GDP-only action to close active project login
-menu_items['close'] = {'class': 'close fas fa-arrow-circle-up',
-                       'url': 'gdpman.py?action=close_project',
-                       'title': 'Close', 'legacy_only': True,
-                       'hover': 'Close active project and return to project management'}
 
 # Define all possible VGrid page columns
 vgrid_items = {}
@@ -244,13 +239,6 @@ def render_menu(configuration, menu_class='navmenu',
                                           configuration.site_vgrid_label)
             spec['title'] = title
             spec['hover'] = hover
-        # Tweak tooltips to refer to project structure in GDP mode
-        if configuration.site_enable_gdp:
-            if name == 'files':
-                spec['hover'] = spec['hover'].replace('home', 'project')
-            elif name == 'setup':
-                spec['hover'] = spec['hover'].replace('site', 'project')
-        # Seafile URL needs to be dynamic
         if name == 'seafile':
             spec['url'] = configuration.user_seahub_url
 
@@ -292,10 +280,10 @@ def render_apps(configuration, title_entry, active_menu):
             app_order.append(name)
 
     app_lines = '''
-        <div class="home-page__content col-12">
-            <h2>Your apps & app-setup</h2>
-            <div class="app-row row app-grid">
-    '''
+                                       <div class="home-page__content col-12">
+						<h2>Your apps & app-setup</h2>
+						<div class="app-row row app-grid">
+        '''
 
     for name in app_order:
         spec = menu_items.get(name, None)
@@ -318,21 +306,22 @@ def render_apps(configuration, title_entry, active_menu):
             spec['url'] = configuration.user_seahub_url
         spec['hover'] = spec.get('hover', '')
         app_lines += '''
-                <div class="col-lg-2 app-cell">
-                    <div class="app__btn col-12">
-                        <a href="%(url)s" title="%(hover)s"><span class="fas %(class)s"></span><h3>%(title)s</h3></a>
-                    </div>
-                </div>
+							<div class="col-lg-2 app-cell">
+								<div class="app__btn col-12">
+									<a href="%(url)s" title="%(hover)s"><span class="fas %(class)s"></span><h3>%(title)s</h3></a>
+								</div>
+							</div>
         ''' % spec
     app_lines += '''
-                <div class="col-lg-2">
-                    <div class="add-app__btn col-12" onclick="addApp()">
-                         <a href="#"><span class="fas fa-plus"></span><h3>Add</h3></a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    '''
+							<div class="col-lg-2">
+								<div class="add-app__btn col-12" onclick="addApp()">
+									<a href="#"><span class="fas fa-plus"></span><h3>Add</h3></a>
+								</div>
+							</div>
+
+						</div>
+					</div>
+'''
 
     return app_lines
 
@@ -396,51 +385,51 @@ def render_before_menu(configuration, script_map={}, user_settings={}):
         html = '''
     <!-- Push notifications: updated/filled by AJAX -->
     <div id="sitestatus-popup" class="toast hidden" data-autohide="false">
-        <div id="sitestatus-top" class="toast-header">
-            <div id="sitestatus-title" class="toast-title">
-                <!-- TODO: move inline style to css files -->
-                <!-- NOTE: reuse 1.5rem size with ml-2 and mb-1 classes to mimic close -->
-                <span id="sitestatus-icon" class="fas fa-question-circle ml-2 mb-1" style="color: grey; font-size: 1.5rem; float: left;"></span>
-                <strong class="mr-auto text-primary" style="float: left;">
-                    <h3 id="sitestatus-caption" style="margin-left: 5px;">SITE STATUS</h3>
-                </strong>
-                <small id="sitestatus-timestamp" class="text-muted" style="float: right;"></small>
-            </div>
-        <div id="sitestatus-close" class="">
-            <button type="button" class="ml-2 mb-1 close" data-dismiss="toast">&times;</button>
+      <div id="sitestatus-top" class="toast-header">
+        <div id="sitestatus-title" class="toast-title">
+          <!-- TODO: move inline style to css files -->
+          <!-- NOTE: reuse 1.5rem size with ml-2 and mb-1 classes to mimic close -->
+          <span id="sitestatus-icon" class="fas fa-question-circle ml-2 mb-1" style="color: grey; font-size: 1.5rem; float: left;"></span>
+          <strong class="mr-auto text-primary" style="float: left;">
+            <h3 id="sitestatus-caption" style="margin-left: 5px;">SITE STATUS</h3>
+          </strong>
+          <small id="sitestatus-timestamp" class="text-muted" style="float: right;"></small>
         </div>
+      <div id="sitestatus-close" class="">
+        <button type="button" class="ml-2 mb-1 close" data-dismiss="toast">&times;</button>
+      </div>
     </div>
     <div id="sitestatus-content" class="toast-body">
-        <h3>Site Status</h3>
-        <p id="sitestatus-line" class="status-text">
-        <!-- Filled by AJAX -->
-        </p>
-        <div id="sitestatus-recent" class="hidden"><h3>Active Announcements</h3>
-            <p id="sitestatus-announce" class="announce-text"></p>
-        </div>
+      <h3>Site Status</h3>
+      <p id="sitestatus-line" class="status-text">
+      <!-- Filled by AJAX -->
+      </p>
+      <div id="sitestatus-recent" class="hidden"><h3>Active Announcements</h3>
+        <p id="sitestatus-announce" class="announce-text"></p>
+      </div>
     </div>
     <div id="sitestatus-more" class="toast-body">
-        <a target=_blank href="%(status_url)s">More details ...</a>
+      <a target=_blank href="%(status_url)s">More details ...</a>
     </div>
-</div>
-'''
+  </div>
+  '''
 
         html += '''
 
 <!--HEADER INFO AREA-->
 <nav id="headerNav">
-    <ul class="nav__items">
-        <li class="nav__item">
-            <a id="supportInfoButton" href="#" class="nav__label" onclick="toggle_info(\'supportInfo\')">Support</a>
-        </li>
-        <li class="nav__item nav_item--expanded">
-            <a id="aboutInfoButton" href="#" class="nav__label" onclick="toggle_info(\'aboutInfo\')">About</a>
-        </li>
+	<ul class="nav__items">
+		<li class="nav__item">
+			<a id="supportInfoButton" href="#" class="nav__label" onclick="toggle_info(\'supportInfo\')">Support</a>
+		</li>
+		<li class="nav__item nav_item--expanded">
+			<a id="aboutInfoButton" href="#" class="nav__label" onclick="toggle_info(\'aboutInfo\')">About</a>
+		</li>
                 <!-- NOTE: completely skip feedback button for now to avoid border
                 <li id="sitefeedback-button" class="nav__item nav_item--expanded fas fa-thumbs-up custom-hidden"></li>
                 -->
                 %(sitestatus_button)s
-    </ul>
+	</ul>
 </nav>
 
 <div id="infoArea" class="infoArea-container">
@@ -448,32 +437,32 @@ def render_before_menu(configuration, script_map={}, user_settings={}):
 
 <div id="supportInfo" class="infoArea-container">
     <span class="far fa-times-circle close_btn" onclick="toggle_info(\'supportInfo\')"></span>
-    <div class="popup container">
-        <div class="row">
-            <div id="quickstart-content" class="col-lg-12">
-            <!-- Filled by AJAX -->
-            </div>
+	<div class="popup container">
+		<div class="row">
+                    <div id="quickstart-content" class="col-lg-12">
+                    <!-- Filled by AJAX -->
+                    </div>
 
-            <div id="faq-content" class="col-lg-12 invert-theme">
-            <!-- Filled by AJAX -->
-            </div>
+                    <div id="faq-content" class="col-lg-12">
+                    <!-- Filled by AJAX -->
+                    </div>
 
-            <div class="vertical-spacer"></div>
-        </div>
-    </div>
+                    <div class="vertical-spacer"></div>
+		</div>
+	</div>
 </div>
 
 <div id="aboutInfo" class="infoArea-container">
 <span class="far fa-times-circle close_btn" onclick="toggle_info(\'aboutInfo\')"></span>
-    <div class="popup container">
-        <div class="row">
-            <div id="about-content" class="col-lg-12">
-                <!-- Filled by AJAX -->
-                </div>
+	<div class="popup container">
+		<div class="row">
+			<div id="about-content" class="col-lg-12">
+                        <!-- Filled by AJAX -->
+                        </div>
 
-                <div class="vertical-spacer"></div>
-        </div>
-    </div>
+                        <div class="vertical-spacer"></div>
+		</div>
+	</div>
 </div>
     '''
 
@@ -544,7 +533,7 @@ def themed_styles(configuration, base=[], advanced=[], skin=[], user_settings={}
               'ui_base': '',
               'advanced': '''
 <link rel="stylesheet" type="text/css" href="%(base_prefix)s/jquery.managers.css" media="screen"/>
-                ''' % css_helpers,
+              ''' % css_helpers,
               'skin': '''
 <link rel="stylesheet" type="text/css" href="%(skin_prefix)s/core.css" media="screen"/>
 <link rel="stylesheet" type="text/css" href="%(skin_prefix)s/managers.css" media="screen"/>
@@ -576,6 +565,28 @@ def themed_styles(configuration, base=[], advanced=[], skin=[], user_settings={}
 
     extend_styles(configuration, styles, base, advanced, skin, user_settings)
     return styles
+
+
+# TODO: eliminate this legacy wrapper now handled in init
+def jquery_ui_js(configuration, js_import, js_init, js_ready):
+    """Fill standard javascript template for JQuery UI pages. The three args
+    add custom extra javascript in the usual load, init and ready phase used
+    with jquery pages.
+    """
+    return '''
+%(js_import)s
+
+<script type="text/javascript" >
+
+    %(js_init)s
+
+    $(document).ready(function() {
+         //console.log("document ready handler");
+         %(js_ready)s
+    });
+
+</script>
+''' % {'js_import': js_import, 'js_init': js_init, 'js_ready': js_ready}
 
 
 def themed_scripts(configuration, base=[], advanced=[], skin=[], init=[],
@@ -657,10 +668,10 @@ def tablesorter_pager(configuration, id_prefix='', entry_name='files',
                       enable_refresh_button=True):
     """Generate html pager for tablesorter table"""
     toolbar = '''
-<div>
+  <div>
     <div class="toolbar">
-        <div class="pager" id="%spager">
-        <form style="display: inline;" action="">
+      <div class="pager" id="%spager">
+      <form style="display: inline;" action="">
 %s
 ''' % (id_prefix, form_prepend)
     # NOTE: UI V3 and V2 assign icons in CSS
@@ -695,10 +706,10 @@ def tablesorter_pager(configuration, id_prefix='', entry_name='files',
         </div>
 ''' % (id_prefix, refresh_button)
     toolbar += '''
-        </form>
-        </div>
+      </form>
+      </div>
     </div>
-</div>
+  </div>
     '''
     return toolbar
 
@@ -745,16 +756,16 @@ def confirm_js(configuration, width=500):
     '''
     add_init = ''
     add_ready = '''
-        // init confirmation dialog
-        $("#confirm_dialog").dialog(
-            // see http://jqueryui.com/docs/dialog/ for options
-            { autoOpen: false,
+          // init confirmation dialog
+          $("#confirm_dialog").dialog(
+              // see http://jqueryui.com/docs/dialog/ for options
+              { autoOpen: false,
                 modal: true, closeOnEscape: true,
                 width: %d,
                 buttons: {
                    "Cancel": function() { $( "#" + name ).dialog("close"); }
                 }
-            });
+              });
     ''' % width
     return (add_import, add_init, add_ready)
 
@@ -765,7 +776,7 @@ def confirm_html(configuration, rows=4, cols=40, cls="fillwidth padspace"):
     <div id="confirm_dialog" title="Confirm">
         <div id="confirm_text"><!-- filled by js --></div>
         <textarea class="%s" cols="%s" rows="%s" id="confirm_input"
-        style="display:none;"></textarea>
+       style="display:none;"></textarea>
     </div>
     ''' % (cls, cols, rows)
     return html
@@ -794,12 +805,12 @@ def man_base_js(configuration, table_dicts, overrides={}):
         }
     '''
     tablesort_args = '''{widgets: ["zebra", "saveSort"],
-                        sortList: %(sort_order)s,
-                        textExtraction: imgTitle
-                        }'''
+                         sortList: %(sort_order)s,
+                         textExtraction: imgTitle
+                         }'''
     pager_args = '''{container: $("#%(pager_id)s"),
-                    size: %(pager_entries)d
-                    }'''
+                     size: %(pager_entries)d
+                     }'''
     pager_init = '''$("#%(pager_id)srefresh").click(function() {
                         %(pager_id)s_refresh();
                     });
@@ -1103,96 +1114,97 @@ def save_settings_js(configuration):
     var errorMsg = "";
 
     var okSaveDialog = {buttons: {Ok: function(){ $(this).dialog("close");}},
-                        minWidth: 600, width: "auto", autoOpen: false, closeOnEscape: true,
-                        modal: true};
+                       minWidth: 600, width: "auto", autoOpen: false, closeOnEscape: true,
+                       modal: true};
 
     //console.debug("submit form serialized: "+$(".save_settings").serialize());
     var options = {
-                    url: "%(save_url)s?output_format=json",
-                    dataType: "json",
-                    type: "POST",
-                    beforeSubmit: function() {
-                        $(".savestatus").html(renderWorking("Saving ..."));
-                        $(".savestatus span").fadeIn(200);
-                    },
-                    success: function(responseObject, statusText) {
-                        /* Reset status */
-                        saved = false;
-                        statusText = "";
-                        warningMsg = "";
-                        errorMsg = "";
-                        //console.log("verify post response: "+statusText);
-                        for (var i=0; i<(responseObject.length); i++) {
-                            if(responseObject[i]["object_type"] === "text") {
-                                statusMsg = responseObject[i]["text"];
-                                if (statusMsg.indexOf("Saved ") !== -1) {
-                                    console.info(
+                   url: "%(save_url)s?output_format=json",
+                   dataType: "json",
+                   type: "POST",
+                   beforeSubmit: function() {
+                       $(".savestatus").html(renderWorking("Saving ..."));
+                       $(".savestatus span").fadeIn(200);
+                   },
+                   success: function(responseObject, statusText) {
+                       /* Reset status */
+                       saved = false;
+                       statusText = "";
+                       warningMsg = "";
+                       errorMsg = "";
+                       //console.log("verify post response: "+statusText);
+                       for (var i=0; i<(responseObject.length); i++) {
+                           if(responseObject[i]["object_type"] === "text") {
+                               statusMsg = responseObject[i]["text"];
+                               if (statusMsg.indexOf("Saved ") !== -1) {
+                                   console.info(
                                             "Save success: "+statusMsg);
                                             saved = true;
                                             /* strip trailing colon */
                                             statusMsg = statusMsg.replace(
                                                 ":", "");
-                                    break;
-                                } else if (statusMsg.indexOf("Input ") !== -1) {
-                                    errorMsg = "Save failed: "+responseObject[i]["text"];
-                                    console.error(errorMsg);
-                                    break;
-                                } else {
-                                    console.debug(
-                                            "ignoring other text entry: "+statusMsg);
-                                }
-                            } else if(responseObject[i]["object_type"] === "error_text") {
-                                errorMsg = "Save failure: "+responseObject[i]["text"];
-                                console.error(errorMsg);
-                                break;
-                            } else if(responseObject[i]["object_type"] === "warning") {
-                                warningMsg = "warning: "+responseObject[i]["text"];
-                                console.warn(warningMsg);
-                            }
-                        }
-                        if (saved) {
-                            var saveMsg = renderSuccess(statusMsg);
-                            if (warningMsg) {
-                                saveMsg += "<br/> "+renderWarning(warningMsg);
-                            }
-                            $(".savestatus").html(saveMsg);
-                            $(".savestatus span").fadeIn(200);
-                            setTimeout(function() { $(".savestatus span").fadeOut(3000);
-                                                }, 1000);
-                            if (statusMsg.indexOf("duplicati") >= 0) {
-                                console.info(
-                                    "force reload for duplicati to update backup sets");
-                                setTimeout(function() {
-                                    $(".savestatus").html(renderWorking("refreshing ..."));
-                                    $(".savestatus span").fadeIn(200);
-                                }, 4000);
-                                setTimeout(function() { location.reload(); }, 5000);
-                            } else if (location.href.indexOf("home") >= 0) {
-                                console.info("force reload for apps to update");
-                                setTimeout(function() {
-                                    $(".savestatus").html(renderWorking("refreshing ..."));
-                                    $(".savestatus span").fadeIn(200);
-                                }, 4000);
-                                setTimeout(function() { location.reload(); }, 5000);
-                            }
-                        } else {
-                            if (!errorMsg) {
-                                errorMsg = "Save failed - please retry";
-                            }
-                            console.error(errorMsg);
-                            $(".savestatus").html(renderError(errorMsg));
-                            $(".savestatus span").fadeIn(100);
-                        }
-                    },
-                    error: function(jqXHR, textStatus, errorThrown) {
-                        errorMsg = "background save failed: ";
-                        errorMsg += textStatus;
-                        console.error(errorMsg);
-                        console.error("error thrown: "+ errorThrown);
-                        $(".savestatus").html(renderError(errorMsg));
-                        $(".savestatus span").fadeIn(100);
-                    }
-                };
+                                   break;
+                               } else if (statusMsg.indexOf("Input ") !== -1) {
+                                   errorMsg = "Save failed: "+responseObject[i]["text"];
+                                   console.error(errorMsg);
+                                   break;
+                               } else {
+                                   console.debug(
+                                             "ignoring other text entry: "+statusMsg);
+                               }
+                           } else if(responseObject[i]["object_type"] === "error_text") {
+                               errorMsg = "Save failure: "+responseObject[i]["text"];
+                               console.error(errorMsg);
+                               break;
+                           } else if(responseObject[i]["object_type"] === "warning") {
+                               warningMsg = "warning: "+responseObject[i]["text"];
+                               console.warn(warningMsg);
+                           }
+                       }
+                       if (saved) {
+                           var saveMsg = renderSuccess(statusMsg);
+                           if (warningMsg) {
+                               saveMsg += "<br/> "+renderWarning(warningMsg);
+                           }
+                           $(".savestatus").html(saveMsg);
+                           $(".savestatus span").fadeIn(200);
+                           setTimeout(function() { $(".savestatus span").fadeOut(3000);
+                                                 }, 1000);
+                           if (statusMsg.indexOf("duplicati") >= 0) {
+                               console.info(
+                                   "force reload for duplicati to update backup sets");
+                               setTimeout(function() {
+                                   $(".savestatus").html(renderWorking("refreshing ..."));
+                                   $(".savestatus span").fadeIn(200);
+                               }, 4000);
+                               setTimeout(function() { location.reload(); }, 5000);
+                           } else if (location.href.indexOf("home") >= 0) {
+                               console.info("force reload for apps to update");
+                               setTimeout(function() {
+                                   $(".savestatus").html(renderWorking("refreshing ..."));
+                                   $(".savestatus span").fadeIn(200);
+                               }, 4000);
+                               setTimeout(function() { location.reload(); }, 5000);
+                           }
+
+                       } else {
+                           if (!errorMsg) {
+                               errorMsg = "Save failed - please retry";
+                           }
+                           console.error(errorMsg);
+                           $(".savestatus").html(renderError(errorMsg));
+                           $(".savestatus span").fadeIn(100);
+                       }
+                   },
+                   error: function(jqXHR, textStatus, errorThrown) {
+                       errorMsg = "background save failed: ";
+                       errorMsg += textStatus;
+                       console.error(errorMsg);
+                       console.error("error thrown: "+ errorThrown);
+                       $(".savestatus").html(renderError(errorMsg));
+                       $(".savestatus span").fadeIn(100);
+                   }
+               };
     /* Prevent enter in fields submitting directly to backend */
     $(".save_settings").on("keypress", function(e) {
             return e.which !== 13;
@@ -1240,45 +1252,15 @@ def twofactor_wizard_js(configuration):
         return "<span class=\'errortext error iconleftpad\'>"+msg+"</span>";
     }
 
-    var importedOTP = false;
     var acceptedOTP = false;
     var statusMsg = "";
     var errorMsg = "";
     var okOTPDialog = {buttons: {Ok: function(){ $(this).dialog("close");}},
                        minWidth: 600, width: "auto", autoOpen: false, closeOnEscape: true,
                        modal: true};
-    var importOTPDialog = {
-        buttons: {
-            "Done importing":
-            function() {
-                $(this).dialog("close");
-                importedOTP = true;
-                var imported_id = $(this).dialog("option", "onImportedClick");
-                if (imported_id) {
-                    //console.debug("clicking "+imported_id);
-                    $("#"+imported_id).prop("disabled", false);
-                    autoClickButtonIfVisible(imported_id, 500);
-                } else {
-                    console.warning("no accept id to click");
-                }
-            },
-            "Close":
-            function() {
-                $(this).dialog("close");
-                return false;
-            }
-        },
-        minWidth: 600, width: "auto",
-        // Position a bit above center to keep background text visible
-        position: {"my": "center center-250"},
-        autoOpen: false, closeOnEscape: true,
-        modal: true};
     var verifyOTPDialog = {
         buttons: {
-            Verify: {
-              id: "twofactor_verify_button",
-              text: "Verify",
-              click: function() {
+            Verify: function() {
                 //console.log("clicked verify in popup");
                 /* save dialog handle for AJAX callback use */
                 var dialog_handle = $(this);
@@ -1286,7 +1268,6 @@ def twofactor_wizard_js(configuration):
                 //console.log("found activate_id: "+activate_id);
                 var verify_url = $(this).data("verify_url");
                 //console.log("found verify_url: "+verify_url);
-                $("#twofactor_verify_button").prop("disabled", true);
                 $("#twofactorstatus").html(renderWorking("checking ..."));
                 acceptedOTP = false;
                 try {
@@ -1302,14 +1283,12 @@ def twofactor_wizard_js(configuration):
                             for (var i=0; i<(responseObject.length); i++) {
                                 if(responseObject[i]["object_type"] === "text") {
                                     statusMsg = responseObject[i]["text"];
-                                    /* NOTE: we allow either action check or renew in caller */
-                                    if (statusMsg.indexOf("Correct token") !== -1 || statusMsg.indexOf("Twofactor session renewed") !== -1) {
+                                    if (statusMsg.indexOf("Correct token") !== -1) {
                                         console.debug(
                                             "Verify success: "+statusMsg);
                                         acceptedOTP = true;
                                         break;
                                     } else if (statusMsg.indexOf("Incorrect token") !== -1) {
-                                        errorMsg = "Wrong token - please retry or check client";
                                         console.error(
                                             "Verify failure: "+statusMsg);
                                         break;
@@ -1320,27 +1299,14 @@ def twofactor_wizard_js(configuration):
                                 }
                             }
                             if (acceptedOTP) {
-                                console.debug("accepted - inform user and proceed");
-                                /* NOTE: we massively chain the effects here
-                                         for sequential action without extra
-                                         timers.
-                                */
                                 $("#twofactorstatus").html(renderSuccess(statusMsg));
-                                $("#twofactorstatus").fadeOut(2500, function() {
-                                    $("#twofactorstatus").html(renderWorking("verified - proceeding ...")).fadeIn(1500, function() {
-                                    $("#twofactorstatus").empty();
-                                    $(dialog_handle).dialog("close");
-                                    $("#otp_verified_button").click();
-                                    });
-                                });
+                                console.debug("accepted - close verify popup");
+                                setTimeout(function() {$(dialog_handle).dialog("close")},
+                                           2000);
                             } else {
-                                if (errorMsg === "") {
-                                    errorMsg = "Failed to verify token - please retry";
-                                }
+                                errorMsg = "Wrong token - please retry or check client";
                                 console.error(errorMsg);
                                 $("#twofactorstatus").html(renderError(errorMsg));
-                                $("#twofactor_verify_button").prop("disabled", false);
-                                $("#token").focus();
                             }
                         },
                         error: function(jqXHR, textStatus, errorThrown) {
@@ -1349,105 +1315,38 @@ def twofactor_wizard_js(configuration):
                             $("#twofactorstatus").html(renderError(errorMsg));
                             console.error(errorMsg);
                             console.error("error thrown: "+ errorThrown);
-                            $("#twofactor_verify_button").prop("disabled", false);
-                            $("#token").focus();
                         }
                     }
-                    if ($("#otp_token_form")[0].checkValidity()) {
-                            $("#otp_token_form").ajaxForm(options);
-                            $("#otp_token_form").submit();
-                        } else {
-                            errorMsg = "Please enter your 6-digit authenticator token";
-                            $("#twofactorstatus").html(renderError(errorMsg));
-                            console.error(errorMsg);                        
-                        }
+                    $("#otp_token_form").ajaxForm(options);
+                    $("#otp_token_form").submit();
                 } catch(err) {
                     console.error("ajaxform error: "+ err);
                 }
                 //console.debug("fired ajaxform");
-              }
             },
             Cancel: function() { $(this).dialog("close");}
         },
-        //width: 480, minHeight: 620,
-        // Position a bit above center to keep background text visible
-        position: {"my": "center center-100"},
+        //width: 480, minHeight: 640,
         autoOpen: false,
         closeOnEscape: true, modal: true
     };
 
-    /* TODO: merge checkOTPImported and checkOTPVerified */
-    function checkOTPImported(error_dialog, error_log) {
-        //console.debug("in checkOTPImported: "+ importedOTP);
-        if (importedOTP) {
-            console.debug("checkOTPImported passed");
-            return true;
-        } else {
-            if (error_log) {
-                console.error("checkOTPImported failed!");
-            }
-            if (error_dialog) {
-                $("#warning_dialog").dialog(okOTPDialog);
-                $("#warning_dialog").html("<span class=\'warn warningtext leftpad\'>Please use one of the import links to import our 2FA secret and confirm first!</span>");
-                $("#warning_dialog").dialog("open");
-            }
-            return false;
-        }
-    }
-    function checkOTPVerified(error_dialog, error_log) {
+    function checkOTPVerified() {
         //console.debug("in checkOTPVerified: "+ acceptedOTP);
         if (acceptedOTP) {
-            console.debug("checkOTPVerified passed");
+            //console.debug("checkOTPVerified passed");
             return true;
         } else {
-            if (error_log) {
-                console.error("checkOTPVerified failed!");
-            }
-            if (error_dialog) {
-                $("#warning_dialog").dialog(okOTPDialog);
-                $("#warning_dialog").html("<span class=\'warn warningtext leftpad\'>Please use the verify button to confirm correct client setup first!</span>");
-                $("#warning_dialog").dialog("open");
-            }
+            console.error("checkOTPVerified failed!");
+            $("#warning_dialog").dialog(okOTPDialog);
+            $("#warning_dialog").html("<span class=\'warn leftpad\'>Please use the verify link to confirm correct client setup first!</span>");
+            $("#warning_dialog").dialog("open");
             return false;
-        }
-    }
-    function toggleOTPDepends() {
-        var fade_time = 500;
-        //console.debug("display deps if any web 2FA is enabled");
-        if ($(".provides-twofactor-base input[type=checkbox]:checked").length) {
-            console.debug("2FA web enabled - show deps");
-            $(".requires-twofactor-base.manual-show").fadeIn(fade_time);
-        } else {
-            console.debug("2FA web disabled - hide deps");
-            if ($(".requires-twofactor-base input[type=checkbox]:checked").length) {
-                console.warn("force 2FA off for services requiring web 2FA");
-                $(".requires-twofactor-base input[type=checkbox]:checked").click();
-                /* NOTE: make fade slow enough to let above unchecking show */
-                fade_time *= 4;
-            }
-            $(".requires-twofactor-base.manual-show").fadeOut(fade_time);
-        }        
-    }
-    function initOTPDepends(static) {
-        //console.debug("init deps");
-        /* NOTE: in GDP mode we force deps on so no need to show them */
-        if (static) {
-            $(".requires-twofactor-base").hide();
-            $(".requires-twofactor-base input[type=checkbox]:not(:checked)").click();
-        } else {
-            /* Dynamic display of deps when provider changes */
-            toggleOTPDepends();
-            $(".provides-twofactor-base input[type=checkbox]").change(toggleOTPDepends);
         }
     }
     function switchOTPState(current, next) {
-        $(".otp_wizard."+current+".switch_button").hide();
-        $(".otp_wizard."+next+":not(.manual-show)").fadeIn(1000);
-        /* Make sure next step is visible */
-        $(".otp_wizard."+next)[0].scrollIntoView({behavior: \"smooth\"});
-        if (next === "otp_ready") {
-            initOTPDepends(%s);
-        }
+        $("."+current+".switch_button").hide();
+        $("."+next).show();
     }
     /* Fast-forward through OTP states like user clicks would do */
     function setOTPProgress(states) {
@@ -1458,8 +1357,7 @@ def twofactor_wizard_js(configuration):
     }
     function showQRCodeOTPDialog(elem_id, otp_uri) {
           // init OTP dialog for QR code
-          $("#"+elem_id).dialog(importOTPDialog);
-          $("#"+elem_id).dialog("option", "onImportedClick", "otp_imported_button");
+          $("#"+elem_id).dialog(okOTPDialog);
           $("#"+elem_id).dialog("open");
           $("#"+elem_id).html("<canvas id=\'otp_qr\'><!-- filled by script --></canvas>");
           var qr = new QRious({
@@ -1470,8 +1368,7 @@ def twofactor_wizard_js(configuration):
     }
     function showTextOTPDialog(elem_id, otp_key) {
           // init OTP dialog for text key
-          $("#"+elem_id).dialog(importOTPDialog);
-          $("#"+elem_id).dialog("option", "onImportedClick", "otp_imported_button");
+          $("#"+elem_id).dialog(okOTPDialog);
           $("#"+elem_id).dialog("open");
           $("#"+elem_id).html("<span id=\'otp_text\'>"+otp_key+"</span>");
     }
@@ -1486,11 +1383,7 @@ def twofactor_wizard_js(configuration):
         $("#"+dialog_id+" .submit").hide()
         /* Prevent enter in token field submitting directly to backend */
         $("#otp_token_form").on("keypress", function(e) {
-                if (e.which === 13) {
-                    $("#twofactor_verify_button").click();
-                    return false;
-                }
-                return true;
+            return e.which !== 13;
             });
         /* Change output to json format */
         $("#otp_token_form").append("<input type=\'hidden\' name=\'output_format\' value=\'json\'>");
@@ -1498,14 +1391,9 @@ def twofactor_wizard_js(configuration):
         /* Resize to actual dialog contents */
         $("#"+dialog_id).dialog("option", "width", "auto");
         $("#"+dialog_id).dialog("option", "height", "auto");
-        /* Make sure dialog is visible no matter how skin and UI places it */
-        $("#"+dialog_id)[0].scrollIntoView({behavior: \"smooth\"});
         //console.debug("opened verify popup");
     }
-    function autoClickButtonIfVisible(link_id, delay) {
-        setTimeout(function() {$("#"+link_id).is(":visible") && $("#"+link_id).click(); }, delay);
-    }
-''' % str(configuration.site_enable_gdp).lower()
+'''
     add_ready = ''
     return (add_import, add_init, add_ready)
 
@@ -1513,11 +1401,11 @@ def twofactor_wizard_js(configuration):
 def twofactor_wizard_html(configuration):
     """Build standard html twofactor wizard table content"""
     html = """
-<tr class='otp_wizard otp_intro'><td>
+<tr class='otp_intro'><td>
 <div id='warning_dialog' title='Warning'
-    class='centertext hidden'><!-- filled by script --></div>
+   class='centertext hidden'><!-- filled by script --></div>
 <div id='otp_secret_dialog' title='TOTP Secret to Import in Your App'
-    class='hidden'><!-- filled by script --></div>
+   class='hidden'><!-- filled by script --></div>
 <p>We %(demand_twofactor)s 2-factor authentication on %(site)s for greater
 password login security.
 In short it means that you enter a generated single-use <em>token</em> from
@@ -1525,76 +1413,72 @@ e.g. your phone or tablet along with your usual login. This combination makes
 account abuse <b>much</b> harder, because even if your password gets stolen,
 it can't be used without your device.</p>
 </td></tr>
-<tr class='otp_wizard otp_intro'><td>
+<tr class='otp_intro'><td>
 <p>Preparing and enabling 2-factor authentication for your login is done in four
 steps.</p>
 </td></tr>
-<tr class='otp_wizard otp_intro switch_button'><td>
+<tr class='otp_intro switch_button'><td>
 <button type=button class='ui-button'
-    onClick='switchOTPState(\"otp_intro\", \"otp_install\");'>
+  onClick='switchOTPState(\"otp_intro\", \"otp_install\");'>
 Okay, let's go!</button>
 </td></tr>
-<tr class='otp_wizard otp_install hidden'><td>
+<tr class='otp_install hidden'><td>
 <h3>1. Install an Authenticator App</h3>
 <p>You first need to install a TOTP authenticator client like
-<a href='https://en.wikipedia.org/wiki/Google_Authenticator'
-  class='urllink iconleftpad' target='_blank'>
+<a href='https://en.wikipedia.org/wiki/Google_Authenticator' target='_blank'>
 Google Authenticator</a>,
-<a href='https://freeotp.github.io/' class='urllink iconleftpad'
-  target='_blank'>FreeOTP</a>,
-<a href='https://www.microfocus.com/en-us/products/netiq-advanced-authentication/overview'
-  class='urllink iconleftpad' target='_blank'>NetIQ Advanced Authentication</a>
-or <a href='https://authy.com/download/' class='urllink iconleftpad'
-  target='_blank'>Authy</a> on your phone
+<a href='https://freeotp.github.io/' target='_blank'>FreeOTP</a>,
+<a href='https://www.microfocus.com/en-us/products/netiq-advanced-authentication/overview' target='_blank'>NetIQ Advanced Authentication</a> or
+<a href='https://authy.com/download/' target='_blank'>Authy</a> on your phone
 or tablet. You can find and install either of them on your device through your
 usual app store.</p>
 </td></tr>
-<tr class='otp_wizard otp_install switch_button hidden'><td>
+<tr class='otp_install switch_button hidden'><td>
 <button type=button class='ui-button'
-    onClick='switchOTPState(\"otp_install\", \"otp_import\");'>
+  onClick='switchOTPState(\"otp_install\", \"otp_import\");'>
 I've got it installed!</button>
 </td></tr>
-<tr class='otp_wizard otp_import hidden'><td>
+<tr class='otp_import hidden'><td>
 <h3>2. Import Secret in Authenticator App</h3>
 <p>Open the chosen authenticator app and import your personal 2-factor secret in one of two ways:</p>
 <ul class='dbllineheight' type='A'>
-<li>Scan your personal <button id='otp_qr_link' class='twofactor-qr-code ui-button inline-button'
-    onClick='showQRCodeOTPDialog(\"otp_secret_dialog\", \"%(otp_uri)s\"); return false;'>
-QR code</button></li>
-<li>Type your personal <button id='otp_key_link' class='twofactor-raw-key ui-button inline-button'
-    onClick='showTextOTPDialog(\"otp_secret_dialog\", \"<p><b>Secret</b>: %(b32_key)s</p><p><b>Interval</b>: %(otp_interval)s</p>\"); return false;'>key code</button></li>
+<li><span id='otp_qr_link' class='fakelink iconspace'
+  onClick='showQRCodeOTPDialog(\"otp_secret_dialog\", \"%(otp_uri)s\");'>
+Scan your personal QR code</span></li>
+<li><span id='otp_key_link' class='fakelink iconspace'
+  onClick='showTextOTPDialog(\"otp_secret_dialog\", \"<p><b>Secret</b>: %(b32_key)s</p><p><b>Interval</b>: %(otp_interval)s</p>\");'>
+Enter your personal key</span></li>
 </ul>
 <p><br/>The latter is usually more cumbersome but may be needed if your app or smart
 device doesn't support scanning QR codes. Most apps automatically add service
 and account info on QR code scanning, but otherwise you can manually enter it.</p>
 </td></tr>
-<tr class='otp_wizard otp_import switch_button hidden'><td>
-<!-- NOTE: we ignore missing explicit import here as it might not be 1st run -->
-<button type=button id='otp_imported_button' class='ui-button'
-    onClick='checkOTPImported(false, true); switchOTPState(\"otp_import\", \"otp_verify\"); autoClickButtonIfVisible(\"otp_verify_button\", 1000); return false;'>
+<tr class='otp_import switch_button hidden'><td>
+<button type=button class='ui-button'
+  onClick='switchOTPState(\"otp_import\", \"otp_verify\");'>
 Yes, I've imported it!</button>
 </td></tr>
-<tr class='otp_wizard otp_verify hidden'><td>
+<tr class='otp_verify hidden'><td>
 <h3>3. Verify the Authenticator App Setup</h3>
-<p>Please <button id='otp_verify_button' class='twofactor-verify-token ui-button inline-button'
-    onClick='verifyClientToken(\"otp_verify_dialog\", \"otp_verified_button\", \"%(check_url)s\");  return false;'>
-verify</button> that your authenticator app displays correct new tokens every 30
+<p>Please <span id='otp_verify_link' class='fakelink infolink'
+ onClick='verifyClientToken(\"otp_verify_dialog\", \"otp_verified_button\", \"%(check_url)s\");'>
+verify</span> that your authenticator app displays correct new tokens every 30
 seconds before you actually enable 2-factor authentication. Otherwise you could
 end up locking yourself out once you enable 2-factor authentication!<p/>
 </td></tr>
-<tr class='otp_wizard otp_verify switch_button hidden'><td>
+<tr class='otp_verify switch_button hidden'><td>
 <button type=button id='otp_verified_button' class='ui-button'
-    onClick='checkOTPVerified(true, true) && switchOTPState(\"otp_verify\", \"otp_ready\");'>
+  onClick='checkOTPVerified() && switchOTPState(\"otp_verify\", \"otp_ready\");'>
 It works!</button>
 </td></tr>
-<tr class='otp_wizard otp_ready hidden'><td>
-<h3>4. Enable 2-Factor Authentication</h3>
-Now that you've followed the required steps to prepare and verify your
-authenticator app, you just need to %(enable_hint)s.<br/>
-This ensures that your future %(site)s logins are security-enhanced with a
-request for your current token from your authenticator app.
+<tr class='otp_ready hidden'><td>
+<h5>4. Enable 2-Factor Authentication</h5>
+Once you've followed the three steps above and verified your authenticator
+app, you can proceed to %(enable_hint)s.<br/>
+Afterwards you can simply logout and login again to verify that a token is
+requested right after your usual %(site)s login.
 </td></tr>
-<tr class='otp_wizard otp_ready hidden'><td>
+<tr class='otp_ready hidden'><td>
 <p class='warningtext'>SECURITY NOTE: please immediately contact the %(site)s admins to
 reset your secret 2-factor authentication key if you ever loose a device with
 it installed or otherwise suspect someone may have gained access to it.
@@ -1611,18 +1495,16 @@ def twofactor_token_html(configuration):
     """
     html = '''<!-- make sure content div covers any background pattern -->
 <div class="twofactorbg">
-<div id="twofactorstatus" class="centertext"><!-- filled by script --></div>
+<div id="twofactorstatus"><!-- filled by script --></div>
 <div id="twofactorbox" class="staticpage">
 <img class="sitelogo" src="%(skin_base)s/logo-left.png"><br/>
-<div id="twofactorlogo" class="twofactor authlogo"></div>
-    <!-- IMPORTANT: this form should not have an explicit action! -->
-    <form id="otp_token_form" method="POST">
-        <input class="tokeninput" type="text" id="token" name="token"
-            placeholder="Authentication Token" autocomplete="off"
-            title="6-digit token from your authenticator"
-            pattern="[0-9]{6}" required autofocus><br/>
-        <input id="otp_token_submit" class="submit" type="submit" value="Submit">
-    </form>
+<img class="authlogo" src="https://lh3.googleusercontent.com/HPc5gptPzRw3wFhJE1ZCnTqlvEvuVFBAsV9etfouOhdRbkp-zNtYTzKUmUVPERSZ_lAL=w300"><br/>
+  <!-- IMPORTANT: this form should not have an explicit action! -->
+  <form id="otp_token_form" method="POST">
+    <input class="tokeninput" type="text" id="token" name="token"
+        placeholder="Authentication Token" autocomplete="off" autofocus><br/>
+    <input id="otp_token_submit" class="submit" type="submit" value="Submit">
+  </form>
 </div>
 </div>
 ''' % {'skin_base': configuration.site_skin_base}
@@ -1757,8 +1639,8 @@ def get_xgi_html_preamble(
 <script type="text/javascript" >
     %s
     $(document).ready(function() {
-        //console.log("document ready handler");
-        %s
+         //console.log("document ready handler");
+         %s
     });
 </script>
 
@@ -1906,13 +1788,13 @@ def get_xgi_html_header(
             out += '''
 <!--New nav side bar -->
 <nav id="sideBar" >
-    <!--SIDEBAR-->
-    <div class="sidebar-container row">
-        <div class="sidebar-header col-12 align-self-start">
-            <a id="logoMenu" href="%(home_url)s">
-                <div class="home-nav-logo"></div>
-            </a>
-        </div>
+	<!--SIDEBAR-->
+	<div class="sidebar-container row">
+		<div class="sidebar-header col-12 align-self-start">
+			<a id="logoMenu" href="%(home_url)s">
+				<div class="home-nav-logo"></div>
+			</a>
+		</div>
             ''' % menu_helpers
             if menu:
                 out += '''
@@ -1925,7 +1807,7 @@ def get_xgi_html_header(
                                                          base_menu, user_menu, user_settings, display=TEXT_ONLY)
                 out += '''
 
-        <div class="sidebar-middle col-12 align-self-center">
+		<div class="sidebar-middle col-12 align-self-center">
 
                     %(icon_lines)s
 
@@ -1933,13 +1815,14 @@ def get_xgi_html_header(
                         <div class="hamburger-box">
                             <!--<div class="hamburger-inner"></div>-->
                             <h3>...</h3>
-                        </div>
-                        <!--<div id="menuTxt">Menu</div>-->
+                       </div>
+                       <!--<div id="menuTxt">Menu</div>-->
+
                     </div>
-        </div>
-        <div class="col-12 align-self-end home-nav-user__container">
-            <div id="userMenuButton" class="fas fa-user home-nav-user" onclick="userMenuToggle()" title="Your personal settings for %(short_title)s"></div>
-        </div>
+		</div>
+		<div class="col-12 align-self-end home-nav-user__container">
+		    <div id="userMenuButton" class="fas fa-user home-nav-user" onclick="userMenuToggle()" title="Your personal settings for %(short_title)s"></div>
+		</div>
 
                 ''' % menu_helpers
 
@@ -1947,16 +1830,16 @@ def get_xgi_html_header(
                 <div id="hamMenu" class="slidernav-container">
 
                     <div class="slider-container__inner row">
-            <div class="slider-header col-12 align-self-start">
-                <h2>%(short_title)s</h2>
-            </div>
-            <div class="slider-middle col-12 align-self-center">
+			<div class="slider-header col-12 align-self-start">
+				<h2>%(short_title)s</h2>
+			</div>
+			<div class="slider-middle col-12 align-self-center">
                             %(text_lines)s
-            </div>
-            <div class="slider-footer col-12 align-self-end home-nav-user__inner">
+			</div>
+  			<div class="slider-footer col-12 align-self-end home-nav-user__inner">
                             <a onclick="userMenuToggle()">User</a>
-            </div>
-            </div>
+			</div>
+		    </div>
                 </div>
                 ''' % menu_helpers
 
@@ -2006,7 +1889,7 @@ def get_xgi_html_header(
                 ''' % user_post_menu
 
             out += '''
-    </div>
+	</div>
 </nav>
 
 %s
@@ -2156,18 +2039,18 @@ to override. */
 var log_level = "info";
 var all_log_levels = {"none": 0, "error": 1, "warn": 2, "info": 3, "debug": 4};
 /*
-    Make sure we can always use console.X without scripts crashing. IE<=9
-    does not init it unless in developer mode and things thus randomly fail
-    without a trace.
+   Make sure we can always use console.X without scripts crashing. IE<=9
+   does not init it unless in developer mode and things thus randomly fail
+   without a trace.
 */
 var noOp = function(){}; // no-op function
 if (!window.console) {
     console = {
-    debug: noOp,
-    log: noOp,
-    info: noOp,
-    warn: noOp,
-    error: noOp
+	debug: noOp,
+	log: noOp,
+	info: noOp,
+	warn: noOp,
+	error: noOp
     }
 }
 /*
@@ -2186,28 +2069,28 @@ var init_log = function() {
             console.log(Date.now()+" DEBUG: "+msg)
             };
     } else {
-    console.debug = noOp;
+	console.debug = noOp;
     }
     if (all_log_levels[log_level] >= all_log_levels["info"]) {
-    console.info = function(msg){
+	console.info = function(msg){
             console.log(Date.now()+" INFO: "+msg)
             };
     } else {
-    console.info = noOp;
+	console.info = noOp;
     }
     if (all_log_levels[log_level] >= all_log_levels["warn"]) {
-    console.warn = function(msg){
+	console.warn = function(msg){
             console.log(Date.now()+" WARN: "+msg)
             };
     } else {
-    console.warn = noOp;
+	console.warn = noOp;
     }
     if (all_log_levels[log_level] >= all_log_levels["error"]) {
-    console.error = function(msg){
+	console.error = function(msg){
             console.log(Date.now()+" ERROR: "+msg)
             };
     } else {
-    console.error = noOp;
+	console.error = noOp;
     }
     console.debug("log ready");
 }
