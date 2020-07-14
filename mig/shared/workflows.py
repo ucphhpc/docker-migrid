@@ -2194,20 +2194,20 @@ def workflow_match(configuration, workflow_object, user_query=False, **kwargs):
     # _logger.debug("WP: searching '%s' with '%s'" % (workflow_object, kwargs))
 
     if user_query:
-        vgrid = kwargs.pop('vgrid')
-        if workflow_object['vgrid'] != vgrid:
-            return (False, "")
+        if 'vgrid' in kwargs:
+            vgrid = kwargs.pop('vgrid')
+            if workflow_object['vgrid'] != vgrid:
+                return (False, "")
         if 'persistence_id' not in kwargs:
             for _k, _v in kwargs.items():
-                if _k in workflow_object:
-                    if re.match(kwargs[_k], workflow_object[_k]):
-                        # _logger.debug("got re match between %s and %s"
-                        #               % (kwargs[_k], workflow_object[_k]))
-                        return (True, "")
-                    if kwargs[_k] in workflow_object[_k]:
-                        # _logger.debug("got crude match between %s and %s"
-                        #               % (kwargs[_k], workflow_object[_k]))
-                        return (True, "")
+                if _k not in workflow_object:
+                    return (False, 'Could not find attribute %s in %s'
+                            % (_k, workflow_object))
+                if not re.match(_v, workflow_object[_k]) \
+                        and _v not in workflow_object[_k]:
+                    return (False, 'Different values for %s in %s'
+                            % (_k, workflow_object))
+            return (True, "")
         else:
             if kwargs['persistence_id'] == workflow_object['persistence_id']:
                 return (True, "")
