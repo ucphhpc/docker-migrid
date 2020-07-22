@@ -1,0 +1,518 @@
+= Introduction =
+This file contains sporadic news entries and changelog entries for the
+individual releases of the MiG project code.
+
+
+== News ==
+A short description of changes 
+
+=== February 27th, 2019 ===
+Long due new release with plenty of added features especially in four
+areas, namely an OpenSSH-based SFTP service, Jupyter integration, DOI 
+integration for archives and a new site mode to host EU GDPR data with
+the associated strict access and logging requirements.
+In relation to that work we've a.o. added 2FA support, import from sharelinks
+and archives, added helpers to ease use of Jupyter as an interactive
+course infrastructure. Additionally ithe release includes a number of
+security improvements across the board.
+
+
+=== April 18th, 2017 ===
+Mainly a security enhancing release, so we recommend that everyone
+running a grid instance upgrades to this version.
+Read-only VGrids/Workgroups was added recently and works for all new
+VGrids if enabled in the configuration. Existing VGrids will keep
+working but need manual migration to get read-only support.
+Quite a lot of optimization in event daemon and several user interfaces.
+Extended share link access to all IO daemons for efficient transfers.
+Finally added greedy filling of available resources in jobs to make it
+possible to request bare minimum requirements but make scheduler fill to
+actually use whatever the resource offers.
+
+
+=== July 31st, 2016 ===
+Feature release. It's been another year with quite a lot of new
+development in terms of new features and improvements, especially
+data-centric additions coming from the ERDA and IDMC projects. Just to
+mention a few we have added sharelinks for easy anonymous data exchange,
+data transfers for flexible data import/export, a number of web
+interface improvements including inline visual previews, better
+international character support and flexible VGrid configuration for
+e.g. fine grained access control.
+
+
+=== August 27th, 2015 ===
+Feature release. A lot of storage service features and improvements. New
+OpenID, WebDAVS, FTPS and event trigger services. New fancy upload, persistent
+archive support daemon and optional Seafile integration. Complete support for
+site-specific web page skins.
+
+
+=== February 20th, 2013 ===
+Minor bugfix release.
+
+
+=== January 30th, 2013 ===
+Feature and minor bugfix release.
+
+
+=== July 23rd, 2012 ===
+Feature and minor bugfix release. Mainly the integration of the long
+awaited interactive virtual machine jobs using VNC. Based on original
+work by Tomas Groth and Simon A. F. Lund but updated and extended to
+work with current VM images and virtualization technologies.
+
+
+=== December 15th, 2011 ===
+Feature and bugfix release.
+
+SECURITY CHANGES:
+* User settings moved to a dedicated user_settings dir to
+  prevent any potential security issues with users manually crafting malign
+  pickle files.
+* Direct access to VGrid component dirs is completely disabled and an Apache
+  guard against fake VGrid components is added. The existing CGI
+  components were *not* vulnerable unless users somehow managed to bypass
+  the prevention of setting the executable bit on their files. The changes
+  are an extra layer of security for the CGIs and a safety precaution
+  needed with the new WSGI components (where the executable is not needed
+  for abuse).
+* Require HTTP POST on potentially Cross-Site-Request-Forgery vulnerable
+  pages like e.g. VGrid management.
+
+The user settings change requires a MiGserver.conf addition and a manual
+migration of old settings is recommend.
+Typically the conf change is a matter of rerunning the conf generator or
+adding a line like:
+user_settings = %(state_path)s/user_settings/
+The settings migration is a matter of moving
+user_home/*/{.settings,.widgets,.userprofile} to the corresponding 
+user_settings/*/{settings,widgets,userprofile} with a command like:
+for name in settings widgets userprofile; do
+    for i in `find state/user_home -mindepth 2 -maxdepth 2 -name ".$name"`; do
+        new=`echo $i|sed 's@user_home@user_settings@g'|sed "s@\.$name@$name@g"`;
+	mkdir -p `dirname $new`
+    	mv $i $new;
+    done
+done
+
+The VGrid component changes are included in the configuration generator
+so you should rerun the generator and replace or update your apache
+configuration.
+
+New exciting features include:
+* Trac integration to provide tons of new VGrid collaboration tools
+* SFTP server for efficient file access and sshfs mounting of your MiG home
+* Powerful Grid user interface library for easy Grid application development
+* People page for user profiles and communication
+
+
+=== September 29th, 2010 ===
+Bugfix releases to add missing 'shared' symlinks in various locations and fix
+a number of smaller bugs.
+Minor updates in layout and widgets.
+
+
+=== August 3rd, 2010 ===
+Feature and interface improvement release with thanks to grid.dk for a
+considerable contribution especially in the usability and interface areas.
+New feautures are mainly focused on improving VGrid usability, making job
+execution more flexible and administrating resources.
+
+
+=== March 15th, 2010 ===
+Our previous shared virtual host for Session ID and certificate based
+access could *potentially* open up for a Man-in-the-Middle attack like:
+http://securitytracker.com/alerts/2009/Nov/1023145.html
+Additionally the same SSL renegotiation prevented upload of big files
+through the web interface. We repartitioned the virtual hosts to prevent
+any such security issues in the future and remove the upload limit at
+once. However, this means that a MiG server now requires either two public IP
+adresses or two SSL ports to work.
+Apart from that we mostly worked on integrating interface polishing and
+improvements from the Grid.dk project. Now some of the main web pages
+use AJAX to some extent for a far more flexible and crisp user experience.
+
+
+=== September 17th, 2009 ===
+********************************************************
+*** IMPORTANT * This upgrade requires admin actions! ***
+********************************************************
+This release changed the user database format and the default location
+of state directories. If you upgrade an existing installation you have
+to at least migrate the user database and optionally move your state
+directories to the new locations.
+
+With the restructuring of the user database *all* existing installations
+need to update their user database before they can use the new version.
+Please backup all your state data and the MiG-users.db and run
+cd mig/server
+./migrateusers.py [OPTIONS]
+Where OPTIONS may be one or more of:
+   -c CONF_FILE        Use CONF_FILE as server configuration
+   -d DB_FILE          Use DB_FILE as user data base file
+   -f                  Force operations to continue past errors
+   -h                  Show this help
+   -p                  Prune duplicate users (keeps the one with latest expire)
+   -v                  Verbose output              
+which in most cases will be just
+./migrateusers.py
+to automatically upgrade all your MiG user directories and the database.
+Run the migrateusers command with the -v flag for detailed informations
+about applied changes.
+You also need to update your apache MiG configuration to map SSL
+certificates to the new user dirs.
+If you choose to switch to the new relocatable state directory layout
+you also need to update your MiGserver.conf and move the state
+directories around.
+Please refer to the example apache and MiGserver confs or use the config
+generator to achieve this.
+After migrating users you will have truly unique users, but you will no
+longer be able to use the migrated data with older middleware versions.
+
+=== May 1st, 2009 ===
+We finally got the old grey web pages completely overhauled. Thanks to those of you 
+that contributed to this often overlooked area.
+Updated setup helpers to make custom install locations easier.
+
+
+=== March 17, 2009 ===
+Added this file for easier tracking of changes. Another bugfixing
+release (1.0.2), so we recommend that everyone upgrades to this version.
+
+
+=== March 06, 2009 ===
+After a long time in planning we finally released the project under the
+GPL v2 today. The project started all the way back in 2003, so there's
+already quite a bit of code and the setup is not trivial. Over the
+coming months we will improve the code and instructions to ease setup
+for other users.
+
+
+== Changelogs ==
+More detailed changelogs for the public releases.
+The full changelog is available from the repository:
+https://sourceforge.net/p/migrid/code/commit_browser
+
+== 1.8.0 ==
+- Configurable password strength policy
+- New JSONRPC interface similar to the existing XMLRPC one
+- More grid workflow trigger optimizations to reduce load
+- Security: tighten chrooting with additional 2nd level checks
+- Split cert and OpenID access into native (mig) and external (ext) flavors
+- Security: tighten password, CSRF and protocol defaults to modern requirements
+- Updates to better fit the now commonly used Apache 2.4 release
+- LetsEncrypt certificate integration
+- Security: enable pure password hashes in user DB for OpenID use 
+- PAM and NSS modules for generic MiG (virtual) user lookup
+- OpenSSH subsys integration of SFTP service for much better performance
+- Optimize shared IO daemon login helpers for less load and overhead 
+- Security: enforce Content Security Policy for frames in Apache and OpenID
+- Jupyter integration with swarm clustering support
+- Support OpenID autologout to e.g. avoid sign up loop
+- Skin updates and polish
+- Update to JQuery UI 1.12 and simplify theme rolling for skins
+- Changed generateconf helper to preserve versioned history
+- Seafile 6.2+ support with implicit WSGI instead of FastCGI
+- Schedule Tasks feature for natively running backends in cron/at fashion
+- More enable_X site conf to enable/disable only wanted features and daemons
+- Chunked WSGI output to allow e.g. >2GB downloads there as well
+- Several init script updates to handle all daemons and consider enable_X
+- Work around OpenID session time out in a number of AJAX web interfaces
+- New GDPR mode for sites hosting sensitive and specifically personal data
+- Security: tighten email validation for improved XSS protection
+- Selenium scripts to verify web interfaces and for user guide screenshots
+- Support custom excludes in Data import/export
+- Reworked freeze archive creation flow for flexibility and DOI support
+- WebDAVS session tracking for performance optimization and GDPR restriction
+- Allow sites to run without SID vhost
+- Cracklib integration for better user password strength verification
+- Fail2Ban integration to protect against automated scans, etc.
+- 2FA support in web and most IO daemons, with a setup wizard
+- Migrate to WSGI default pages instead of old CGI
+- Security: use custom strong DH params in a number of locations
+- Fix problems with reload and log rotate
+- Admin helpers for native OpenID users and batch user creation 
+- Support direct import from sharelinks
+- Support flags in commands from workflow trigger rules and schedule tasks
+- Security: explicit CVE-2018-21000805 workaround, just in case
+- Reworked logging for a single implementation for all interfaces and daemons
+- Support for Scandir-1.3+
+- Tunable sshd and apache helper process count for scalability
+- Syslog support for GDP logs
+- Fix race in archive cache update
+- Re-implement individual daemon control in init script, which systemd broke
+- AJAX loading on landing page for freeze archives for better responsiveness
+- Support direct import from own backup and freeze archives i.e. to restore
+- Allow automatic account expire for native OpenID access
+- Security: let SFTP clients fetch host pub key from DNSSEC
+
+
+== 1.7.0 ==
+- Added read-only support in VGrids and prepare for granular write-restrict
+- Security: close illegal directory traversal vectors in path input handling
+- Improved unmount of dead mounts during stop of storage resources
+- Optimized preview engine and added support for additional TIFF formats
+- Security: update to JQuery 1.12 with backwards browser support and a XSS fix
+- Added support for checksum to file, which also works around browser time out
+- Integrated Duplicati backup from user computers
+- Fix sftp truncate on path suport to avoid upload error in e.g. WinSCP
+- Ease separate network address for IO services on default FW-friendly ports
+- LetsEncrypt SSL cert integration
+- Rework rate limit to prevent a single user blocking all others from same GW
+- Fix a memory leak in VM proxy daemon, mainly triggered by security scans
+- Security: unified and hardened SSL/TLS/SSH setup in daemons
+- Security: hardened OpenID cookie handling as recommended by OpenVAS
+- Security: hardened Apache conf as recommended by OpenVAS
+- New FRONTENDPROXY resource conf keyword to enable NATed resources
+- Security: added user password policy support to enforce strong passwords
+- Reworked event daemon for scaling, using multiprocessing and dir cache
+- Fixed init script shutdown of daemons to properly save state
+- Significantly optimized some backends by switching to use VGrid cache 
+- Enable HTML5 input format helpers to make forms more user-friendly
+- Switch to resume-mode in all datatransfers and fix some corner case issues
+- Added MAXFILL keyword in jobs to fill available resources when scheduled
+- Add ENFORCELIMITS in resource conf to allow working around e.g. mmap issue
+- Introduced Trash bin in home and VGrid folders to allow for data retention
+- Dynamic file manager and preview sizing to fit available window space
+- Enabled IO daemon access to read+write share links
+- Add disk use (du) function to allow data size query in file manager
+- Introduced backup archives with minimal meta data, link to all archive files
+- Switch to AJAX in most manager pages for faster more responsive interfaces
+- Security: enhanced CSRF prevention on all actions with side-effects
+- Properly handle monitoring of new dirs in event daemon
+- A number of minor bug fixes and general interface polishing
+
+== 1.6.0 ==
+- Updated xmlrpc client example to latest to allow non-interactive password 
+- Dynamic ID fields for VGrid and resource admin to add multiple IDs at once
+- Several bug fixes in user scripts
+- Save and display VGrid and resource access requests to ease management
+- Optimized post helpers for action icons like request VGrid membership
+- Bug fix to only show users once in People page despite aliases and links
+- AJAX'ify all tablesort 'manager' pages for more responsive interfaces
+- Bug fix to make sure storage-only resources show up in Resources page
+- Support HUP in daemons and provide service reload target to avoid restarts
+- Support limit on number of concurrent sftp client sessions to mitigate DoS
+- Bug fixes for issues in vgrid management through WSGI interface
+- Update user scripts and XMLRPC API to match the latest functionalities
+  and e.g. allow scripted upload to sharelinks.
+- Sharelinks feature for easy anonymous data exchange
+- Tuning of Archives pages to avoid time-outs on big archives
+- Security: fix race in webdavs chrooting; matching wsgidav upstream changes
+- Seafile settings and sign-up tuning
+- Data transfers feature for remote data imports/exports; pw or key login
+- VGrid settings features for fine grained access control, hide vgrid, etc.
+- Significantly reduce I/O daemon login lookup/update overhead
+- Imaging preview features for 2D and 3D image visualization 
+- Extended self-testing in user scripts
+- Security: improved parsing and validation of resource configurations
+- Bug fixes in relation to big file (>2GB) uploads
+- Rate limit on failed logins in SFTP/FTPS/WebDAVS/OpenID daemons
+- Significant SFTP server performance improvements
+- Workflow flexibility, interface and performance improvements
+- Interface polish including dynamic file manager sizing to fill window
+- Tuning of allowed file name characters to support international users
+- Switch all command calls to 'subprocess' without shell for better security
+- Separate RH/CentOS and Debian/Ubuntu init scripts and improved daemon wrap
+- Added log rotation of individual I/O daemon logs
+- Security: Apache conf tuning to address recent potential attack vectors like
+  heartbeat, beast, poodle, httpoxy
+
+== 1.5.0 ==
+- Seafile integration to provide Dropbox-like features
+- Additional file manager operations
+- Daemon port aliasing for firewall-friendly remote access to user homes
+- Fixes for chmod/chattr in daemons
+- Security hardening
+- Generic skin support for custom web site look and feel
+- Support for image previews and basic visualization
+- Polished file manager for usability with progress bars, etc.
+- Implemented MOUNT support in jobs for easy live access to user home files
+- Optimized file manager speed with many files/dirs
+- VGrid workflows for data-driven automation of tasks
+- Full OpenID integration: OpenID login service and user login support
+- WebDAVS service for file access and mount support
+- FTPS service for file access and mount support
+- Fancy HTML5 chunked uploads added to remove big upload limitations
+- Persistent file archives to freeze a set of e.g. research files
+- Renamed some daemons to grid_*.py for consistency
+- Fix for edituser not properly handling inheritance
+- Fix for stray drag-n-drop file copy in file manager
+
+== 1.4.3 ==
+-Fixes a port bug in the configuration generator for the single IP setup
+-Fix to re-enable support for running the configuration generator without args
+-Visually simplified certificate request and sign up pages
+
+== 1.4.2 ==
+-Fixes the wrong node count for resources without store nodes
+-Preserve anonymization for storage resources in shared vgrid dirs
+-Improved storage resource status and monitoring
+-Support for simplified navigation menu. 
+-WSGI fix to mimic CGI behaviour more closely
+-SFTP robustness improvements
+-A number of VGrid portal helper improvements
+-List actual providers on runtime env pages.
+
+== 1.4.1 ==
+-Improvements and stats fixes to VGrid monitors (includes fix for issue 32)
+-Fix issue 67: migget user script bug
+-Speed optimizations to VM builder using tmpfs when possible
+-Complete VM build scripts to ease future and custom VM image builds
+-VM polish: access to all job settings, job session timeout warning
+-VM live I/O access through mounted job dir
+-Integration of interactive VM jobs using VNC
+-Use compression in generated zip files (user scripts, etc)
+-New MiG admin monitor page
+-Added sftp DSA key support and fixed a crash for broken keys
+-Fix removal of nested VGrids
+-Improved Runtime Env reuse support
+-Fix issue 66: Add VGrid owner bug
+
+== 1.4.0 ==
+-Completely disable direct access to VGrid component dirs for security
+-New Apache guards against VGrid component abuse
+-WSGI access to all VGrid components (wiki, scm, tracker, ...)
+-Integrate Trac scm, forum, blog, downloads, pastebin and many more plugins
+-Trac integration for VGrid Project Trackers
+-Flexible VGrid component visibility
+-Simplified Apache rewrite rules
+-SFTP server fixes
+-Tweak file manager download efficiency for both big and small files
+-Filemanager bread crumbs navigation
+-Filemanager fixes
+-Added MatlabOnGrid 'user project'
+-Move user settings to user-inaccessible user_settings dir
+-Speed up resource/vgrid/user caches with explicit cache invalidation
+-New VGrid forums and VGrids page layout improvements
+-Require POST on certain pages to prevent CSRF attacks and unintended updates
+-CSS fixes for correct rendering in WebKit-based browsers
+-Improved Jobs page with job feasibility test and more job information 
+-Add People page and let users set contact and profile information
+-Reworked access requests and added VGrid resource membership requests
+-Basic password reminder support
+-MiG user interface for consistent API and local job testing
+-Support automatic resource creation without admin interaction
+-SLURM resource support
+-Initial Grid Replicated Storage file system integration
+-Basic job limits even on native resource
+-Resubmit fixes for dynamic variables
+-Support SFTP access to user home and thus SSHFS mount
+
+== 1.3.2 ==
+-Add missing state dirs
+
+== 1.3.1 ==
+-Add missing symlinks to the mig/shared directory
+-Fix handling of old jobs in PARSE state during start up
+-Fix access control in resource editor back end
+-Fix time stamps in job manager (off by one month)
+-Actually honour max jobs in job manager
+-Sanitize file manager action handlers
+-Allow delete resource for anonymized resources
+-Fixed occasional wrong icons in fileman
+-Enable tilde and variable expansion of miguser.conf variables in user scripts
+-Upgrade to latest JQuery and JQuery UI
+-More consistent use of jquery tablesorters on main pages
+-Improved handling of submit errors on LRMS resources
+-More user widgets
+
+== 1.3.0 ==
+-New central message queues for synchronized job communication
+-Full live I/O support in jobs
+-Added python version of generated resource admin script
+-Support for job freeze/thaw in queue
+-Full zip/unzip support in user homes
+-New fancy file and settings editors
+-New user defined widgets using html/css/javascript
+-Integrated resource removal from grid.dk
+-Integrated runtime env removal from grid.dk
+-Integrated VGrid removal from grid.dk
+-Merged improved Submit job, Docs, VGrids and Resources pages from grid.dk
+-Merged site specific settings for SSS and VGrid components from grid.dk
+-New public resource viewer for ordinary users
+-New optional VGrid SCM
+-Support repair/update VGrid Wiki and SCM
+-Bugfixes in user scripts, nested vgrid web pages, LRMS job scripts, etc.
+-General page layout polish and code clean up
+
+== 1.2.0 ==
+-Work around potential Man-in-the-Middle apache issue (separate vhosts)
+-Fixed upload of big files (separate vhosts)
+-Optional resource anonymity
+-Optional auto creation of users with valid certificate
+-Fixed some notification timeout delays with threading
+-Multiple submit job styles
+-Support site specific customization
+-Optional resource targetting in submit job
+-New AJAX file manager
+-New AJAX job manager
+-New AJAX MiG shell
+-New optional statistics page
+-Overhauled Most other pages
+-Individual user stats on Dashboard
+-Integrate optional software catalogue from grid.dk
+-Integrate optional ARC support
+
+== 1.1.0 ==
+-reworked user ID structure to avoid collissions when users with same
+full name exist
+-move to apache 2.x as default web server
+-moved state directories to improve relocation support
+-more relocatable installation with e.g. MIG_CONF environment
+-users can now request scheduling information
+-support for external users signing up or imported from XML
+-added resource storage units for integration of external storage
+-custom style sheets support for all pages
+-added optional usage records for statistics and accounting
+-several SSS monitor improvements including sorting
+-allow sandbox jobs on all resources, but not the other way around
+-lowered default number of job retries and provided override in mRSL
+-user selectable job submit and files page interfaces
+-improved handling of quotes in EXECUTE field
+-added new dashboard user entry page
+-web interface improvements and fixes
+-rescheduling fixes
+-jabber notification fixes
+-ssh/scp timeout tuning
+-user script fixes
+-fixed several minor bugs pointed out by pylint
+-initial support for skin customization 
+
+== 1.0.4 ==
+-complete reworking of web layout
+-minor bugfixes and code clean up
+-updated RedHat compatible server configurations
+-java notes for One-click resources (IcedTea Java does not work)
+-fixed a number of install issues
+-updated install helper scripts to ease custom install
+-parallel resource admin scripts
+
+== 1.0.3 ==
+-added NEWS (this file) for tracking changes
+-Fixes to VGrid parsing and job notification
+-move job notifications to background threads to avoid blocking server
+-added experimental JSON output support
+-reworked ssh/scp helpers to prevent blocking of server
+
+== 1.0.2 ==
+-another minor bugfix and doc release
+-overhauled the sandbox generator to make it work everywhere
+-Moved some internal state files out of the code directories
+-cleaned up a leftover ssh to sandboxes the and corresponding log errors
+-cleaned up vgrid finder to remove irrelevant/annoying log error entries
+-added some missing license headers
+-fixed a bug in job handout
+-general tidying of all python code
+
+== 1.0.1 ==
+-verified install instructions
+-updated confs and tested complete install with apache2
+-added some missing license headers
+-more server documentation
+-merged One-Click source
+
+== 1.0.0 ==
+-first public release
+-rearranged old directory layout and added required license information

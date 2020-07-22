@@ -37,7 +37,7 @@ from shared.freezefunctions import import_freeze_form
 from shared.functional import validate_input_and_cert
 from shared.functionality.editor import advanced_editor_css_deps, \
     advanced_editor_js_deps, lock_info, edit_file
-from shared.gdp import get_project_from_client_id
+from shared.gdp.all import get_project_from_client_id
 from shared.handlers import get_csrf_limit, make_csrf_token
 from shared.html import themed_styles, legacy_user_interface
 from shared.init import initialize_main_variables, find_entry, extract_menu
@@ -787,7 +787,7 @@ def main(client_id, user_arguments_dict):
     legacy_buttons = False
     if legacy_user_interface(configuration, user_settings):
         legacy_buttons = True
-        logger.info("enable legacy buttons")
+        logger.debug("enable legacy buttons")
 
     if configuration.site_enable_jobs and \
             'submitjob' in extract_menu(configuration, title_entry):

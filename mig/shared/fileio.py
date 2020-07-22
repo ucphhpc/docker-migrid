@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # fileio - wrappers to keep file I/O in a single replaceable module
-# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -272,7 +272,8 @@ def unpickle(path, logger, allow_missing=False):
         logger.debug('%s was unpickled successfully' % path)
         return data_object
     except Exception, err:
-        if not allow_missing:
+        # NOTE: check that it was in fact due to file does not exist error
+        if not allow_missing or getattr(err, 'errno', None) != errno.ENOENT:
             logger.error('%s could not be opened/unpickled! %s'
                          % (path, err))
         return False
@@ -298,7 +299,8 @@ def load_json(path, logger, allow_missing=False, convert_utf8=True):
             data_object = force_utf8_rec(data_object)
         return data_object
     except Exception, err:
-        if not allow_missing:
+        # NOTE: check that it was in fact due to file does not exist error
+        if not allow_missing or getattr(err, 'errno', None) != errno.ENOENT:
             logger.error('%s could not be opened/loaded! %s'
                          % (path, err))
         return False
@@ -657,30 +659,79 @@ def sha512sum_file(path, chunk_size=default_chunk_size,
     return __checksum_file(path, "sha512", chunk_size, max_chunks)
 
 
-def acquire_file_lock(lock_path, exclusive=True):
-    """Uses fcntl to acquire the lock in lock_path in exclusive mode unless
-    otherwise specified.
-    Should be used on seperate lock files and not on the file that is
+def acquire_file_lock(lock_path, exclusive=True, blocking=True):
+    """Uses fcntl to acquire the lock in lock_path in exclusive and blocking
+    mode unless requested otherwise.
+    Should be used on separate lock files and not on the file that is
     meant to be synchronized itself.
     Returns the lock handle used to unlock the file again. We recommend
     explicitly calling release_file_lock when done, but technically it should
     be enough to delete all references to the handle and let garbage
-    collection automatically unlock it.
+    collection automatically unlock and close it.
+    Returns None if blocking is disabled and the lock could not be readily
+    acquired.
     """
     if exclusive:
         lock_mode = fcntl.LOCK_EX
     else:
         lock_mode = fcntl.LOCK_SH
+    if not blocking:
+        lock_mode |= fcntl.LOCK_NB
     # NOTE: Some system+python combinations require 'w+' here
     #       to allow both SH and EX locking
     lock_handle = open(lock_path, "w+")
-    fcntl.flock(lock_handle.fileno(), lock_mode)
+    try:
+        fcntl.flock(lock_handle.fileno(), lock_mode)
+    except IOError, ioe:
+        # Clean up
+        try:
+            lock_handle.close()
+        except:
+            pass
+        # If non-blocking flock gave up an IOError will be raised and the
+        # exception will have an errno attribute set to EACCES or EAGAIN.
+        # All other exceptions should be re-raised for caller to handle.
+        if not blocking and ioe.errno in (errno.EACCES, errno.EAGAIN):
+            lock_handle = None
+        else:
+            raise ioe
+
     return lock_handle
 
 
-def release_file_lock(lock_handle):
-    """Uses fcntl to release the lock held in lock_handle."""
+# TODO: use this function for modify X calls with limited blocking
+def responsive_acquire_lock(lock_path, exclusive, max_attempts=10,
+                            retry_delay=2):
+    """A simple helper to retry locking lock_path in non-blocking way
+    until it either succeeds or the maximum allowed number of attempts failed.
+    The exclusive arg is used to toggle between exclusive or shared locking.
+    The optional max_attempts and retry_delay args can be used to tune the
+    locking retries.
+    """
+    lock_handle = None
+    for i in xrange(max_attempts):
+        lock_handle = acquire_file_lock(lock_path, exclusive, False)
+        if lock_handle is None:
+            time.sleep(retry_delay)
+        else:
+            break
+    if lock_handle is None:
+        raise Exception("gave up locking %s for update" % lock_path)
+    return lock_handle
+
+
+def release_file_lock(lock_handle, close=True):
+    """Uses fcntl to release the lock held in lock_handle. We generally lock a
+    separate lock file when we wish to modify a shared file in line with the
+    acquire_file_lock notes, so this release helper by default includes closing
+    of the lock_handle file object.
+    """
     fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+    if close:
+        try:
+            lock_handle.close()
+        except:
+            pass
 
 
 def check_readable(configuration, path):
@@ -769,4 +820,6 @@ def user_chroot_exceptions(configuration):
     chroot_exceptions.append(os.path.abspath(configuration.resource_home))
     if configuration.site_enable_seafile and configuration.seafile_mount:
         chroot_exceptions.append(os.path.abspath(configuration.seafile_mount))
+    # Allow access to mig_system_storage used for merging multiple storage backends
+    chroot_exceptions.append(os.path.abspath(configuration.mig_system_storage))
     return chroot_exceptions

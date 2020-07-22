@@ -602,7 +602,7 @@ while [ 1 ]; do
     # if givejob exists, we must request a new job (and delete 
     # "givejob")
     for givejobrequest in *.givejob; do
-        # No matching expansion results in raw pattern value - just
+        # No matching expansion results in raw pattern value - just 
         # ignore
         if [ "$givejobrequest" = '*.givejob' ]; then
             continue

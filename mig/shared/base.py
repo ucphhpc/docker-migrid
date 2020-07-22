@@ -83,6 +83,33 @@ def client_alias(client_id):
     return base64.urlsafe_b64encode(client_id).replace('=', '_')
 
 
+def expand_openid_alias(alias_id, configuration):
+    """Expand openid alias to full certificate DN from symlink"""
+    home_path = os.path.join(configuration.user_home, alias_id)
+    if os.path.islink(home_path):
+        real_home = os.path.realpath(home_path)
+        client_dir = os.path.basename(real_home)
+        client_id = client_dir_id(client_dir)
+    else:
+        client_id = alias_id
+    return client_id
+
+
+def get_short_id(configuration, user_id, user_alias):
+    """Internal helper to translate user_id and user_alias to short_id"""
+    short_id = extract_field(user_id, user_alias)
+
+    if configuration.site_enable_gdp:
+
+        # TODO add 'user_gdp_alias' to configuration ?
+
+        gdp_id = extract_field(user_id, gdp_distinguished_field)
+        if gdp_id is not None:
+            short_id = "%s@%s" % (short_id, gdp_id)
+
+    return short_id
+
+
 def fill_user(target):
     """Fill target user dictionary with all expected fields"""
 
@@ -162,6 +189,27 @@ def pretty_format_user(distinguished_name, hide_email=True):
     return "%(full_name)s, %(organization)s &lt;%(email)s&gt;" % user_dict
 
 
+def canonical_user(configuration, user_dict, limit_fields):
+    """Apply basic transformations to user dicts for consistency. Remove
+    unexpected fields, lower-case email, capitalize full name and uppercase
+    country and state.
+    """
+    canonical = {}
+    for (key, val) in user_dict.items():
+        if not key in limit_fields:
+            continue
+        if key == 'full_name':
+            val = ' '.join([i.capitalize() for i in val.split()])
+        elif key == 'email':
+            val = val.lower()
+        elif key == 'country':
+            val = val.upper()
+        elif key == 'state':
+            val = val.upper()
+        canonical[key] = val
+    return canonical
+
+
 def sandbox_resource(unique_resource_name):
     """Returns boolean indicating if the resource is a sandbox"""
     fqdn = unique_resource_name.rsplit('.', 1)[0]
@@ -220,7 +268,7 @@ def invisible_path(path, allow_vgrid_scripts=False):
     return False
 
 
-def requested_page(environ=None, fallback='dashboard.py'):
+def requested_page(environ=None, fallback='home.py'):
     """Lookup requested page from environ or os.environ if not provided.
     Return fallback if no page was found in environ.
     """
@@ -229,9 +277,21 @@ def requested_page(environ=None, fallback='dashboard.py'):
     # NOTE: RPC wrappers inject name of actual backend as BACKEND_NAME
     page_path = environ.get('BACKEND_NAME', False) or \
         environ.get('SCRIPT_URL', False) or \
+        environ.get('SCRIPT_URI', False) or \
         environ.get('PATH_INFO', False) or \
         environ.get('REQUEST_URI', fallback).split('?', 1)[0]
     return page_path
+
+
+def requested_url_base(environ=None):
+    """Lookup requested url base from environ or os.environ if not provided.
+    """
+    if not environ:
+        environ = os.environ
+    full_url = environ.get('SCRIPT_URI', None)
+    parts = full_url.split('/', 3)
+    url_base = '/'.join(parts[:3])
+    return url_base
 
 
 def force_utf8(val):

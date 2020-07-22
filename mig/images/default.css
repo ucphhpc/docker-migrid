@@ -315,6 +315,15 @@ table.liveio table {
 table th.icon {
   width: 8px;
 }
+table.peers {
+}
+
+/* format the contents of any element like a pre element */
+.verbatim {
+    display: block;
+    font-family: monospace; 
+    white-space: pre;
+}
 
 .menublock {
   width: 160px;
@@ -442,6 +451,9 @@ table th.icon {
 .navmenu ul li.people a, #legacy-ui-body .app-grid .fas.people {
   background-image: url('/images/icons/group.png');
 }
+.navmenu ul li.peers a, #legacy-ui-body .app-grid .fas.peers {
+  background-image: url('/images/icons/forum.png');
+}
 .navmenu ul li.cloud a, #legacy-ui-body .app-grid .fas.cloud {
   background-image: url('/images/icons/bricks.png');
 }
@@ -463,6 +475,9 @@ table th.icon {
 }
 .navmenu ul li.logout a, #legacy-ui-body .app-grid .fas.logout {
   background-image: url('/images/icons/door_in.png');
+}
+.navmenu ul li.close a, #legacy-ui-body .app-grid .fas.close {
+  background-image: url('/images/icons/book_previous.png');
 }
 
 #legacy-ui-body .app-grid .fas.fa-plus {
@@ -541,6 +556,32 @@ table th.icon {
 .button-grid > * {
 }
 
+/* Grid layouts with one to four horizontal items */
+.one-col-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96%, auto));
+}
+.two-col-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(48%, auto));
+}
+.three-col-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(32%, auto));
+}
+.four-col-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(24%, auto));
+}
+.five-col-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(19%, auto));
+}
+.one-col-grid > *, .two-col-grid > *, .three-col-grid > *, .four-col-grid > *,
+.five-col-grid > * {
+}
+
+
 /* Cloud instance grid */
 .cloud-instance-grid {
   display: grid;
@@ -567,6 +608,17 @@ table th.icon {
 .cloud-instance-grid > div.cloud-instance-grid-right {
     grid-column-start: 10;
     grid-column-end: 12;
+}
+.one-column-grid {
+  display: grid;
+  grid-row-gap: 2px;
+  grid-template-columns: repeat(1, 1fr);
+}
+.two-column-grid {
+  display: grid;
+  grid-column-gap: 10px;
+  grid-row-gap: 2px;
+  grid-template-columns: repeat(2, 1fr);
 }
 
 /* align checkboxes vertically with text */
@@ -985,17 +1037,30 @@ div.archive pre {
 .error {
     background-image: url('/images/icons/exclamation.png');
     background-repeat: no-repeat;
- }
+    background-position: left center;
+}
 .warn {
     background-image: url('/images/icons/error.png');
     background-repeat: no-repeat;
- }
+    background-position: left center;
+}
 .info {
     background-image: url('/images/icons/information.png');
     background-repeat: no-repeat;
+    background-position: left center;
 }
 .ok {
     background-image: url('/images/icons/accept.png');
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+.personal {
+    background-image: url('/images/icons/personal.png');
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+.tip {
+    background-image: url('/images/icons/lightbulb.png');
     background-repeat: no-repeat;
 }
 .urllink {
@@ -1561,6 +1626,39 @@ div.savestatus {
 #confirm-dialog {
     background: #fff;
 }
+
+/* NOTE: used to reserve space for tips accordion to avoid 'jump' on load */
+.tips-placeholder {
+    height: 22px;
+}
+
+/* Mark optional and required form fields */
+form.needs-validation input, form.needs-validation select, form.needs-validation textarea {
+  border: 1px solid grey;
+  border-radius: 4px;
+  border-width: 1px;
+  border-left-width: thick;
+}
+form.needs-validation input[type=submit] {
+  border-left-width: thin;
+  padding: 2px 8px;
+}
+form.needs-validation :optional {
+    border-left-color: silver;
+}
+form.needs-validation :required {
+    border-left-color: limegreen;
+}
+form.needs-validation :valid:required {
+    border-left-color: green;
+}
+/* NOTE: text mentions mandatory field marking with this class - keep in sync 
+   with '*:required' color above */
+.highlight_required {
+    color: limegreen;
+    font-weight: bold;
+}
+
 
 /* 
 *************************************************************************

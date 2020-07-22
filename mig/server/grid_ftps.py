@@ -88,6 +88,7 @@ except ImportError:
     print "WARNING: the python OpenSSL module is required for FTPS"
     OpenSSL = None
 
+from shared.accountstate import check_account_accessible
 from shared.base import invisible_path, force_utf8
 from shared.conf import get_configuration_object
 from shared.fileio import user_chroot_exceptions
@@ -97,9 +98,9 @@ from shared.griddaemons.ftps import default_max_user_hits, \
     get_fs_path, acceptable_chmod, refresh_user_creds, refresh_share_creds, \
     update_login_map, login_map_lookup, hit_rate_limit, expire_rate_limit, \
     check_twofactor_session, validate_auth_attempt
-from shared.tlsserver import hardened_openssl_context
 from shared.logger import daemon_logger, register_hangup_handler
 from shared.pwhash import make_scramble
+from shared.tlsserver import hardened_openssl_context
 from shared.useradm import check_password_hash
 from shared.validstring import possible_user_id, possible_sharelink_id
 
@@ -188,10 +189,11 @@ class MiGUserAuthorizer(DummyAuthorizer):
 
         The following is checked before granting auth:
         1) Valid username
-        2) Valid user (Does user exist and enabled ftps)
-        3) Valid 2FA session (if 2FA is enabled)
-        4) Hit rate limit (Too many auth attempts)
-        5) Valid password (if password enabled)
+        2) Valid user (Does user exist with enabled FTPS)
+        3) Account is active and not expired
+        4) Valid 2FA session (if 2FA is enabled)
+        5) Hit rate limit (Too many auth attempts)
+        6) Valid password (if password enabled)
         """
         secret = None
         disconnect = False
@@ -200,6 +202,7 @@ class MiGUserAuthorizer(DummyAuthorizer):
         password_enabled = False
         invalid_username = False
         invalid_user = False
+        account_accessible = False
         valid_password = False
         valid_twofa = False
         exceeded_rate_limit = False
@@ -228,8 +231,8 @@ class MiGUserAuthorizer(DummyAuthorizer):
 
         if self.last_expire + self.min_expire_delay < time.time():
             self.last_expire = time.time()
-            expire_rate_limit(configuration, "ftps", 
-                expire_delay=self.min_expire_delay)
+            expire_rate_limit(configuration, "ftps",
+                              expire_delay=self.min_expire_delay)
         if hit_rate_limit(configuration, 'ftps', client_ip, username,
                           max_user_hits=max_user_hits):
             exceeded_rate_limit = True
@@ -253,6 +256,8 @@ class MiGUserAuthorizer(DummyAuthorizer):
             else:
                 # list of User login objects for username
                 entries = [self.user_table[username]]
+                account_accessible = check_account_accessible(configuration,
+                                                              username, 'ftps')
             for entry in entries:
                 if entry['pwd'] is not None:
                     password_enabled = True
@@ -280,6 +285,7 @@ class MiGUserAuthorizer(DummyAuthorizer):
             secret=secret,
             invalid_username=invalid_username,
             invalid_user=invalid_user,
+            account_accessible=account_accessible,
             valid_twofa=valid_twofa,
             authtype_enabled=password_enabled,
             valid_auth=valid_password,

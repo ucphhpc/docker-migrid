@@ -730,6 +730,15 @@ background: url(/images/icons/code.png) left center no-repeat;
 .ext_xml { background: url(/images/icons/code.png) left center no-repeat; }
 .ext_zip { background: url(/images/icons/zip.png) left center no-repeat; }
 
+.twofactor.authlogo {
+    background-image: url(/images/icons/2fa-code.png);
+    background-position: center;
+    background-size: 120px;
+    background-repeat: no-repeat;
+    width: 100%;
+    height: 124px;
+}
+
 .ui-draggable-dragging {
     /*background-color: red;*/
 }
@@ -899,7 +908,7 @@ background: url(/images/icons/code.png) left center no-repeat;
     width: 40%;
 }
 .form_container input:not([type="checkbox"]):not([type="submit"]), .form_container textarea,
-.form_container select, .form_container fill_space {
+.form_container select, .form_container .fill_space {
     width: 98%;
     display: block;
     padding: 2px;
@@ -907,6 +916,23 @@ background: url(/images/icons/code.png) left center no-repeat;
 .form_container select, .form_container textarea {
     width: 99%;
 }
+.form_container .form-cell {
+    width: 96%;
+}
+.form_container .form-cell .fill-width {
+    width: 98%;
+}
+.form_container .form-row .fill-width {
+    width: 98%;
+}
+/* NOTE: match height of drop-downs with text fields when inside UI-widget
+         like on peers page and without breaking in general on V2 
+*/
+.ui-widget-content .form_container .form-cell .themed-select {
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
 
 #submit_button {
     width: auto;
@@ -1047,6 +1073,42 @@ background: url(/images/icons/code.png) left center no-repeat;
     border: 0;
     vertical-align: middle;
 }
+
+/* V2 Account request form */
+/* form with field grid */
+#account-request-grid .form-row {
+    display: grid;
+    grid-gap: 10px;
+    grid-template-columns: repeat(auto-fill, 32%);
+    margin: 10px 0px;
+}
+#account-request-grid .form-row.single-entry {
+    grid-template-columns: repeat(auto-fill, 98%);
+}
+#account-request-grid .form-row .single-entry .form-cell{
+    width: 98%;
+    display: block;
+}
+#account-request-grid .form-row select {
+    width: 100%;
+}
+
+/* Tips in Home page below apps */
+#tips-container {
+    width: auto;
+}
+#tips-content .tips-entry h4 {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 700;
+    padding-top: 5px;
+    padding-bottom: 0;
+    margin: 0;
+}
+#tips-content .tips-entry p {
+    font-size: 14px;
+}
+
 
 /* Cloud button grid layout */
 .manage-cloud-instance, .cloud-instance-input {

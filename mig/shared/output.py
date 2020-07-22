@@ -34,6 +34,7 @@ import traceback
 from binascii import hexlify
 
 import shared.returnvalues as returnvalues
+from shared.bailout import bailout_title
 from shared.defaults import file_dest_sep, keyword_any
 from shared.html import get_xgi_html_header, get_xgi_html_footer, \
     vgrid_items, html_post_helper, tablesorter_pager
@@ -46,22 +47,20 @@ row_name = ('even', 'odd')
 
 def reject_main(client_id, user_arguments_dict):
     """A simple main-function to use if functionality backend is disabled"""
-    return ([
-        {'object_type': 'title', 'text': 'Access Error'},
-        {'object_type': 'header', 'text': 'Access Error'},
-        {'object_type': 'error_text', 'text':
-         "This backend is disabled by site configuration!"}
-    ], returnvalues.CLIENT_ERROR)
+    output_objs = [bailout_title(None, 'Access Error'),
+                   {'object_type': 'header', 'text': 'Access Error'},
+                   {'object_type': 'error_text', 'text':
+                    "This backend is disabled by site configuration!"}]
+    return (output_objs, returnvalues.CLIENT_ERROR)
 
 
 def dummy_main(client_id, user_arguments_dict):
     """Dummy main-function to override with backend import"""
-    return ([
-        {'object_type': 'title', 'text': 'Internal Error'},
-        {'object_type': 'header', 'text': 'Internal Error'},
-        {'object_type': 'error_text', 'text':
-         "This backend should always be overriden!"}
-    ], returnvalues.SYSTEM_ERROR)
+    output_objs = [bailout_title(None, 'Internal Error'),
+                   {'object_type': 'header', 'text': 'Internal Error'},
+                   {'object_type': 'error_text', 'text':
+                    "This backend should always be overriden!"}]
+    return (output_objs, returnvalues.SYSTEM_ERROR)
 
 
 def txt_table_if_have_keys(header, input_dict, keywordlist):
@@ -1406,6 +1405,47 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
             lines.append('<tr><td>Resources</td><td>%s</td></tr>'
                          % ', '.join(provider_links))
             lines.append('</table>')
+        elif i['object_type'] == 'peers':
+            peers = i['peers']
+            lines.append('''
+<table class="peers columnsort" id="peers">
+<thead class="title">
+    <tr>
+        <th>Full Name</th>
+        <th>Organization</th>
+        <th>Email</th>
+        <th>Country</th>
+        <th>Kind</th>
+        <th>Label</th>
+        <th>Expire</th>
+        <th>Actions</th>
+    </tr>
+</thead>
+<tbody>
+''')
+            if not peers:
+                lines.append('''
+<td colspan=8>No peers registered yet ...</td>
+''')
+
+            for single_peer in peers:
+                editlink = single_peer.get('editpeerlink', '')
+                dellink = single_peer.get('delpeerlink', '')
+                if editlink:
+                    editlink = html_link(editlink)
+                if dellink:
+                    dellink = html_link(dellink)
+                single_peer['action_links'] = "%s %s" % (editlink, dellink)
+                lines.append('''<tr>
+<td>%(full_name)s</td><td>%(organization)s</td><td>%(email)s</td>
+<td>%(country)s</td><td>%(kind)s</td><td>%(label)s</td><td>%(expire)s</td>
+<td>%(action_links)s</td>
+</tr>
+''' % single_peer)
+            lines.append('''
+</tbody>
+</table>''')
+
         elif i['object_type'] == 'frozenarchives':
             frozenarchives = i['frozenarchives']
             lines.append('''

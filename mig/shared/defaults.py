@@ -75,6 +75,9 @@ final_states = ['FINISHED', 'CANCELED', 'EXPIRED', 'FAILED']
 
 maxfill_fields = ['CPUTIME', 'NODECOUNT', 'CPUCOUNT', 'MEMORY', 'DISK']
 
+peer_kinds = ['course', 'project', 'collaboration']
+peers_fields = ['full_name', 'organization', 'email', 'country']
+
 mqueue_prefix = 'message_queues'
 default_mqueue = 'default'
 mqueue_empty = 'NO MESSAGES'
@@ -116,6 +119,14 @@ default_https_port = 443
 
 cert_valid_days = 365
 oid_valid_days = 365
+cert_auto_extend_days = 30
+oid_auto_extend_days = 30
+
+# Strictly ordered list of account status values to enable use of filemarks
+# for caching account status using integer timestamps outside user DB.
+# IMPORTANT: generally do NOT rearrange order, and ONLY append new values
+#            unless also purging ALL status filemarks in the process.
+valid_account_status = ['active', 'temporal', 'suspended', 'retired']
 
 auth_openid_mig_db = 'mod_auth_openid-mig-users.db'
 auth_openid_ext_db = 'mod_auth_openid-ext-users.db'
@@ -133,6 +144,8 @@ ftps_conf_dir = '.ftps'
 seafile_conf_dir = '.seafile'
 duplicati_conf_dir = '.duplicati'
 cloud_conf_dir = '.cloud'
+expire_marks_dir = 'expire_marks'
+status_marks_dir = 'status_marks'
 job_output_dir = 'job_output'
 transfer_output_dir = 'transfer_output'
 cron_output_dir = 'cron_output'
@@ -152,6 +165,8 @@ sharelinks_filename = 'sharelinks'
 seafile_ro_dirname = 'seafile_readonly'
 twofactor_key_name = 'twofactor_key'
 twofactor_interval_name = 'twofactor_interval'
+peers_filename = 'peers'
+pending_peers_filename = 'pending_peers'
 # Trash really goes to this location but only accessible through link
 trash_destdir = '.trash'
 trash_linkname = 'Trash'
@@ -360,7 +375,7 @@ STRONG_SSH_LEGACY_MACS = ",".join([BEST_SSH_LEGACY_MACS, SAFE_SSH_LEGACY_MACS])
 
 # Detect and ban cracking attempts and unauthorized vulnerability scans
 # A pattern to match usernames unambiguously identifying cracking attempts
-CRACK_USERNAME_REGEX = '(root|bin|daemon|adm|admin|administrator|superadmin|lp|operator|controller|ftp|irc|nobody|sys|pi|guest|financeiro|Management|www|www-data|mysql|postgres|oracle|mongodb|sybase|redis|hadoop|zimbra|cpanel|plesk|openhabian|tomcat|exim|postfix|sendmail|mailnull|postmaster|mail|uucp|news|teamspeak|git|svn|cvs|user|ftpuser|ubuntu|ubnt|supervisor|csgoserver|device|laboratory|deploy|support|info|test[0-9]*|user[0-9]*|[0-9]+|root;[a-z0-9]+)'
+CRACK_USERNAME_REGEX = '(root|bin|daemon|adm|admin|administrator|superadmin|localadmin|mysqladmin|lp|operator|controller|ftp|irc|nobody|sys|pi|guest|financeiro|Management|www|www-data|mysql|postgres|oracle|mongodb|sybase|redis|hadoop|zimbra|cpanel|plesk|openhabian|tomcat|exim|postfix|sendmail|mailnull|postmaster|mail|uucp|news|teamspeak|git|svn|cvs|user|ftpuser|ubuntu|ubnt|supervisor|csgoserver|device|laboratory|deploy|support|info|test[0-9]*|user[0-9]*|[0-9]+|root;[a-z0-9]+)'
 # A pattern to match failed web access prefixes unambiguously identifying
 # unauthorized vulnerability scans
 CRACK_WEB_REGEX = '((HNAP1|GponForm|provisioning|provision|prov|polycom|yealink|CertProv|phpmyadmin|admin|cfg|wp|wordpress|cms|blog|old|new|test|dev|tmp|temp|remote|mgmt|properties|authenticate|tmui|ddem|a2billing|vtigercrm|secure|rpc|recordings|dana-na)(/.*|)|.*(Login|login|configuration|header|admin)\.(php|jsp|asp))'

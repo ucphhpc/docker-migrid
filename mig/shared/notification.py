@@ -47,13 +47,12 @@ try:
 except ImportError, ierr:
     gnupg = None
 
-from shared.base import force_utf8, generate_https_urls, extract_field
+from shared.base import force_utf8, generate_https_urls
 from shared.defaults import email_keyword_list, job_output_dir, \
     transfer_output_dir
 from shared.fileio import send_message_to_grid_notify
 from shared.safeinput import is_valid_simple_email
 from shared.settings import load_settings
-from shared.useradm import expand_openid_alias
 
 # might be python 2.4, without xml.etree
 # ...in which case: better not configure usage_record_dir
@@ -82,9 +81,12 @@ def create_notify_message(
                 'site': configuration.short_title}
 
     entity_mapper = {'vgridmember': 'member', 'vgridowner': 'owner',
-                     'vgridresource': 'resource', 'resourceowner': 'owner'}
-    accept_mapper = {'vgridaccept': 'vgrid', 'resourceaccept': 'resource'}
-    reject_mapper = {'vgridreject': 'vgrid', 'resourcereject': 'resource'}
+                     'vgridresource': 'resource', 'resourceowner': 'owner',
+                     'peeraccount': 'peer'}
+    accept_mapper = {'vgridaccept': 'vgrid', 'resourceaccept': 'resource',
+                     'peeraccept': 'peer'}
+    reject_mapper = {'vgridreject': 'vgrid', 'resourcereject': 'resource',
+                     'peerreject': 'peer'}
 
     frame_template = """---
 
@@ -181,16 +183,25 @@ Please contact the %(site)s team for details about expire policies.
             txt += frame_template % request_text
         elif request_type in accept_mapper.keys():
             kind = accept_mapper[request_type]
-            header = '%s %s admission note' % (configuration.short_title, kind)
+            if 'vgrid' == kind:
+                show_kind = configuration.site_vgrid_label
+            else:
+                show_kind = kind
+            header = '%s %s admission note' % (configuration.short_title,
+                                               show_kind)
             txt += """This is a %s admission note sent on behalf of %s:
-""" % (kind, from_id)
+""" % (show_kind, from_id)
             txt += frame_template % request_text
         elif request_type in reject_mapper.keys():
             kind = reject_mapper[request_type]
+            if 'vgrid' == kind:
+                show_kind = configuration.site_vgrid_label
+            else:
+                show_kind = kind
             header = '%s %s access rejection note' \
-                % (configuration.short_title, kind)
+                % (configuration.short_title, show_kind)
             txt += """This is a %s access rejection note sent on behalf of %s:
-""" % (kind, from_id)
+""" % (show_kind, from_id)
             txt += frame_template % request_text
         elif request_type in entity_mapper.keys():
             entity = entity_mapper[request_type]
@@ -205,6 +216,13 @@ Please contact the %(site)s team for details about expire policies.
 who would like it to be added as a %s in %s and included the reason:
 %s
 """ % (request_type, from_id, entity, target_name, request_text)
+            elif request_type == "peeraccount":
+                txt += """This is a %s request sent on behalf of
+%s
+who requested an external user account on %s and specifically pointed to you as
+the local sponsor or representative with the account request comment:
+%s
+""" % (request_type, from_id, target_name, request_text)
             else:
                 txt += """This is a %s request sent on behalf of
 %s
@@ -215,24 +233,38 @@ who would like to be added as a %s in %s and included the reason:
             txt += '''
 If you want to handle the %s request please visit:
 ''' % entity
+
+            vgrid_res_help = ''' and add or
+reject it.
+You can find the request in the Pending Requests table there and either click
+the green plus-icon to accept it or the red minus-icon to reject it.
+
+'''
+
             if request_type.startswith('vgrid'):
                 txt += generate_https_urls(
                     configuration,
                     '%(auto_base)s/%(auto_bin)s/adminvgrid.py?' +
                     'vgrid_name=%(enc_target_name)s',
                     var_dict)
+                txt += vgrid_res_help
             elif request_type.startswith('resource'):
                 txt += generate_https_urls(
                     configuration,
                     '%(auto_base)s/%(auto_bin)s/resadmin.py?' +
                     'unique_resource_name=%(enc_target_name)s',
                     var_dict)
-            txt += ''' and add or
-reject it.
-You can find the request in the Pending Requests table there and either click
-the green plus-icon to accept it or the red minus-icon to reject it.
+                txt += vgrid_res_help
+            elif request_type.startswith('peer'):
+                txt += generate_https_urls(
+                    configuration,
+                    '%(auto_base)s/%(auto_bin)s/peers.py',
+                    var_dict)
+                txt += ''' and accept or
+reject it from the Requested Peers tab.
 
 '''
+
         else:
             txt += 'INVALID REQUEST TYPE: %s\n\n' % request_type
 
@@ -298,6 +330,7 @@ documentation.
         short_title = configuration.short_title
         migoid_title = configuration.user_mig_oid_title
         migoid_url = configuration.migserver_https_mig_oid_url
+        entry_url = configuration.migserver_http_url
         header = 'Re: %s OpenID request for %s' % (short_title, user_name)
         txt += """This is an auto-generated intro message from %s to inform
 about the creation or renewal of your user account with OpenID login.
@@ -305,13 +338,16 @@ about the creation or renewal of your user account with OpenID login.
 You can log in with username %s and your chosen password at
 %s
 
+The terms of use are always available from %s along with our privacy and cookie
+policy.
+
 Please contact the %s admins in case you should ever loose or forget your
 password. The same applies if you suspect or know that someone may have gotten
 hold of your login.
 
 Regards,
 The %s Admins
-""" % (short_title, user_email, migoid_url, short_title, short_title)
+""" % (short_title, user_email, migoid_url, entry_url, short_title, short_title)
     elif status == 'ACCOUNTEXPIRE':
         from_id = args_list[0]
         user_email = args_list[1]
@@ -790,13 +826,6 @@ def send_system_notification(user_id, category, message, configuration):
     logger = configuration.logger
     if not configuration.site_enable_notify:
         logger.warning("System notify helper is disabled in configuration!")
-        return False
-    if not user_id:
-        logger.error("Invalid user_id: %s" % user_id)
-        return False
-    client_id = expand_openid_alias(user_id, configuration)
-    if not client_id or not extract_field(client_id, 'email'):
-        logger.error("send_system_notification: Invalid user_id: %s" % user_id)
         return False
     if not isinstance(category, list):
         logger.error("send_system_notification: category must be a list")

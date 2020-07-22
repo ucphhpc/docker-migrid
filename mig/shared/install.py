@@ -311,6 +311,7 @@ def generate_confs(
     listen_clause='#Listen',
     serveralias_clause='#ServerAlias',
     distro='Debian',
+    autolaunch_page=None,
     landing_page=None,
     skin='migrid-basic',
     short_title='MiG',
@@ -1275,9 +1276,22 @@ ssh-keygen -f %(__DAEMON_KEYCERT__)s -y > %(__DAEMON_PUBKEY__)s""" % user_dict
         xgi_auth = 'cgi-auth'
     user_dict['__TWOFACTOR_PAGE__'] = os.path.join(
         '/', xgi_auth, 'twofactor.py')
+    if autolaunch_page is None:
+        if enable_gdp:
+            backend = 'gdpman.py'
+        else:
+            backend = 'autolaunch.py'
+        user_dict['__AUTOLAUNCH_PAGE__'] = os.path.join(
+            '/', xgi_bin, backend)
+    else:
+        user_dict['__AUTOLAUNCH_PAGE__'] = autolaunch_page
     if landing_page is None:
+        if enable_gdp:
+            backend = 'gdpman.py'
+        else:
+            backend = 'home.py'
         user_dict['__LANDING_PAGE__'] = os.path.join(
-            '/', xgi_bin, 'dashboard.py')
+            '/', xgi_bin, backend)
     else:
         user_dict['__LANDING_PAGE__'] = landing_page
 
@@ -1294,6 +1308,10 @@ ssh-keygen -f %(__DAEMON_KEYCERT__)s -y > %(__DAEMON_PUBKEY__)s""" % user_dict
     vgrid_aliases = [vgrid_label, vgrid_label.lower(), vgrid_label.upper()]
     vgrid_aliases = [i for i in vgrid_aliases if i != 'vgrid']
     user_dict['__VGRID_ALIAS_REGEX__'] = '(%s)' % '|'.join(vgrid_aliases)
+
+    secscan_addr_list = secscan_addr.split()
+    secscan_addr_pattern = '(' + '|'.join(secscan_addr_list) + ')'
+    user_dict['__SECSCAN_ADDR_PATTERN__'] = secscan_addr_pattern
 
     # Collect final variable values for log
     sorted_keys = user_dict.keys()

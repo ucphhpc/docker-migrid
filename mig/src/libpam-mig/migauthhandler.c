@@ -30,6 +30,12 @@
 #include <string.h>
 #include <dlfcn.h>
 #include <time.h>
+/* TODO: Python should really be included first to avoid warnings about 
+   redefined _POSIX_C_SOURCE in line with:
+   https://bugs.python.org/issue1045893 
+   https://stackoverflow.com/questions/10056393/g-with-python-h-how-to-compile
+   It is a bit complicated here due to the code structure, however.
+*/
 #include <Python.h>
 #include "migauth.h"
 
@@ -50,6 +56,7 @@
 #define MIG_MAX_SECRET_HITS         (0x001000)
 #define MIG_SKIP_NOTIFY             (0x002000)
 #define MIG_AUTHTYPE_PASSWORD       (0x004000)
+#define MIG_ACCOUNT_INACCESSIBLE    (0x008000)
 
 #ifndef MIG_HOME
 #define MIG_HOME "/home/mig/mig"
@@ -75,9 +82,9 @@ static void pyrun(const char *cmd, ...)
     va_end(args);
     int pyres = PyRun_SimpleString(pycmd);
     if (pyres == 0) {
-        WRITELOGMESSAGE(LOG_DEBUG, "pyrun OK: %s", pycmd);
+        WRITELOGMESSAGE(LOG_DEBUG, "pyrun OK: %s\n", pycmd);
     } else {
-        WRITELOGMESSAGE(LOG_ERR, "pyrun FAILED: %s", pycmd);
+        WRITELOGMESSAGE(LOG_ERR, "pyrun FAILED: %s\n", pycmd);
     }
 }
 
@@ -111,9 +118,11 @@ static bool mig_pyinit()
         pyrun("from shared.griddaemons.sftp import validate_auth_attempt");
         pyrun("from shared.griddaemons.sftp import active_sessions");
         pyrun("from shared.griddaemons.sftp import expire_rate_limit");
+        pyrun("from shared.griddaemons.sftp import check_twofactor_session");
         pyrun
             ("from shared.logger import daemon_logger, register_hangup_handler");
         pyrun("from shared.conf import get_configuration_object");
+        pyrun("from shared.accountstate import check_account_accessible");
         pyrun("from shared.pwhash import scramble_digest");
         pyrun("configuration = get_configuration_object(skip_log=True)");
         pyrun("log_level = configuration.loglevel");
@@ -124,7 +133,7 @@ static bool mig_pyinit()
     return true;
 }
 
-static void mig_pyexit()
+static bool mig_pyexit()
 {
     if (libpython_handle == NULL) {
         WRITELOGMESSAGE(LOG_DEBUG, "Python already finalized\n");
@@ -133,6 +142,7 @@ static void mig_pyexit()
         dlclose(libpython_handle);
         libpython_handle = NULL;
     }
+    return true;
 }
 
 static char *mig_scramble_digest(const char *key)
@@ -184,6 +194,8 @@ static bool mig_hit_rate_limit(const char *username, const char *address)
     return result;
 }
 
+/*** 
+ * NOTE: Disabled for now, 
 static bool mig_exceeded_max_sessions(const char *username, const char *address)
 {
     bool result = false;
@@ -216,6 +228,7 @@ static bool mig_exceeded_max_sessions(const char *username, const char *address)
     }
     return result;
 }
+***/
 
 static bool mig_validate_username(const char *username)
 {
@@ -318,12 +331,15 @@ static bool register_auth_attempt(const unsigned int mode,
         strncat(&pycmd[0], "skip_notify=True, ",
                 MAX_PYCMD_LENGTH - strlen(pycmd));
     }
+    if (mode & MIG_ACCOUNT_INACCESSIBLE) {
+        strncat(&pycmd[0], "account_accessible=False, ",
+                MAX_PYCMD_LENGTH - strlen(pycmd));
+    }
     strncat(&pycmd[0], ")", MAX_PYCMD_LENGTH - strlen(pycmd));
     if (MAX_PYCMD_LENGTH == strlen(pycmd)) {
         WRITELOGMESSAGE(LOG_ERR, "register_auth_attempt: pycmd overflow\n");
         return false;
     }
-    WRITELOGMESSAGE(LOG_DEBUG, "python call: %s", &pycmd[0]);
     pyrun(&pycmd[0]);
     PyObject *py_authorized = PyObject_GetAttrString(py_main, "authorized");
     if (py_authorized == NULL) {
@@ -331,6 +347,66 @@ static bool register_auth_attempt(const unsigned int mode,
     } else {
         result = PyObject_IsTrue(py_authorized);
         Py_DECREF(py_authorized);
+    }
+
+    return result;
+}
+
+static bool mig_check_twofactor_session(const char *username,
+                                        const char *address)
+{
+    bool result = false;
+    bool strict_address = false;
+
+    pyrun
+        ("twofactor_strict_address = configuration.site_twofactor_strict_address");
+    PyObject *py_twofactor_strict_address =
+        PyObject_GetAttrString(py_main, "twofactor_strict_address");
+    if (py_twofactor_strict_address == NULL) {
+        WRITELOGMESSAGE(LOG_ERR,
+                        "Missing python variable: py_twofactor_strict_address\n");
+        return result;
+    } else {
+        strict_address = PyObject_IsTrue(py_twofactor_strict_address);
+        Py_DECREF(py_twofactor_strict_address);
+    }
+    if (strict_address) {
+        pyrun
+            ("valid_twofactor = check_twofactor_session(configuration, '%s', '%s', 'sftp-pw')",
+             username, address);
+    } else {
+        pyrun
+            ("valid_twofactor = check_twofactor_session(configuration, '%s', None, 'sftp-pw')",
+             username);
+    }
+    PyObject *py_valid_twofactor =
+        PyObject_GetAttrString(py_main, "valid_twofactor");
+    if (py_valid_twofactor == NULL) {
+        WRITELOGMESSAGE(LOG_ERR,
+                        "Missing python variable: py_valid_twofactor\n");
+    } else {
+        result = PyObject_IsTrue(py_valid_twofactor);
+        Py_DECREF(py_valid_twofactor);
+    }
+
+    return result;
+}
+
+static bool mig_check_account_accessible(const char *username)
+{
+    bool result = false;
+
+    pyrun
+      ("account_accessible = check_account_accessible(configuration, '%s', 'sftp')",
+       username);
+    PyObject *py_account_accessible =
+        PyObject_GetAttrString(py_main, "account_accessible");
+    if (py_account_accessible == NULL) {
+        WRITELOGMESSAGE(LOG_ERR,
+                        "Missing python variable: py_account_accessible\n");
+    } else {
+        result = PyObject_IsTrue(py_account_accessible);
+        Py_DECREF(py_account_accessible);
     }
 
     return result;

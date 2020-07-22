@@ -81,11 +81,10 @@ def main(client_id, user_arguments_dict):
     title_entry['script']['advanced'] += add_import
     title_entry['script']['init'] += add_init
     title_entry['script']['ready'] += add_ready
-    # NOTE: use wide version to allow inline status messages in V2
-    title_entry['script']['body'] = "class='staticpage wide'"
+    title_entry['script']['body'] = "class='staticpage'"
 
     header_entry = {'object_type': 'header', 'text':
-                    'Welcome to the %s OpenID account request page' %
+                    '%s account request - with OpenID login' %
                     configuration.short_title}
     output_objects.append(header_entry)
 
@@ -160,14 +159,14 @@ to your old files, jobs and privileges. </p>''' %
     fill_helpers.update({'site_signup_hint': configuration.site_signup_hint})
     fill_helpers.update(user_fields)
     html = """
-<p class="sub-title">Please enter your information in at least the <span>mandatory</span> fields below and press the Send button to submit the OpenID account request to the %(site)s administrators.</p>
+<p class="sub-title">Please enter your information in at least the <span class='highlight_required'>mandatory</span> fields below and press the Send button to submit the account request to the %(site)s administrators.</p>
+
+<p class='personal leftpad highlight_message'>
+IMPORTANT: we need to verify your identity, so please use an Email address
+clearly affiliated with your Organization!
+</p>
 
 %(site_signup_hint)s
-
-<p class='criticaltext highlight_message'>
-IMPORTANT: Please help us verify your identity by providing Organization and
-Email data that we can easily validate!
-</p>
 
 <hr />
 
@@ -199,8 +198,7 @@ Email data that we can easily validate!
 <tr><td class='mandatory label'>Password</td><td><input id='password_field' type=password name=password minlength=%(password_min_len)d maxlength=%(password_max_len)d value='%(password)s' required pattern='.{%(password_min_len)d,%(password_max_len)d}' title='Password of your choice, see help box for limitations' /> </td><td class=fill_space><br /></td></tr>
 <tr><td class='mandatory label'>Verify password</td><td><input id='verifypassword_field' type=password name=verifypassword minlength=%(password_min_len)d maxlength=%(password_max_len)d value='%(verifypassword)s' required pattern='.{%(password_min_len)d,%(password_max_len)d}' title='Repeat your chosen password' /></td><td class=fill_space><br /></td></tr>
 <!-- NOTE: we technically allow saving the password on scrambled form hide it by default -->
-<tr class='hidden'><td class='optional label'>Password recovery</td><td class=''><input id='passwordrecovery_checkbox' type=checkbox name=passwordrecovery></td>
-</td><td class=fill_space><br/></td></tr>
+<tr class='hidden'><td class='optional label'>Password recovery</td><td class=''><input id='passwordrecovery_checkbox' type=checkbox name=passwordrecovery></td><td class=fill_space><br/></td></tr>
 <tr><td class='optional label'>Optional comment or reason why you should<br />be granted a %(site)s account:</td><td><textarea id='comment_field' rows=4 name=comment title='A free-form comment where you can explain what you need the account for' ></textarea></td><td class=fill_space><br /></td></tr>
 <tr><td class='label'><!-- empty area --></td><td>
 

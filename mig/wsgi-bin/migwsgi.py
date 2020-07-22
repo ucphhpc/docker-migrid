@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # migwsgi.py - Provides the entire WSGI interface
-# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -31,13 +31,13 @@ import cgi
 import time
 
 import shared.returnvalues as returnvalues
-from shared.bailout import bailout_helper, crash_helper
+from shared.bailout import bailout_helper, crash_helper, filter_output_objects
 from shared.base import requested_page, allow_script
 from shared.defaults import download_block_size
 from shared.conf import get_configuration_object
 from shared.objecttypes import get_object_type_info
 from shared.output import validate, format_output, dummy_main, reject_main
-from shared.safeinput import valid_backend_name, html_escape
+from shared.safeinput import valid_backend_name, html_escape, InputException
 from shared.scriptinput import fieldstorage_to_dict
 
 
@@ -66,12 +66,26 @@ def stub(configuration, client_id, import_path, backend, user_arguments_dict,
 
     try:
         valid_backend_name(backend)
+    except InputException, iex:
+        _logger.error("%s refused to import invalid backend %r (%s): %s" %
+                      (_addr, backend, import_path, iex))
+        bailout_helper(configuration, backend, output_objects,
+                       header_text='User Error')
+        output_objects.extend([
+            {'object_type': 'error_text', 'text':
+             'Invalid backend: %s' % html_escape(backend)},
+            {'object_type': 'link', 'text': 'Go to default interface',
+             'destination': configuration.site_landing_page}
+        ])
+        return (output_objects, returnvalues.CLIENT_ERROR)
 
+    try:
         # Import main from backend module
 
         exec 'from %s import main' % import_path
     except Exception, err:
-        _logger.error("%s could not import %s: %s" % (_addr, import_path, err))
+        _logger.error("%s could not import %r (%s): %s" %
+                      (_addr, backend, import_path, err))
         bailout_helper(configuration, backend, output_objects)
         output_objects.extend([
             {'object_type': 'error_text', 'text':
@@ -147,22 +161,25 @@ def application(environ, start_response):
     from shared.httpsclient import extract_client_id
     client_id = extract_client_id(configuration, environ)
 
-    fieldstorage = cgi.FieldStorage(fp=environ['wsgi.input'],
-                                    environ=environ)
-    user_arguments_dict = fieldstorage_to_dict(fieldstorage)
-
     # default to html
 
+    default_content = 'text/html'
     output_format = 'html'
-    if user_arguments_dict.has_key('output_format'):
-        output_format = user_arguments_dict['output_format'][0]
 
     backend = "UNKNOWN"
     output_objs = []
+    user_arguments_dict = {}
+
     try:
         if not configuration.site_enable_wsgi:
             _logger.error("WSGI interface is disabled in configuration")
             raise Exception("WSGI interface not enabled for this site")
+
+        fieldstorage = cgi.FieldStorage(fp=environ['wsgi.input'],
+                                        environ=environ)
+        user_arguments_dict = fieldstorage_to_dict(fieldstorage)
+        if user_arguments_dict.has_key('output_format'):
+            output_format = user_arguments_dict['output_format'][0]
 
         # Environment contains python script _somewhere_ , try in turn
         # and fall back to dashboard if all fails
@@ -180,6 +197,8 @@ def application(environ, start_response):
                                                  user_arguments_dict)
         status = '200 OK'
     except Exception, exc:
+        import traceback
+        _logger.error("wsgi handling crashed:\n%s" % traceback.format_exc())
         _logger.error("handling of WSGI request for %s from %s failed: %s" %
                       (backend, client_id, exc))
         status = '500 ERROR'
@@ -191,7 +210,6 @@ def application(environ, start_response):
 
     (ret_code, ret_msg) = ret_val
 
-    default_content = 'text/html'
     if 'json' == output_format:
         default_content = 'application/json'
     elif 'html' != output_format:
@@ -216,8 +234,9 @@ def application(environ, start_response):
     # Explicit None means error during output formatting - empty string is okay
 
     if output is None:
-        _logger.error("WSGI %s output formatting failed: %s" % (output_format,
-                                                                output_objs))
+        output_filtered = filter_output_objects(configuration, output_objs)
+        _logger.error("WSGI %s output formatting failed: %s" %
+                      (output_format, output_filtered))
         output = 'Error: output could not be correctly delivered!'
 
     content_length = len(output)
@@ -225,26 +244,34 @@ def application(environ, start_response):
         # _logger.debug("WSGI adding explicit content length %s" % content_length)
         response_headers.append(('Content-Length', str(content_length)))
 
-    start_response(status, response_headers)
+    # NOTE: send response to client but don't crash e.g. on closed connection
+    try:
+        start_response(status, response_headers)
 
-    # NOTE: we consistently hit download error for archive files reaching ~2GB
-    #       with showfreezefile.py on wsgi but the same on cgi does NOT suffer
-    #       the problem for the exact same files. It seems wsgi has a limited
-    #       output buffer, so we explicitly force significantly smaller chunks
-    #       here as a workaround.
-    chunk_parts = 1
-    if content_length > download_block_size:
-        chunk_parts = content_length / download_block_size
-        if content_length % download_block_size != 0:
-            chunk_parts += 1
-        _logger.info("WSGI %s yielding %d output parts (%db)" %
-                     (backend, chunk_parts, content_length))
-    for i in xrange(chunk_parts):
-        # _logger.debug("WSGI %s yielding part %d / %d output parts" % \
-        #             (backend, i+1, chunk_parts))
-        # end index may be after end of content - but no problem
-        part = output[i*download_block_size:(i+1)*download_block_size]
-        yield part
-    if chunk_parts > 1:
-        _logger.info("WSGI %s finished yielding all %d output parts" %
-                     (backend, chunk_parts))
+        # NOTE: we consistently hit download error for archive files reaching ~2GB
+        #       with showfreezefile.py on wsgi but the same on cgi does NOT suffer
+        #       the problem for the exact same files. It seems wsgi has a limited
+        #       output buffer, so we explicitly force significantly smaller chunks
+        #       here as a workaround.
+        chunk_parts = 1
+        if content_length > download_block_size:
+            chunk_parts = content_length / download_block_size
+            if content_length % download_block_size != 0:
+                chunk_parts += 1
+            _logger.info("WSGI %s yielding %d output parts (%db)" %
+                         (backend, chunk_parts, content_length))
+        for i in xrange(chunk_parts):
+            # _logger.debug("WSGI %s yielding part %d / %d output parts" % \
+            #             (backend, i+1, chunk_parts))
+            # end index may be after end of content - but no problem
+            part = output[i*download_block_size:(i+1)*download_block_size]
+            yield part
+        if chunk_parts > 1:
+            _logger.info("WSGI %s finished yielding all %d output parts" %
+                         (backend, chunk_parts))
+    except IOError, ioe:
+        _logger.warning("WSGI %s for %s could not deliver output: %s" %
+                        (backend, client_id, ioe))
+    except Exception, exc:
+        _logger.error("WSGI %s for %s crashed during response: %s" %
+                      (backend, client_id, exc))

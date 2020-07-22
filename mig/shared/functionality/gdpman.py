@@ -30,15 +30,15 @@
 import os
 import tempfile
 
-from shared.auth import expire_twofactor_session, get_twofactor_secrets
+from shared.auth import get_twofactor_secrets
 import shared.returnvalues as returnvalues
 from shared.base import get_xgi_bin
 from shared.defaults import csrf_field
 from shared.functional import validate_input_and_cert
-from shared.gdp import ensure_user, get_projects, get_users, \
+from shared.gdp.all import ensure_user, get_projects, get_users, \
     get_active_project_client_id, project_accept_user, project_create, \
     project_invite_user, project_login, project_logout, project_remove_user, \
-    validate_user, get_project_info
+    validate_user, get_project_info, get_project_from_client_id
 from shared.handlers import safe_handler, get_csrf_limit, make_csrf_token
 from shared.html import twofactor_wizard_html, twofactor_wizard_js, \
     twofactor_token_html
@@ -171,6 +171,7 @@ def html_tmpl(
 
     fill_entries = {'csrf_field': csrf_field,
                     'csrf_token': csrf_token,
+                    'short_title': configuration.short_title,
                     }
 
     twofactor_enabled = False
@@ -260,7 +261,7 @@ def html_tmpl(
         <div id='project-tabs'>
         <ul class='fillwidth padspace'>"""
     if accepted_projects:
-        html += """<li><a href='#access_project_tab'>Access Project</a></li>"""
+        html += """<li><a href='#access_project_tab'>Open Project</a></li>"""
         tab_count += 1
     if info_projects:
         html += """<li><a href='#project_info_tab'>Project Info</a></li>"""
@@ -295,6 +296,9 @@ def html_tmpl(
         # TODO: should it check for enable2fa instead of twofactor_auth?
         if action == 'twofactor_auth':
             preselected_tab = tab_count
+        tab_count += 1
+    if twofactor_enabled:
+        html += """<li><a href='#logout_tab'>Logout</a></li>"""
         tab_count += 1
 
     html += """</ul>"""
@@ -338,7 +342,7 @@ def html_tmpl(
         <table class='gm_projects_table' style='border-spacing=0;'>
         <thead>
             <tr>
-                <th>Access project:</th>
+                <th>Open project:</th>
             </tr>
         </thead>
         <tbody>
@@ -369,8 +373,7 @@ def html_tmpl(
         <tbody>
             <tr><td>
                 <!-- NOTE: must have href for correct cursor on mouse-over -->
-                <a class='ui-button' id='access_project_button' href='#' onclick='submitform(\"access_project\"); return false;'>Login</a>
-                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
+                <a class='ui-button' id='access_project_button' href='#' onclick='submitform(\"access_project\"); return false;'>Open</a>
             </td></tr>
         </tbody>
         </table>
@@ -420,7 +423,6 @@ def html_tmpl(
             <tr><td>
                 <!-- NOTE: must have href for correct cursor on mouse-over -->
                 <a class='ui-button' id='project_info_button' href='#' onclick='showProjectInfo(); return false;'>Info</a>
-                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
             </td></tr>
         </tbody>
         </table>
@@ -475,7 +477,6 @@ def html_tmpl(
             <tr><td>
                 <!-- NOTE: must have href for correct cursor on mouse-over -->
                 <a class='ui-button' id='accept_user_button' href='#' onclick='submitform(\"accept_user\"); return false;'>Accept</a>
-                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
             </td></tr>
         </tbody>
         </table>
@@ -538,7 +539,6 @@ def html_tmpl(
             <tr><td>
                 <!-- NOTE: must have href for correct cursor on mouse-over -->
                 <a class='ui-button' id='invite_user_button' href='#' onclick='submitform(\"invite_user\"); return false;'>Invite</a>
-                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
             </td></tr>
         </tbody>
         </table>
@@ -605,7 +605,6 @@ def html_tmpl(
             <tr><td>
                 <!-- NOTE: must have href for correct cursor on mouse-over -->
                 <a class='ui-button' id='remove_user_button' href='#' onclick='submitform(\"remove_user\"); return false;'>Remove</a>
-                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
             </td></tr>
         </tbody>
         </table>
@@ -740,7 +739,6 @@ def html_tmpl(
             <tr><td>
                 <!-- NOTE: must have href for correct cursor on mouse-over -->
                 <a class='ui-button' id='create_project_button' href='#' onclick='submitform(\"create_project\"); return false;'>Create</a>
-                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
             </td></tr>
         </tbody>
         </table>
@@ -774,7 +772,6 @@ def html_tmpl(
             </td></tr>
             <tr><td>
                 <!-- NOTE: must have href for correct cursor on mouse-over -->
-                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
             </td></tr>
         </tbody>
         </table>
@@ -811,7 +808,8 @@ def html_tmpl(
         # TODO: we might want to protect QR code with repeat basic login
         #       or a simple timeout since last login (cookie age).
         html += twofactor_wizard_html(configuration)
-        check_url = '/%s/twofactor.py' % get_xgi_bin(configuration)
+        check_url = '/%s/twofactor.py?action=renew' % get_xgi_bin(
+            configuration)
         if twofactor_enabled:
             enable_hint = 'enable it (as you already did)'
         else:
@@ -822,80 +820,68 @@ def html_tmpl(
                              'demand', 'enable_hint': enable_hint})
 
         html += """
-        <tr class='otp_ready hidden'><td>
+        <tr class='otp_wizard otp_ready hidden'><td>
         </td></tr>
         """
 
         if not twofactor_enabled:
-            html += """<tr class='otp_ready hidden'><td>
+            html += """<tr class='otp_wizard otp_ready hidden'><td>
         Enable 2-factor authentication and<br/>
         <a class='ui-button' id='enable2fa_button' href='#' onclick='submitform(\"enable2fa\"); return false;'>Start Using %(site)s</a>
 </td></tr>
 """
-
         html += """
-        <tr><td>
-                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
-            </td></tr>
+<tr><td>
+</td></tr>
 </tbody>
 </table>
 </div>
 """
-
     if configuration.site_enable_twofactor and \
         (current_twofactor_dict.get("MIG_OID_TWOFACTOR", False) or
          current_twofactor_dict.get("EXT_OID_TWOFACTOR", False)):
         html += """<script>
     setOTPProgress(['otp_intro', 'otp_install', 'otp_import', 'otp_verify',
                     'otp_ready']);
-</script>"""
-
+</script>
+    <div id='logout_tab'>
+    <table class='gm_projects_table' style='border-spacing=0;'>
+    <thead>
+        <tr>
+            <th>Logout:</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td>
+            Are you sure you want to log out of %(short_title)s ?
+        </tr></td>
+    </tbody>
+    <table class='gm_projects_table' style='border-spacing=0;'>
+        <thead>
+            <tr>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>
+                <!-- NOTE: must have href for correct cursor on mouse-over -->
+                <a class='ui-button' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Yes</a>
+            </td></tr>
+        </tbody>
+        </table>
+    </table>
+    </div>
+<!- Tabs and form close tags ->
+</div>    
+</form>
+"""
     fill_helpers.update({
         'client_id': client_id,
     })
 
     fill_entries.update(fill_helpers)
-
-    html += """
-</div>"""
-
-    # Tabs and form close tags
-
-    html += """
-</form>
-"""
     html = html % fill_entries
 
-    return html
-
-
-def html_logout_tmpl(configuration, csrf_token):
-    """HTML logout template for GDP manager"""
-
-    fill_entries = {'csrf_field': csrf_field,
-                    'csrf_token': csrf_token,
-                    }
-
-    html = \
-        """
-    <form id='gm_logout_form' action='gdpman.py' method='post'>
-    <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
-    <input type='hidden' name='action' value='' />
-    <table class='gm_projects_table' style='border-spacing=0;'>
-    <thead>
-        <tr>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr><td>
-            <!-- NOTE: must have href for correct cursor on mouse-over -->
-            <a class='genericbutton' id='logout_button' href='#' onclick='submitform(\"logout\"); return false;'>Logout</a>
-        </td></tr>
-    </tbody>
-    </table>
-    </form>""" \
-        % fill_entries
     return html
 
 
@@ -937,27 +923,36 @@ def js_tmpl_parts(configuration, csrf_token):
         var category_id = category_map[project_name];
         selectRef('accept_user', category_id);
     }
-    function renderSelectRemoveUserFromProject(project_name, project_participants) {
+    function renderSelectRemoveUserFromProject(project_name, project_info) {
         /* Helper to render user select in remove_user tab */
         var select;
         var option;
         var option_desc;
         var option_value;
+        var users = []
+        if (project_info.OK.length == 1) {
+            for (var i=0; i<project_info.OK[0].users.length; i++ ) {
+                if (project_info.OK[0].users[i].state == 'accepted' \
+                    || project_info.OK[0].users[i].state == 'invited') {
+                    users.push(project_info.OK[0].users[i]);
+                }
+            }
+        }
         select = $('#remove_user_tab select[name=remove_user_short_id]');
         select.children().remove().end();
-        if (project_participants.OK.length == 0) {
+        if (users.length == 0) {
             option = new Option('No participants found', '', true, true);
             select.append(option);
         }
-        else if (project_participants.OK.length > 0) {
+        else if (users.length > 0) {
             option = new Option('Choose participant', '', true, true);
             select.append(option);
             option = new Option('───────', '', false, false);
             select.append(option);
-            for (var i=0; i<project_participants.OK.length; i++ ) {
-                option_desc = project_participants.OK[i].name
-                            + ' (' + project_participants.OK[i].email + ')';
-                option_value = project_participants.OK[i].short_id;
+            for (var i=0; i<users.length; i++ ) {
+                option_desc = users[i].name
+                            + ' (' + users[i].email + ')';
+                option_value = users[i].short_id;
                 option = new Option(option_desc, option_value, false, false);
                 select.append(option);
             }
@@ -978,7 +973,7 @@ def js_tmpl_parts(configuration, csrf_token):
         $('#remove_user_tab tr[id=user]').hide();
         if (project_name !== '') {
             ajax_gdp_project_info(renderSelectRemoveUserFromProject,
-                                     project_name);
+                                    project_name);
         }
     }
     function extractProject(project_action) {
@@ -1147,37 +1142,84 @@ def js_tmpl_parts(configuration, csrf_token):
             $('#gm_project_submit_form').submit();
         }
     }
-    function showProjectInfoDialog(project_name, project_participants) {
+    function showProjectInfoDialog(project_name, project_info) {
         var html = '';
         var body = '';
-        html += '<p><b>Project participants:</b></p>';
+        var active_body = '';
+        var pending_body = '';
+        var show_create_date = null;
+        var create_date = null;
+        var date_milisec_pos = -1;
 
+        if (project_info.ERROR.length > 0) {
+            for (var i=0; i<project_info.ERROR.length; i++) {
+                html += '<p class=\"errortext\">' +
+                        'Error: '+project_info.ERROR[i]+'</p>';
+            }
+        }
+        if (project_info.WARNING.length > 0) {
+            for (var i=0; i<project_info.WARNING.length; i++) {
+                html += '<p class=\"warningtext\">' +
+                        'Warning: '+ project_info.WARNING[i]+'</p>';
+            }
+        }
+        if (html === '' && project_info.OK.length == 1) {
+            console.debug(JSON.stringify(project_info.OK[0].create));
+            create_date = String(project_info.OK[0].create.date);
+            date_milisec_pos = create_date.indexOf('.');
+            if (date_milisec_pos > 0) {
+                show_create_date = create_date.substring(0,
+                                        date_milisec_pos);
+            } else {
+                show_create_date = create_date;
+            }
+            html += '<div class="two-column-grid">';
+            html += '<span>';
+            html += '<b>Created:</b>';
+            html += '</span><span>';
+            html += show_create_date;
+            html += '</span><span>';
+            html += '<b>Owner:</b>';
+            html += '</span><span>';
+            html += project_info.OK[0].owner.name;
+            html += '</span><span>';
+            html += '<b>Category:</b>';
+            html += '</span><span>';
+            html += project_info.OK[0].create.category;
+            html += '</span>';
+            for (var i=0; i<project_info.OK[0].create.references.length; i++) {
+                html += '<span>';
+                html += '<b>'+project_info.OK[0].create.references[i].ref_name+':</b>';
+                html += '</span><span>';
+                html += project_info.OK[0].create.references[i].value;
+                html += '</span>';
+            }
+            html += '</div>';  
+            for (var i=0; i<project_info.OK[0].users.length; i++) {
+                if (project_info.OK[0].users[i].state === 'accepted') {
+                    active_body += '<span>'+project_info.OK[0].users[i].name+' ('+project_info.OK[0].users[i].email+')</span>';
+                }
+                else if (project_info.OK[0].users[i].state === 'invited') {
+                    pending_body += '<span>'+project_info.OK[0].users[i].name+' ('+project_info.OK[0].users[i].email+')</span>';
+                }
+            }
+            html += '<div class="one-column-grid">';
+            if (active_body !== '') {
+                html += '<span>&nbsp;</span>';
+                html += '<span><b>Active participants:</b></span>';
+                html += active_body;
+            }
+            if (pending_body !== '') {
+                html += '<span>&nbsp;</span>';
+                html += '<span><b>Pending invites:</b></span>';
+                html += pending_body;
+            }
+            html += '</div>';
 
-        if (project_participants.ERROR.length > 0) {
-            for (var i=0; i<project_participants.ERROR.length; i++) {
-                body += '<p class=\"errortext\">' +
-                        'Error: '+project_participants.ERROR[i]+'</p>';
-            }
         }
-        if (project_participants.WARNING.length > 0) {
-            for (var i=0; i<project_participants.WARNING.length; i++) {
-                body += '<p class=\"warningtext\">' +
-                        'Warning: '+ project_participants.WARNING[i]+'</p>';
-            }
-        }
-        if (project_participants.OK.length > 0) {
-            for (var i=0; i<project_participants.OK.length; i++) {
-                body += '<p>'+project_participants.OK[i].name+' ('+project_participants.OK[i].email+')</p>';
-            }
-        }
-        if (body === '') {
-            body += '<p>No participants found</p>';
-        }
-        html += body;
         $('#info_dialog').dialog('option', 'title', project_name);
         $('#info_dialog').html('<p>'+html+'</p>');
         $('#info_dialog').dialog('open');
-
     }
 
     function showProjectInfo() {
@@ -1304,8 +1346,8 @@ Please contact the site admins %s if you think it should be enabled.
         output_objects.append({'object_type': 'error_text',
                                'text': 'Missing user credentials'})
         return (output_objects, returnvalues.ERROR)
-
-    if action and not safe_handler(
+    # TODO: Enable csrf in nav menu on 'close_project'
+    if action not in ('', 'close_project') and not safe_handler(
         configuration,
         'post',
         op_name,
@@ -1320,13 +1362,6 @@ Please contact the site admins %s if you think it should be enabled.
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     if action == 'enable2fa':
-
-        # Expire any exisiting 2FA sessions
-        # Due to browser cookies outdated 2FA sessions may be re-initiated
-
-        expire_twofactor_session(
-            configuration, client_id, environ, allow_missing=False)
-
         keywords_dict = twofactor_keywords(configuration)
         topic_mrsl = ''
         for keyword in keywords_dict.keys():
@@ -1363,23 +1398,15 @@ Please contact the site admins %s if you think it should be enabled.
         except Exception, exc:
             pass  # probably deleted by parser!
 
-        status_msg = 'OK: 2-Factor Authentication enabled'
-        if not parse_status:
+        if parse_status:
+            status_msg = 'OK: 2-Factor Authentication enabled'
+        else:
             status_msg = 'ERROR: Failed to enable 2-Factor Authentication'
             logger.error("%s -> %s" % (status_msg, parse_msg))
-            html = status_msg
-        else:
-            html = """
-            <a id='gdp_twofactorlogin' href='%s'></a>
-            <script type='text/javascript'>
-                document.getElementById('gdp_twofactorlogin').click();
-            </script>""" \
-                % environ['SCRIPT_URI']
+            output_objects.append({'object_type': 'html_form',
+                                   'text': status_msg})
 
-        output_objects.append({'object_type': 'html_form',
-                               'text': html})
-
-        return (output_objects, returnvalues.OK)
+            return (output_objects, returnvalues.OK)
 
     # Make sure user exists in GDP user db
 
@@ -1405,9 +1432,8 @@ Please contact the site admins %s if you think it should be enabled.
                                                  return_query_dict)
         elif active_project_client_id:
             dest_op_name = 'fileman'
-            redirect_url = environ.get('REQUEST_URI',
-                                       '').split('?')[0].replace(op_name,
-                                                                 dest_op_name)
+            redirect_url = environ.get('REQUEST_URI', '').split('?')[
+                0].replace(op_name, dest_op_name)
         if redirect_url:
             html = """
             <a id='redirect' href='%s'></a>
@@ -1446,7 +1472,6 @@ Please contact the site admins %s if you think it should be enabled.
             </tbody>
             </table>""" \
             % status_msg
-        html += html_logout_tmpl(configuration, csrf_token)
         output_objects.append({'object_type': 'html_form',
                                'text': html})
     else:
@@ -1482,6 +1507,21 @@ Please contact the site admins %s if you think it should be enabled.
             else:
                 action_msg = "ERROR: Login to project: '%s' failed" \
                     % base_vgrid_name
+
+        elif action == 'close_project':
+            active_project_client_id = get_active_project_client_id(
+                configuration, client_id, 'https')
+            if active_project_client_id:
+                project_name = get_project_from_client_id(
+                    configuration, active_project_client_id)
+                status = project_logout(configuration,
+                                        'https',
+                                        client_addr,
+                                        client_id)
+                if status:
+                    action_msg = "OK: Closed project: %s" % project_name
+                else:
+                    action_msg = "ERROR: Closing project: %s" % project_name
         elif action == 'accept_user':
 
             # Project accept user invitation
@@ -1671,11 +1711,11 @@ Please contact the site admins %s if you think it should be enabled.
             output_objects.append({'object_type': 'project_info',
                                    'info': get_project_info(
                                        configuration,
+                                       client_id,
                                        base_vgrid_name,
-                                       skip_users=[client_id],
-                                       project_state='accepted',
                                    )})
-
+        elif action == 'enable2fa':
+            action_msg = status_msg
         elif action:
             action_msg = 'ERROR: Unknown action: %s' % action
 
@@ -1685,7 +1725,6 @@ Please contact the site admins %s if you think it should be enabled.
         if output_format != 'json':
             html = html_tmpl(configuration, action, client_id, csrf_token,
                              action_msg)
-            # html += html_logout_tmpl(configuration, csrf_token)
             output_objects.append({'object_type': 'html_form',
                                    'text': html})
 

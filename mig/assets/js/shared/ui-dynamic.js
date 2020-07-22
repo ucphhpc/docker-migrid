@@ -120,16 +120,46 @@ function init_quickstart_dynamic() {
 function init_faq() {
     console.debug("init faq");
     /* Init FAQ as foldable but closed and with individual heights */
-    $(".faq-entries.accordion").accordion({
-        collapsible: true,
-        active: false,
-        heightStyle: "content"
-    });
-    /* fix and reduce accordion spacing */
-    $(".ui-accordion-header").css("padding-top", 0).css("padding-bottom", 0).css("margin", 0);
+    accordion_init(".faq-entries.accordion", false);
 }
 function init_about() {
     console.debug("init About");
+}
+function init_tips() {
+    console.debug("init Tips");
+    /* Init Tips as single entry selected based on current date */
+    $("#tips-content .tips-entries").hide();
+    //console.debug("hiding all tips");
+    $("#tips-content .tips-entry").hide();
+    var now = new Date();
+    /* NOTE: select day based on YYYYMMDD for consistent daily increment */
+    var fulldate = now.getFullYear()*1E4 + now.getMonth()*1E2 + now.getDate();
+    var total_tips = $("#tips-content .tips-entry").length;
+    var show_tip = fulldate % total_tips
+    console.debug("show tip number " + show_tip+" : "+fulldate+"%"+total_tips);
+    $("#tips-content .tips-entry h4").each(function (index, title) {
+        /* Prefix: tip title with Tip marker */
+        //console.debug("found title: "+index);
+        /* NOTE: leave a little room between fold icon and info icon */
+        var title_text = "<span class='leftpad'/>";
+        title_text += "<span class='tip iconleftpad'>Quick Tip:</span> ";
+        title_text += $(title).html() + " ... ";
+        $(title).html(title_text);
+    });
+                                          
+    $("#tips-content .tips-entry").each(function (index, item) {
+        if (show_tip === index) {
+            console.debug("show tip "+index);
+            /* NOTE: chain loading marker removal to delay until visible */
+            $(item).fadeIn(500, function() {
+                $("#tips-content").removeClass("tips-loading");
+            });
+        }
+    });
+    /* NOTE: we need to specify header to look inside the div.tips-entry */
+    accordion_init("#tips-content .tips-entries.accordion", false, "h4");
+    $("#tips-content").removeClass("tips-placeholder");
+    $("#tips-content .tips-entries").show();
 }
 
 function load_quickstart_static(base_url) {
@@ -205,6 +235,33 @@ function load_about_content(base_url, country) {
         console.error("load "+country+" about failed: "+err);
     }
 }
+function load_tips(base_url) {
+    /* Fetch Tips contents from snippet specified in configuration */
+    var content_url = base_url+" #tips-english";
+    console.debug("get content from "+content_url);
+    /* Load content: roughly equivalent to $.get(url, data, success) */
+    try {
+        $("#tips-content").addClass("tips-loading");
+        $("#tips-content").load(content_url, init_tips);
+    } catch(err) {
+        console.error("load tips failed: "+err);
+    }
+}
+function init_tips_content() {
+    /* TODO: update to match init_tips if ever used */
+    console.log("init tips");
+}
+function load_tips_content(base_url, country) {
+    /* Fetch Tips contents from snippet specified in configuration */
+    var content_url = base_url+" #tips-"+country;
+    console.log("get content from "+content_url);
+    /* Load content: roughly equivalent to $.get(url, data, success) */
+    try {
+        $("#tips-content-"+country).load(content_url, init_tips_content);
+    } catch(err) {
+        console.error("load "+country+" tips failed: "+err);
+    }
+}
 function load_sitestatus(base_url, system_match, locale) {
     /* Fetch and render Sitestatus contents from JSON events */
     var content_url = base_url;
@@ -214,15 +271,20 @@ function load_sitestatus(base_url, system_match, locale) {
 
 
 /* We need to run accordion init as a callback on status event load */
-function accordion_init(accordion_selector, active) {
+function accordion_init(accordion_selector, active, header) {
     /* Init accordion as foldable, with active index entry open and with 
        individual heights. If active is false or left out it stays folded. */
     if (active === undefined) {
         active = false;
     }
+    if (header === undefined) {
+        header = "h4";
+    }
     $(accordion_selector).accordion({
         collapsible: true,
         active: active,
+        header: header,
+        icons: {"header": "ui-icon-plus", "activeHeader": "ui-icon-minus"},
         heightStyle: "content"
     });
     /* fix and reduce accordion spacing */
@@ -231,11 +293,18 @@ function accordion_init(accordion_selector, active) {
 
 
 /* Site status helpers */
-function fill_server_status_accordion(status_events, status_targets, system_match, locale) {
+function fill_server_status_accordion(status_events, brief_targets, status_targets, system_match, locale) {
     /* Load content: roughly equivalent to $.get(url, data, success) */
     console.debug("AJAX fill server status accordion");
+    
+    $(brief_targets["EN"]).html("Loading status ...").addClass("leftpad").addClass("spinner");
+    $(brief_targets["DK"]).html("Henter status ...").addClass("leftpad").addClass("spinner");
     $(status_targets["EN"]).html("<p class='leftpad spinner'>Loading status and news entries ...</p>");
     $(status_targets["DK"]).html("<p class='leftpad spinner'>Henter status og nyheder ...</p>");
+    
+    var status_res = {"EN": "All systems and services are fully operational",
+                      "DK": "Alle systemer og services kører planmæssigt",
+                      "status_icon": "icon_online"};
     try {
         $.getJSON(status_events).done(function(response) {
             //console.debug("Success: "+response);
@@ -333,13 +402,27 @@ function fill_server_status_accordion(status_events, status_targets, system_matc
                 if (systems_overlap.length < 1) {
                     //console.debug("skip entry for "+entry_systems+" without match for "+system_match+", "+systems_overlap);
                     show_entry = false;
+                } else if (outage_start < now && now < outage_end) {
+                    title_class += "outage error iconleftpad";
+                    //console.debug("show outage: " + outage_start +" < " +now+ " < "+outage_end);
+                    status_res["status_icon"] = "icon_offline";
+                    status_res["EN"] = "Active service outages";
+                    status_res["DK"] = "Aktuelle serviceudfald";
                 } else if (work_start < now && now < work_end) {
                     title_class += "work warn iconleftpad";
-                    //console.debug("show active: " + work_start +" < " +now+ " < "+work_end );
+                    //console.debug("show active: " + work_start +" < " +now+ " < "+work_end);
+                    if (status_res["status_icon"] != 'icon_offline') {
+                        status_res["status_icon"] = "icon_slack";
+                        status_res["EN"] = "Work tasks in progress";
+                        status_res["DK"] = "Igangværende arbejdsopgaver";
+                    }
                 } else if (announce_start < now && now < announce_end) {
                     title_class += "announce info iconleftpad";
-                    //console.debug("announce ahead: " + announce_start +" < " +now+ " < "+announce_end );
-
+                    //console.debug("announce ahead: " + announce_start +" < " +now+ " < "+announce_end);
+                    if (status_res["status_icon"] == 'icon_online') {
+                        status_res["EN"] += ", but with active announcements";
+                        status_res["DK"] += ", men med aktuelle varsler";
+                    }
                 } else if (now < announce_start) {
                     //console.debug("skip future marker: " + announce_start + " vs "+now);
                     title_class += "waiting iconleftpad";
@@ -369,6 +452,10 @@ function fill_server_status_accordion(status_events, status_targets, system_matc
                 }
                 
             });
+            $(brief_targets["EN"]).removeClass("spinner");
+            $(brief_targets["DK"]).removeClass("spinner");
+            $(brief_targets["EN"]).html(status_res["EN"]).addClass(status_res["status_icon"]);
+            $(brief_targets["DK"]).html(status_res["DK"]).addClass(status_res["status_icon"]);
             $(status_targets["EN"]).html(en_items.join(""));
             $(status_targets["DK"]).html(dk_items.join(""));
             

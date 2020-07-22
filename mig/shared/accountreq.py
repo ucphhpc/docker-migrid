@@ -38,11 +38,14 @@ try:
 except ImportError:
     iso3166 = None
 
-from shared.base import force_utf8
+from shared.base import force_utf8, canonical_user, client_id_dir, \
+    distinguished_name_to_user
+from shared.defaults import peers_fields, pending_peers_filename
 from shared.fileio import delete_file
 # Expose some helper variables for functionality backends
 from shared.safeinput import name_extras, password_extras, password_min_len, \
-    password_max_len, valid_password_chars, valid_name_chars, dn_max_len
+    password_max_len, valid_password_chars, valid_name_chars, dn_max_len, \
+    html_escape
 from shared.serial import load, dump
 
 
@@ -199,15 +202,15 @@ def account_js_helpers(configuration, fields):
 def account_request_template(configuration, password=True, default_country=''):
     """A general form template used for various account requests"""
     html = """
-<div class=form_container>
+<div id='account-request-grid' class=form_container>
 
 <!-- use post here to avoid field contents in URL -->
 <form method='%(form_method)s' action='%(target_op)s.py' onSubmit='return validate_form();' class="needs-validation" novalidate>
 <input type='hidden' name='%(csrf_field)s' value='%(csrf_token)s' />
-  <div class="form-row">
-    <div class="col-md-4 mb-3">
+<div class="form-row">
+    <div class="col-md-4 mb-3 form-cell">
       <label for="validationCustom01">Full name</label>
-      <input type="text" class="form-control" id="full_name_field" placeholder="Full name" type=text name=cert_name value='%(full_name)s' required pattern='[^ ]+([ ][^ ]+)+' required>
+      <input type="text" class="form-control" id="full_name_field" placeholder="Full name" type=text name=cert_name value='%(full_name)s' required pattern='[^ ]+([ ][^ ]+)+' title='Your full name, i.e. two or more names separated by space' />
       <div class="valid-feedback">
         Looks good!
       </div>
@@ -215,36 +218,36 @@ def account_request_template(configuration, password=True, default_country=''):
         Please enter your full name.
       </div>
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-md-4 mb-3 form-cell">
       <label for="validationCustom02">Email address</label>
-      <input class="form-control" id='email_field' type=email name=email value='%(email)s' placeholder="name@example.com" required>
+      <input class="form-control" id="email_field" type=email name=email value='%(email)s' placeholder="username@organization.org" required title="Email address should match your organization - and you need to read mail sent there" />
       <div class="valid-feedback">
         Looks good!
       </div>
       <div class="invalid-feedback">
-        Enter an email address.
+        Please enter your email address matching your organization/company.
       </div>
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-md-4 mb-3 form-cell">
       <label for="validationCustom01">Organization</label>
-      <input class="form-control" id='organization_field' type=text name=org value='%(organization)s' required pattern='[^ ]+([ ][^ ]+)*' placeholder="Organization" required>
+      <input class="form-control" id="organization_field" type=text name=org value='%(organization)s' required pattern='[^ ]+([ ][^ ]+)*' placeholder="Organization or company" title='Name of your organization or company: one or more words or abbreviations separated by space' />
       <div class="valid-feedback">
         Looks good!
       </div>
       <div class="invalid-feedback">
-        Please enter an organization.
+        Please enter the name of your organization or company.
       </div>
     </div>
   </div>
   <div class="form-row">
-    <div class="col-md-4 mb-3">
+    <div class="col-md-4 mb-3 form-cell">
       <label for="validationCustom03">Country</label>
     """
     # Generate drop-down of countries and codes if available, else simple input
     sorted_countries = list_country_codes(configuration)
     if sorted_countries:
         html += """
-        <select class="form-control themed-select html-select" id='country_field' name=country minlength=2 maxlength=2 value='%(country)s' required pattern='[A-Z]{2}' placeholder="Two letter country-code">
+        <select class="form-control themed-select html-select" id="country_field" name=country minlength=2 maxlength=2 value='%(country)s' required pattern='[A-Z]{2}' placeholder="Two letter country-code" title='Please select your country from the list'>
 """
         # TODO: detect country based on browser info?
         # Start out without a country selection
@@ -259,7 +262,7 @@ def account_request_template(configuration, password=True, default_country=''):
     """
     else:
         html += """
-        <input class="form-control" id='country_field' type=text name=country value='%(country)s' required pattern='[A-Z]{2}' minlength=2 maxlength=2 placeholder="Two letter country-code" >
+        <input class="form-control" id="country_field" type=text name=country value='%(country)s' required pattern='[A-Z]{2}' minlength=2 maxlength=2 placeholder="Two letter country-code" title='The two capital letters used to abbreviate your country' />
         """
 
     html += """
@@ -267,12 +270,13 @@ def account_request_template(configuration, password=True, default_country=''):
         Looks good!
       </div>
       <div class="invalid-feedback">
-        Please provide a valid two letter country-code.
+        Please select your country or provide your two letter country-code in line with
+        https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2.
       </div>
     </div>
-    <div class="col-md-4 mb-3">
-      <label for="validationCustom04">State</label>
-      <input class="form-control" id='state_field' type=text name=state value='%(state)s' pattern='([A-Z]{2})?' maxlength=2 placeholder="State" >
+    <div class="col-md-4 mb-3 form-cell">
+      <label for="validationCustom04">Optional state code</label>
+      <input class="form-control" id="state_field" type=text name=state value='%(state)s' pattern='([A-Z]{2})?' maxlength=2 placeholder="NA" title="Mainly for U.S. users - please just leave empty if in doubt" >
     </div>
   </div>
     """
@@ -280,9 +284,9 @@ def account_request_template(configuration, password=True, default_country=''):
     if password:
         html += """  
   <div class="form-row">
-    <div class="col-md-4 mb-3">
+    <div class="col-md-4 mb-3 form-cell">
       <label for="validationCustom01">Password</label>
-      <input type="password" class="form-control" id='password_field' type=password name=password minlength=%(password_min_len)d maxlength=%(password_max_len)d value='%(password)s' required pattern='.{%(password_min_len)d,%(password_max_len)d}' placeholder="Password" required>
+      <input type="password" class="form-control" id="password_field" type=password name=password minlength=%(password_min_len)d maxlength=%(password_max_len)d value='%(password)s' required pattern='.{%(password_min_len)d,%(password_max_len)d}' placeholder="Your password" title='Password of your choice - site policies about password strength apply and will give you feedback below if refused' />
       <div class="valid-feedback">
         Looks good!
       </div>
@@ -291,9 +295,9 @@ def account_request_template(configuration, password=True, default_country=''):
         I.e. %(password_min_len)d to %(password_max_len)d characters from at least %(password_min_classes)d of the 4 different character classes: lowercase, uppercase, digits, other.
       </div>
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-md-4 mb-3 form-cell">
       <label for="validationCustom03">Verify password</label>
-      <input type="password" class="form-control" id='verifypassword_field' type=password name=verifypassword minlength=%(password_min_len)d maxlength=%(password_max_len)d value='%(verifypassword)s' required pattern='.{%(password_min_len)d,%(password_max_len)d}' placeholder="Verify password" required>
+      <input type="password" class="form-control" id="verifypassword_field" type=password name=verifypassword minlength=%(password_min_len)d maxlength=%(password_max_len)d value='%(verifypassword)s' required pattern='.{%(password_min_len)d,%(password_max_len)d}' placeholder="Repeat password" title='Repeat your chosen password to rule out most simple typing errors' />
       <div class="valid-feedback">
         Looks good!
       </div>
@@ -305,15 +309,15 @@ def account_request_template(configuration, password=True, default_country=''):
         """
 
     html += """
-  <div class="form-row">
-    <div class="col-md-12 mb-3">
-      <label for="validationCustom03">Optional comment or reason why you should be granted a UCPH ERDA UI Dev account:</label>
-      <textarea rows=4 name=comment title='A free-form comment where you can explain what you need the account for' ></textarea>
+  <div class="form-row single-entry">
+    <div class="col-md-12 mb-3 form-cell">
+      <label for="validationCustom03">Optional comment or reason why you should be granted a %(site)s account:</label>
+      <textarea rows=4 name=comment title='A free-form comment to justify your account needs' placeholder="Typically a note about which collaboration, project or course you need the account for and the name and email of your affiliated contact" ></textarea>
     </div>
   </div>
   <div class="form-group">
     <div class="form-check">
-      <span class="switch-label">I accept the %(site)s <a href="/public/site-privacy-policy.pdf" target="_blank">terms and conditions</a></span>
+      <span class="switch-label">I accept the %(site)s <a href="/public/terms.html" target="_blank">terms and conditions</a></span>
       <label class="form-check-label switch" for="acceptTerms">
       <input class="form-check-input" type="checkbox" value="" id="acceptTerms" required>
       <span class="slider round small" title="Required to get an account"></span>
@@ -328,7 +332,7 @@ def account_request_template(configuration, password=True, default_country=''):
     </div>
   </div>
   <div class="vertical-spacer"></div>
-  <input id='submit_button' type=submit value=Send />
+  <input id="submit_button" type=submit value=Send />
 </form>
 
 </div>
@@ -503,3 +507,123 @@ def forced_org_email_match(org, email, configuration):
         return False
     else:
         return True
+
+
+def peers_permit_allowed(configuration, user_dict):
+    """Check if user with user_dict is allowed to manage peers based on
+    optional configuration limits.
+    """
+    for (key, val) in configuration.site_peers_permit:
+        if not re.match(val, user_dict.get(key, 'NO SUCH FIELD')):
+            return False
+    return True
+
+
+def parse_peers_form(configuration, raw_lines, csv_sep):
+    """Parse CSV form of peers into a list of peers"""
+    _logger = configuration.logger
+    header = None
+    peers = []
+    err = []
+    for line in raw_lines.split('\n'):
+        line = line.split('#', 1)[0].strip()
+        if not line:
+            continue
+        parts = line.split(csv_sep)
+        if not header:
+            missing = [i for i in peers_fields if i not in parts]
+            if missing:
+                err.append("Parsed peers did NOT contain required field(s): %s"
+                           % ', '.join(missing))
+            header = parts
+            continue
+        if len(header) != len(parts):
+            _logger.warning('skip peers line with mismatch in field count: %s'
+                            % line)
+            err.append("Skip peers line not matching header format: %s" %
+                       html_escape(line + ' vs ' + csv_sep.join(header)))
+            continue
+        raw_user = dict(zip(header, parts))
+        peers.append(canonical_user(configuration, raw_user, peers_fields))
+    _logger.debug('parsed form into peers: %s' % peers)
+    return (peers, err)
+
+
+def parse_peers_userid(configuration, raw_entries):
+    """Parse list of user IDs into a list of peers"""
+    _logger = configuration.logger
+    peers = []
+    err = []
+    for entry in raw_entries:
+        raw_user = distinguished_name_to_user(entry.strip())
+        missing = [i for i in peers_fields if i not in raw_user]
+        if missing:
+            err.append("Parsed peers did NOT contain required field(s): %s"
+                       % ', '.join(missing))
+            continue
+        peers.append(canonical_user(configuration, raw_user, peers_fields))
+    _logger.debug('parsed user id into peers: %s' % peers)
+    return (peers, err)
+
+
+def parse_peers(configuration, peers_content, peers_format, csv_sep=';'):
+    """Parse provided peer formats into a list of peer users.
+    Please note that peers_content is the accepted list of input values.
+    """
+    _logger = configuration.logger
+    if "userid" == peers_format:
+        raw_peers = peers_content
+        return parse_peers_userid(configuration, raw_peers)
+    elif "csvform" == peers_format:
+        # NOTE: first merge the individual textarea(s)
+        raw_peers = '\n'.join(peers_content)
+        return parse_peers_form(configuration, raw_peers, csv_sep)
+    elif "csvupload" == peers_format:
+        # TODO: extract upload
+        raw_peers = ''
+        return parse_peers_form(configuration, raw_peers, csv_sep)
+    elif "csvurl" == peers_format:
+        # TODO: fetch URL contents
+        raw_peers = ''
+        return parse_peers_form(configuration, raw_peers, csv_sep)
+    elif "fields" == peers_format:
+        # TODO: extract fields
+        raw_peers = []
+        return parse_peers_userid(configuration, raw_peers)
+    else:
+        _logger.error("unknown peers format: %s" % peers_format)
+        return ([], "unknown peers format: %s" % peers_format)
+
+
+def manage_pending_peers(configuration, client_id, action, change_list):
+    """Helper to manage changes to pending peers list of client_id"""
+    _logger = configuration.logger
+    client_dir = client_id_dir(client_id)
+    pending_peers_path = os.path.join(configuration.user_settings, client_dir,
+                                      pending_peers_filename)
+    try:
+        pending_peers = load(pending_peers_path)
+    except Exception, exc:
+        if os.path.exists(pending_peers_path):
+            _logger.warning("could not load pending peers from %s: %s" %
+                            (pending_peers_path, exc))
+        pending_peers = []
+    change_dict = dict(change_list)
+    # NOTE: always remove old first to replace any existing and move them last
+    pending_peers = [(i, j)
+                     for (i, j) in pending_peers if not i in change_dict]
+    if action == "add":
+        pending_peers += change_list
+    elif action == "remove":
+        pass
+    else:
+        _logger.error(
+            "unsupported action in manage pending peers: %s" % action)
+        return False
+    try:
+        dump(pending_peers, pending_peers_path)
+        return True
+    except Exception, exc:
+        _logger.warning("could not save pending peers to %s: %s" %
+                        (pending_peers_path, exc))
+        return False

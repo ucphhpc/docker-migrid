@@ -36,13 +36,12 @@ import sys
 import time
 from datetime import datetime
 
-from shared.base import extract_field
+from shared.base import extract_field, expand_openid_alias
 from shared.conf import get_configuration_object
 from shared.fileio import unpickle, delete_file
 from shared.logger import daemon_logger, \
     register_hangup_handler
 from shared.notification import send_email
-from shared.useradm import expand_openid_alias
 
 
 stop_running = multiprocessing.Event()
@@ -180,7 +179,7 @@ def recv_notification(configuration, path):
             client_dict['files'] = files_list
         if path in files_list:
             logger.warning(
-                "Skipping prevoursly received notification: '%s'" % path)
+                "Skipping previously received notification: '%s'" % path)
         else:
             files_list.append(path)
             client_dict['timestamp'] = min(

@@ -31,15 +31,15 @@ import time
 import re
 
 from shared.auth import active_twofactor_session
+from shared.base import extract_field, expand_openid_alias
 from shared.defaults import CRACK_USERNAME_REGEX
-from shared.gdp import get_client_id_from_project_client_id
+from shared.gdp.all import get_client_id_from_project_client_id
 from shared.griddaemons.ratelimits import default_user_abuse_hits, \
     default_proto_abuse_hits, default_max_secret_hits, update_rate_limit
 from shared.griddaemons.sessions import active_sessions
 from shared.notification import send_system_notification
 from shared.settings import load_twofactor
 from shared.twofactorkeywords import get_keywords_dict as twofactor_defaults
-from shared.useradm import expand_openid_alias
 
 
 def valid_twofactor_session(configuration, client_id, addr=None):
@@ -154,13 +154,17 @@ def authlog(configuration,
     _auth_logger(log_message)
 
     if notify and category:
-        user_msg = "IP: %s, User: %s, Message: %s" % \
-            (user_addr, user_id, log_msg)
-        status = send_system_notification(user_id, category,
-                                          user_msg, configuration)
-        if not status:
-            logger.error("Failed to send notification to: %s" % user_id)
-
+        # Check for valid user before issuing notification
+        client_id = expand_openid_alias(user_id, configuration)
+        if client_id and extract_field(client_id, 'email'):
+            user_msg = "IP: %s, User: %s, Message: %s" % \
+                (user_addr, user_id, log_msg)
+            status = send_system_notification(user_id, category,
+                                              user_msg, configuration)
+        # else:
+        #     logger.debug("Skipped send_system_notification to user: %r" \
+        #         % user_id)
+        
     return status
 
 
@@ -173,6 +177,7 @@ def validate_auth_attempt(configuration,
                           secret=None,
                           invalid_username=False,
                           invalid_user=False,
+                          account_accessible=True,
                           skip_twofa_check=False,
                           valid_twofa=False,
                           authtype_enabled=False,
@@ -210,6 +215,8 @@ def validate_auth_attempt(configuration,
                  % invalid_username
                  + "invalid_user: %s\n"
                  % invalid_user
+                 + "account_accessible: %s\n"
+                 % account_accessible
                  + "skip_twofa_check: %s\n"
                  % skip_twofa_check
                  + "valid_twofa: %s\n"
@@ -230,9 +237,10 @@ def validate_auth_attempt(configuration,
     authorized = False
     disconnect = False
     twofa_passed = valid_twofa
-
     notify = True
-    if skip_notify:
+
+    if skip_notify or invalid_username or invalid_user \
+            or ip_addr in configuration.site_security_scanners:
         notify = False
 
     if skip_twofa_check:
@@ -296,7 +304,7 @@ def validate_auth_attempt(configuration,
             log_msg += ":%s" % tcp_port
         log_func(log_msg)
         authlog(configuration, authlog_lvl, protocol, authtype,
-                username, ip_addr, auth_msg, notify=False)
+                username, ip_addr, auth_msg, notify=notify)
     elif invalid_user:
         disconnect = True
         auth_msg = "Invalid user"
@@ -306,7 +314,17 @@ def validate_auth_attempt(configuration,
         logger.error(log_msg)
         authlog(configuration, 'ERROR', protocol, authtype,
                 username, ip_addr,
-                auth_msg, notify=False)
+                auth_msg, notify=notify)
+    elif not account_accessible:
+        disconnect = True
+        auth_msg = "Account disabled or expired"
+        log_msg = auth_msg + " %s from %s" % (username, ip_addr)
+        if tcp_port > 0:
+            log_msg += ":%s" % tcp_port
+        logger.error(log_msg)
+        authlog(configuration, 'ERROR', protocol, authtype,
+                username, ip_addr,
+                auth_msg, notify=notify)
     elif not authtype_enabled:
         disconnect = True
         auth_msg = "%s auth disabled or %s not set" % (authtype, authtype)
@@ -323,7 +341,7 @@ def validate_auth_attempt(configuration,
         if tcp_port > 0:
             log_msg += ":%s" % tcp_port
         logger.error(log_msg)
-        authlog(configuration, 'ERROR', protocol, authtype,
+        authlog(configuration, 'WARNING', protocol, authtype,
                 username, ip_addr, auth_msg, notify=notify)
     elif authtype_enabled and not valid_auth:
         auth_msg = "Failed %s" % authtype
@@ -335,8 +353,7 @@ def validate_auth_attempt(configuration,
                 username, ip_addr, auth_msg, notify=notify)
     elif valid_auth and twofa_passed:
         authorized = True
-        if notify and not configuration.site_enable_gdp:
-            notify = False
+        notify = False
         auth_msg = "Accepted %s" % authtype
         log_msg = auth_msg + " login for %s from %s" % (username, ip_addr)
         if tcp_port > 0:
@@ -383,7 +400,7 @@ def validate_auth_attempt(configuration,
             log_msg += ":%s" % tcp_port
         logger.critical(log_msg)
         authlog(configuration, 'CRITICAL', protocol, authtype,
-                username, ip_addr, auth_msg)
+                username, ip_addr, auth_msg, notify=notify)
 
     elif proto_abuse_hits > 0 and proto_hits > proto_abuse_hits:
         auth_msg = "Abuse limit reached"
@@ -393,6 +410,6 @@ def validate_auth_attempt(configuration,
             log_msg += ":%s" % tcp_port
         logger.critical(log_msg)
         authlog(configuration, 'CRITICAL', protocol, authtype,
-                username, ip_addr, auth_msg)
+                username, ip_addr, auth_msg, notify=notify)
 
     return (authorized, disconnect)

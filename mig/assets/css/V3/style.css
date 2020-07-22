@@ -360,7 +360,7 @@ legend {
 }
 
 .home-page__content {
-    padding-top: 3%;
+    padding-top: 1%;
 }
 
 @media (min-width: 1000px) {
@@ -502,7 +502,8 @@ legend {
 
 /* APP POPUP PAGE */
 .app-container {
-    background: #147;
+    /* NOTE: default to same background in app select */
+    background: inherit;
     height: 100vh;
     width: calc(100% - 70px);
     position: fixed;
@@ -561,6 +562,24 @@ legend {
 input[type=checkbox]:checked + label {
     background: 0%;
 }
+
+/* Tips in Home page below apps */
+#tips-container {
+    padding-top: 1%;
+    width: auto;
+}
+#tips-content .tips-entry h4 {
+    font-size: 16px;
+    line-height: 20px;
+    font-weight: 700;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    margin: 0;
+}
+#tips-content .tips-entry p {
+    font-size: 14px;
+}
+
 
 /* When the checkbox is not checked, use a grey background */
 .container input:checked ~ .checkmark {

@@ -34,18 +34,17 @@ import socket
 import time
 
 from shared.base import client_dir_id, client_id_dir, client_alias, \
-    force_utf8
+    force_utf8, get_short_id
 from shared.defaults import dav_domain
 from shared.fileio import unpickle
-from shared.gdp import get_project_from_user_id
+from shared.gdp.all import get_project_from_user_id
 from shared.sharelinks import extract_mode_id
 from shared.ssh import parse_pub_key
 from shared.useradm import ssh_authkeys, davs_authkeys, ftps_authkeys, \
     https_authkeys, get_authkeys, ssh_authpasswords, davs_authpasswords, \
     ftps_authpasswords, https_authpasswords, get_authpasswords, \
     ssh_authdigests, davs_authdigests, ftps_authdigests, https_authdigests, \
-    generate_password_hash, generate_password_digest, load_user_dict, \
-    get_short_id
+    generate_password_hash, generate_password_digest, load_user_dict
 from shared.validstring import possible_sharelink_id, possible_job_id, \
     possible_jupyter_mount_id
 
@@ -395,10 +394,16 @@ def update_user_objects(configuration, auth_file, path, user_vars, auth_protos,
         conf['users'] = [i for i in conf['users']
                          if not i.username in user_logins or
                          i.digest is None]
-    # logger.debug("after clean up old users list is:\n%s" % \
-    #             '\n'.join(["%s" % i for i in conf['users']]))
+    # logger.debug("after clean up old users list is:\n%s" %
+    #              '\n'.join(["%s" % i for i in conf['users']]))
     if creds_lock:
         creds_lock.release()
+
+    user_id_list = [user_alias]
+    if short_id:
+        user_id_list += [short_id, short_alias]
+
+    # Now add all current login methods
     for user_key in all_keys:
         # Remove comments and blank lines
         user_key = user_key.split('#', 1)[0].strip()
@@ -411,57 +416,18 @@ def update_user_objects(configuration, auth_file, path, user_vars, auth_protos,
             logger.warning("Skipping broken key %s for user %s (%s)" %
                            (user_key, user_id, exc))
             continue
-        add_user_object(configuration, user_alias, user_dir, pubkey=user_key)
-        # Add short alias copy if user aliasing is enabled
-        if short_id:
-            add_user_object(configuration,
-                            short_id,
-                            user_dir,
-                            pubkey=user_key,
-                            user_dict=user_dict)
-            add_user_object(configuration,
-                            short_alias,
-                            user_dir,
-                            pubkey=user_key,
-                            user_dict=user_dict)
+        for login_id in user_id_list:
+            add_user_object(configuration, login_id, user_dir, pubkey=user_key)
     for user_password in all_passwords:
         user_password = user_password.strip()
-        add_user_object(configuration,
-                        user_alias,
-                        user_dir,
-                        password=user_password,
-                        user_dict=user_dict)
-        # Add short alias copy if user aliasing is enabled
-        if short_id:
-            add_user_object(configuration,
-                            short_id,
-                            user_dir,
-                            password=user_password,
-                            user_dict=user_dict)
-            add_user_object(configuration,
-                            short_alias,
-                            user_dir,
-                            password=user_password,
-                            user_dict=user_dict)
+        for login_id in user_id_list:
+            add_user_object(configuration, login_id, user_dir,
+                            password=user_password, user_dict=user_dict)
     for user_digest in all_digests:
         user_digest = user_digest.strip()
-        add_user_object(configuration,
-                        user_alias,
-                        user_dir,
-                        digest=user_digest,
-                        user_dict=user_dict)
-        # Add short alias copy if user aliasing is enabled
-        if short_id:
-            add_user_object(configuration,
-                            short_id,
-                            user_dir,
-                            digest=user_digest,
-                            user_dict=user_dict)
-            add_user_object(configuration,
-                            short_alias,
-                            user_dir,
-                            digest=user_digest,
-                            user_dict=user_dict)
+        for login_id in user_id_list:
+            add_user_object(configuration, login_id, user_dir,
+                            digest=user_digest, user_dict=user_dict)
     # logger.debug("after update users list is:\n%s" % \
     #             '\n'.join(["%s" % i for i in conf['users']]))
 
@@ -483,6 +449,7 @@ def refresh_user_creds(configuration, protocol, username):
     changed_users = []
     conf = configuration.daemon_conf
     logger = conf.get("logger", logging.getLogger())
+    # logger.debug("refresh_user_creds for %s" % username)
     private_auth_file = True
     if protocol in ('ssh', 'sftp', 'scp', 'rsync'):
         proto_authkeys = ssh_authkeys
@@ -521,13 +488,13 @@ def refresh_user_creds(configuration, protocol, username):
     else:
         authkeys_path = authpasswords_path = authdigests_path = conf['db_path']
 
-    # logger.debug("Updating user creds for %s" % username)
-
     changed_paths = get_creds_changes(conf, username, authkeys_path,
                                       authpasswords_path, authdigests_path)
     if not changed_paths:
         # logger.debug("No user creds changes for %s" % username)
         return (conf, changed_users)
+
+    # logger.debug("Updating user creds for %s" % username)
 
     short_id, short_alias = None, None
     matches = []
@@ -546,15 +513,10 @@ def refresh_user_creds(configuration, protocol, username):
             logger.warning("Skipping non-existant auth path %s" % path)
             continue
         # logger.debug("Checking %s" % path)
-        if private_auth_file:
-            user_home = path.replace(os.sep + auth_file, '')
-            user_dir = user_home.replace(conf['root_dir'] + os.sep, '')
-        else:
-            # Expand actual user home from alias
-            user_home = os.path.realpath(os.path.join(configuration.user_home,
-                                                      username))
-            user_dir = os.path.basename(user_home)
-
+        # Expand actual user home from alias
+        user_home = os.path.realpath(os.path.join(configuration.user_home,
+                                                  username))
+        user_dir = os.path.basename(user_home)
         # Check that user home exists
         if not os.path.exists(user_home):
             logger.warning("Skipping user without home %s" % user_home)
@@ -577,12 +539,10 @@ def refresh_user_creds(configuration, protocol, username):
                 continue
             user_dir = os.path.join(user_dir, project_name)
         user_vars = (user_id, user_alias, user_dir, short_id, short_alias)
-        update_user_objects(configuration,
-                            auth_file,
-                            path,
-                            user_vars,
-                            auth_protos,
-                            private_auth_file)
+        # logger.debug("refresh_user_creds updating objs for %s" % username)
+        update_user_objects(configuration, auth_file, path, user_vars,
+                            auth_protos, private_auth_file)
+
     if changed_paths:
         logger.info("Refreshed user %s from configuration: %s" %
                     (username, changed_paths))
@@ -679,12 +639,8 @@ def refresh_users(configuration, protocol):
             project_name = get_project_from_user_id(configuration, user_id)
             user_dir = os.path.join(user_dir, project_name)
         user_vars = (user_id, user_alias, user_dir, short_id, short_alias)
-        update_user_objects(configuration,
-                            auth_file,
-                            path,
-                            user_vars,
-                            auth_protos,
-                            private_auth_file)
+        update_user_objects(configuration, auth_file, path, user_vars,
+                            auth_protos, private_auth_file)
         changed_users += [user_id, user_alias]
         if short_id is not None:
             changed_users += [short_id, short_alias]
@@ -1165,12 +1121,16 @@ def update_login_map(daemon_conf, changed_users, changed_jobs=[],
     (e.g. public keys).
     """
     login_map = daemon_conf['login_map']
+    logger = daemon_conf.get("logger", logging.getLogger())
+    # logger.debug("update_login_map with changed users: %s" % changed_users)
     creds_lock = daemon_conf.get('creds_lock', None)
     if creds_lock:
         creds_lock.acquire()
     for username in changed_users:
         login_map[username] = [i for i in daemon_conf['users'] if username ==
                                i.username]
+    # logger.debug("update_login_map for %s: %s" %
+    #              (username, '\n'.join([str(i) for i in login_map[username]])))
     for username in changed_jobs:
         login_map[username] = [i for i in daemon_conf['jobs'] if username ==
                                i.username]

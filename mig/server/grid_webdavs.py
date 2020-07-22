@@ -63,26 +63,27 @@ except ImportError, ierr:
     print "You may need to install cherrypy if your wsgidav does not bundle it"
     sys.exit(1)
 
+from shared.accountstate import check_account_accessible
 from shared.base import invisible_path, force_unicode
 from shared.conf import get_configuration_object
 from shared.defaults import dav_domain, litmus_id, io_session_timeout
 from shared.fileio import check_write_access, user_chroot_exceptions
-from shared.gdp import project_open, project_close, project_log
+from shared.gdp.all import project_open, project_close, project_log
 from shared.griddaemons.davs import get_fs_path, acceptable_chmod, \
     default_max_user_hits, default_user_abuse_hits, \
     default_proto_abuse_hits, default_max_secret_hits, \
     default_username_validator, refresh_user_creds, refresh_share_creds, \
     update_login_map, login_map_lookup, hit_rate_limit, expire_rate_limit, \
-    add_user_object, track_open_session, clear_sessions, \
-    track_close_session, track_close_expired_sessions, \
-    get_active_session, check_twofactor_session, validate_auth_attempt
-from shared.pwhash import make_scramble
-from shared.sslsession import ssl_session_token
-from shared.tlsserver import hardened_ssl_context
+    add_user_object, track_open_session, clear_sessions, track_close_session, \
+    track_close_expired_sessions, get_active_session, \
+    check_twofactor_session, validate_auth_attempt
 from shared.logger import daemon_logger, daemon_gdp_logger, \
     register_hangup_handler
 from shared.notification import send_system_notification
-from shared.pwhash import unscramble_digest, assure_password_strength
+from shared.pwhash import make_scramble, unscramble_digest, \
+    assure_password_strength
+from shared.sslsession import ssl_session_token
+from shared.tlsserver import hardened_ssl_context
 from shared.useradm import check_password_hash, generate_password_hash, \
     generate_password_digest
 from shared.validstring import possible_user_id, possible_gdp_user_id, \
@@ -486,12 +487,13 @@ class MiGHTTPAuthenticator(HTTPAuthenticator):
 
         The following is checked before granting auth:
         1) Valid username
-        2) Valid user (Does user exist and enabled WebDAVS)
-        3) Valid 2FA session (if 2FA is enabled)
-        4) Hit rate limit (To many auth attempts)
-        5) Valid pre-authorized SSL session
-        6) Valid password (if password enabled)
-        7) Valid digest (if digest enabled)
+        2) Valid user (Does user exist with enabled WebDAVS)
+        3) Account is active and not expired
+        4) Valid 2FA session (if 2FA is enabled)
+        5) Hit rate limit (To many auth attempts)
+        6) Valid pre-authorized SSL session
+        7) Valid password (if password enabled)
+        8) Valid digest (if digest enabled)
         """
         result = None
         response_ok = False
@@ -506,6 +508,7 @@ class MiGHTTPAuthenticator(HTTPAuthenticator):
         exceeded_rate_limit = False
         invalid_username = False
         invalid_user = False
+        account_accessible = False
         ip_addr = _get_addr(environ)
         tcp_port = _get_port(environ)
         daemon_conf = configuration.daemon_conf
@@ -541,6 +544,9 @@ class MiGHTTPAuthenticator(HTTPAuthenticator):
         elif not default_username_validator(configuration, username):
             invalid_username = True
         elif password_auth or digest_auth:
+            account_accessible = check_account_accessible(configuration,
+                                                          username, 'davs',
+                                                          environ)
             if password_auth:
                 result = super(MiGHTTPAuthenticator, self) \
                     .authBasicAuthRequest(environ, start_response)
@@ -549,8 +555,8 @@ class MiGHTTPAuthenticator(HTTPAuthenticator):
                     .authDigestAuthRequest(environ, start_response)
             auth_username = environ.get('http_authenticator.username', None)
             auth_realm = environ.get('http_authenticator.realm', None)
-            print "auth_username: %s" % auth_username
-            print "auth_realm: %s" % auth_realm
+            #print "DEBUG: auth_username: %s" % auth_username
+            #print "DEBUG: auth_realm: %s" % auth_realm
             if auth_username and auth_username == username and auth_realm:
                 if password_auth:
                     valid_password = True
@@ -596,6 +602,7 @@ class MiGHTTPAuthenticator(HTTPAuthenticator):
                 secret=secret,
                 invalid_username=invalid_username,
                 invalid_user=invalid_user,
+                account_accessible=account_accessible,
                 valid_twofa=valid_twofa,
                 authtype_enabled=(password_enabled or digest_enabled),
                 valid_auth=(valid_password or valid_digest),
