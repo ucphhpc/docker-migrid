@@ -1213,7 +1213,9 @@ def get_wp_map(configuration, client_id=None):
     last_map[WORKFLOW_PATTERNS] = workflow_p_map
     last_refresh[WORKFLOW_PATTERNS] = map_stamp
     last_load[WORKFLOW_PATTERNS] = map_stamp
-    _logger.debug("WP: got: '%s' map" % workflow_p_map)
+    # Do not print whole map here. It is dangerously big if any recipe contains
+    # significant data such as an image.
+    _logger.debug("WP: got: map with keys '%s'" % workflow_p_map.keys())
     return workflow_p_map
 
 
@@ -1242,7 +1244,9 @@ def get_wr_map(configuration, client_id=None):
     last_map[WORKFLOW_RECIPES] = workflow_r_map
     last_refresh[WORKFLOW_RECIPES] = map_stamp
     last_load[WORKFLOW_RECIPES] = map_stamp
-    _logger.debug("WR: got: '%s' map" % workflow_r_map)
+    # Do not print whole map here. It is dangerously big if any recipe contains
+    # significant data such as an image.
+    _logger.debug("WP: got: map with keys '%s'" % workflow_r_map.keys())
     return workflow_r_map
 
 
