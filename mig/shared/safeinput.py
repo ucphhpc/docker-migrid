@@ -34,18 +34,20 @@ unicode decoded strings since a single character may take up multiple bytes in
 the byte string version and we want to validate on a character by character
 basis.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
 import cgi
 from email.utils import parseaddr, formataddr
-from string import letters, digits, printable
+from string import ascii_letters, digits, printable
 from unicodedata import category, normalize, name as unicode_name
 
-from shared.base import force_unicode, force_utf8
-from shared.defaults import src_dst_sep, user_id_charset, user_id_max_length, \
+from mig.shared.base import force_unicode, force_utf8
+from mig.shared.defaults import src_dst_sep, user_id_charset, user_id_max_length, \
     session_id_charset, session_id_length, workflow_id_length, MAX_SWEEP
-from shared.listhandling import frange
-from shared.validstring import valid_user_path
-from shared.valuecheck import lines_value_checker, \
+from mig.shared.listhandling import frange
+from mig.shared.validstring import valid_user_path
+from mig.shared.valuecheck import lines_value_checker, \
     max_jobs_value_checker
 
 VALID_WORKFLOW_ATTRIBUTES = [
@@ -103,16 +105,16 @@ CURRENCY = '¤$€£¢¥₣₤'
 
 # We must be careful about characters that have special regex meaning
 
-VALID_SAFE_PATH_CHARACTERS = letters + digits + "/.,_-+="
-VALID_PATH_CHARACTERS = letters + digits + CURRENCY + "/.,_-+±×÷=½¾" + \
+VALID_SAFE_PATH_CHARACTERS = ascii_letters + digits + "/.,_-+="
+VALID_PATH_CHARACTERS = ascii_letters + digits + CURRENCY + "/.,_-+±×÷=½¾" + \
     " " + "'" + ":;@§%‰()~!&¶"
 
 # Plain text here only - *no* html tags, i.e. no '<' or '>' !!
 
 VALID_TEXT_CHARACTERS = VALID_PATH_CHARACTERS + CURRENCY + '?#*[]{}' + '"' + \
     "`|^" + '\\' + '\n\r\t'
-VALID_FQDN_CHARACTERS = letters + digits + '.-'
-VALID_BACKEND_NAME_CHARACTERS = letters + digits + '-_'
+VALID_FQDN_CHARACTERS = ascii_letters + digits + '.-'
+VALID_BACKEND_NAME_CHARACTERS = ascii_letters + digits + '-_'
 VALID_BASEURL_CHARACTERS = VALID_FQDN_CHARACTERS + ':/_'
 VALID_URL_CHARACTERS = VALID_BASEURL_CHARACTERS + '?;&%='
 # According to https://tools.ietf.org/html/rfc3986#section-2 URLs may contain
@@ -136,15 +138,15 @@ ALLOW_UNSAFE = \
 # Allow these chars in addition to plain letters and digits
 # We explicitly allow email chars in CN to work around broken DNs
 
-#############################################################################
-# IMPORTANT: never allow '+' or '_' in name: reserved for path translation! #
-#############################################################################
+#*****************************************************************************
+#* IMPORTANT: never allow '+' or '_' in name: reserved for path translation! *
+#*****************************************************************************
 
 name_extras = ' -@.'
 
-#############################################################################
-# IMPORTANT: never allow '+' in DN: reserved for path translation!          #
-#############################################################################
+#*****************************************************************************
+#* IMPORTANT: never allow '+' in DN: reserved for path translation!          *
+#*****************************************************************************
 # We allow ':' in DN, however, as it is used by e.g. DanID:
 # /C=DK/O=Ingen organisatorisk tilknytning/CN=${NAME}/serialNumber=PID:${SERIAL}
 # Similarly we must allow '_' in DN since it is valid in emailAddress. We only
@@ -163,9 +165,9 @@ dn_max_len = 96
 
 valid_integer_chars = digits + integer_extras
 valid_float_chars = digits + float_extras
-valid_password_chars = letters + digits + password_extras
-valid_name_chars = letters + digits + name_extras
-valid_dn_chars = letters + digits + dn_extras
+valid_password_chars = ascii_letters + digits + password_extras
+valid_name_chars = ascii_letters + digits + name_extras
+valid_dn_chars = ascii_letters + digits + dn_extras
 valid_username_chars = user_id_charset
 VALID_INTEGER_CHARACTERS = valid_integer_chars
 VALID_FLOAT_CHARACTERS = valid_float_chars
@@ -303,7 +305,8 @@ def valid_printable(contents, min_length=0, max_length=-1):
 def valid_ascii(contents, min_length=0, max_length=-1, extra_chars=''):
     """Verify that supplied contents only contain ascii characters"""
 
-    __valid_contents(contents, letters + extra_chars, min_length, max_length)
+    __valid_contents(
+        contents, ascii_letters + extra_chars, min_length, max_length)
 
 
 def valid_numeric(contents, min_length=0, max_length=-1):
@@ -315,7 +318,8 @@ def valid_numeric(contents, min_length=0, max_length=-1):
 def valid_alphanumeric(contents, min_length=0, max_length=-1, extra_chars=''):
     """Verify that supplied contents only contain alphanumeric characters"""
 
-    __valid_contents(contents, letters + digits + extra_chars, min_length,
+    __valid_contents(
+        contents, ascii_letters + digits + extra_chars, min_length,
                      max_length)
 
 
@@ -755,7 +759,7 @@ def valid_user_path_name(
     (status, msg) = (True, '')
     try:
         valid_path(path)
-    except InputException, iex:
+    except InputException as iex:
         status = False
         msg = 'Invalid path! (%s: %s)' % (safe_path, iex)
     # Automatic configuration extraction
@@ -812,7 +816,7 @@ def __valid_gdp_var(gdp_var):
     """Verify that supplied gdp_var only contains characters that
     we consider valid in various gdp variable names.
     """
-    __valid_contents(gdp_var, letters + '_')
+    __valid_contents(gdp_var, ascii_letters + '_')
 
 
 def valid_gdp_category_id(category_id):
@@ -833,7 +837,7 @@ def valid_gdp_ref_value(ref_value):
     """Verify that supplied ref_value only contains characters that
     we consider valid in GDP ref values.
     """
-    __valid_contents(ref_value, letters + digits + '+-=/.:_')
+    __valid_contents(ref_value, ascii_letters + digits + '+-=/.:_')
 
 
 def valid_cloud_instance_id(
@@ -1024,8 +1028,9 @@ def valid_workflow_attributes(attributes):
 
 
 def valid_workflow_operation(operation):
-    """Verify that the supplied workflow
-    operation only contains letters + _ """
+    """Verify that the supplied workflow operation only contains letters and
+    underscores.
+    """
     valid_ascii(operation, extra_chars='_')
 
 
@@ -1053,19 +1058,23 @@ def valid_job_attributes(attributes):
 
 
 def valid_job_type(type):
-    """Verify that the supplied job type only contains letters + _ """
+    """Verify that the supplied job type only contains letters and
+    underscores.
+    """
     valid_ascii(type, extra_chars='_')
 
 
 def valid_job_operation(operation):
-    """Verify that the supplied job operation only contains letters + _ """
+    """Verify that the supplied job operation only contains letters and
+    underscores.
+    """
     valid_ascii(operation, extra_chars='_')
 
 
 def filter_ascii(contents):
     """Filter supplied contents to only contain ascii characters"""
 
-    return __filter_contents(contents, letters)
+    return __filter_contents(contents, ascii_letters)
 
 
 def filter_numeric(contents):
@@ -1077,13 +1086,13 @@ def filter_numeric(contents):
 def filter_alphanumeric(contents):
     """Filter supplied contents to only contain alphanumeric characters"""
 
-    return __filter_contents(contents, letters + digits)
+    return __filter_contents(contents, ascii_letters + digits)
 
 
 def filter_alphanumeric_and_spaces(contents):
     """Filter supplied contents to only contain alphanumeric characters"""
 
-    return __filter_contents(contents, letters + digits + ' ')
+    return __filter_contents(contents, ascii_letters + digits + ' ')
 
 
 def filter_date(contents):
@@ -1184,7 +1193,7 @@ def validated_string(user_arguments_dict, name, default):
 
     try:
         valid_alphanumeric(first)
-    except InputException, iex:
+    except InputException as iex:
         err += '%s' % iex
     return (filter_alphanumeric(first), err)
 
@@ -1211,7 +1220,7 @@ def validated_plain_text(user_arguments_dict, name, default):
         # valid_alphanumeric_and_spaces(first)
 
         valid_plain_text(first)
-    except InputException, iex:
+    except InputException as iex:
         err += '%s' % iex
 
     # return filter_alphanumeric_and_spaces(first), err
@@ -1241,7 +1250,7 @@ def validated_path(user_arguments_dict, name, default):
         # valid_alphanumeric_and_spaces(first)
 
         valid_path(first)
-    except InputException, iex:
+    except InputException as iex:
         err += '%s' % iex
 
     # return filter_alphanumeric_and_spaces(first), err
@@ -1268,7 +1277,7 @@ def validated_fqdn(user_arguments_dict, name, default):
 
     try:
         valid_fqdn(first)
-    except InputException, iex:
+    except InputException as iex:
         err += '%s' % iex
     return (filter_fqdn(first), err)
 
@@ -1292,7 +1301,7 @@ def validated_commonname(user_arguments_dict, name, default):
 
     try:
         valid_commonname(first)
-    except InputException, iex:
+    except InputException as iex:
         err += '%s' % iex
     return (filter_commonname(first), err)
 
@@ -1316,7 +1325,7 @@ def validated_password(user_arguments_dict, name, default):
 
     try:
         valid_password(first)
-    except InputException, iex:
+    except InputException as iex:
         err += '%s' % iex
     return (filter_password(first), err)
 
@@ -1343,7 +1352,7 @@ def validated_integer(user_arguments_dict, name, default):
     try:
         valid_numeric(first)
         return (int(first), err)
-    except InputException, iex:
+    except InputException as iex:
         err += '%s' % iex
     filtered = filter_numeric(first)
     if filtered:
@@ -1374,7 +1383,7 @@ def validated_job_id(user_arguments_dict, name, default):
 
     try:
         valid_job_id(first)
-    except InputException, iex:
+    except InputException as iex:
         err += '%s' % iex
     return (filter_job_id(first), err)
 
@@ -1806,7 +1815,7 @@ def validate_dict_values(
         if _key in type_checks:
             try:
                 type_checks[_key](_value)
-            except Exception, err:
+            except Exception as err:
                 # Probably illegal type hint
                 rejected_v[_key] = ((html_escape(",".join(values)),
                                      html_escape(str(err))))
@@ -1814,7 +1823,7 @@ def validate_dict_values(
         if _key in value_checks:
             try:
                 value_checks[_key](_value)
-            except Exception, err:
+            except Exception as err:
                 # Value check failed
                 rejected_v[_key] = ((html_escape(",".join(values)),
                                      html_escape(str(err))))
@@ -1857,7 +1866,7 @@ def validate_values(
             continue
         try:
             type_checks[key](entry)
-        except Exception, err:
+        except Exception as err:
             # Probably illegal type hint
             bad_values.append((html_escape(show_val),
                                html_escape(str(err))))
@@ -1867,7 +1876,7 @@ def validate_values(
             continue
         try:
             value_checks[key](entry)
-        except Exception, err:
+        except Exception as err:
             # Value check failed
             bad_values.append((html_escape(show_val),
                                html_escape(str(err))))
@@ -1897,14 +1906,14 @@ if __name__ == '__main__':
                     u'Unicode æøå', 'Test Maybe Invalid Źacãŕ',
                     'Test Invalid ?', 'Test HTML Invalid <code/>'):
         try:
-            print 'Testing valid_commonname: %s' % test_cn
-            print 'Filtered commonname: %s' % filter_commonname(test_cn)
+            print('Testing valid_commonname: %s' % test_cn)
+            print('Filtered commonname: %s' % filter_commonname(test_cn))
             # print 'DEBUG %s only in %s' % ([test_cn],
             #        [VALID_NAME_CHARACTERS])
             valid_commonname(test_cn)
-            print 'Accepted raw commonname!'
-        except Exception, exc:
-            print 'Rejected raw commonname %s : %s' % (test_cn, exc)
+            print('Accepted raw commonname!')
+        except Exception as exc:
+            print('Rejected raw commonname %s : %s' % (test_cn, exc))
 
     for test_path in ('test.txt', 'Test Æøå', 'Test Überh4x0r',
                       'Test valid Jean-Luc Géraud', 'Test valid Źacãŕ',
@@ -1914,14 +1923,14 @@ if __name__ == '__main__':
                       'Test invalid <', 'Test Invalid >',
                       'Test Invalid *', 'Test Invalid "'):
         try:
-            print 'Testing valid_path: %s' % test_path
-            print 'Filtered path: %s' % filter_path(test_path)
+            print('Testing valid_path: %s' % test_path)
+            print('Filtered path: %s' % filter_path(test_path))
             # print 'DEBUG %s only in %s' % ([test_path],
             #                               [VALID_PATH_CHARACTERS])
             valid_path(test_path)
-            print 'Accepted raw path!'
-        except Exception, exc:
-            print 'Rejected raw path %s : %s' % (test_path, exc)
+            print('Accepted raw path!')
+        except Exception as exc:
+            print('Rejected raw path %s : %s' % (test_path, exc))
 
     for test_addr in ('', 'invalid', 'abc@dk', 'abc@def.org', 'abc@def.gh.org',
                       'aBc@Def.org', '<invalid@def.org>',
@@ -1939,11 +1948,11 @@ if __name__ == '__main__':
                       '<script>alert("XSS vulnerable");</script>',
                       '<script>alert("XSS vulnerable a@b.c");</script>'):
         try:
-            print 'Testing valid_email_address: %s' % test_addr
+            print('Testing valid_email_address: %s' % test_addr)
             valid_email_address(test_addr)
-            print 'Accepted raw address! %s' % [parseaddr(test_addr)]
-        except Exception, exc:
-            print 'Rejected raw address %s : %s' % (test_addr, exc)
+            print('Accepted raw address! %s' % [parseaddr(test_addr)])
+        except Exception as exc:
+            print('Rejected raw address %s : %s' % (test_addr, exc))
 
     autocreate_defaults = {
         'openid.ns.sreg': [''],
@@ -1983,19 +1992,19 @@ if __name__ == '__main__':
                            'openid.sreg.email': ['bardino@nbi.ku.dk']}
     (accepted, rejected) = validated_input(
         user_arguments_dict, autocreate_defaults)
-    print "Accepted:"
+    print("Accepted:")
     for (key, val) in accepted.items():
-        print "\t%s: %s" % (key, val)
-    print "Rejected:"
+        print("\t%s: %s" % (key, val))
+    print("Rejected:")
     for (key, val) in rejected.items():
-        print "\t%s: %s" % (key, val)
+        print("\t%s: %s" % (key, val))
     user_arguments_dict['openid.sreg.fullname'] = [
         force_unicode('Jonas Æøå Bardino')]
     (accepted, rejected) = validated_input(
         user_arguments_dict, autocreate_defaults)
-    print "Accepted:"
+    print("Accepted:")
     for (key, val) in accepted.items():
-        print "\t%s: %s" % (key, val)
-    print "Rejected:"
+        print("\t%s: %s" % (key, val))
+    print("Rejected:")
     for (key, val) in rejected.items():
-        print "\t%s: %s" % (key, val)
+        print("\t%s: %s" % (key, val))

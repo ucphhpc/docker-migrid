@@ -26,12 +26,13 @@
 #
 
 """Emulate a command line interface with all the cgi functions"""
+from __future__ import absolute_import
 
 import os
 
-import shared.returnvalues as returnvalues
-from shared.functional import validate_input_and_cert
-from shared.init import initialize_main_variables, find_entry
+from mig.shared import returnvalues
+from mig.shared.functional import validate_input_and_cert
+from mig.shared.init import initialize_main_variables, find_entry
 
 
 def signature():

@@ -3,8 +3,8 @@
 #
 # --- BEGIN_HEADER ---
 #
-# distfile - [insert a few words of module description on this line]
-# Copyright (C) 2003-2009  The MiG Project lead by Brian Vinter
+# distfile - implementation of serverfile with remote IO
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -25,12 +25,13 @@
 # -- END_HEADER ---
 #
 
-# Script version (automagically updated by cvs)
-
 """This module contains various wrapper functions for distributed
 server IO. In that way the underlying distribution of server
 files can be separated from the normal server operation.
 """
+from __future__ import absolute_import
+
+# Script version (automagically updated by cvs)
 
 __version__ = '$Revision: 2084 $'
 __revision__ = __version__
@@ -48,10 +49,10 @@ except ImportError:
 
     _devnull = '/dev/null'
 
-import shared.distbase as distbase
-from shared.distbase import HTTPS_SID_PORT, HTTPS_CERT_PORT, BASE_ID, \
+from mig.shared import distbase
+from mig.shared.distbase import HTTPS_SID_PORT, HTTPS_CERT_PORT, BASE_ID, \
     BASE_HOME, HTTP_OK
-from shared.serverfile import ServerFile, LOCK_UN, LOCK_SH, LOCK_EX, \
+from mig.shared.serverfile import ServerFile, LOCK_UN, LOCK_SH, LOCK_EX, \
     LockingException
 
 # Provide user agent string for use in distfile recursion check
@@ -73,9 +74,9 @@ def _line_read(data, size=-1):
     return line_data[:index + 1]
 
 
-# ####################
+#
 # Public file class #
-# ####################
+#
 
 
 class DistFile(ServerFile):
@@ -87,16 +88,11 @@ class DistFile(ServerFile):
 
     fd_str = "<%s remote file '%s', mode %s at %s >"
 
-    def __init__(
-        self,
-        path,
-        mode='r',
-        bufsize=-1,
-        ):
+    def __init__(self, path, mode='r', bufsize=-1):
         """Setup DistFile object"""
 
         # Make sure we don't run into trouble if server doesn't recognize
-    # that /test//file/ is equivalent to /test/file
+        # that /test//file/ is equivalent to /test/file
 
         path = _normpath(path)
 
@@ -129,7 +125,7 @@ class DistFile(ServerFile):
             # now
 
             raise IOError('Distfile: init failed with error %s: %s'
-                           % (status, data))
+                          % (status, data))
         if mode.startswith('w'):
 
             # Mimic standard python behaviour of truncating files
@@ -158,7 +154,7 @@ class DistFile(ServerFile):
         path,
         mode='r',
         buf=-1,
-        ):
+    ):
         """Request the current leader to open the active session for
         file with supplied path.
         """
@@ -195,20 +191,20 @@ class DistFile(ServerFile):
         path,
         offset,
         bytes,
-        ):
+    ):
         """Read bytes from position, offset, in file with specified
         path. Try each of the providers in turn if remote read fails.
         """
 
         for server in providers:
             (status, data) = distbase.get_range(server,
-                    HTTPS_CERT_PORT, '/%s/%s' % (self.session_home,
-                    path), offset, bytes)
+                                                HTTPS_CERT_PORT, '/%s/%s' % (self.session_home,
+                                                                             path), offset, bytes)
             if status in HTTP_OK:
                 return data
 
         raise IOError('Error: no providers could deliver the data: %s'
-                       % data)
+                      % data)
 
     def __write_remote_file(
         self,
@@ -217,7 +213,7 @@ class DistFile(ServerFile):
         offset,
         bytes,
         data,
-        ):
+    ):
         """Write the supplied contents to all replicas of the remote
         file. This is done by forwarding the write to all replicas
         if called from the main server. When the secondary providers
@@ -235,7 +231,7 @@ class DistFile(ServerFile):
                 offset,
                 bytes,
                 data,
-                )
+            )
             status_list.append(status)
             data_list.append(reply)
 
@@ -249,7 +245,7 @@ class DistFile(ServerFile):
         providers,
         path,
         size,
-        ):
+    ):
         """Truncate all replicas of path to the supplied size. This is
         done by forwarding the write to all replicas if called from
         the main server. When the secondary providers receive the
@@ -264,7 +260,7 @@ class DistFile(ServerFile):
             contents = self.__read_remote_file(providers, path, 0, size)
         for server in providers:
             (status, data) = distbase.http_put(server, HTTPS_CERT_PORT,
-                    '/%s/%s' % (self.session_home, path), contents)
+                                               '/%s/%s' % (self.session_home, path), contents)
             status_list.append(status)
             data_list.append(data)
 
@@ -279,7 +275,7 @@ class DistFile(ServerFile):
 
         for server in providers:
             (status, data) = distbase.http_stat(server,
-                    HTTPS_CERT_PORT, '/%s' % path, '')
+                                                HTTPS_CERT_PORT, '/%s' % path, '')
 
             # stat returns MiG code rather than HTTP code: 0 means OK
 
@@ -287,7 +283,7 @@ class DistFile(ServerFile):
                 return data
 
         raise IOError('Error: no providers could deliver the data: %s'
-                       % data)
+                      % data)
 
     # Public interface methods #
 
@@ -351,10 +347,10 @@ class DistFile(ServerFile):
             raise ValueError('I/O operation on closed file')
         if not self.__read_allowed():
             raise IOError('Illegal read: path %s, mode %s !'
-                           % (self.path, self.mode))
+                          % (self.path, self.mode))
 
         data = self.__read_remote_file(self.providers, self.path,
-                self.offset, bytes)
+                                       self.offset, bytes)
         self.offset += len(data)
         return data
 
@@ -388,7 +384,7 @@ class DistFile(ServerFile):
             raise ValueError('I/O operation on closed file')
         if not self.__write_allowed():
             raise IOError('Illegal truncate: path %s, mode %s !'
-                           % (self.path, self.mode))
+                          % (self.path, self.mode))
         if size == -1:
             size = self.offset
         self.__truncate_remote_file(self.providers, self.path, size)
@@ -404,7 +400,7 @@ class DistFile(ServerFile):
             raise ValueError('I/O operation on closed file')
         if not self.__write_allowed():
             raise IOError('Illegal write: path %s, mode %s !'
-                           % (self.path, self.mode))
+                          % (self.path, self.mode))
         self.__write_remote_file(self.providers, self.path,
                                  self.offset, len(data), data)
         self.offset += len(data)
@@ -449,5 +445,3 @@ class DistFile(ServerFile):
             state = 'closed'
         return self.fd_str % (state, self.path, self.mode,
                               self.providers)
-
-

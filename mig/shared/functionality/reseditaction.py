@@ -28,22 +28,23 @@
 # Martin Rehr martin@rehr.dk August 2005
 
 """Handle resource editor actions"""
+from __future__ import absolute_import
 
 import os
 import time
 
-import shared.confparser as confparser
-import shared.returnvalues as returnvalues
-from shared.base import client_id_dir
-from shared.defaults import keyword_auto, csrf_field
-from shared.fileio import unpickle
-from shared.functional import validate_input_and_cert, REJECT_UNSET
-from shared.handlers import safe_handler, get_csrf_limit
-from shared.init import initialize_main_variables, find_entry
-from shared.notification import send_resource_create_request_mail
-from shared.resource import prepare_conf, write_resource_config, \
+from mig.shared import confparser
+from mig.shared import returnvalues
+from mig.shared.base import client_id_dir
+from mig.shared.defaults import keyword_auto, csrf_field
+from mig.shared.fileio import unpickle
+from mig.shared.functional import validate_input_and_cert, REJECT_UNSET
+from mig.shared.handlers import safe_handler, get_csrf_limit
+from mig.shared.init import initialize_main_variables, find_entry
+from mig.shared.notification import send_resource_create_request_mail
+from mig.shared.resource import prepare_conf, write_resource_config, \
     create_resource, update_resource, resource_owners
-from shared.safeinput import html_escape
+from mig.shared.safeinput import html_escape
 
 
 def signature():
@@ -68,7 +69,7 @@ def handle_update(configuration, client_id, resource_id, user_vars,
     try:
         logger.info('write to file: %s' % pending_file)
         write_resource_config(configuration, user_vars, pending_file)
-    except Exception, err:
+    except Exception as err:
         logger.error('Resource conf %s could not be written: %s' %
                      (pending_file, err))
         output_objects.append({'object_type': 'error_text', 'text':

@@ -26,11 +26,12 @@
 #
 
 """Bourne shell job script generator and functions"""
+from __future__ import absolute_import
 
 from urllib import quote as urlquote
 import os
 
-from shared.defaults import job_output_dir, src_dst_sep
+from mig.shared.defaults import job_output_dir, src_dst_sep
 
 
 class GenJobScriptSh:
@@ -73,7 +74,7 @@ class GenJobScriptSh:
         """
 
         upload_bw_limit = ''
-        if self.resource_conf.has_key('MAXUPLOADBANDWIDTH')\
+        if 'MAXUPLOADBANDWIDTH' in self.resource_conf\
              and self.resource_conf['MAXUPLOADBANDWIDTH'] > 0:
             upload_bw_limit = '--limit-rate %ik'\
                  % self.resource_conf['MAXUPLOADBANDWIDTH']
@@ -117,7 +118,7 @@ class GenJobScriptSh:
         """Send message to mqueue"""
 
         upload_bw_limit = ''
-        if self.resource_conf.has_key('MAXUPLOADBANDWIDTH')\
+        if 'MAXUPLOADBANDWIDTH' in self.resource_conf\
              and self.resource_conf['MAXUPLOADBANDWIDTH'] > 0:
             upload_bw_limit = '--limit-rate %ik'\
               % self.resource_conf['MAXUPLOADBANDWIDTH']
@@ -137,7 +138,7 @@ class GenJobScriptSh:
         """
         
         download_bw_limit = ''
-        if self.resource_conf.has_key('MAXDOWNLOADBANDWIDTH')\
+        if 'MAXDOWNLOADBANDWIDTH' in self.resource_conf\
              and self.resource_conf['MAXDOWNLOADBANDWIDTH'] > 0:
             download_bw_limit = '--limit-rate %ik'\
                  % self.resource_conf['MAXDOWNLOADBANDWIDTH']
@@ -176,7 +177,7 @@ class GenJobScriptSh:
         """Download internal job files"""
 
         download_bw_limit = ''
-        if self.resource_conf.has_key('MAXDOWNLOADBANDWIDTH')\
+        if 'MAXDOWNLOADBANDWIDTH' in self.resource_conf\
             and self.resource_conf['MAXDOWNLOADBANDWIDTH'] > 0:
             download_bw_limit = '--limit-rate %ik'\
                  % self.resource_conf['MAXDOWNLOADBANDWIDTH']
@@ -193,7 +194,7 @@ class GenJobScriptSh:
         """Receive message from mqueue"""
 
         download_bw_limit = ''
-        if self.resource_conf.has_key('MAXDOWNLOADBANDWIDTH')\
+        if 'MAXDOWNLOADBANDWIDTH' in self.resource_conf\
             and self.resource_conf['MAXDOWNLOADBANDWIDTH'] > 0:
             download_bw_limit = '--limit-rate %ik'\
                  % self.resource_conf['MAXDOWNLOADBANDWIDTH']
@@ -245,7 +246,7 @@ class GenJobScriptSh:
         requested['DISK'] = self.job_dict.get('DISK', 1)
         requested['JOBID'] = self.job_dict.get('JOB_ID', 'UNKNOWN')
         requested['ADMINEMAIL'] = ''
-        if self.resource_conf.has_key('ADMINEMAIL'):
+        if 'ADMINEMAIL' in self.resource_conf:
 
             # Format to mail flag is normally user[@host][,user[@host],...]
 
@@ -522,7 +523,7 @@ class GenJobScriptSh:
 
             fe_move = resource_filename.split('/', 1)[0]
 
-            if not fe_move_dict.has_key(fe_move):
+            if fe_move not in fe_move_dict:
                 fe_move_dict[fe_move] = True
 
         for executables in self.job_dict['EXECUTABLES']:
@@ -552,7 +553,7 @@ class GenJobScriptSh:
 
             fe_move = resource_filename.split('/', 1)[0]
 
-            if not fe_move_dict.has_key(fe_move):
+            if fe_move not in fe_move_dict:
                 fe_move_dict[fe_move] = True
 
         # Quote file names to protect against exotic characters
@@ -602,7 +603,7 @@ class GenJobScriptSh:
 
             exe_move = resource_filename.split('/', 1)[0]
 
-            if not exe_move_dict.has_key(exe_move):
+            if exe_move not in exe_move_dict:
                 exe_move_dict[exe_move] = True
 
         # Quote file names to protect against exotic characters

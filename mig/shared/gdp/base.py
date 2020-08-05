@@ -26,6 +26,7 @@
 #
 
 """GDP specific helper functions"""
+from __future__ import print_function
 
 import copy
 import datetime
@@ -41,31 +42,31 @@ try:
 except:
     Xvfb = None
 
-from shared.base import client_id_dir, valid_dir_input, extract_field, \
+from mig.shared.base import client_id_dir, valid_dir_input, extract_field, \
     fill_distinguished_name, expand_openid_alias, get_short_id
-from shared.defaults import default_vgrid, all_vgrids, any_vgrid, \
+from mig.shared.defaults import default_vgrid, all_vgrids, any_vgrid, \
     gdp_distinguished_field, io_session_timeout, \
     user_db_filename as mig_user_db_filename, \
     valid_gdp_auth_scripts as valid_auth_scripts
-from shared.fileio import touch, make_symlink, write_file, remove_rec, \
+from mig.shared.fileio import touch, make_symlink, write_file, remove_rec, \
     acquire_file_lock, release_file_lock, copy_file
-from shared.gdp.userid import __validate_user_id, \
+from mig.shared.gdp.userid import __validate_user_id, \
     __client_id_from_project_client_id, \
     __project_name_from_project_client_id, \
     __short_id_from_client_id, __project_short_id_from_project_client_id, \
     __client_id_from_user_id, __project_client_id_from_user_id, \
     __project_short_id_from_user_id, __scamble_user_id, \
     get_project_from_user_id, get_project_client_id
-from shared.notification import send_email
-from shared.serial import load, dump
-from shared.useradm import create_user, delete_user, edit_user, \
+from mig.shared.notification import send_email
+from mig.shared.serial import load, dump
+from mig.shared.useradm import create_user, delete_user, edit_user, \
     get_full_user_map, lock_user_db
-from shared.vgrid import vgrid_flat_name, vgrid_is_owner, vgrid_set_owners, \
+from mig.shared.vgrid import vgrid_flat_name, vgrid_is_owner, vgrid_set_owners, \
     vgrid_add_members, vgrid_set_settings, vgrid_create_allowed, \
     vgrid_remove_members, vgrid_restrict_write_support
-from shared.vgridaccess import force_update_user_map, \
+from mig.shared.vgridaccess import force_update_user_map, \
     force_update_vgrid_map, force_update_resource_map
-from shared.vgridkeywords import get_settings_keywords_dict
+from mig.shared.vgridkeywords import get_settings_keywords_dict
 
 user_db_filename = 'gdp-users.db'
 user_log_filename = 'gdp-users.log'
@@ -129,8 +130,6 @@ def __user_log_filepath(configuration):
     log_lock_filepath = '%s.lock' % log_filepath
 
     return (log_filepath, log_lock_filepath)
-
-
 
 
 def __create_gdp_user_db_entry(configuration):
@@ -374,7 +373,7 @@ def __load_user_db(configuration,
     if os.path.exists(db_filepath):
         try:
             result = load(db_filepath)
-        except Exception, exc:
+        except Exception as exc:
             err = str(exc)
             result = {}
             msg = "Failed to load GDP user DB"
@@ -490,7 +489,7 @@ def __send_project_action_confirmation(configuration,
                 status = False
                 _logger.error("%s: No notify emails found in file: %r"
                               % (log_err_msg, notify_filepath))
-        except Exception, exc:
+        except Exception as exc:
             status = False
             _logger.error("%s: Failed to open notify emails file: %s"
                           % (log_err_msg, exc))
@@ -516,7 +515,7 @@ def __send_project_action_confirmation(configuration,
                 fh = open(template_filepath)
                 template = fh.read()
                 fh.close()
-            except Exception, exc:
+            except Exception as exc:
                 status = False
                 _logger.error("%s: Failed to open template file: %s"
                               % (log_err_msg, exc))
@@ -560,7 +559,7 @@ def __send_project_action_confirmation(configuration,
             # NOTE: we force disable network listen for security
             vdisplay = Xvfb(nolisten='tcp')
             vdisplay.start()
-        except Exception, exc:
+        except Exception as exc:
             status = False
             vdisplay = None
             _logger.error("%s: Failed to initialize vdisplay: %s"
@@ -573,14 +572,14 @@ def __send_project_action_confirmation(configuration,
                 pdfkit.from_string(template, pdf_filepath,
                                    configuration=pdfkit_conf,
                                    options=pdf_options)
-            except Exception, exc:
+            except Exception as exc:
                 status = False
                 _logger.error("%s: pdfkit failed: %s"
                               % (log_err_msg, exc))
         if vdisplay is not None:
             try:
                 vdisplay.stop()
-            except Exception, exc:
+            except Exception as exc:
                 status = False
                 _logger.error("%s: Failed to stop vdisplay: %s"
                               % (log_err_msg, exc))
@@ -694,7 +693,7 @@ def __delete_mig_user(configuration, client_id, allow_missing=False):
             delete_user(mig_user_dict, configuration.config_file,
                         mig_user_db_path, force=True)
             status = True
-        except Exception, exc:
+        except Exception as exc:
             status = False
             _logger.error(log_err_msg
                           + ": %s" % (exc))
@@ -740,7 +739,7 @@ def __get_user_log_entry(configuration,
                 result = (line_arr[1], line_arr[2])
             line = fh.readline()
         fh.close()
-    except Exception, exc:
+    except Exception as exc:
         _logger.error("GDP: __get_user_log_entry failed: %s" % exc)
         result = None
     if do_lock:
@@ -779,7 +778,7 @@ def __update_user_log(configuration, client_id, do_lock=True):
             fh.write(msg)
             fh.close()
             result = True
-        except Exception, exc:
+        except Exception as exc:
             _logger.error("GDP: __update_user_log failed: %s" % exc)
             result = False
     if do_lock:
@@ -857,7 +856,6 @@ def get_active_project_short_id(configuration, user_id, protocol):
         configuration, project_client_id)
 
     return result
-
 
 
 def update_category_meta(configuration, client_id, project, category_dict,
@@ -1018,7 +1016,7 @@ def project_log(
                 else:
                     raise ValueError(
                         "Missing client_id for user_id: %s" % user_id)
-            except Exception, exc:
+            except Exception as exc:
                 status = False
                 _logger.error(log_err_msg + ": %s" % exc)
 
@@ -1247,7 +1245,7 @@ def get_project_info(configuration,
                          configuration.gdp_data_categories])
     owner_project_meta = owner_project.get('category_meta', {})
     category_id = owner_project_meta.get('category_id', '')
-    if not category_map.has_key(category_id):
+    if category_id not in category_map:
         _logger.error("Missing data category: %s used by project: %s"
                       % (category_id, project_name))
         return result
@@ -1300,7 +1298,6 @@ def get_project_info(configuration,
                 'state': project.get('state', '')
             })
     return result
-
 
 
 def get_project_user_dn(configuration, requested_script, client_id, protocol):
@@ -1764,7 +1761,7 @@ def reset_account_roles(
                 ok_msg += ", " + template
                 if verbose:
                     msg = "Resetting " + template
-                    print msg
+                    print(msg)
                     _logger.debug("GDP: " + msg)
             else:
                 status = False
@@ -1887,28 +1884,28 @@ def edit_gdp_user(
     (log_filepath, log_lock_filepath) = __user_log_filepath(configuration)
 
     if verbose:
-        print log_prefix
+        print(log_prefix)
 
     if force:
         msg = "force enabled, rollback DISABLED !!!"
         if verbose:
-            print msg
+            print(msg)
         _logger.warning(log_prefix + msg)
 
     if verbose:
         msg = "Using MiG DB: %r" % mig_db_path
-        print msg
+        print(msg)
         _logger.debug(msg)
 
         msg = "Using GDP DB: %s" % gdp_db_path
-        print msg
+        print(msg)
         _logger.debug(msg)
 
     if verbose:
         msg = "Update GDP and MiG DB entry and dirs for %r: %s" \
             % (user_id, changes)
         _logger.debug(msg)
-        print msg
+        print(msg)
 
     # Check if user is logged in on any of the valid protocols
 
@@ -1923,7 +1920,7 @@ def edit_gdp_user(
             msg = "user currently logged in to project: %r with protocol: %r" \
                 % (project_name, protocol)
             if verbose:
-                print msg
+                print(msg)
             _logger.error(log_prefix + msg)
             if not force:
                 return (False, msg)
@@ -1934,7 +1931,7 @@ def edit_gdp_user(
 
     msg = "rebuilding user, vgrid and resource maps to ensure consistency"
     if verbose:
-        print msg
+        print(msg)
     _logger.info(log_prefix + msg)
 
     force_update_user_map(configuration, clean=True)
@@ -1948,11 +1945,11 @@ def edit_gdp_user(
     bck_mig_db_path = "%s.edituser.bck.%s" % (mig_db_path, time.time())
     try:
         copy_file(mig_db_path, bck_mig_db_path, configuration)
-    except Exception, exc:
+    except Exception as exc:
         msg = "failed to backup MiG user database: %r -> %r" % (
             mig_db_path, bck_mig_db_path)
         if verbose:
-            print msg
+            print(msg)
         _logger.error(log_prefix + msg)
         release_file_lock(flock_mig_db)
         return (False, msg)
@@ -1964,11 +1961,11 @@ def edit_gdp_user(
     bck_log_filepath = "%s.edituser.bck.%s" % (log_filepath, time.time())
     try:
         copy_file(log_filepath, bck_log_filepath, configuration)
-    except Exception, exc:
+    except Exception as exc:
         msg = "failed to backup GDP users log: %r -> %r" % (
             log_filepath, bck_log_filepath)
         if verbose:
-            print msg
+            print(msg)
         _logger.error(log_prefix + msg)
         release_file_lock(flock_log)
         return (False, msg)
@@ -1983,11 +1980,11 @@ def edit_gdp_user(
     bck_db_filepath = "%s.edituser.bck.%s" % (db_filepath, time.time())
     try:
         copy_file(db_filepath, bck_db_filepath, configuration)
-    except Exception, exc:
+    except Exception as exc:
         msg = "failed to backup GDP database: %r -> %r" % (
             db_filepath, bck_db_filepath)
         if verbose:
-            print msg
+            print(msg)
         _logger.error(log_prefix + msg)
         release_file_lock(flock_gdp_db)
         return (False, msg)
@@ -2001,7 +1998,7 @@ def edit_gdp_user(
         template = "invalid GDP user"
         msg = template + ": %r" % user_id
         if verbose:
-            print "ERROR: " + msg
+            print("ERROR: " + msg)
         _logger.error(log_prefix + template)
         release_file_lock(flock_gdp_db)
         return (False, msg)
@@ -2018,7 +2015,7 @@ def edit_gdp_user(
         if not project_user_id:
             msg = "missing user_id for project: %r" % project_name
             if verbose:
-                print "ERROR: %s" % msg
+                print("ERROR: %s" % msg)
             _logger.error(log_prefix + msg)
             if not force:
                 rollback = True
@@ -2045,7 +2042,7 @@ def edit_gdp_user(
         if verbose:
             msg = "updating MiG DB entry and dirs for %r: %s" \
                 % (project_user_id, project_dict)
-            print msg
+            print(msg)
             _logger.debug(msg)
 
         # Generate transaction information needed by rollback
@@ -2054,7 +2051,7 @@ def edit_gdp_user(
         if not mig_user_dict:
             msg = "missing user entry: %r in MiG DB" % project_user_id
             if verbose:
-                print "ERROR: %s" % msg
+                print("ERROR: %s" % msg)
             _logger.error(log_prefix + msg)
             if not force:
                 rollback = True
@@ -2077,13 +2074,13 @@ def edit_gdp_user(
             template = "project user:\n%r" % project_user_id \
                 + "\nchanged to:\n%r" % new_project_user_id
             if verbose:
-                print template
+                print(template)
             _logger.info(log_prefix + template)
-        except Exception, exc:
+        except Exception as exc:
             msg = "failed to edit user: %r: %s" \
                 % (project_user_id, str(exc))
             if verbose:
-                print "ERROR: %s" % msg
+                print("ERROR: %s" % msg)
             _logger.error(log_prefix + msg)
             if not force:
                 rollback = True
@@ -2097,7 +2094,7 @@ def edit_gdp_user(
         if verbose:
             msg = "updating MiG DB entry and dirs for %r: %s" \
                 % (user_id, changes)
-            print msg
+            print(msg)
             _logger.debug(msg)
 
         # Generate open id aliases based on changes dict
@@ -2118,7 +2115,7 @@ def edit_gdp_user(
         if not mig_user_dict:
             msg = "missing user entry %r in MiG DB" % user_id
             if verbose:
-                print "ERROR: %s" % msg
+                print("ERROR: %s" % msg)
             _logger.error(log_prefix + msg)
             if not force:
                 rollback = True
@@ -2170,13 +2167,13 @@ def edit_gdp_user(
                 + "in GDP / MiG user database and file system"
 
             if verbose:
-                print ok_msg
+                print(ok_msg)
             _logger.info(log_prefix + template)
 
-        except Exception, exc:
+        except Exception as exc:
             msg = "failed to edit user: %r: %s" % (user_id, str(exc))
             if verbose:
-                print "ERROR: %s" % msg
+                print("ERROR: %s" % msg)
             _logger.error(log_prefix + msg)
             if not force:
                 rollback = True
@@ -2187,7 +2184,7 @@ def edit_gdp_user(
 
         if verbose:
             msg = "updating GDP users log"
-            print msg
+            print(msg)
             _logger.debug(msg)
 
         flock_log = acquire_file_lock(log_lock_filepath)
@@ -2197,7 +2194,7 @@ def edit_gdp_user(
             if not status:
                 msg = "Error: Failed to update GDP users log" \
                     + ", manual action is NEEDED !!!"
-                print "ERROR: %s" % msg
+                print("ERROR: %s" % msg)
                 _logger.error(msg)
                 if not force:
                     rollback = True
@@ -2210,7 +2207,7 @@ def edit_gdp_user(
 
         msg = "Rolling back due to errors"
         if verbose:
-            print msg
+            print(msg)
         _logger.info(log_prefix + msg)
         try:
 
@@ -2223,15 +2220,15 @@ def edit_gdp_user(
                 msg = "rolling back MiG DB user %r to %r: %s" % (
                     rollback_id, rollback_org_id, rollback_dict)
                 if verbose:
-                    print msg
+                    print(msg)
                 _logger.info(msg)
                 user = edit_user(rollback_id, rollback_dict,
                                  conf_path, mig_db_path,
                                  True, verbose)
-        except Exception, exc:
+        except Exception as exc:
             msg = "failed to rollback: %s" % str(exc)
             if verbose:
-                print "ERROR: %s" % msg
+                print("ERROR: %s" % msg)
             _logger.error(log_prefix + msg)
             return (False, msg)
 
@@ -2240,7 +2237,7 @@ def edit_gdp_user(
         msg = "rolling back GDP DB user: %r to %r" % \
             (new_user_id, user_id)
         if verbose:
-            print msg
+            print(msg)
         _logger.info(log_prefix + msg)
 
         flock_gdp_db = acquire_file_lock(db_lock_filepath)
@@ -2252,7 +2249,7 @@ def edit_gdp_user(
         if new_user_id and new_user_id in gdp_db.keys():
             msg = "removing user: %r from GDP DB" % new_user_id
             if verbose:
-                print msg
+                print(msg)
             _logger.info(log_prefix + msg)
             del gdp_db[new_user_id]
 
@@ -2260,7 +2257,7 @@ def edit_gdp_user(
 
         msg = "restoring original user: %r: %s" % (user_id, gdp_user_rollback)
         if verbose:
-            print msg
+            print(msg)
         _logger.info(msg)
         gdp_db[user_id] = gdp_user_rollback
         __save_user_db(configuration, gdp_db,
@@ -2274,7 +2271,7 @@ def edit_gdp_user(
         result = False
         msg = "Failed to edit user: %r" % (user_id)
         if verbose:
-            print msg
+            print(msg)
         _logger.error(log_prefix + msg + ": %s" % changes)
         ret_msg = msg
 
@@ -2352,7 +2349,7 @@ def create_project_user(
             create_user(mig_user_dict, configuration.config_file,
                         mig_user_db_path, ask_renew=False,
                         default_renew=True)
-        except Exception, exc:
+        except Exception as exc:
             status = False
             _logger.error(log_err_msg
                           + ": Failed to create user: %s" % (exc))
@@ -2984,7 +2981,7 @@ def project_create(
     # This is done explicitly here as not all operations from
     # shared.functionality.createvgrid apply to GDP
     # TODO:
-    # Move vgridcreate functions from shared.functionality.createvgrid
+    # Move vgridcreate functions from mig.shared.functionality.createvgrid
     # to a commen helper module
 
     if project_name.find('/') != -1:
@@ -3053,12 +3050,12 @@ def project_create(
             _logger.error(log_err_msg + template)
 
     # Create directory to store vgrid files
- 
+
     if status:
         try:
             os.mkdir(vgrid_home_dir)
             rollback_dirs['vgrid_home_dir'] = vgrid_home_dir
-        except Exception, exc:
+        except Exception as exc:
             status = False
             template = ": Could not create base directory"
             err_msg += template
@@ -3083,7 +3080,7 @@ def project_create(
                 write_file("""= Private Share =
 This directory is used for hosting private files for the %r %r.
 """ % (vgrid_label, project_name), share_readme, _logger, make_parent=False)
-        except Exception, exc:
+        except Exception as exc:
             status = False
             template = ": Could not create files directory"
             err_msg += template
@@ -3132,7 +3129,7 @@ This directory is used for hosting private files for the %r %r.
             try:
                 os.mkdir(project_home)
                 rollback_dirs['project_home'] = project_home
-            except Exception, exc:
+            except Exception as exc:
                 status = False
                 template = ": Could not create home directory"
                 err_msg += template
@@ -3246,4 +3243,3 @@ This directory is used for hosting private files for the %r %r.
         _logger.info(log_ok_msg)
 
     return (status, ret_msg)
-              

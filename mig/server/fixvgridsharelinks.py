@@ -38,17 +38,19 @@ not correctly updated after the switch from the legacy vgrid_files_home to
 the new vgrid_files_writable and vgrid_files_readonly so the vgrid sharelink
 pickle didn't get updated for recent vgrids. 
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
 import sys
 import getopt
 
-from shared.useradm import init_user_adm, fix_vgrid_sharelinks
+from mig.shared.useradm import init_user_adm, fix_vgrid_sharelinks
 
 
 def usage(name='fixvgridsharelinks.py'):
     """Usage help"""
 
-    print """Update vgrid sharelinks to fix any links not previously handled by
+    print("""Update vgrid sharelinks to fix any links not previously handled by
 sharelink creation inside new-style vgrids.
 
 Usage:
@@ -60,7 +62,7 @@ Where OPTIONS may be one or more of:
    -h                  Show this help
    -v                  Verbose output
 """\
-         % {'name': name}
+         % {'name': name})
 
 
 if '__main__' == __name__:
@@ -71,8 +73,8 @@ if '__main__' == __name__:
     opt_args = 'c:d:fhv'
     try:
         (opts, args) = getopt.getopt(args, opt_args)
-    except getopt.GetoptError, err:
-        print 'Error: ', err.msg
+    except getopt.GetoptError as err:
+        print('Error: ', err.msg)
         usage()
         sys.exit(1)
 
@@ -89,7 +91,7 @@ if '__main__' == __name__:
         elif opt == '-v':
             verbose = True
         else:
-            print 'Error: %s not supported!' % opt
+            print('Error: %s not supported!' % opt)
             sys.exit(1)
 
     if len(args) > 0:
@@ -98,6 +100,6 @@ if '__main__' == __name__:
 
     try:
         fix_vgrid_sharelinks(conf_path, db_path, verbose, force)
-    except Exception, err:
-        print err
+    except Exception as err:
+        print(err)
         sys.exit(1)

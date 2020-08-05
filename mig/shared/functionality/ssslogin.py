@@ -26,12 +26,13 @@
 #
 
 """This script is the welcome site for sandbox users"""
+from __future__ import absolute_import
 
-import shared.returnvalues as returnvalues
-from shared.defaults import csrf_field
-from shared.functional import validate_input
-from shared.handlers import get_csrf_limit, make_csrf_token
-from shared.init import initialize_main_variables
+from mig.shared import returnvalues
+from mig.shared.defaults import csrf_field
+from mig.shared.functional import validate_input
+from mig.shared.handlers import get_csrf_limit, make_csrf_token
+from mig.shared.init import initialize_main_variables
 
 default_language = 'english'
 

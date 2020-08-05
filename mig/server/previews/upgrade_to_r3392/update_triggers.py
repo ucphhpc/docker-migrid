@@ -15,12 +15,12 @@ TRIGGER_DICT_FILE = 'trigger_dict.pck'
 os.environ['MIG_CONF'] = MIG_CONF
 sys.path.append(MIG_HOME)
 
-from shared.conf import get_configuration_object
-from shared.logger import _debug_format, _default_format
-from shared.fileio import pickle, unpickle, copy, move, delete_file
-from shared.safeeval import subprocess_call
-from shared.vgrid import vgrid_owners
-from shared.findtype import is_user
+from mig.shared.conf import get_configuration_object
+from mig.shared.logger import _debug_format, _default_format
+from mig.shared.fileio import pickle, unpickle, copy, move, delete_file
+from mig.shared.safeeval import subprocess_call
+from mig.shared.vgrid import vgrid_owners
+from mig.shared.findtype import is_user
 
 
 def get_logger(loglevel=logging.INFO):
@@ -224,7 +224,7 @@ def get_update_trigger_dict_and_check_for_unique_clientid(configuration,
             if rule_id != 'system_imagesettings_meta_created' \
                 and rule_id != 'system_imagesettings_dir_deleted':
                 client_id = trigger['run_as']
-                if run_as.has_key(client_id):
+                if client_id in run_as:
                     run_as[client_id] += 1
                 else:
                     run_as[client_id] = 1
@@ -287,7 +287,7 @@ def remove_triggers(configuration, vgrids_dict):
         logger.info('vgridpath: %s' % vgridpath)
         logger.info('----------------------------------------------')
 
-        if not triggers_removed.has_key(vgrid):
+        if vgrid not in triggers_removed:
             triggers_removed[vgrid] = []
 
         for trigger in vgrids_dict[key]['triggers']:

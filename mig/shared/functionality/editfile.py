@@ -28,19 +28,20 @@
 # Minimum Intrusion Grid
 
 """Editor back end"""
+from __future__ import absolute_import
 
 import os
 import glob
 
-import shared.returnvalues as returnvalues
-from shared.base import client_id_dir
-from shared.editing import acquire_edit_lock, release_edit_lock
-from shared.fileio import check_write_access
-from shared.functional import validate_input_and_cert, REJECT_UNSET
-from shared.handlers import safe_handler, get_csrf_limit
-from shared.init import initialize_main_variables
-from shared.job import new_job
-from shared.validstring import valid_user_path
+from mig.shared import returnvalues
+from mig.shared.base import client_id_dir
+from mig.shared.editing import acquire_edit_lock, release_edit_lock
+from mig.shared.fileio import check_write_access
+from mig.shared.functional import validate_input_and_cert, REJECT_UNSET
+from mig.shared.handlers import safe_handler, get_csrf_limit
+from mig.shared.init import initialize_main_variables
+from mig.shared.job import new_job
+from mig.shared.validstring import valid_user_path
 
 
 def signature():
@@ -170,7 +171,7 @@ CSRF-filtered POST requests to prevent unintended updates'''
                               : 'Saved changes to %s.' % path})
         logger.info('saved changes to %s' % path)
         release_edit_lock(abs_path, client_id)
-    except Exception, exc:
+    except Exception as exc:
 
         # Don't give away information about actual fs layout
 

@@ -47,10 +47,12 @@ expire time and workgroup membership.
 Afterwards one would then typically use notifymigoid and notifypassword to
 inform imported users about their login.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
 import fileinput
 
-from shared.base import fill_distinguished_name
+from mig.shared.base import fill_distinguished_name
 
 if __name__ == '__main__':
     user_list = []
@@ -75,4 +77,4 @@ if __name__ == '__main__':
         if not user_id in user_list:
             user_list.append(user_id)
     for user in user_list:
-        print '%s' % user
+        print('%s' % user)

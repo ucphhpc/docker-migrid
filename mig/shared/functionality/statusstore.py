@@ -25,13 +25,14 @@
 # -- END_HEADER ---
 #
 
-import shared.returnvalues as returnvalues
-from shared.conf import get_all_store_names
-from shared.findtype import is_owner
-from shared.functional import validate_input_and_cert, REJECT_UNSET
-from shared.init import initialize_main_variables
-from shared.resadm import status_resource_store
-from shared.worker import Worker
+from __future__ import absolute_import
+from mig.shared import returnvalues
+from mig.shared.conf import get_all_store_names
+from mig.shared.findtype import is_owner
+from mig.shared.functional import validate_input_and_cert, REJECT_UNSET
+from mig.shared.init import initialize_main_variables
+from mig.shared.resadm import status_resource_store
+from mig.shared.worker import Worker
 
 
 def signature():

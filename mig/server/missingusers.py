@@ -26,20 +26,22 @@
 #
 
 """Find all users in user_home and compare with data base"""
+from __future__ import print_function
+from __future__ import absolute_import
 
 import fnmatch
 import os
 import sys
 import getopt
 
-from shared.base import client_dir_id, distinguished_name_to_user
-from shared.useradm import init_user_adm, search_users, default_search
+from mig.shared.base import client_dir_id, distinguished_name_to_user
+from mig.shared.useradm import init_user_adm, search_users, default_search
 
 
 def usage(name='missingusers.py'):
     """Usage help"""
 
-    print """Find missing users in MiG user database.
+    print("""Find missing users in MiG user database.
 Usage:
 %(name)s [SEARCH_OPTIONS]
 Where SEARCH_OPTIONS may be one or more of:
@@ -57,7 +59,7 @@ Where SEARCH_OPTIONS may be one or more of:
    -v                  Verbose output
 
 Each search value can be a string or a pattern with * and ? as wildcards.
-""" % {'name': name}
+""" % {'name': name})
 
 
 if '__main__' == __name__:
@@ -70,8 +72,8 @@ if '__main__' == __name__:
     name_only = False
     try:
         (opts, args) = getopt.getopt(args, opt_args)
-    except getopt.GetoptError, err:
-        print 'Error: ', err.msg
+    except getopt.GetoptError as err:
+        print('Error: ', err.msg)
         usage()
         sys.exit(1)
 
@@ -102,13 +104,13 @@ if '__main__' == __name__:
         elif opt == '-v':
             verbose = True
         else:
-            print 'Error: %s not supported!' % opt
+            print('Error: %s not supported!' % opt)
             usage()
             sys.exit(0)
 
     fs_users = {}
     fs_hits = []
-    from shared.conf import get_configuration_object
+    from mig.shared.conf import get_configuration_object
     configuration = get_configuration_object()
     for user_dir in os.listdir(configuration.user_home):
         home_path = os.path.join(configuration.user_home, user_dir)
@@ -131,11 +133,11 @@ if '__main__' == __name__:
                                             verbose)
     db_hits_dict = dict(db_hits)
 
-    print "Missing users:"
+    print("Missing users:")
     for (user_id, user_dict) in fs_hits:
         if db_hits_dict.get(user_id, None):
             continue
         if name_only:
-            print '%s' % user_dict['full_name']
+            print('%s' % user_dict['full_name'])
         else:
-            print '%s : %s' % (user_id, user_dict)
+            print('%s : %s' % (user_id, user_dict))

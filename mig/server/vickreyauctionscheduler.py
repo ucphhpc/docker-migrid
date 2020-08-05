@@ -26,11 +26,13 @@
 #
 
 """Vicrey Auction Scheduler"""
+from __future__ import print_function
+from __future__ import absolute_import
 
 import random
 
-from scheduler import Scheduler
-from shared.conf import get_configuration_object
+from mig.server.scheduler import Scheduler
+from mig.shared.conf import get_configuration_object
 
 
 class VickreyAuctionScheduler(Scheduler):
@@ -60,7 +62,7 @@ class VickreyAuctionScheduler(Scheduler):
         for i in range(qlen):
             job = self.job_queue.get_job(i)
 
-            print job['JOB_ID']
+            print(job['JOB_ID'])
 
             if job['CPUTIME'] <= res_time:
                 self.filtered_jobs.append(job)
@@ -83,7 +85,7 @@ class VickreyAuctionScheduler(Scheduler):
 
             if job['MAXPRICE'] >= resource_conf['MINPRICE']:
                 self.sealed_bids.append((job['MAXPRICE'], job['JOB_ID'
-                        ]))
+                                                              ]))
 
         # sorting bids
 
@@ -124,8 +126,8 @@ class VickreyAuctionScheduler(Scheduler):
 
         # payment and scheduling
 
-        print highest[1]
-        print second[1]
+        print(highest[1])
+        print(second[1])
 
         # diff = highest[0] - second[0]
 
@@ -143,7 +145,7 @@ class VickreyAuctionScheduler(Scheduler):
 
         # self.UpdateHistory(winner, resource_conf)
 
-        print winner
+        print(winner)
 
         return winner
 

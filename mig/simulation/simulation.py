@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # simulation - [insert a few words of module description on this line]
-# Copyright (C) 2003-2011  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -25,45 +25,46 @@
 # -- END_HEADER ---
 #
 
-#
-# MiG simulation of a setup with a number of resources, users and servers
-#
+"""MiG simulation of a setup with a number of resources, users and servers"""
 
 # import pychecker.checker
 
+from __future__ import print_function
+from __future__ import absolute_import
+
+import getopt
+import ConfigParser
 import logging
+import math
 import random
 import os
 import sys
 import time
-import getopt
-import ConfigParser
-import math
 
-from user import User
-from resource import Resource
-from server import Server
-from configuration import Configuration
+from .user import User
+from .resource import Resource
+from .server import Server
+from mig.shared.configuration import Configuration
 
 
 def usage():
-    print 'Usage:', sys.argv[0], '[OPTIONS] SETUP'
-    print 'OPTIONS:'
-    print '\t-h/--help'
-    print '\t-d/--debug loglevel'
-    print "\t\twhere loglevel is in 'logging.(DEBUG|INFO|WARN|ERROR)'"
-    print '\t-e/--expire seconds'
-    print '\t-f/--frequency statusfrequency'
-    print '\t-l/--log logfile'
-    print '\t-m/--migratecost cost'
-    print '\t-r/--random seed'
-    print '\t-s/--steps timesteps'
-    print '\t-t/--topology layout'
-    print "\t\twhere layout is in '(linear|ring|full|mesh|cube|star)'"
-    print 'SETUP:'
-    print "\t'#SERVERS:#RESOURCES:#USERS' string"
-    print '\t\tor'
-    print '\tConfigParser formatted scenario description file'
+    print('Usage:', sys.argv[0], '[OPTIONS] SETUP')
+    print('OPTIONS:')
+    print('\t-h/--help')
+    print('\t-d/--debug loglevel')
+    print("\t\twhere loglevel is in 'logging.(DEBUG|INFO|WARN|ERROR)'")
+    print('\t-e/--expire seconds')
+    print('\t-f/--frequency statusfrequency')
+    print('\t-l/--log logfile')
+    print('\t-m/--migratecost cost')
+    print('\t-r/--random seed')
+    print('\t-s/--steps timesteps')
+    print('\t-t/--topology layout')
+    print("\t\twhere layout is in '(linear|ring|full|mesh|cube|star)'")
+    print('SETUP:')
+    print("\t'#SERVERS:#RESOURCES:#USERS' string")
+    print('\t\tor')
+    print('\tConfigParser formatted scenario description file')
 
 
 def server_to_dict(server, migrate_cost):
@@ -88,7 +89,7 @@ def set_peers(servers, topology, migrate_cost):
     server_names = servers.keys()
     server_list = servers.values()
 
-    print 'Using', topology, 'topology'
+    print('Using', topology, 'topology')
 
     if topology == 'ring':
         for server in server_list:
@@ -118,9 +119,9 @@ def set_peers(servers, topology, migrate_cost):
         for (peer_name, peer) in servers.items():
             if server_name != peer_name:
                 server.peers[peer_name] = server_to_dict(peer,
-                        migrate_cost)
+                                                         migrate_cost)
                 peer.peers[server_name] = server_to_dict(server,
-                        migrate_cost)
+                                                         migrate_cost)
     elif topology == 'mesh':
 
         # fill a square from left to right, top to bottom:
@@ -148,54 +149,54 @@ def set_peers(servers, topology, migrate_cost):
 
             if j - 1 >= 0:
                 (peer_name, peer) = (server_names[above],
-                        server_list[above])
+                                     server_list[above])
                 server.peers[peer_name] = server_to_dict(peer,
-                        migrate_cost)
+                                                         migrate_cost)
             if j + 1 < y and below < server_cnt:
                 (peer_name, peer) = (server_names[below],
-                        server_list[below])
+                                     server_list[below])
                 server.peers[peer_name] = server_to_dict(peer,
-                        migrate_cost)
+                                                         migrate_cost)
             if i - 1 >= 0:
                 (peer_name, peer) = (server_names[left],
-                        server_list[left])
+                                     server_list[left])
                 server.peers[peer_name] = server_to_dict(peer,
-                        migrate_cost)
+                                                         migrate_cost)
             if i + 1 < x and right < server_cnt:
                 (peer_name, peer) = (server_names[right],
-                        server_list[right])
+                                     server_list[right])
                 server.peers[peer_name] = server_to_dict(peer,
-                        migrate_cost)
+                                                         migrate_cost)
 
             index += 1
     elif topology == 'full':
 
         # print row
-    # elif topology == "cube":
+        # elif topology == "cube":
 
         for (server_name, server) in servers.items():
             for (peer_name, peer) in servers.items():
                 if server_name != peer_name:
                     server.peers[peer_name] = server_to_dict(peer,
-                            migrate_cost)
+                                                             migrate_cost)
     else:
-        print 'Unsupported topology:', topology
+        print('Unsupported topology:', topology)
 
     for server in servers.values():
-        print server.id, 'peers', server.peers.keys()
+        print(server.id, 'peers', server.peers.keys())
 
 
 def show_status(level):
     for server in servers.values():
         qlen = server.job_queue.queue_length()
-        print '%s: queued %d, migrated %d, returned %d' % (server.id,
-                qlen, server.migrated_jobs, server.returned_jobs)
+        print('%s: queued %d, migrated %d, returned %d' % (server.id,
+                                                           qlen, server.migrated_jobs, server.returned_jobs))
         (avg_dist, avg_price, avg_paid, avg_diff, avg_load) = (0.0,
-                0.0, 0.0, 0.0, 0.0)
+                                                               0.0, 0.0, 0.0, 0.0)
         (avg_done, avg_empty, avg_requests, avg_delay) = (0.0, 0.0,
-                0.0, 0.0)
+                                                          0.0, 0.0)
         cnt = 0
-        print ' res fqdn:\tdist\tload\tprice\tpaid\tdiff\tjobs\tdelay'
+        print(' res fqdn:\tdist\tload\tprice\tpaid\tdiff\tjobs\tdelay')
         for (res_fqdn, resource_conf) in server.resources.items():
             dist = server.scheduler.resource_distance(resource_conf)
             if level == 'local' and dist > 0:
@@ -222,7 +223,7 @@ def show_status(level):
             avg_requests += 1.0 * requests
             delay = resource_conf['EXPECTED_DELAY']
             avg_delay += delay
-            print '  %s:\t%s\t%.3f\t%.2f\t%.2f\t%.2f\t%d/%d\t%.2f' % (
+            print('  %s:\t%s\t%.3f\t%.2f\t%.2f\t%.2f\t%d/%d\t%.2f' % (
                 res_fqdn,
                 dist,
                 load,
@@ -232,7 +233,7 @@ def show_status(level):
                 done,
                 requests,
                 delay,
-                )
+            ))
             cnt += 1
         cnt = max(1, cnt)
         avg_dist /= cnt
@@ -244,19 +245,19 @@ def show_status(level):
         avg_empty /= cnt
         avg_requests /= cnt
         avg_delay /= cnt
-        print ' average:\t%.1f\t%.3f\t%.2f\t%.2f\t%.2f\t%.0f/%.0f\t%.2f'\
-             % (
-            avg_dist,
-            avg_load,
-            avg_price,
-            avg_paid,
-            avg_diff,
-            avg_done,
-            avg_requests,
-            avg_delay,
-            )
+        print(' average:\t%.1f\t%.3f\t%.2f\t%.2f\t%.2f\t%.0f/%.0f\t%.2f'
+              % (
+                  avg_dist,
+                  avg_load,
+                  avg_price,
+                  avg_paid,
+                  avg_diff,
+                  avg_done,
+                  avg_requests,
+                  avg_delay,
+              ))
 
-        print ' user ID:\tjobs\tprice\tdiff\tlast/min/avg/max paid\tlast/min/avg/max delay\tlast/min/avg/max dist'
+        print(' user ID:\tjobs\tprice\tdiff\tlast/min/avg/max paid\tlast/min/avg/max delay\tlast/min/avg/max dist')
         for (user_id, user_conf) in server.users.items():
             dist = server.scheduler.user_distance(user_conf)
             if level == 'local' and dist > 0:
@@ -275,7 +276,7 @@ def show_status(level):
             if jobs_done > 0:
                 last_done = done_jobs[done_total - 1]
                 last_execute = time.mktime(last_done['EXECUTE_TIMESTAMP'
-                        ])
+                                                     ])
                 last_received = \
                     time.mktime(last_done['RECEIVED_TIMESTAMP'])
                 last_paid = last_done['EXEC_PRICE']
@@ -309,7 +310,7 @@ def show_status(level):
 
                     if real_jobs == 1:
 
-                # Init using first real job
+                        # Init using first real job
 
                         job_paid = job['EXEC_PRICE']
                         job_execute = \
@@ -328,7 +329,7 @@ def show_status(level):
                     job_paid = job['EXEC_PRICE']
                     job_execute = time.mktime(job['EXECUTE_TIMESTAMP'])
                     job_received = time.mktime(job['RECEIVED_TIMESTAMP'
-                            ])
+                                                   ])
                     job_delay = job_execute - job_received
                     job_dist = int(job['MIGRATE_COUNT'])
 
@@ -346,26 +347,26 @@ def show_status(level):
                 avg_delay /= jobs_done
                 avg_dist /= jobs_done
 
-            print '  %s:\t%d/%d\t%.2f\t%.2f\t%.2f/%.2f/%.2f/%.2f\t%d/%d/%.2f/%d\t\t%d/%d/%.2f/%d'\
-                 % (
-                user_id,
-                done_cnt,
-                queue_cnt,
-                last_price,
-                last_diff,
-                last_paid,
-                min_paid,
-                avg_paid,
-                max_paid,
-                last_delay,
-                min_delay,
-                avg_delay,
-                max_delay,
-                last_dist,
-                min_dist,
-                avg_dist,
-                max_dist,
-                )
+            print('  %s:\t%d/%d\t%.2f\t%.2f\t%.2f/%.2f/%.2f/%.2f\t%d/%d/%.2f/%d\t\t%d/%d/%.2f/%d'
+                  % (
+                      user_id,
+                      done_cnt,
+                      queue_cnt,
+                      last_price,
+                      last_diff,
+                      last_paid,
+                      min_paid,
+                      avg_paid,
+                      max_paid,
+                      last_delay,
+                      min_delay,
+                      avg_delay,
+                      max_delay,
+                      last_dist,
+                      min_dist,
+                      avg_dist,
+                      max_dist,
+                  ))
             cnt += 1
 
 
@@ -412,9 +413,9 @@ try:
         'random=',
         'steps=',
         'topology=',
-        ])
-except getopt.GetoptError, e:
-    print 'Error: ' + e.msg
+    ])
+except getopt.GetoptError as e:
+    print('Error: ' + e.msg)
     usage()
     sys.exit(1)
 
@@ -427,18 +428,18 @@ for (opt, val) in opts:
     elif opt in ('-e', '--expire'):
         try:
             override_expire = int(val)
-        except ValueError, e:
-            print 'Error: invalid expire argument %s - expected integer'\
-                 % val
-            print e
+        except ValueError as e:
+            print('Error: invalid expire argument %s - expected integer'
+                  % val)
+            print(e)
             sys.exit(1)
     elif opt in ('-f', '--frequency'):
         try:
             override_freq = int(val)
-        except ValueError, e:
-            print 'Error: invalid frequency argument %s - expected integer'\
-                 % val
-            print e
+        except ValueError as e:
+            print('Error: invalid frequency argument %s - expected integer'
+                  % val)
+            print(e)
             sys.exit(1)
     elif opt in ('-l', '--log'):
         log_name = val
@@ -449,15 +450,15 @@ for (opt, val) in opts:
     elif opt in ('-s', '--steps'):
         try:
             override_steps = int(val)
-        except ValueError, e:
-            print 'Error: invalid steps argument %s - expected integer'\
-                 % val
-            print e
+        except ValueError as e:
+            print('Error: invalid steps argument %s - expected integer'
+                  % val)
+            print(e)
             sys.exit(1)
     elif opt in ('-t', '--topology'):
         override_top = val
     else:
-        print 'Error: unknown option: %s' % opt
+        print('Error: unknown option: %s' % opt)
         sys.exit(1)
 
 logfile = os.path.expanduser(log_name)
@@ -483,9 +484,9 @@ if arg.count(':') == 2:
         try:
             val = int(cnt)
             vals.append(val)
-        except ValueError, e:
-            print 'Error: invalid argument %s - expected integer' % cnt
-            print e
+        except ValueError as e:
+            print('Error: invalid argument %s - expected integer' % cnt)
+            print(e)
             sys.exit(1)
 
     server_cnt = vals[0]
@@ -505,13 +506,13 @@ if arg.count(':') == 2:
         migrate_cost = override_migrate
 
     try:
-        print timesteps
+        print(timesteps)
         timesteps = int(timesteps)
         expire = timesteps
         status_freq = int(status_freq)
-    except ValueError, e:
-        print 'Error: invalid argument %s - expected integer' % timesteps
-        print e
+    except ValueError as e:
+        print('Error: invalid argument %s - expected integer' % timesteps)
+        print(e)
         sys.exit(1)
 
     if override_expire:
@@ -544,7 +545,7 @@ if arg.count(':') == 2:
             str(42.0 + i / 3.0),
             server,
             [''],
-            )
+        )
 
     for i in range(user_cnt):
         name = 'user-' + str(i)
@@ -558,13 +559,13 @@ if arg.count(':') == 2:
             str(56.5 + i),
             server,
             [''],
-            )
+        )
 else:
 
     input_name = arg
     input_path = os.path.expanduser(input_name)
     if not os.path.isfile(input_path):
-        print 'Error: input file %s not found!' % input_name
+        print('Error: input file %s not found!' % input_name)
         sys.exit(1)
     input_files = [input_path]
     scenario = ConfigParser.ConfigParser()
@@ -580,7 +581,7 @@ else:
         'expire': str(timesteps),
         'migrate_cost': str(migrate_cost),
         'seed': str(seed),
-        }
+    }
     for (opt, val) in defaults.items():
         scenario.set(general, opt, val)
 
@@ -606,15 +607,15 @@ else:
 
     topology = defaults['topology']
     migrate_cost = defaults['migrate_cost']
-    print 'topology', topology
+    print('topology', topology)
     try:
         timesteps = int(defaults['timesteps'])
         expire = timesteps
         seed = eval(defaults['seed'])
         status_freq = int(defaults['status_frequency'])
-    except ValueError, e:
-        print 'Error: invalid argument %s - expected integer' % defaults
-        print e
+    except ValueError as e:
+        print('Error: invalid argument %s - expected integer' % defaults)
+        print(e)
         sys.exit(1)
 
     if override_expire:
@@ -644,7 +645,7 @@ else:
             user_cnt += 1
             user_confs[fqdn] = entity
         else:
-            print 'Error: entity %s lacks type!' % fqdn
+            print('Error: entity %s lacks type!' % fqdn)
             sys.exit(1)
 
     entity_cnt = server_cnt + resource_cnt + user_cnt
@@ -676,7 +677,7 @@ else:
             minprice,
             server,
             [''],
-            )
+        )
 
     for (name, conf) in user_confs.items():
         server_fqdn = conf['server']
@@ -691,7 +692,7 @@ else:
             maxprice,
             server,
             [''],
-            )
+        )
 
 set_peers(servers, topology, migrate_cost)
 
@@ -699,7 +700,7 @@ logger.info('Starting simulation')
 
 start = time.time()
 
-print 'Seeding random with: %s' % seed
+print('Seeding random with: %s' % seed)
 random.seed(seed)
 for step in range(timesteps):
     logger.info('step %d', step)
@@ -713,7 +714,7 @@ for step in range(timesteps):
         remain = len(entities)
 
     if step % status_freq == 0:
-        print 'step', step
+        print('step', step)
         show_status('local')
 
 end = time.time()
@@ -722,9 +723,9 @@ logger.info(' --- End of simulation --- ')
 
 runtime = end - start
 
-print 'Final state after %d steps' % timesteps
+print('Final state after %d steps' % timesteps)
 show_status('all')
 
-print 'Actual runtime %3.2f s' % runtime
+print('Actual runtime %3.2f s' % runtime)
 
 sys.exit(0)

@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # confparser - parse resource configurations
-# Copyright (C) 2003-2017  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -30,13 +30,15 @@
 # Martin Rehr
 
 """parse resource configurations"""
+from __future__ import absolute_import
 
-import shared.parser as parser
-import shared.refunctions as refunctions
-import shared.resconfkeywords as resconfkeywords
-from shared.conf import get_configuration_object
-from shared.serial import dumps
-from shared.vgrid import vgrid_is_resource,vgrid_is_default
+from mig.shared.conf import get_configuration_object
+from mig.shared.parser import parse, check_types
+from mig.shared.refunctions import is_runtime_environment, get_re_dict
+from mig.shared.resconfkeywords import get_keywords_dict as \
+    resconf_get_keywords_dict
+from mig.shared.serial import dumps
+from mig.shared.vgrid import vgrid_is_resource, vgrid_is_default
 
 
 def get_resource_config_dict(configuration, config_file):
@@ -46,14 +48,13 @@ def get_resource_config_dict(configuration, config_file):
     if not configuration:
         configuration = get_configuration_object()
 
-    result = parser.parse(config_file)
-    external_dict = resconfkeywords.get_keywords_dict(configuration)
+    result = parse(config_file)
+    external_dict = resconf_get_keywords_dict(configuration)
 
     # The Configfile has the right structure
     # Check if the types are correct too
 
-    (status, msg) = parser.check_types(result, external_dict,
-            configuration)
+    (status, msg) = check_types(result, external_dict, configuration)
 
     if not status:
         return (False, 'Parse failed (typecheck) ' + msg, external_dict)
@@ -84,33 +85,31 @@ def run(configuration, localfile_spaces, unique_resource_name,
 
     # verify runtime environments are specified correctly
 
-    if conf.has_key('RUNTIMEENVIRONMENT'):
+    if 'RUNTIMEENVIRONMENT' in conf:
         for re in conf['RUNTIMEENVIRONMENT']:
             try:
                 (name, value) = re
-            except Exception, err:
+            except Exception as err:
                 return (False, 'Runtime environment error: %s' % err)
-            if not refunctions.is_runtime_environment(name,
-                    configuration):
+            if not is_runtime_environment(name, configuration):
                 return (False,
                         "Non existing runtime environment specified ('%s'), please create the runtime environment before specifying it in resource configurations."
-                         % name)
+                        % name)
 
-            (re_dict, msg) = refunctions.get_re_dict(name,
-                    configuration)
+            (re_dict, msg) = get_re_dict(name, configuration)
             if not re_dict:
                 return (False,
                         'Runtime environment error, could not open (%s) %s'
-                         % (name, msg))
+                        % (name, msg))
 
-            if not re_dict.has_key('ENVIRONMENTVARIABLE'):
+            if 'ENVIRONMENTVARIABLE' not in re_dict:
                 if value:
 
                     # res conf has envs, but according to the template it should not
 
                     return (False,
                             "%s should not have any environments and you specified '%s'. Details about the runtime environment <a href=showre.py?re_name=%s>here</a>"
-                             % (re, value, name))
+                            % (re, value, name))
                 else:
                     continue
             re_dict_environments = re_dict['ENVIRONMENTVARIABLE']
@@ -121,8 +120,8 @@ def run(configuration, localfile_spaces, unique_resource_name,
             if not len(value) == len(re_dict_environments):
                 return (False,
                         "You have specified %s environments, but the runtime environment '%s' requires %s. Details about the runtime environment <a href='showre.py?re_name=%s'>here.</a>"
-                         % (len(value), name,
-                        len(re_dict_environments), name))
+                        % (len(value), name,
+                            len(re_dict_environments), name))
 
             # we now know that the number of environments are
             # correct, verify that there are no name duplicates
@@ -137,13 +136,13 @@ def run(configuration, localfile_spaces, unique_resource_name,
 
                         return (False,
                                 "You have specified the environment '%s' more than once for the '%s' runtime environment."
-                                 % (envname, name))
+                                % (envname, name))
                     used_envnames.append(envname)
-                except Exception, err:
+                except Exception as err:
 
                     return (False,
                             'Runtimeenvironment error: Name and value not found in env: %s'
-                             % err)
+                            % err)
 
             # verify environment names are correct according to the
             # runtime environment definition do this by comparing
@@ -159,10 +158,10 @@ def run(configuration, localfile_spaces, unique_resource_name,
                 if not n in used_envnames:
                     return (False,
                             "You have not specified an environment named '%s' which is required by the '%s' runtime environment. Details about the runtime environment <a href=showre.py?re_name=%s>here.</a>"
-                             % (n, name, name))
+                            % (n, name, name))
 
     # check VGrid access
-    
+
     vgrid_label = configuration.site_vgrid_label
     for (unit_config, unit_name) in (('EXECONFIG', '+EXENAME+'),
                                      ('STORECONFIG', '+STORENAME+')):
@@ -193,12 +192,12 @@ def run(configuration, localfile_spaces, unique_resource_name,
 
                     for vgrid in vgrid_name:
                         if not vgrid_is_default(vgrid) and not \
-                               vgrid_is_resource(vgrid, unique_resource_name,
-                                                 configuration):
+                            vgrid_is_resource(vgrid, unique_resource_name,
+                                              configuration):
                             return (False,
                                     """Your resource is not allowed in the %s
 '%s' specified in the configuation for the '%s' resource unit. Please contact
-the %s owner and ask if you can be included in the %s.""" % \
+the %s owner and ask if you can be included in the %s.""" %
                                     (vgrid_label, vgrid, res_unit['name'],
                                      vgrid_label, vgrid_label))
                 else:
@@ -206,14 +205,13 @@ the %s owner and ask if you can be included in the %s.""" % \
                     # string
 
                     if not vgrid_is_default(vgrid) and not vgrid_is_resource(vgrid_name,
-                            unique_resource_name, configuration):
+                                                                             unique_resource_name, configuration):
                         return (False,
                                 """Your resource is not allowed in the %s '%s'
 specified in the configuation for the '%s' resource unit. Please contact the %s
-owner and ask if you can be included in the %s.""" % \
+owner and ask if you can be included in the %s.""" %
                                 (vgrid_label, vgrid_name, res_unit['name'],
                                  vgrid_label, vgrid_label))
-
 
     # save dictionary to a file
 
@@ -222,7 +220,7 @@ owner and ask if you can be included in the %s.""" % \
         # save configuration as python dictionary in the resource' private directory
 
         filename = configuration.resource_home + unique_resource_name\
-             + '/config'
+            + '/config'
     elif outfile:
 
         # outfile specified (DumpConfig)
@@ -230,15 +228,13 @@ owner and ask if you can be included in the %s.""" % \
         filename = outfile
     else:
         return (True, 'Everything ok')
-        
+
     try:
         fsock = open(filename, 'w')
         st = dumps(conf, 0)
         fsock.write(st)
         fsock.close()
-    except Exception, err:
+    except Exception as err:
         return (False, "Fatal error: could not open '" + filename
-                 + "' for writing!" + '\n Msg: ' + str(err))
+                + "' for writing!" + '\n Msg: ' + str(err))
     return (True, 'Everything ok, config updated')
-
-

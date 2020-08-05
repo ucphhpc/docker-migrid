@@ -35,6 +35,9 @@ or with a minor patch (see https://github.com/mar10/wsgidav/issues/29) to allow
 per-user subdir chrooting inside root_dir.
 """
 
+from __future__ import print_function
+from __future__ import absolute_import
+
 import os
 import sys
 import threading
@@ -58,18 +61,18 @@ try:
     from wsgidav.http_authenticator import HTTPAuthenticator
     from wsgidav.dav_error import DAVError, HTTP_FORBIDDEN
     from wsgidav.util import getRfc1123Time
-except ImportError, ierr:
-    print "ERROR: the python wsgidav module is required for this daemon"
-    print "You may need to install cherrypy if your wsgidav does not bundle it"
+except ImportError as ierr:
+    print("ERROR: the python wsgidav module is required for this daemon")
+    print("You may need to install cherrypy if your wsgidav does not bundle it")
     sys.exit(1)
 
-from shared.accountstate import check_account_accessible
-from shared.base import invisible_path, force_unicode
-from shared.conf import get_configuration_object
-from shared.defaults import dav_domain, litmus_id, io_session_timeout
-from shared.fileio import check_write_access, user_chroot_exceptions
-from shared.gdp.all import project_open, project_close, project_log
-from shared.griddaemons.davs import get_fs_path, acceptable_chmod, \
+from mig.shared.accountstate import check_account_accessible
+from mig.shared.base import invisible_path, force_unicode
+from mig.shared.conf import get_configuration_object
+from mig.shared.defaults import dav_domain, litmus_id, io_session_timeout
+from mig.shared.fileio import check_write_access, user_chroot_exceptions
+from mig.shared.gdp.all import project_open, project_close, project_log
+from mig.shared.griddaemons.davs import get_fs_path, acceptable_chmod, \
     default_max_user_hits, default_user_abuse_hits, \
     default_proto_abuse_hits, default_max_secret_hits, \
     default_username_validator, refresh_user_creds, refresh_share_creds, \
@@ -77,16 +80,16 @@ from shared.griddaemons.davs import get_fs_path, acceptable_chmod, \
     add_user_object, track_open_session, clear_sessions, track_close_session, \
     track_close_expired_sessions, get_active_session, \
     check_twofactor_session, validate_auth_attempt
-from shared.logger import daemon_logger, daemon_gdp_logger, \
+from mig.shared.logger import daemon_logger, daemon_gdp_logger, \
     register_hangup_handler
-from shared.notification import send_system_notification
-from shared.pwhash import make_scramble, unscramble_digest, \
+from mig.shared.notification import send_system_notification
+from mig.shared.pwhash import make_scramble, unscramble_digest, \
     assure_password_strength
-from shared.sslsession import ssl_session_token
-from shared.tlsserver import hardened_ssl_context
-from shared.useradm import check_password_hash, generate_password_hash, \
+from mig.shared.sslsession import ssl_session_token
+from mig.shared.tlsserver import hardened_ssl_context
+from mig.shared.useradm import check_password_hash, generate_password_hash, \
     generate_password_digest
-from shared.validstring import possible_user_id, possible_gdp_user_id, \
+from mig.shared.validstring import possible_user_id, possible_gdp_user_id, \
     possible_sharelink_id
 
 configuration, logger = None, None
@@ -258,7 +261,7 @@ class HardenedSSLAdapter(BuiltinSSLAdapter):
                 continue
             try:
                 clean_sock.close()
-            except Exception, exc:
+            except Exception as exc:
                 pass
 
     def get_environ(self, ssl_sock):
@@ -821,14 +824,14 @@ class MiGWsgiDAVDomainController(WsgiDAVDomainController):
             # Mimic password policy compliance from check_password_digest here
             try:
                 assure_password_strength(configuration, password)
-            except Exception, exc:
+            except Exception as exc:
                 if strict_policy:
                     msg = "%s password for %s" % ('webdavs', username) \
                         + "does not satisfy local policy: %s" % exc
                     logger.warning(msg)
                     password = ''
             digest_enabled = True
-        except Exception, exc:
+        except Exception as exc:
             digest_enabled = False
             logger.error("failed to extract digest password: %s" % exc)
             password = ''
@@ -914,7 +917,7 @@ class MiGFileResource(FileResource):
                 raise DAVError(HTTP_FORBIDDEN)
             try:
                 result = method(self, *method_args, **method_kwargs)
-            except Exception, exc:
+            except Exception as exc:
                 result = None
                 logger_msg = "%s failed: '%s'" % (operation, src_path)
                 if dst_path is not None:
@@ -1050,7 +1053,7 @@ class MiGFolderResource(FolderResource):
                 raise DAVError(HTTP_FORBIDDEN)
             try:
                 result = method(self, *method_args, **method_kwargs)
-            except Exception, exc:
+            except Exception as exc:
                 result = None
                 logger_msg = "%s failed: '%s'" % (operation, src_path)
                 if dst_path is not None:
@@ -1222,7 +1225,7 @@ class MiGFilesystemProvider(FilesystemProvider):
                 if os.path.islink(user_chroot):
                     try:
                         user_chroot = os.readlink(user_chroot)
-                    except Exception, exc:
+                    except Exception as exc:
                         logger.error("could not expand link %s" % user_chroot)
                         continue
                 break
@@ -1231,7 +1234,7 @@ class MiGFilesystemProvider(FilesystemProvider):
         try:
             abs_path = get_fs_path(configuration, abs_path, user_chroot,
                                    self.chroot_exceptions)
-        except ValueError, vae:
+        except ValueError as vae:
             raise RuntimeError("Access out of bounds: %s in %s : %s"
                                % (path, user_chroot, vae))
         abs_path = force_unicode(abs_path)
@@ -1250,7 +1253,7 @@ class MiGFilesystemProvider(FilesystemProvider):
         self._count_getResourceInst += 1
         try:
             abs_path = self._locToFilePath(path, environ)
-        except RuntimeError, rte:
+        except RuntimeError as rte:
             logger.warning("getResourceInst: %s : %s" % (path, rte))
             raise DAVError(HTTP_FORBIDDEN)
 
@@ -1484,7 +1487,7 @@ class LogStats(threading.Thread):
                         + "------------------------------------------------\n"
                 logger.info(msg)
                 self.last_http_requests = http_requests
-        except Exception, exc:
+        except Exception as exc:
             logger.error("Failed to log statistics: %s" % exc)
             logger.info(traceback.format_exc())
 
@@ -1653,15 +1656,15 @@ if __name__ == "__main__":
     if not configuration.site_enable_davs:
         err_msg = "WebDAVS access to user homes is disabled in configuration!"
         logger.error(err_msg)
-        print err_msg
+        print(err_msg)
         sys.exit(1)
-    print """
+    print("""
 Running grid webdavs server for user webdavs access to their MiG homes.
 
 Set the MIG_CONF environment to the server configuration path
 unless it is available in mig/server/MiGserver.conf
-"""
-    print __doc__
+""")
+    print(__doc__)
     address = configuration.user_davs_address
     port = configuration.user_davs_port
     # Lookup chroot exceptions once and for all
@@ -1723,13 +1726,13 @@ unless it is available in mig/server/MiGserver.conf
     logger.info("Starting WebDAV server")
     info_msg = "Listening on address '%s' and port %d" % (address, port)
     logger.info(info_msg)
-    print info_msg
+    print(info_msg)
     try:
         run(configuration)
     except KeyboardInterrupt:
         info_msg = "Received user interrupt"
         logger.info(info_msg)
-        print info_msg
-    except Exception, exc:
+        print(info_msg)
+    except Exception as exc:
         logger.error("exiting on unexpected exception: %s" % exc)
         logger.info(traceback.format_exc())

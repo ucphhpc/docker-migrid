@@ -27,21 +27,24 @@
 
 """Creating the MiG monitor page"""
 
+from __future__ import print_function
+from __future__ import absolute_import
+
 import datetime
 import os
 import sys
 import time
 
-from shared.conf import get_configuration_object
-from shared.defaults import default_vgrid
-from shared.fileio import unpickle
-from shared.gridstat import GridStat
-from shared.html import get_xgi_html_header, get_xgi_html_footer, \
+from mig.shared.conf import get_configuration_object
+from mig.shared.defaults import default_vgrid
+from mig.shared.fileio import unpickle
+from mig.shared.gridstat import GridStat
+from mig.shared.html import get_xgi_html_header, get_xgi_html_footer, \
     themed_styles, themed_scripts
-from shared.logger import daemon_logger, register_hangup_handler
-from shared.output import format_timedelta
-from shared.resource import anon_resource_id
-from shared.vgridaccess import get_vgrid_map_vgrids
+from mig.shared.logger import daemon_logger, register_hangup_handler
+from mig.shared.output import format_timedelta
+from mig.shared.resource import anon_resource_id
+from mig.shared.vgridaccess import get_vgrid_map_vgrids
 
 configuration, logger = None, None
 
@@ -52,7 +55,7 @@ def create_monitor(vgrid_name):
     html_file = os.path.join(configuration.vgrid_home, vgrid_name,
                              '%s.html' % configuration.vgrid_monitor)
 
-    print 'collecting statistics for VGrid %s' % vgrid_name
+    print('collecting statistics for VGrid %s' % vgrid_name)
     sleep_secs = configuration.sleep_secs
     slackperiod = configuration.slackperiod
     now = time.asctime(time.localtime())
@@ -333,15 +336,15 @@ This page was generated %(now)s (automatic refresh every %(sleep_secs)s secs).
                 # read last request helper file
 
                 mon_file_name = os.path.join(abs_mon_dir, filename)
-                print 'found ' + mon_file_name
+                print('found ' + mon_file_name)
                 last_request_dict = unpickle(mon_file_name, logger)
                 if not last_request_dict:
-                    print 'could not open and unpickle: '\
-                        + mon_file_name
+                    print('could not open and unpickle: '
+                          + mon_file_name)
                     continue
-                if not last_request_dict.has_key('CREATED_TIME'):
-                    print 'skip broken last request dict: '\
-                        + mon_file_name
+                if 'CREATED_TIME' not in last_request_dict:
+                    print('skip broken last request dict: '
+                          + mon_file_name)
                     continue
 
                 difference = datetime.datetime.now()\
@@ -353,13 +356,13 @@ This page was generated %(now)s (automatic refresh every %(sleep_secs)s secs).
 
                 last_timetuple = last_request_dict['CREATED_TIME'].timetuple()
 
-                if last_request_dict.has_key('CPUTIME'):
+                if 'CPUTIME' in last_request_dict:
                     cputime = last_request_dict['CPUTIME']
-                elif last_request_dict.has_key('cputime'):
+                elif 'cputime' in last_request_dict:
                     cputime = last_request_dict['cputime']
                 else:
-                    print 'ERROR: last request does not contain cputime field!: %s'\
-                        % last_request_dict
+                    print('ERROR: last request does not contain cputime field!: %s'
+                          % last_request_dict)
                     continue
 
                 try:
@@ -367,9 +370,9 @@ This page was generated %(now)s (automatic refresh every %(sleep_secs)s secs).
                 except ValueError:
                     try:
                         cpusec = int(float(cputime))
-                    except ValueError, verr:
-                        print 'ERROR: failed to parse cputime %s: %s'\
-                            % (cputime, verr)
+                    except ValueError as verr:
+                        print('ERROR: failed to parse cputime %s: %s'
+                              % (cputime, verr))
 
                 # Include execution delay guesstimate for strict fill
                 # LRMS resources
@@ -392,12 +395,12 @@ This page was generated %(now)s (automatic refresh every %(sleep_secs)s secs).
 
                 if time_remaining.days < -7:
                     try:
-                        print 'removing: %s as we havent seen him for %s days.'\
-                            % (mon_file_name, abs(time_remaining).days)
+                        print('removing: %s as we havent seen him for %s days.'
+                              % (mon_file_name, abs(time_remaining).days))
                         os.remove(mon_file_name)
-                    except Exception, err:
-                        print "could not remove: '%s' Error: %s"\
-                            % (mon_file_name, str(err))
+                    except Exception as err:
+                        print("could not remove: '%s' Error: %s"
+                              % (mon_file_name, str(err)))
                     pass
                 else:
                     unique_res_name_and_exe_list = \
@@ -508,15 +511,15 @@ This page was generated %(now)s (automatic refresh every %(sleep_secs)s secs).
                 # read last resource action status file
 
                 mon_file_name = os.path.join(abs_mon_dir, filename)
-                print 'found ' + mon_file_name
+                print('found ' + mon_file_name)
                 last_status_dict = unpickle(mon_file_name, logger)
                 if not last_status_dict:
-                    print 'could not open and unpickle: '\
-                        + mon_file_name
+                    print('could not open and unpickle: '
+                          + mon_file_name)
                     continue
-                if not last_status_dict.has_key('CREATED_TIME'):
-                    print 'skip broken last request dict: '\
-                        + mon_file_name
+                if 'CREATED_TIME' not in last_status_dict:
+                    print('skip broken last request dict: '
+                          + mon_file_name)
                     continue
 
                 difference = datetime.datetime.now()\
@@ -531,12 +534,12 @@ This page was generated %(now)s (automatic refresh every %(sleep_secs)s secs).
                         last_status_dict['CREATED_TIME']
                     if time_stopped.days > 7:
                         try:
-                            print 'removing: %s as we havent seen him for %s days.'\
-                                  % (mon_file_name, abs(time_stopped).days)
+                            print('removing: %s as we havent seen him for %s days.'
+                                  % (mon_file_name, abs(time_stopped).days))
                             os.remove(mon_file_name)
-                        except Exception, err:
-                            print "could not remove: '%s' Error: %s"\
-                                  % (mon_file_name, str(err))
+                        except Exception as err:
+                            print("could not remove: '%s' Error: %s"
+                                  % (mon_file_name, str(err)))
                         continue
 
                 unique_res_name_and_store_list = filename.split(
@@ -578,9 +581,9 @@ This page was generated %(now)s (automatic refresh every %(sleep_secs)s secs).
                     last_status = 'checked'
                     last_timetuple = datetime.datetime.now().timetuple()
                     days, hours, minutes, seconds = 0, 0, 0, 0
-                except OSError, ose:
-                    print 'could not stat mount point %s: %s' % \
-                        (mount_point, ose)
+                except OSError as ose:
+                    print('could not stat mount point %s: %s' %
+                          (mount_point, ose))
                     is_live = False
                 if last_status_dict['STATUS'] == 'stopped':
                     resource_status = 'offline'
@@ -706,8 +709,8 @@ A total of <b>'''\
         file_handle = open(html_file, 'w')
         file_handle.write(html)
         file_handle.close()
-    except Exception, exc:
-        print 'Could not write monitor page %s: %s' % (html_file, exc)
+    except Exception as exc:
+        print('Could not write monitor page %s: %s' % (html_file, exc))
 
 
 if __name__ == '__main__':
@@ -729,15 +732,15 @@ if __name__ == '__main__':
     if not configuration.site_enable_jobs:
         err_msg = "Job support is disabled in configuration!"
         logger.error(err_msg)
-        print err_msg
+        print(err_msg)
         sys.exit(1)
 
-    print """
+    print("""
 Running grid monitor generator.
 
 Set the MIG_CONF environment to the server configuration path
 unless it is available in mig/server/MiGserver.conf
-"""
+""")
 
     # Make sure that the default VGrid home used by monitor exists
 
@@ -745,7 +748,7 @@ unless it is available in mig/server/MiGserver.conf
     if not os.path.isdir(default_vgrid_dir):
         try:
             os.makedirs(default_vgrid_dir)
-        except OSError, ose:
+        except OSError as ose:
             logger.error('Failed to create default VGrid home: %s' % ose)
 
     keep_running = True
@@ -756,20 +759,20 @@ unless it is available in mig/server/MiGserver.conf
             # create global statistics ("")
             # vgrids_list.append("")
 
-            print 'Updating cache.'
+            print('Updating cache.')
             grid_stat = GridStat(configuration, logger)
             grid_stat.update()
             for vgrid_name in vgrids_list:
-                print 'creating monitor for vgrid: %s' % vgrid_name
+                print('creating monitor for vgrid: %s' % vgrid_name)
                 create_monitor(vgrid_name)
 
-            print 'sleeping for %s seconds' % configuration.sleep_secs
+            print('sleeping for %s seconds' % configuration.sleep_secs)
             time.sleep(float(configuration.sleep_secs))
         except KeyboardInterrupt:
             keep_running = False
-        except Exception, exc:
-            print 'Caught unexpected exception: %s' % exc
+        except Exception as exc:
+            print('Caught unexpected exception: %s' % exc)
             time.sleep(10)
 
-    print 'Monitor daemon shutting down'
+    print('Monitor daemon shutting down')
     sys.exit(0)

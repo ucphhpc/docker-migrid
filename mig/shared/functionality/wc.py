@@ -26,17 +26,18 @@
 #
 
 """Word count back end functionality"""
+from __future__ import absolute_import
 
 import os
 import glob
 
-import shared.returnvalues as returnvalues
-from shared.base import client_id_dir
-from shared.functional import validate_input_and_cert, REJECT_UNSET
-from shared.init import initialize_main_variables
-from shared.parseflags import byte_count, line_count, word_count, \
+from mig.shared import returnvalues
+from mig.shared.base import client_id_dir
+from mig.shared.functional import validate_input_and_cert, REJECT_UNSET
+from mig.shared.init import initialize_main_variables
+from mig.shared.parseflags import byte_count, line_count, word_count, \
     verbose
-from shared.validstring import valid_user_path
+from mig.shared.validstring import valid_user_path
 
 
 def signature():
@@ -153,7 +154,7 @@ def main(client_id, user_arguments_dict):
                     obj['bytes'] = bytes
 
                 filewcs.append(obj)
-            except Exception, exc:
+            except Exception as exc:
                 output_objects.append({'object_type': 'error_text',
                         'text': "%s: '%s': %s" % (op_name,
                         relative_path, exc)})

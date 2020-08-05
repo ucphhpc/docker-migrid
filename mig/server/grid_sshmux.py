@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # grid_sshmux - open ssh multiplexing master connections
-# Copyright (C) 2003-2018  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -32,17 +32,20 @@ connection is relatively short lived to allow better connection
 error tolerance.
 """
 
+from __future__ import print_function
+from __future__ import absolute_import
+
 import os
 import signal
 import sys
 import threading
 from time import sleep
 
-from shared.base import sandbox_resource
-from shared.conf import get_resource_configuration, \
+from mig.shared.base import sandbox_resource
+from mig.shared.conf import get_resource_configuration, \
     get_configuration_object
-from shared.logger import daemon_logger, register_hangup_handler
-from shared.ssh import execute_on_resource
+from mig.shared.logger import daemon_logger, register_hangup_handler
+from mig.shared.ssh import execute_on_resource
 
 configuration, logger = None, None
 
@@ -67,7 +70,7 @@ def persistent_connection(resource_config, logger):
             if 0 != exit_code:
                 msg = 'ssh multiplex %s: %s returned %i' % \
                       (hostname, executed, exit_code)
-                print msg
+                print(msg)
 
                 # make sure control_socket was cleaned up
 
@@ -82,16 +85,16 @@ def persistent_connection(resource_config, logger):
                 except:
                     pass
                 sleep(sleep_secs)
-        except StandardError, err:
+        except Exception as err:
 
             msg = '%s thread caught exception (%s) - retry later' % \
                   (hostname, err)
-            print msg
+            print(msg)
             logger.error(msg)
             sleep(sleep_secs)
 
     msg = '%s thread leaving...' % hostname
-    print msg
+    print(msg)
     logger.info(msg)
 
 
@@ -100,10 +103,10 @@ def graceful_shutdown(signum, frame):
     system in a graceful way """
 
     msg = '%s: graceful_shutdown called' % sys.argv[0]
-    print msg
+    print(msg)
     try:
         logger.info(msg)
-    except StandardError:
+    except Exception:
         pass
     sys.exit(0)
 
@@ -126,15 +129,15 @@ if __name__ == '__main__':
     if not configuration.site_enable_jobs:
         err_msg = "Job support is disabled in configuration!"
         logger.error(err_msg)
-        print err_msg
+        print(err_msg)
         sys.exit(1)
 
-    print """
+    print("""
 Running grid ssh multiplexing server for resource ssh connection reuse.
 
 Set the MIG_CONF environment to the server configuration path
 unless it is available in mig/server/MiGserver.conf
-"""
+""")
 
     persistent_hosts = {}
     resource_path = configuration.resource_home
@@ -157,18 +160,18 @@ unless it is available in mig/server/MiGserver.conf
                                            unique_resource_name, logger)
             if not status:
                 continue
-            if res_conf.has_key('SSHMULTIPLEX') and res_conf['SSHMULTIPLEX']:
-                print 'adding multiplexing resource %s' % unique_resource_name
+            if 'SSHMULTIPLEX' in res_conf and res_conf['SSHMULTIPLEX']:
+                print('adding multiplexing resource %s' % unique_resource_name)
                 fqdn = res_conf['HOSTURL']
                 res_conf['HOMEDIR'] = res_dir
                 persistent_hosts[fqdn] = res_conf
-        except Exception, err:
+        except Exception as err:
 
             # else:
             #    print "ignoring non-multiplexing resource %s" % unique_resource_name
 
-            print "Failed to open resource conf '%s': %s"\
-                % (unique_resource_name, err)
+            print("Failed to open resource conf '%s': %s"
+                  % (unique_resource_name, err))
 
     threads = {}
 
@@ -176,13 +179,13 @@ unless it is available in mig/server/MiGserver.conf
 
     signal.signal(signal.SIGINT, graceful_shutdown)
     for (hostname, conf) in persistent_hosts.items():
-        if not threads.has_key(hostname):
+        if hostname not in threads:
             threads[hostname] = \
                 threading.Thread(target=persistent_connection, args=(conf,
                                                                      logger))
             threads[hostname].setDaemon(True)
             threads[hostname].start()
 
-    print 'Send interrupt (ctrl-c) twice to stop persistent connections'
+    print('Send interrupt (ctrl-c) twice to stop persistent connections')
     while True:
         sleep(60)

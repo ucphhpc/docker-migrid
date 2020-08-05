@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # refunctions - runtime environment functions
-# Copyright (C) 2003-2016  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -26,6 +26,7 @@
 #
 
 """Runtime Environment functions"""
+from __future__ import absolute_import
 
 import base64
 import datetime
@@ -33,15 +34,15 @@ import fcntl
 import os
 import time
 
-from shared.modified import mark_re_modified, check_res_modified, \
-     reset_res_modified
-import shared.rekeywords as rekeywords
-import shared.parser as parser
-from shared.serial import load, dump
+from mig.shared.modified import mark_re_modified, check_res_modified, \
+    reset_res_modified
+from mig.shared.rekeywords import get_keywords_dict as re_get_keywords_dict
+from mig.shared.parser import parse, check_types
+from mig.shared.serial import load, dump
 
 WRITE_LOCK = 'write.lock'
 RTE_SPECIALS = RUNTIMEENVS, CONF, MODTIME = \
-               ['__runtimeenvs__', '__conf__', '__modtime__']
+    ['__runtimeenvs__', '__conf__', '__modtime__']
 
 # Never repeatedly refresh maps within this number of seconds in same process
 # Used to avoid refresh floods with e.g. runtime envs page calling
@@ -51,6 +52,7 @@ MAP_CACHE_SECONDS = 60
 last_refresh = {RUNTIMEENVS: 0}
 last_load = {RUNTIMEENVS: 0}
 last_map = {RUNTIMEENVS: {}}
+
 
 def load_re_map(configuration, do_lock=True):
     """Load map of runtime environments. Uses a pickled dictionary for
@@ -78,6 +80,7 @@ def load_re_map(configuration, do_lock=True):
         lock_handle.close()
     return (re_map, map_stamp)
 
+
 def refresh_re_map(configuration):
     """Refresh map of runtime environments and their configuration. Uses a
     pickled dictionary for efficiency. 
@@ -94,10 +97,11 @@ def refresh_re_map(configuration):
     re_map, map_stamp = load_re_map(configuration, do_lock=False)
 
     # Find all runtimeenvs and their configurations
-    
+
     (load_status, all_res) = list_runtime_environments(configuration)
     if not load_status:
-        configuration.logger.error("failed to load runtimeenv list: %s" % all_res)
+        configuration.logger.error(
+            "failed to load runtimeenv list: %s" % all_res)
         return re_map
     for re_name in all_res:
         re_path = os.path.join(configuration.re_home, re_name)
@@ -107,7 +111,7 @@ def refresh_re_map(configuration):
 
         # init first time
         re_map[re_name] = re_map.get(re_name, {})
-        if not re_map[re_name].has_key(CONF) or re_mtime >= map_stamp:
+        if CONF not in re_map[re_name] or re_mtime >= map_stamp:
             re_conf = get_re_conf(re_name, configuration)
             if not re_conf:
                 re_conf = {}
@@ -115,8 +119,8 @@ def refresh_re_map(configuration):
             re_map[re_name][MODTIME] = map_stamp
             dirty += [re_name]
     # Remove any missing runtimeenvs from map
-    missing_re = [re_name for re_name in re_map.keys() \
-                   if not re_name in all_res]
+    missing_re = [re_name for re_name in re_map.keys()
+                  if not re_name in all_res]
     for re_name in missing_re:
         del re_map[re_name]
         dirty += [re_name]
@@ -125,13 +129,14 @@ def refresh_re_map(configuration):
         try:
             dump(re_map, map_path)
             os.utime(map_path, (start_time, start_time))
-        except Exception, exc:
+        except Exception as exc:
             configuration.logger.error("Could not save re map: %s" % exc)
 
     last_refresh[RUNTIMEENVS] = start_time
     lock_handle.close()
 
     return re_map
+
 
 def get_re_map(configuration):
     """Returns the current map of runtime environments and their
@@ -167,7 +172,7 @@ def list_runtime_environments(configuration):
         if not os.path.isdir(configuration.re_home):
             try:
                 os.mkdir(configuration.re_home)
-            except Exception, err:
+            except Exception as err:
                 configuration.logger.info(
                     'refunctions.py: not able to create directory %s: %s'
                     % (configuration.re_home, err))
@@ -209,10 +214,12 @@ def get_re_dict(name, configuration):
     else:
         return (re_dict, '')
 
+
 def get_re_conf(re_name, configuration):
     """Wrapper to mimic other get_X_conf functions but using get_re_dict"""
     (conf, msg) = get_re_dict(re_name, configuration)
     return conf
+
 
 def delete_runtimeenv(re_name, configuration):
     """Delete an existing runtime environment"""
@@ -228,7 +235,7 @@ def delete_runtimeenv(re_name, configuration):
         try:
             os.remove(filename)
             mark_re_modified(configuration, re_name)
-        except Exception, err:
+        except Exception as err:
             msg = "Exception during deletion of runtime enviroment '%s': %s"\
                   % (re_name, err)
             status = False
@@ -238,21 +245,21 @@ def delete_runtimeenv(re_name, configuration):
         status = False
     lock_handle.close()
     return (status, msg)
-    
+
+
 def create_runtimeenv(filename, client_id, configuration):
     """Create a new runtime environment"""
-    result = parser.parse(filename)
-    external_dict = rekeywords.get_keywords_dict()
+    result = parse(filename)
+    external_dict = re_get_keywords_dict()
 
-    (status, parsemsg) = parser.check_types(result, external_dict,
-            configuration)
+    (status, parsemsg) = check_types(result, external_dict, configuration)
 
     try:
         os.remove(filename)
-    except Exception, err:
+    except Exception as err:
         msg = \
             'Exception removing temporary runtime environment file %s, %s'\
-             % (filename, err)
+            % (filename, err)
 
     if not status:
         msg = 'Parse failed (typecheck) %s' % parsemsg
@@ -260,7 +267,7 @@ def create_runtimeenv(filename, client_id, configuration):
 
     new_dict = {}
 
-    # move parseresult to a dictionary
+    # move parse result to a dictionary
 
     for (key, value_dict) in external_dict.iteritems():
         new_dict[key] = value_dict['Value']
@@ -287,12 +294,13 @@ def create_runtimeenv(filename, client_id, configuration):
     try:
         dump(new_dict, re_filename)
         mark_re_modified(configuration, re_name)
-    except Exception, err:
+    except Exception as err:
         status = False
         msg = 'Internal error saving new runtime environment: %s' % err
 
     lock_handle.close()
     return (status, msg)
+
 
 def update_runtimeenv_owner(re_name, old_owner, new_owner, configuration):
     """Update owner on an existing runtime environment if existing owner
@@ -313,14 +321,15 @@ def update_runtimeenv_owner(re_name, old_owner, new_owner, configuration):
             mark_re_modified(configuration, re_name)
         else:
             status = False
-    except Exception, err:
+    except Exception as err:
         msg = "Failed to edit owner of runtime enviroment '%s': %s" % \
               (re_name, err)
         configuration.logger.warning(msg)
         status = False
     lock_handle.close()
     return (status, msg)
-    
+
+
 def build_reitem_object(configuration, re_dict):
     """Build a runtimeenvironment object based on input re_dict"""
 
@@ -337,7 +346,7 @@ def build_reitem_object(configuration, re_dict):
                 'url': software_item['url'],
                 'description': software_item['description'],
                 'version': software_item['version'],
-                })
+            })
 
     # anything specified?
 
@@ -372,7 +381,7 @@ def build_reitem_object(configuration, re_dict):
                 'name': environment_item['name'],
                 'example': environment_item['example'],
                 'description': environment_item['description'],
-                })
+            })
     created_timetuple = re_dict['CREATED_TIMESTAMP'].timetuple()
     created_asctime = time.asctime(created_timetuple)
     created_epoch = time.mktime(created_timetuple)
@@ -390,5 +399,4 @@ def build_reitem_object(configuration, re_dict):
         'verifystatus': verifystatus,
         'environments': environments,
         'software': software_list,
-        }
-
+    }

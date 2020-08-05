@@ -37,28 +37,29 @@
      - no special check for KU organisation
      - allows empty fields for things like country, email, and state
 """
+from __future__ import absolute_import
 
 import os
 import time
 
-import shared.returnvalues as returnvalues
-from shared.base import client_id_dir, force_utf8, force_unicode, \
+from mig.shared import returnvalues
+from mig.shared.base import client_id_dir, force_utf8, force_unicode, \
     fill_user, distinguished_name_to_user, fill_distinguished_name
-from shared.defaults import user_db_filename, cert_valid_days, \
+from mig.shared.defaults import user_db_filename, cert_valid_days, \
     oid_valid_days
-from shared.fileio import write_file
-from shared.functional import validate_input, REJECT_UNSET
-from shared.handlers import safe_handler, get_csrf_limit
-from shared.httpsclient import extract_client_openid
-from shared.init import initialize_main_variables
-from shared.notification import send_email
-from shared.safeinput import filter_commonname
-from shared.useradm import create_user
-from shared.url import openid_autologout_url
+from mig.shared.fileio import write_file
+from mig.shared.functional import validate_input, REJECT_UNSET
+from mig.shared.handlers import safe_handler, get_csrf_limit
+from mig.shared.httpsclient import extract_client_openid
+from mig.shared.init import initialize_main_variables
+from mig.shared.notification import send_email
+from mig.shared.safeinput import filter_commonname
+from mig.shared.useradm import create_user
+from mig.shared.url import openid_autologout_url
 
 try:
-    import shared.arcwrapper as arc
-except Exception, exc:
+    from mig.shared import arcwrapper
+except Exception as exc:
 
     # Ignore errors and let it crash if ARC is enabled without the lib
 
@@ -126,7 +127,7 @@ def handle_proxy(proxy_string, client_id, config):
     client_dir = client_id_dir(client_id)
     proxy_dir = os.path.join(config.user_home, client_dir)
     proxy_path = os.path.join(config.user_home, client_dir,
-                              arc.Ui.proxy_name)
+                              arcwrapper.Ui.proxy_name)
 
     if not config.arc_clusters:
         output.append({'object_type': 'error_text',
@@ -137,8 +138,8 @@ def handle_proxy(proxy_string, client_id, config):
 
     try:
         write_file(proxy_string, proxy_path, config.logger)
-        os.chmod(proxy_path, 0600)
-    except Exception, exc:
+        os.chmod(proxy_path, 0o600)
+    except Exception as exc:
         output.append({'object_type': 'error_text',
                        'text': 'Proxy file could not be written (%s)!'
                        % str(exc).replace(proxy_dir, '')})
@@ -147,7 +148,7 @@ def handle_proxy(proxy_string, client_id, config):
     # provide information about the uploaded proxy
 
     try:
-        session_ui = arc.Ui(proxy_dir)
+        session_ui = arcwrapper.Ui(proxy_dir)
         proxy = session_ui.getProxy()
         if proxy.IsExpired():
 
@@ -161,7 +162,7 @@ def handle_proxy(proxy_string, client_id, config):
             output.append({'object_type': 'text',
                            'text': 'Proxy certificate will expire on %s (in %s sec.)'
                            % (proxy.Expires(), proxy.getTimeleft())})
-    except arc.NoProxyError, err:
+    except arcwrapper.NoProxyError as err:
 
         output.append({'object_type': 'warning',
                        'text': 'No proxy certificate to load: %s'
@@ -498,7 +499,7 @@ accepting create matching supplied ID!'''})
                 proxy_out = handle_proxy(proxy_content, uniq_id,
                                          configuration)
                 output_objects.extend(proxy_out)
-        except Exception, err:
+        except Exception as err:
             logger.error('create failed for %s: %s' % (uniq_id, err))
             output_objects.append({'object_type': 'error_text',
                                    'text': '''Could not create the user account for you:

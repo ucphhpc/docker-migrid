@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # securexmlrpc - a secure version of the built-in xmlrpc server and proxy
-# Copyright (C) 2003-2011  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 # 
 # This file is part of MiG.
 # 
@@ -26,8 +26,9 @@
 #
 
 """A SSL/TLS secured version of the built-in XMLRPC server and proxy. Requires
-python-2.6 or later to provide the ssl module.
+python-2.7 or later to provide the ssl module.
 """
+from __future__ import print_function
 
 import os
 import re
@@ -37,7 +38,7 @@ from SimpleXMLRPCServer import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
 from SocketServer import ThreadingMixIn
 # Expose extra ssl constants for optional overriding of server attributes
 from ssl import wrap_socket, CERT_NONE, CERT_OPTIONAL, CERT_REQUIRED, \
-     PROTOCOL_SSLv2, PROTOCOL_SSLv3, PROTOCOL_SSLv23, PROTOCOL_TLSv1
+     PROTOCOL_SSLv23, PROTOCOL_TLSv1_2
 
 
 # Exception marshalling partially by http://code.activestate.com/recipes/365244/
@@ -158,8 +159,7 @@ class BlockingSecureXMLRPCServer(SimpleXMLRPCServer):
             raise ValueError("No such server key: %s" % key_path)
         if not os.path.isfile(cert_path):
             raise ValueError("No such server certificate: %s" % cert_path)
-        if not ssl_version in (PROTOCOL_SSLv2, PROTOCOL_SSLv3, PROTOCOL_SSLv23,
-                               PROTOCOL_TLSv1):
+        if not ssl_version in (PROTOCOL_SSLv23, PROTOCOL_TLSv1_2):
             raise ValueError("Invalid ssl_version value: %s" % ssl_version)
         if not cert_reqs in (CERT_NONE, CERT_OPTIONAL, CERT_REQUIRED):
             raise ValueError("Invalid cert_reqs value: %s" % cert_reqs)
@@ -203,15 +203,15 @@ if __name__ == '__main__':
         address_tuple = (address_tuple[0], int(sys.argv[2]))
     if 'client' in sys.argv[3:]:
         proxy = SecureXMLRPCServerProxy(address_tuple)
-        print "requesting list of methods from server on %s:%d" % address_tuple
+        print("requesting list of methods from server on %s:%d" % address_tuple)
         reply = proxy.system.listMethods()
-        print "server replied: %s" % reply
+        print("server replied: %s" % reply)
     else:
         # Create server
         server = SecureXMLRPCServer(address_tuple)
         server.register_introspection_functions()
         # Run the server's main loop
-        print "Starting SecureXMLRPCServer on %s:%s" % address_tuple
+        print("Starting SecureXMLRPCServer on %s:%s" % address_tuple)
         server.serve_forever()
 
         

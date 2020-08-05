@@ -29,6 +29,8 @@
 Currently only checks that files and dirs exist, but could be
 extended to include other variable checks.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
 import os
 import re
@@ -36,8 +38,8 @@ import sys
 import types
 from ConfigParser import ConfigParser
 
-from shared.configuration import Configuration
-from shared.configuration import fix_missing
+from mig.shared.configuration import Configuration
+from mig.shared.configuration import fix_missing
 
 YES = 0
 NO = 1
@@ -87,7 +89,7 @@ if argc == 1:
 elif argc == 2:
     conf_file = sys.argv[1]
 else:
-    print usage()
+    print(usage())
     sys.exit(2)
 
 conf = None
@@ -96,26 +98,26 @@ if not os.path.isfile(conf_file):
                            % (conf_file, 'create it? [Y/n] ')):
         try:
             touch_file(conf_file)
-            print 'created empty configuration file: %s' % conf_file
-        except Exception, err:
-            print 'could not create %s: %s' % (conf_file, err)
+            print('created empty configuration file: %s' % conf_file)
+        except Exception as err:
+            print('could not create %s: %s' % (conf_file, err))
     else:
         sys.exit(1)
 else:
     try:
         conf = Configuration(conf_file)
-    except Exception, err:
-        print 'configuration file %s is incomplete! %s' % (conf_file,
-                err)
+    except Exception as err:
+        print('configuration file %s is incomplete! %s' % (conf_file,
+                err))
 
 if not conf:
     if YES == ask_confirm('Add missing configuration options? [Y/n] '):
         fix_missing(conf_file)
         try:
             conf = Configuration(conf_file)
-        except Exception, err:
-            print 'configuration file %s is still incomplete! %s'\
-                 % (conf_file, err)
+        except Exception as err:
+            print('configuration file %s is still incomplete! %s'\
+                 % (conf_file, err))
             sys.exit(1)
     else:
         sys.exit(1)
@@ -127,13 +129,13 @@ ignore_attrs = ['__class__', '__doc__', '__module__']
 path_re = re.compile('(' + os.sep + "\w+)+")
 
 conf.logger.info('Checking configuration paths in %s ...', conf_file)
-print 'Checking configuration paths in %s ...' % conf_file
+print('Checking configuration paths in %s ...' % conf_file)
 warnings = 0
 missing_paths = []
 conf_parser = ConfigParser()
 conf_parser.read([conf_file])
 for (name, val) in conf_parser.items('GLOBAL'):
-    if not isinstance(val, types.StringType):
+    if not isinstance(val, bytes):
 
         # ignore non-string values
 
@@ -153,13 +155,13 @@ for (name, val) in conf_parser.items('GLOBAL'):
             conf.logger.info('%s OK: %s exists', name, val)
         else:
             conf.logger.warning('%s: %s does not exist!', name, val)
-            print '* WARNING *: %s: %s does not exist!' % (name, val)
+            print('* WARNING *: %s: %s does not exist!' % (name, val))
             if not path in missing_paths:
                 missing_paths.append(path)
             warnings += 1
 
 conf.logger.info('Found %d configuration problem(s)', warnings)
-print 'Found %d configuration problem(s)' % warnings
+print('Found %d configuration problem(s)' % warnings)
 
 if warnings > 0:
     answer = ask_confirm('Add missing path(s)? [Y/n/a]: ',
@@ -183,29 +185,29 @@ if warnings > 0:
             if not path_type or 'D' == path_type.upper():
                 try:
                     os.makedirs(path)
-                    print 'created directory %s' % path
-                except Exception, err:
-                    print 'could not create directory %s: %s' % (path,
-                            err)
+                    print('created directory %s' % path)
+                except Exception as err:
+                    print('could not create directory %s: %s' % (path,
+                            err))
             elif 'F' == path_type.upper():
                 try:
                     dirname = os.path.dirname(path)
                     if dirname and not os.path.exists(dirname):
                         os.makedirs(dirname)
-                        print 'created directory %s' % dirname
+                        print('created directory %s' % dirname)
                     touch_file(path)
-                    print 'created file %s' % path
-                except Exception, err:
-                    print 'could not create file %s: %s' % (path, err)
+                    print('created file %s' % path)
+                except Exception as err:
+                    print('could not create file %s: %s' % (path, err))
             elif 'P' == path_type.upper():
                 try:
                     dirname = os.path.dirname(path)
                     if dirname and not os.path.exists(dirname):
                         os.makedirs(dirname)
-                        print 'created directory %s' % dirname
+                        print('created directory %s' % dirname)
                     os.mkfifo(path)
-                    print 'created pipe %s' % path
-                except Exception, err:
-                    print 'could not create file %s: %s' % (path, err)
+                    print('created pipe %s' % path)
+                except Exception as err:
+                    print('could not create file %s: %s' % (path, err))
 
 sys.exit(0)

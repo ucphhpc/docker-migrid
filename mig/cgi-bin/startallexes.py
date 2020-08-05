@@ -25,13 +25,14 @@
 # -- END_HEADER ---
 #
 
+from __future__ import absolute_import
 import cgi
 import cgitb
 cgitb.enable()
 
 # call startexe!
 
-from shared.functionality.startexe import main
-from shared.cgiscriptstub import run_cgi_script
+from mig.shared.functionality.startexe import main
+from mig.shared.cgiscriptstub import run_cgi_script
 
 run_cgi_script(main)

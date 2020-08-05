@@ -26,17 +26,18 @@
 #
 
 """Display user stats like job states and disk use"""
+from __future__ import absolute_import
 
 import os
 import datetime
 
-import shared.returnvalues as returnvalues
-from shared.functional import validate_input
-from shared.init import initialize_main_variables
-from shared.usercache import refresh_disk_stats, refresh_job_stats, \
+from mig.shared import returnvalues
+from mig.shared.functional import validate_input
+from mig.shared.init import initialize_main_variables
+from mig.shared.usercache import refresh_disk_stats, refresh_job_stats, \
      format_bytes, OWN, VGRID, JOBS, FILES, DIRECTORIES, BYTES, PARSE, \
      QUEUED, EXECUTING, FINISHED, RETRY, CANCELED, EXPIRED, FAILED, FROZEN
-from shared.vgridaccess import user_allowed_res_exes
+from mig.shared.vgridaccess import user_allowed_res_exes
 
 
 def signature():
@@ -100,7 +101,7 @@ def main(client_id, user_arguments_dict):
         total_res = {'resources': resource_count, 'exes': exe_count}
         user_stats['resources'] = total_res
     if 'certificate' in stats:
-        if os.environ.has_key('SSL_CLIENT_V_END'):
+        if 'SSL_CLIENT_V_END' in os.environ:
             expire = os.environ['SSL_CLIENT_V_END']
         else:
             expire = -1

@@ -27,4 +27,5 @@
 
 # "redirect" to restart
 
-from shared.functionality.restartexe import *
+from __future__ import absolute_import
+from mig.shared.functionality.restartexe import *

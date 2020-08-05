@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # safeeval - Safe evaluation of expressions and commands
-# Copyright (C) 2003-2015  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -42,51 +42,56 @@ code. I.e. NO direct os.system, os.execX, os.spawnX, os.popen, subprocess.X or
 Also try hard not to use the shell invocation if at all possible.
 """
 
+from future.utils import raise_
+
 import dis
 import subprocess
+
 # expose STDOUT and PIPE as vars
 subprocess_stdout, subprocess_pipe = subprocess.STDOUT, subprocess.PIPE
 
-_const_codes = map(dis.opmap.__getitem__, [
-    'POP_TOP',
-    'ROT_TWO',
-    'ROT_THREE',
-    'ROT_FOUR',
-    'DUP_TOP',
-    'BUILD_LIST',
-    'BUILD_MAP',
-    'BUILD_TUPLE',
-    'LOAD_CONST',
-    'RETURN_VALUE',
-    'STORE_SUBSCR',
-    ])
+# NOTE: some op names may be missing from opmap depending on python version
+_const_ops = ['POP_TOP',
+              'ROT_TWO',
+              'ROT_THREE',
+              'ROT_FOUR',
+              'DUP_TOP',
+              'BUILD_LIST',
+              'BUILD_MAP',
+              'BUILD_TUPLE',
+              'LOAD_CONST',
+              'RETURN_VALUE',
+              'STORE_SUBSCR']
+_const_codes = [dis.opmap.get(i) for i in _const_ops if i in dis.opmap]
 
-_expr_codes = _const_codes + map(dis.opmap.__getitem__, [
-    'UNARY_POSITIVE',
-    'UNARY_NEGATIVE',
-    'UNARY_NOT',
-    'UNARY_INVERT',
-    'BINARY_POWER',
-    'BINARY_MULTIPLY',
-    'BINARY_DIVIDE',
-    'BINARY_FLOOR_DIVIDE',
-    'BINARY_TRUE_DIVIDE',
-    'BINARY_MODULO',
-    'BINARY_ADD',
-    'BINARY_SUBTRACT',
-    'BINARY_LSHIFT',
-    'BINARY_RSHIFT',
-    'BINARY_AND',
-    'BINARY_XOR',
-    'BINARY_OR',
-    ])
+_expr_ops = ['UNARY_POSITIVE',
+             'UNARY_NEGATIVE',
+             'UNARY_NOT',
+             'UNARY_INVERT',
+             'BINARY_POWER',
+             'BINARY_MULTIPLY',
+             'BINARY_DIVIDE',
+             'BINARY_FLOOR_DIVIDE',
+             'BINARY_TRUE_DIVIDE',
+             'BINARY_MODULO',
+             'BINARY_ADD',
+             'BINARY_SUBTRACT',
+             'BINARY_LSHIFT',
+             'BINARY_RSHIFT',
+             'BINARY_AND',
+             'BINARY_XOR',
+             'BINARY_OR']
+_expr_codes = _const_codes + \
+    [dis.opmap.get(i) for i in _expr_ops if i in dis.opmap]
+
 
 # For inclusion of math function
 # math.sin(2) requires addition of:
 # LOAD_NAME (101), LOAD_ATTR (105) and CALL_FUNCTION (131)
 
-_math_expr_codes = _expr_codes + map(dis.opmap.__getitem__, ['LOAD_NAME'
-        , 'LOAD_ATTR', 'CALL_FUNCTION'])
+_math_ops = ['LOAD_NAME', 'LOAD_ATTR', 'CALL_FUNCTION']
+_math_expr_codes = _expr_codes + \
+    [dis.opmap.get(i) for i in _math_ops if i in dis.opmap]
 
 # TODO: add more?
 # Keep this list in sync with import list in math_expr_eval
@@ -113,14 +118,14 @@ _math_names = [
     'min',
     'max',
     'cmp',
-    ]
+]
 
 
 def _get_opcodes(codeobj):
     """_get_opcodes(codeobj) -> [opcodes]
 
     Extract the actual opcodes as a list from a code object
-    
+
     >>> c = compile(\"[1 + 2, (1,2)]\", \"\", \"eval\")
     >>> _get_opcodes(c)
     [100, 100, 23, 100, 100, 102, 103, 83]
@@ -149,7 +154,7 @@ def _get_opnames(codeobj):
     """_get_opnames(codeobj) -> [opnames]
 
     Extract the actual opnames as a list from a code object
-    
+
     >>> c = compile(\"[1 + 2, (1,2)]\", \"\", \"eval\")
     >>> _get_opnames(c)
     [('math','cos'),('sys','exit')]
@@ -173,7 +178,7 @@ def _get_opnames(codeobj):
 
 def test_expr(expr, allowed_codes, allowed_args=[]):
     """test_expr(expr) -> codeobj
-    
+
     Test that the expression contains only the listed opcodes.
     If the expression is valid and contains only allowed codes,
     return the compiled code object. Otherwise raise a ValueError
@@ -186,14 +191,15 @@ def test_expr(expr, allowed_codes, allowed_args=[]):
         # fixed this print to actually insert expr (original contains ',' instead
         # of '%') - Jonas
 
-        raise ValueError, '%s is not a valid expression' % expr
+        raise_(ValueError, '%s is not a valid expression' % expr)
+
     codes = _get_opcodes(c)
     for code in codes:
 
         # print "code:", code
 
         if code not in allowed_codes:
-            raise ValueError, 'opcode %s not allowed' % dis.opname[code]
+            raise_(ValueError, 'opcode %s not allowed' % dis.opname[code])
 
     if allowed_args:
         args = _get_opnames(c)
@@ -202,7 +208,7 @@ def test_expr(expr, allowed_codes, allowed_args=[]):
             # print "arg:", arg
 
             if arg not in allowed_args:
-                raise ValueError, 'opname not allowed: ' + str(arg)
+                raise_(ValueError, 'opname not allowed: ' + str(arg))
 
     return c
 
@@ -212,13 +218,13 @@ def test_expr(expr, allowed_codes, allowed_args=[]):
 
 def const_eval(expr):
     """const_eval(expression) -> value
-    
+
     Safe Python constant evaluation
-    
+
     Evaluates a string that contains an expression describing
     a Python constant. Strings that are not valid Python expressions
     or that contain other code besides the constant raise ValueError.
-    
+
     >>> const_eval(\"10\")
     10
     >>> const_eval(\"[1,2, (3,4), {'foo':'bar'}]\")
@@ -235,13 +241,13 @@ def const_eval(expr):
 
 def expr_eval(expr):
     """expr_eval(expression) -> value
-    
+
     Safe Python expression evaluation
-    
+
     Evaluates a string that contains an expression that only
     uses Python constants. This can be used to e.g. evaluate
     a numerical expression from an untrusted source.
-    
+
     >>> expr_eval(\"1+2\")
     3
     >>> expr_eval(\"[1,2]*2\")
@@ -258,14 +264,14 @@ def expr_eval(expr):
 
 def math_expr_eval(expr):
     """math_expr_eval(math_expression) -> value
-    
+
     Safe Python math expression evaluation
-    
+
     Evaluates a string that contains an expression that only
     uses Python constants and functions from the math module.
     This can be used to e.g. evaluate a mathematical expression
     from an untrusted source.
-    
+
     >>> math_expr_eval(\"1+2\")
     3
     >>> math_expr_eval(\"cos(2)*2\")
@@ -296,6 +302,7 @@ def subprocess_check_output(command, stdin=None, stdout=None, stderr=None,
     return subprocess.check_output(command, stdin=stdin, env=env, cwd=cwd,
                                    shell=only_sanitized_variables)
 
+
 def subprocess_call(command, stdin=None, stdout=None, stderr=None, env=None,
                     cwd=None, only_sanitized_variables=False):
     """Safe execution of command.
@@ -307,6 +314,7 @@ def subprocess_call(command, stdin=None, stdout=None, stderr=None, env=None,
     """
     return subprocess.call(command, stdin=stdin, stdout=stdout, stderr=stderr,
                            env=env, cwd=cwd, shell=only_sanitized_variables)
+
 
 def subprocess_popen(command, stdin=None, stdout=None, stderr=None, env=None,
                      cwd=None, only_sanitized_variables=False):
@@ -320,4 +328,3 @@ def subprocess_popen(command, stdin=None, stdout=None, stderr=None, env=None,
     """
     return subprocess.Popen(command, stdin=stdin, stdout=stdout, stderr=stderr,
                             env=env, cwd=cwd, shell=only_sanitized_variables)
-

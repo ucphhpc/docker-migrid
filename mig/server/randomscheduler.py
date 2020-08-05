@@ -26,10 +26,11 @@
 #
 
 """Random Scheduler"""
+from __future__ import absolute_import
 
 import random
 
-from scheduler import Scheduler
+from mig.server.scheduler import Scheduler
 
 
 class RandomScheduler(Scheduler):
@@ -70,13 +71,13 @@ class RandomScheduler(Scheduler):
             # Ignore job which don't match the filter requirements
 
             for (key, val) in must_match.items():
-                if not job.has_key(key) or val != job[key]:
+                if key not in job or val != job[key]:
                     continue
             self.logger.debug('Schedule treating job %d: %s', i,
                               job['JOB_ID'])
             if 'GO' == job['SCHEDULE_HINT']\
-                 and resource_conf['RESOURCE_ID']\
-                 in job['SCHEDULE_TARGETS']:
+                    and resource_conf['RESOURCE_ID']\
+                    in job['SCHEDULE_TARGETS']:
                 self.logger.debug('schedule: found suitable job %s',
                                   job['JOB_ID'])
                 self.logger.debug('Resource: %s',
@@ -106,5 +107,3 @@ class RandomScheduler(Scheduler):
         # just return last job while testing
 
         return job
-
-

@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # settings - helpers for handling user settings
-# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -25,29 +25,30 @@
 # -- END_HEADER ---
 #
 
+from __future__ import absolute_import
 import datetime
 import os
 from binascii import hexlify
 
-import shared.parser as parser
-from shared.base import client_id_dir
-from shared.defaults import settings_filename, profile_filename, \
+from mig.shared.base import client_id_dir
+from mig.shared.defaults import settings_filename, profile_filename, \
     widgets_filename, twofactor_filename, duplicati_filename, ssh_conf_dir, \
     davs_conf_dir, ftps_conf_dir, seafile_conf_dir, duplicati_conf_dir, \
     cloud_conf_dir, authkeys_filename, authpasswords_filename, \
     authdigests_filename, keyword_unchanged, dav_domain
-from shared.duplicatikeywords import get_keywords_dict as get_duplicati_fields, \
+from mig.shared.duplicatikeywords import get_keywords_dict as get_duplicati_fields, \
     extract_duplicati_helper, duplicati_conf_templates
-from shared.fileio import pickle, unpickle
-from shared.modified import mark_user_modified
-from shared.profilekeywords import get_keywords_dict as get_profile_fields
-from shared.pwhash import make_hash, make_digest, assure_password_strength
-from shared.safeinput import valid_password
-from shared.settingskeywords import get_keywords_dict as get_settings_fields
-from shared.ssh import parse_pub_key, tighten_key_perms
-from shared.twofactorkeywords import get_keywords_dict as get_twofactor_fields, \
+from mig.shared.fileio import pickle, unpickle
+from mig.shared.modified import mark_user_modified
+from mig.shared.parser import parse, check_types
+from mig.shared.profilekeywords import get_keywords_dict as get_profile_fields
+from mig.shared.pwhash import make_hash, make_digest, assure_password_strength
+from mig.shared.safeinput import valid_password
+from mig.shared.settingskeywords import get_keywords_dict as get_settings_fields
+from mig.shared.ssh import parse_pub_key, tighten_key_perms
+from mig.shared.twofactorkeywords import get_keywords_dict as get_twofactor_fields, \
     check_twofactor_deps
-from shared.widgetskeywords import get_keywords_dict as get_widgets_fields
+from mig.shared.widgetskeywords import get_keywords_dict as get_widgets_fields
 
 
 def parse_and_save_pickle(source, destination, keywords, client_id,
@@ -56,14 +57,13 @@ def parse_and_save_pickle(source, destination, keywords, client_id,
     dictionary in a pickled file in user_settings.
     """
     client_dir = client_id_dir(client_id)
-    result = parser.parse(source, strip_space, strip_comments)
+    result = parse(source, strip_space, strip_comments)
 
-    (status, parsemsg) = parser.check_types(result, keywords,
-                                            configuration)
+    (status, parsemsg) = check_types(result, keywords, configuration)
 
     try:
         os.remove(source)
-    except Exception, err:
+    except Exception as err:
         msg = 'Exception removing temporary file %s, %s'\
             % (source, err)
 
@@ -238,13 +238,13 @@ def parse_and_save_publickeys(keys_path, keys_content, client_id,
                 continue
             try:
                 parse_pub_key(key)
-            except Exception, exc:
+            except Exception as exc:
                 raise Exception('Invalid public key: %s' % key)
         keys_fd = open(keys_path, 'wb')
         keys_fd.write(keys_content)
         keys_fd.close()
         tighten_key_perms(configuration, client_id)
-    except Exception, exc:
+    except Exception as exc:
         status = False
         msg = 'ERROR: writing %s publickey file: %s' % (client_id, exc)
     return (status, msg)
@@ -273,10 +273,10 @@ def parse_and_save_passwords(passwords_path, passwords_content, client_id,
         passwords_fd = open(passwords_path, 'wb')
         passwords_fd.write(password_hash)
         passwords_fd.close()
-    except ValueError, vae:
+    except ValueError as vae:
         status = False
         msg = 'invalid password: %s' % vae
-    except Exception, exc:
+    except Exception as exc:
         status = False
         msg = 'ERROR: writing %s passwords file: %s' % (client_id, exc)
     return (status, msg)
@@ -307,10 +307,10 @@ def parse_and_save_digests(digests_path, passwords_content, client_id,
         digests_fd = open(digests_path, 'wb')
         digests_fd.write(password_digest)
         digests_fd.close()
-    except ValueError, vae:
+    except ValueError as vae:
         status = False
         msg = 'invalid password: %s' % vae
-    except Exception, exc:
+    except Exception as exc:
         status = False
         msg = 'ERROR: writing %s digests file: %s' % (client_id, exc)
     return (status, msg)
@@ -323,7 +323,7 @@ def _parse_and_save_auth_pw_keys(publickeys, password, client_id,
     """
     client_dir = client_id_dir(client_id)
     # Make sure permissions are tight enough for e.g. ssh auth keys to work
-    os.umask(022)
+    os.umask(0o22)
     proto_conf_path = os.path.join(configuration.user_home, client_dir,
                                    proto_conf_dir)
     # Create proto conf dir for any old users
@@ -473,7 +473,7 @@ def _load_auth_pw_keys(client_id, configuration, proto, proto_conf_dir,
         keys_fd = open(keys_path)
         section_dict['authkeys'] = keys_fd.read()
         keys_fd.close()
-    except Exception, exc:
+    except Exception as exc:
         if not allow_missing:
             configuration.logger.error("load %s publickeys failed: %s" %
                                        (proto, exc))
@@ -486,7 +486,7 @@ def _load_auth_pw_keys(client_id, configuration, proto, proto_conf_dir,
                 password = keyword_unchanged
             pw_fd.close()
         section_dict['authpassword'] = password
-    except Exception, exc:
+    except Exception as exc:
         if not allow_missing:
             configuration.logger.error("load %s password failed: %s" %
                                        (proto, exc))
@@ -499,7 +499,7 @@ def _load_auth_pw_keys(client_id, configuration, proto, proto_conf_dir,
                 digest = keyword_unchanged
             digest_fd.close()
         section_dict['authdigests'] = digest
-    except Exception, exc:
+    except Exception as exc:
         if not allow_missing:
             configuration.logger.error("load %s digest failed: %s" %
                                        (proto, exc))

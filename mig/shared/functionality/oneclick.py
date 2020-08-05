@@ -28,11 +28,12 @@
 # Minimum Intrusion Grid
 
 """Oneclick resource back end"""
+from __future__ import absolute_import
 
-import shared.returnvalues as returnvalues
-from shared.functional import validate_input
-from shared.init import initialize_main_variables
-from shared.sandbox import get_resource
+from mig.shared import returnvalues
+from mig.shared.functional import validate_input
+from mig.shared.init import initialize_main_variables
+from mig.shared.sandbox import get_resource
 
 
 def signature():

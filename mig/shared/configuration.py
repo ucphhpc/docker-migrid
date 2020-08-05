@@ -26,6 +26,8 @@
 #
 
 """Configuration class"""
+from __future__ import print_function
+from __future__ import absolute_import
 
 import base64
 import datetime
@@ -36,12 +38,12 @@ import sys
 import time
 from ConfigParser import ConfigParser
 
-from shared.defaults import CSRF_MINIMAL, CSRF_WARN, CSRF_MEDIUM, CSRF_FULL, \
+from mig.shared.defaults import CSRF_MINIMAL, CSRF_WARN, CSRF_MEDIUM, CSRF_FULL, \
     POLICY_NONE, POLICY_WEAK, POLICY_MEDIUM, POLICY_HIGH, POLICY_CUSTOM, \
     freeze_flavors, duplicati_protocol_choices, default_css_filename, keyword_any
-from shared.logger import Logger, SYSLOG_GDP
-from shared.html import menu_items, vgrid_items
-from shared.fileio import read_file, load_json
+from mig.shared.logger import Logger, SYSLOG_GDP
+from mig.shared.html import menu_items, vgrid_items
+from mig.shared.fileio import read_file, load_json
 
 
 def fix_missing(config_file, verbose=True):
@@ -111,8 +113,6 @@ def fix_missing(config_file, verbose=True):
         'gdp_home': '~/state/gdp_home/',
         'workflows_home': '~/state/workflows_home/',
         'workflows_db_home': '~/state/workflows_home/workflows_db_home/',
-        'workflows_db': '~/state/workflows_home/workflows_db_home/workflows_db.pickle',
-        'workflows_db_lock': '~/state/workflows_home/workflows_db_home/workflows_db.lock',
         'notify_home': '~/state/notify_home',
         'site_vgrid_links': 'files web tracker workflows monitor',
         'site_vgrid_creators': 'distinguished_name:.*',
@@ -258,14 +258,14 @@ def fix_missing(config_file, verbose=True):
         for (option, value) in settings.items():
             if not config.has_option(section, option):
                 if verbose:
-                    print 'setting %s->%s to %s' % (section, option,
-                                                    value)
+                    print('setting %s->%s to %s' % (section, option,
+                                                    value))
                 config.set(section, option, value)
                 modified = True
     if modified:
         backup_path = '%s.%d' % (config_file, time.time())
-        print 'Backing up existing configuration to %s as update removes all comments'\
-            % backup_path
+        print('Backing up existing configuration to %s as update removes all comments'
+              % backup_path)
         fd = open(config_file, 'r')
         backup_fd = open(backup_path, 'w')
         backup_fd.writelines(fd.readlines())
@@ -277,6 +277,7 @@ def fix_missing(config_file, verbose=True):
 
 
 class Configuration:
+
     """Server configuration in parsed form"""
 
     mig_server_id = None
@@ -327,8 +328,6 @@ class Configuration:
     gdp_home = ''
     workflows_home = ''
     workflows_db_home = ''
-    workflows_db = ''
-    workflows_db_lock = ''
     notify_home = ''
     seafile_mount = ''
     openid_store = ''
@@ -567,9 +566,9 @@ class Configuration:
             pass
 
         if not os.path.isfile(self.config_file):
-            print """Could not find your configuration file (%s). You might
+            print("""Could not find your configuration file (%s). You might
 need to point the MIG_CONF environment to your actual MiGserver.conf
-location.""" % self.config_file
+location.""" % self.config_file)
             raise IOError
 
         config = ConfigParser()
@@ -603,7 +602,7 @@ location.""" % self.config_file
         else:
             self.log_path = os.path.join(self.log_dir, self.logfile)
             if verbose:
-                print 'logging to:', self.log_path, '; level:', self.loglevel
+                print('logging to:', self.log_path, '; level:', self.loglevel)
 
         # reopen or initialize logger
 
@@ -614,8 +613,6 @@ location.""" % self.config_file
 
         logger = self.logger_obj.logger
         self.logger = logger
-
-        self.logger.info("Using config file: '%s'" % self.config_file)
 
         # print "logger initialized (level " + logger_obj.loglevel() + ")"
         # logger.debug("logger initialized")
@@ -689,7 +686,7 @@ location.""" % self.config_file
 
             # logger.info("done reading settings from config")
 
-        except Exception, err:
+        except Exception as err:
             try:
                 self.logger.error('Error in reloading configuration: %s' % err)
             except:
@@ -774,10 +771,6 @@ location.""" % self.config_file
         if config.has_option('GLOBAL', 'workflows_db_home'):
             self.workflows_db_home = config.get('GLOBAL',
                                                 'workflows_db_home')
-        if config.has_option('GLOBAL', 'workflows_db'):
-            self.workflows_db = config.get('GLOBAL', 'workflows_db')
-        if config.has_option('GLOBAL', 'workflows_db_lock'):
-            self.workflows_db_lock = config.get('GLOBAL', 'workflows_db_lock')
         if config.has_option('GLOBAL', 'notify_home'):
             self.notify_home = config.get('GLOBAL', 'notify_home')
         if config.has_option('GLOBAL', 'vm_home'):
@@ -1499,7 +1492,7 @@ location.""" % self.config_file
             self.site_base_menu = ['default']
         if config.has_option('SITE', 'default_menu'):
             req = config.get('SITE', 'default_menu').split()
-            self.site_default_menu = [i for i in req if menu_items.has_key(i)]
+            self.site_default_menu = [i for i in req if i in menu_items]
         else:
             self.site_default_menu = ['dashboard', 'files', 'submitjob',
                                       'jobs', 'resources', 'vgrids',
@@ -1507,13 +1500,13 @@ location.""" % self.config_file
                                       'settings', 'crontab', 'docs', 'logout']
         if config.has_option('SITE', 'simple_menu'):
             req = config.get('SITE', 'simple_menu').split()
-            self.site_simple_menu = [i for i in req if menu_items.has_key(i)]
+            self.site_simple_menu = [i for i in req if i in menu_items]
         else:
             self.site_simple_menu = ['dashboard', 'files', 'vgrids',
                                      'settings', 'logout']
         if config.has_option('SITE', 'advanced_menu'):
             req = config.get('SITE', 'advanced_menu').split()
-            self.site_advanced_menu = [i for i in req if menu_items.has_key(i)]
+            self.site_advanced_menu = [i for i in req if i in menu_items]
         else:
             self.site_advanced_menu = ['dashboard', 'submitjob', 'files',
                                        'jobs', 'vgrids', 'resources',
@@ -1522,7 +1515,7 @@ location.""" % self.config_file
                                        'shell', 'docs', 'logout']
         if config.has_option('SITE', 'user_menu'):
             req = config.get('SITE', 'user_menu').split()
-            self.site_user_menu = [i for i in req if menu_items.has_key(i)]
+            self.site_user_menu = [i for i in req if i in menu_items]
         else:
             self.site_user_menu = []
 
@@ -1788,7 +1781,7 @@ location.""" % self.config_file
             self.site_security_scanners = []
         # Fall back to a static 'random' salt string since we need it to
         # remain constant
-        static_rand = 'w\xff\xcft\xaf/\x089 B\x1eG\x84i\x97a'
+        static_rand = b'w\xff\xcft\xaf/\x089 B\x1eG\x84i\x97a'
         self.site_digest_salt = base64.b16encode(static_rand)
         if config.has_option('SITE', 'digest_salt'):
             # Salt must be upper case hex

@@ -26,6 +26,7 @@
 #
 
 """Authentication helper functions"""
+from __future__ import absolute_import
 
 import Cookie
 import base64
@@ -42,15 +43,23 @@ try:
 except ImportError:
     pyotp = None
 
-from shared.base import client_id_dir, extract_field, force_utf8
-from shared.defaults import twofactor_key_name, twofactor_interval_name, \
+from mig.shared.base import client_id_dir, extract_field, force_utf8
+from mig.shared.defaults import twofactor_key_name, twofactor_interval_name, \
     twofactor_key_bytes, twofactor_cookie_bytes, twofactor_cookie_ttl
-from shared.fileio import read_file, delete_file, delete_symlink, \
+from mig.shared.fileio import read_file, delete_file, delete_symlink, \
     pickle, unpickle, make_symlink
-from shared.gdp.all import get_base_client_id
-from shared.pwhash import scramble_password, unscramble_password
+from mig.shared.gdp.all import get_base_client_id
+from mig.shared.pwhash import scramble_password, unscramble_password
 
-valid_otp_window = 1
+# Set OTP windows range (+/-) to compensate for offset 
+# and drifting offline clocks
+# NOTE: valid_otp_window = 1 : compensates for drifting clocks
+#       valid_otp_window >= 1 : compensates for drifting clocks 
+#                               and a clock offset of valid_otp_window-1
+# IMPORTANT: Do not change without consulting:
+# bardino@science.ku.dk or 
+# rehr@science.ku.dk
+valid_otp_window = 2
 
 
 def get_totp(client_id,
@@ -97,7 +106,7 @@ def load_twofactor_interval(client_id, configuration):
         i_fd.close()
         try:
             result = int(interval)
-        except Exception, exc:
+        except Exception as exc:
             result = None
             _logger.error("Failed to read twofactor interval: %s" % exc)
 
@@ -141,7 +150,7 @@ def reset_twofactor_key(client_id, configuration, seed=None, interval=None):
             i_fd = open(interval_path, 'w')
             i_fd.write("%d" % interval)
             i_fd.close()
-    except Exception, exc:
+    except Exception as exc:
         _logger.error("failed in reset 2FA key: %s" % exc)
         return False
 
@@ -166,7 +175,7 @@ def load_twofactor_key(client_id, configuration, allow_missing=True):
         pw_fd.close()
         b32_key = unscramble_password(configuration.site_password_salt,
                                       scrambled)
-    except Exception, exc:
+    except Exception as exc:
         if not allow_missing:
             _logger.error("load 2FA key failed: %s" % exc)
     return b32_key
@@ -312,7 +321,7 @@ def load_twofactor_session(configuration, session_key):
     # Use session file timestamp as default session start
     try:
         session_expire = os.stat(session_path).st_ctime + twofactor_cookie_ttl
-    except Exception, exc:
+    except Exception as exc:
         _logger.warning("Could not stat session_path %s: %s" % (session_path,
                                                                 exc))
         return {}

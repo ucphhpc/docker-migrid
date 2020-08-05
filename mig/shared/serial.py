@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # serial - object serialization operations using pickle or json
-# Copyright (C) 2003-2009  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -26,8 +26,13 @@
 #
 
 """Pickle based serializing"""
+from __future__ import print_function
 
-import cPickle as pickle
+# Python 2 requires explicit cPickle where as python 3 defaults to it
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import json
 import yaml
 
@@ -59,7 +64,7 @@ def dump(data, path, protocol=0, serializer='pickle', mode='wb', **kwargs):
         serial_helper(data, fh, **kwargs)
 
 
-def loads(data, serializer='pickle'):
+def loads(data, serializer='pickle', **kwargs):
     """Load data from serialized string"""
     serial_helper = pickle.loads
     if serializer == 'json':
@@ -84,13 +89,13 @@ def load(path, serializer='pickle', mode='rb', **kwargs):
 
 
 if "__main__" == __name__:
-    print "Testing serializer"
+    print("Testing serializer")
     tmp_path = "dummyserial.tmp"
     orig = {'abc': 123, 'def': 'def', 'ghi': 42.0}
-    print "testing serializing to string and back"
+    print("testing serializing to string and back")
     data = loads(dumps(orig))
-    print "original\n%s\nloaded\n%s\nMatch: %s" % (orig, data, orig == data)
-    print "testing serializing to file and back"
+    print("original\n%s\nloaded\n%s\nMatch: %s" % (orig, data, orig == data))
+    print("testing serializing to file and back")
     dump(orig, tmp_path)
     data = load(tmp_path)
-    print "original\n%s\nloaded\n%s\nMatch: %s" % (orig, data, orig == data)
+    print("original\n%s\nloaded\n%s\nMatch: %s" % (orig, data, orig == data))

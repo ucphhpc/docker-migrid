@@ -6,7 +6,7 @@
 #
 #
 # pwhash - helpers for passwords and hashing
-# Copyright (C) 2003-2018  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -45,14 +45,18 @@
 
 """
 
+from __future__ import print_function
+from __future__ import absolute_import
+
 import hashlib
 from os import urandom
 from base64 import b64encode, b64decode, b16encode, b16decode
 from itertools import izip
 from random import SystemRandom
-from string import lowercase, uppercase, digits
+from string import ascii_lowercase, ascii_uppercase, digits
+
 # From https://github.com/mitsuhiko/python-pbkdf2
-from pbkdf2 import pbkdf2_bin
+from mig.shared.pbkdf2 import pbkdf2_bin
 
 try:
     import cracklib
@@ -60,7 +64,7 @@ except ImportError:
     # Optional cracklib not available - fail gracefully and check before use
     cracklib = None
 
-from shared.defaults import POLICY_NONE, POLICY_WEAK, POLICY_MEDIUM, \
+from mig.shared.defaults import POLICY_NONE, POLICY_WEAK, POLICY_MEDIUM, \
     POLICY_HIGH, POLICY_CUSTOM
 
 # Parameters to PBKDF2. Only affect new passwords.
@@ -110,7 +114,7 @@ def check_hash(configuration, service, username, password, hashed,
     if strict_policy:
         try:
             assure_password_strength(configuration, password)
-        except Exception, exc:
+        except Exception as exc:
             _logger.warning("%s password for %s does not fit local policy: %s"
                             % (service, username, exc))
             return False
@@ -186,7 +190,7 @@ def check_digest(configuration, service, realm, username, password, digest,
     # We check policy AFTER cache lookup since it is already verified for those
     try:
         assure_password_strength(configuration, password)
-    except Exception, exc:
+    except Exception as exc:
         _logger.warning("%s password for %s does not fit local policy: %s"
                         % (service, username, exc))
         if strict_policy:
@@ -241,12 +245,13 @@ def check_scramble(configuration, service, username, password, scrambled,
         password = password.encode('utf-8')
     if isinstance(scramble_cache, dict) and \
             scramble_cache.get(password, None) == scrambled:
-        # print "found cached scramble: %s" % scramble_cache.get(password, None)
+        # print "found cached scramble: %s" % scramble_cache.get(password,
+        # None)
         return True
     # We check policy AFTER cache lookup since it is already verified for those
     try:
         assure_password_strength(configuration, password)
-    except Exception, exc:
+    except Exception as exc:
         _logger.warning('%s password for %s does not satisfy local policy: %s'
                         % (service, username, exc))
         if strict_policy:
@@ -265,7 +270,7 @@ def make_csrf_token(configuration, method, operation, client_id, limit=None):
     """
     salt = configuration.site_digest_salt
     merged = "%s:%s:%s:%s" % (method, operation, client_id, limit)
-    #configuration.logger.debug("CSRF for %s" % merged)
+    # configuration.logger.debug("CSRF for %s" % merged)
     xor_id = "%s" % (int(salt, 16) ^ int(b16encode(merged), 16))
     token = hashlib.sha256(xor_id).hexdigest()
     return token
@@ -317,7 +322,7 @@ def password_requirements(site_policy, logger=None):
         try:
             _, min_len_str, min_classes_str = site_policy.split(':', 2)
             min_len, min_classes = int(min_len_str), int(min_classes_str)
-        except Exception, exc:
+        except Exception as exc:
             errors.append('custom password policy %s on invalid format: %s' %
                           (site_policy, exc))
     else:
@@ -357,7 +362,8 @@ def assure_password_strength(configuration, password):
             (policy_fail_msg, min_len)
         _logger.warning(err_msg)
         raise ValueError(err_msg)
-    char_class_map = {'lower': lowercase, 'upper': uppercase, 'digits': digits}
+    char_class_map = {'lower': ascii_lowercase, 'upper': ascii_uppercase,
+                      'digits': digits}
     base_chars = ''.join(char_class_map.values())
     pw_classes = []
     for i in password:
@@ -419,9 +425,9 @@ def generate_random_password(configuration, tries=42):
     _logger = configuration.logger
     count, classes = parse_password_policy(configuration)
     # TODO: use the password charset from safeinput instead?
-    charset = lowercase
+    charset = ascii_lowercase
     if classes > 1:
-        charset += uppercase
+        charset += ascii_uppercase
     if classes > 2:
         charset += digits
     if classes > 3:
@@ -432,7 +438,7 @@ def generate_random_password(configuration, tries=42):
         try:
             assure_password_strength(configuration, password)
             return password
-        except ValueError, err:
+        except ValueError as err:
             _logger.warning("generated password %s didn't fit policy - retry"
                             % password)
             pass
@@ -441,13 +447,13 @@ def generate_random_password(configuration, tries=42):
 
 
 if __name__ == "__main__":
-    from shared.conf import get_configuration_object
+    from mig.shared.conf import get_configuration_object
     configuration = get_configuration_object()
     for pw in ('', 'abc', 'abcdefgh', '12345678', 'test1234', 'password',
                'Password123', 'P4s5W0rd', 'Goof1234', 'MinimumIntrusionGrid',
                'Dr3Ab3_2', 'kasd#D2s', 'fsk34dsa-.32d'):
         try:
             res = assure_password_strength(configuration, pw)
-        except Exception, exc:
+        except Exception as exc:
             res = "NO (%s)" % exc
-        print "Password '%s' follows site policy: %s" % (pw, res)
+        print("Password '%s' follows site policy: %s" % (pw, res))

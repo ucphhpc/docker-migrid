@@ -29,9 +29,9 @@
 
 import os
 
-from shared.base import invisible_path
-from shared.safeinput import valid_path
-from shared.validstring import possible_user_id, possible_gdp_user_id, \
+from mig.shared.base import invisible_path
+from mig.shared.safeinput import valid_path
+from mig.shared.validstring import possible_user_id, possible_gdp_user_id, \
     possible_sharelink_id, possible_job_id, possible_jupyter_mount_id, \
     valid_user_path, is_valid_email_address
 
@@ -136,11 +136,11 @@ def acceptable_chmod(path, mode, chmod_exceptions):
                  chmod_exceptions]:
         return False
     # Never touch special leading bits (suid, sgid, etc.)
-    if mode & 07000 != 00000:
+    if mode & 0o7000 != 00000:
         return False
-    if os.path.isfile(path) and mode & 0600 == 0600:
+    if os.path.isfile(path) and mode & 0o600 == 0o600:
         return True
-    elif os.path.isdir(path) and mode & 0700 == 0700:
+    elif os.path.isdir(path) and mode & 0o700 == 0o700:
         return True
     else:
         return False

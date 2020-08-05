@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
 import os
 import sys
 import logging
@@ -12,9 +13,9 @@ TRIGGER_DICT_FILE = 'trigger_dict.pck'
 os.environ['MIG_CONF'] = MIG_CONF
 sys.path.append(MIG_HOME)
 
-from shared.conf import get_configuration_object
-from shared.logger import _debug_format, _default_format
-from shared.fileio import unpickle
+from mig.shared.conf import get_configuration_object
+from mig.shared.logger import _debug_format, _default_format
+from mig.shared.fileio import unpickle
 
 
 def get_logger(loglevel=logging.INFO):
@@ -54,7 +55,7 @@ def main():
 
     vgrid_list = get_vgrids_dict(vgrids_dict)
     for name in vgrid_list:
-        print name
+        print(name)
 
 
 if __name__ == '__main__':

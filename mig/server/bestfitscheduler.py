@@ -26,8 +26,9 @@
 #
 
 """Best Fit Scheduler"""
+from __future__ import absolute_import
 
-from scheduler import Scheduler
+from mig.server.scheduler import Scheduler
 
 
 class BestFitScheduler(Scheduler):
@@ -48,7 +49,7 @@ class BestFitScheduler(Scheduler):
             'CPUTIME': 60,
             'MEMORY': 30,
             'DISK': 10,
-            }
+        }
         job_fitness = 0.0
 
         for attr in priority_list.keys():
@@ -57,8 +58,8 @@ class BestFitScheduler(Scheduler):
                 job_val = float(job[attr])
                 res_val = float(resource_conf[attr])
             except:
-                self.logger.error('fitness: float conversion for %s failed!'
-                                  , attr)
+                self.logger.error(
+                    'fitness: float conversion for %s failed!', attr)
                 continue
 
             if res_val == 0.0:
@@ -120,14 +121,14 @@ class BestFitScheduler(Scheduler):
             # Ignore job which don't match the filter requirements
 
             for (key, val) in must_match.items():
-                if not job.has_key(key) or val != job[key]:
+                if key not in job or val != job[key]:
                     continue
 
             # self.logger.debug("schedule treating job %d: %s", i, job['JOB_ID'])
 
             if 'GO' == job['SCHEDULE_HINT']\
-                 and resource_conf['RESOURCE_ID']\
-                 in job['SCHEDULE_TARGETS']:
+                    and resource_conf['RESOURCE_ID']\
+                    in job['SCHEDULE_TARGETS']:
 
                 # self.logger.debug("schedule: found suitable job")
 
@@ -165,7 +166,5 @@ class BestFitScheduler(Scheduler):
         # self.ShowHistory()
 
         self.logger.info('schedule: returning best job: %s %d %f'
-                          % (best_job['JOB_ID'], best_i, best_fitness))
+                         % (best_job['JOB_ID'], best_i, best_fitness))
         return best_job
-
-

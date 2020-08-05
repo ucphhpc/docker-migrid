@@ -62,6 +62,9 @@
 Requires Paramiko module (http://pypi.python.org/pypi/paramiko).
 """
 
+from __future__ import print_function
+from __future__ import absolute_import
+
 import os
 import shutil
 import socket
@@ -76,18 +79,18 @@ try:
     import paramiko.util
     from paramiko.common import DEFAULT_WINDOW_SIZE, DEFAULT_MAX_PACKET_SIZE
 except ImportError:
-    print "ERROR: the python paramiko module is required for this daemon"
+    print("ERROR: the python paramiko module is required for this daemon")
     sys.exit(1)
 
-from shared.accountstate import check_account_accessible
-from shared.base import invisible_path, force_utf8
-from shared.conf import get_configuration_object
-from shared.defaults import keyword_auto, STRONG_SSH_KEXALGOS, \
+from mig.shared.accountstate import check_account_accessible
+from mig.shared.base import invisible_path, force_utf8
+from mig.shared.conf import get_configuration_object
+from mig.shared.defaults import keyword_auto, STRONG_SSH_KEXALGOS, \
     STRONG_SSH_CIPHERS, STRONG_SSH_MACS, STRONG_SSH_LEGACY_KEXALGOS, \
     STRONG_SSH_LEGACY_MACS
-from shared.fileio import check_write_access, user_chroot_exceptions
-from shared.gdp.all import project_open, project_close, project_log
-from shared.griddaemons.sftp import default_username_validator, \
+from mig.shared.fileio import check_write_access, user_chroot_exceptions
+from mig.shared.gdp.all import project_open, project_close, project_log
+from mig.shared.griddaemons.sftp import default_username_validator, \
     default_max_user_hits, default_user_abuse_hits, \
     default_proto_abuse_hits, default_max_secret_hits, \
     get_fs_path, strip_root, flags_to_mode, acceptable_chmod, \
@@ -96,12 +99,12 @@ from shared.griddaemons.sftp import default_username_validator, \
     hit_rate_limit, expire_rate_limit, clear_sessions, \
     track_open_session, track_close_session, active_sessions, \
     check_twofactor_session, validate_auth_attempt
-from shared.logger import daemon_logger, daemon_gdp_logger, \
+from mig.shared.logger import daemon_logger, daemon_gdp_logger, \
     register_hangup_handler
-from shared.notification import send_system_notification
-from shared.pwhash import make_scramble
-from shared.useradm import check_password_hash
-from shared.validstring import possible_user_id, possible_gdp_user_id, \
+from mig.shared.notification import send_system_notification
+from mig.shared.pwhash import make_scramble
+from mig.shared.useradm import check_password_hash
+from mig.shared.validstring import possible_user_id, possible_gdp_user_id, \
     possible_job_id, possible_sharelink_id, possible_jupyter_mount_id
 
 configuration, logger = None, None
@@ -223,7 +226,7 @@ class SFTPHandle(paramiko.SFTPHandle):
                 if ftrace['logstatus']:
                     try:
                         result = method(self, *method_args, **method_kwargs)
-                    except Exception, exc:
+                    except Exception as exc:
                         result = None
                         msg = "(%d:%d): %s" \
                             % (offset, offset+length, exc)
@@ -262,7 +265,7 @@ class SFTPHandle(paramiko.SFTPHandle):
 
                 try:
                     result = method(self, *method_args, **method_kwargs)
-                except Exception, exc:
+                except Exception as exc:
                     result = None
                     logger.error("%s failed: '%s': %s"
                                  % (operation, path, exc))
@@ -551,7 +554,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
         # self.logger.debug("_chattr %s" % path)
         try:
             real_path = self._get_fs_path(path)
-        except ValueError, err:
+        except ValueError as err:
             self.logger.warning('chattr %s: %s' % (path, err))
             return paramiko.SFTP_PERMISSION_DENIED
         if not os.path.exists(real_path):
@@ -602,7 +605,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
                     tmp_fd = open(real_path, 'r+b')
                     os.ftruncate(tmp_fd.fileno(), attr.st_size)
                     tmp_fd.close()
-                except Exception, exc:
+                except Exception as exc:
                     self.logger.error("truncate %s to %s failed: %s" %
                                       (real_path, attr.st_size, exc))
             else:
@@ -621,7 +624,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
         # self.logger.debug("_chmod %s" % path)
         try:
             real_path = self._get_fs_path(path)
-        except ValueError, err:
+        except ValueError as err:
             self.logger.warning('chmod %s: %s' % (path, err))
             return paramiko.SFTP_PERMISSION_DENIED
         if not os.path.exists(real_path):
@@ -641,9 +644,9 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
             # Only allow permission changes that won't give excessive access
             # or remove own access.
             if os.path.isdir(path):
-                new_mode = (mode & 0775) | 0750
+                new_mode = (mode & 0o775) | 0o750
             else:
-                new_mode = (mode & 0775) | 0640
+                new_mode = (mode & 0o775) | 0o640
             # self.logger.debug("chmod %s (%s) without damage on %s :: %s" %
             #                  (new_mode, mode, path, real_path))
             try:
@@ -651,7 +654,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
                     os.chmod(real_path, new_mode)
                 else:
                     os.fchmod(file_obj.fileno(), new_mode)
-            except Exception, err:
+            except Exception as err:
                 self.logger.error("chmod %s (%s) failed on path %s :: %s %s" %
                                   (new_mode, mode, path, real_path, err))
                 return paramiko.SFTP_PERMISSION_DENIED
@@ -669,7 +672,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
         # self.logger.debug('open %s' % path)
         try:
             real_path = self._get_fs_path(path)
-        except ValueError, err:
+        except ValueError as err:
             self.logger.warning('open %s: %s' % (path, err))
             return paramiko.SFTP_PERMISSION_DENIED
         # self.logger.debug("open on %s :: %s (%s %s)" % \
@@ -698,7 +701,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
             # Fake OS level open call first to avoid most flag parsing.
             # This is necessary to make things like O_CREAT, O_EXCL and
             # O_TRUNCATE consistent with the simple mode strings.
-            fake = os.open(real_path, flags, 0644)
+            fake = os.open(real_path, flags, 0o644)
             os.close(fake)
             # Now fake our own chattr to set any requested mode and times
             # self.logger.debug("fake chattr on %s :: %s (%s %s)" %
@@ -727,7 +730,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
             # self.logger.debug("open done %s :: %s (%s %s)" % \
             #                  (path, real_path, str(handle), mode))
             return handle
-        except Exception, err:
+        except Exception as err:
             self.__gdp_log("open", path, flags=flags, error=err)
             self.logger.error("open on %s :: %s (%s) failed: %s" %
                               (path, real_path, mode, err))
@@ -739,7 +742,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
         # self.logger.debug('list_folder %s' % path)
         try:
             real_path = self._get_fs_path(path)
-        except ValueError, err:
+        except ValueError as err:
             self.logger.warning('list_folder %s: %s' % (path, err))
             return paramiko.SFTP_PERMISSION_DENIED
         # self.logger.debug("list_folder %s :: %s" % (path, real_path))
@@ -750,7 +753,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
             return paramiko.SFTP_NO_SUCH_FILE
         try:
             files = os.listdir(real_path)
-        except Exception, err:
+        except Exception as err:
             self.logger.error("list_folder on %s :: %s failed: %s" %
                               (path, real_path, err))
             return paramiko.SFTP_FAILURE
@@ -764,7 +767,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
             try:
                 reply.append(paramiko.SFTPAttributes.from_stat(
                     os.stat(full_name), self._strip_root(filename)))
-            except Exception, err:
+            except Exception as err:
                 self.logger.warning("list_folder %s: stat on %s failed: %s" %
                                     (path, full_name, err))
         # self.logger.debug("list_folder %s reply %s" % (path, reply))
@@ -776,7 +779,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
         # self.logger.debug('stat %s' % path)
         try:
             real_path = self._get_fs_path(path)
-        except ValueError, err:
+        except ValueError as err:
             self.logger.warning('stat %s: %s' % (path, err))
             return paramiko.SFTP_PERMISSION_DENIED
         # self.logger.debug("stat %s :: %s" % (path, real_path))
@@ -788,7 +791,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
             return paramiko.SFTP_NO_SUCH_FILE
         try:
             return paramiko.SFTPAttributes.from_stat(os.stat(real_path), path)
-        except Exception, err:
+        except Exception as err:
             self.logger.error("stat on %s :: %s failed: %s" %
                               (path, real_path, err))
             return paramiko.SFTP_FAILURE
@@ -799,7 +802,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
         # self.logger.debug('lstat %s' % path)
         try:
             real_path = self._get_fs_path(path)
-        except ValueError, err:
+        except ValueError as err:
             self.logger.warning('lstat %s: %s' % (path, err))
             return paramiko.SFTP_PERMISSION_DENIED
         # self.logger.debug("lstat %s :: %s" % (path, real_path))
@@ -811,7 +814,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
         # self.logger.debug('return lstat %s' % path)
         try:
             return paramiko.SFTPAttributes.from_stat(os.stat(real_path), path)
-        except Exception, err:
+        except Exception as err:
             self.logger.error("lstat on %s :: %s failed: %s" %
                               (path, real_path, err))
             return paramiko.SFTP_FAILURE
@@ -822,7 +825,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
         # self.logger.debug("remove %s" % path)
         try:
             real_path = self._get_fs_path(path)
-        except ValueError, err:
+        except ValueError as err:
             self.logger.warning('remove %s: %s' % (path, err))
             return paramiko.SFTP_PERMISSION_DENIED
         if not check_write_access(real_path):
@@ -845,7 +848,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
             os.remove(real_path)
             self.logger.info("removed %s :: %s" % (path, real_path))
             return paramiko.SFTP_OK
-        except Exception, err:
+        except Exception as err:
             self.__gdp_log("remove", path, error=err)
             self.logger.error("remove on %s :: %s failed: %s" %
                               (path, real_path, err))
@@ -858,7 +861,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
         # self.logger.debug("rename %s %s" % (oldpath, newpath))
         try:
             real_oldpath = self._get_fs_path(oldpath)
-        except ValueError, err:
+        except ValueError as err:
             self.logger.warning('rename %s %s: %s' % (oldpath, newpath, err))
             return paramiko.SFTP_PERMISSION_DENIED
         # Prevent removal of special files - link to vgrid dirs, etc.
@@ -888,7 +891,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
             self.logger.info("renamed %s to %s :: %s to %s"
                              % (oldpath, newpath, real_oldpath, real_newpath))
             return paramiko.SFTP_OK
-        except Exception, err:
+        except Exception as err:
             self.__gdp_log("rename", oldpath, dst_path=newpath,
                            error=err)
             self.logger.error("rename on %s :: %s failed: %s" %
@@ -901,7 +904,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
         # self.logger.debug("mkdir %s" % path)
         try:
             real_path = self._get_fs_path(path)
-        except ValueError, err:
+        except ValueError as err:
             self.logger.warning('mkdir %s: %s' % (path, err))
             return paramiko.SFTP_PERMISSION_DENIED
         if os.path.isdir(real_path):
@@ -916,10 +919,10 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
             return paramiko.SFTP_FAILURE
         try:
             # Force MiG default mode
-            os.mkdir(real_path, 0755)
+            os.mkdir(real_path, 0o755)
             self.logger.info("made dir %s :: %s" % (path, real_path))
             return paramiko.SFTP_OK
-        except Exception, err:
+        except Exception as err:
             self.__gdp_log("mkdir", path, error=err)
             self.logger.error("mkdir on %s :: %s failed: %s" %
                               (path, real_path, err))
@@ -931,7 +934,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
         # self.logger.debug("rmdir %s" % path)
         try:
             real_path = self._get_fs_path(path)
-        except ValueError, err:
+        except ValueError as err:
             self.logger.warning('rmdir %s: %s' % (path, err))
             return paramiko.SFTP_PERMISSION_DENIED
         # Prevent removal of special files - link to vgrid dirs, etc.
@@ -954,7 +957,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
             os.rmdir(real_path)
             self.logger.info("removed dir %s :: %s" % (path, real_path))
             return paramiko.SFTP_OK
-        except Exception, err:
+        except Exception as err:
             self.__gdp_log("rmdir", path, error=err)
             self.logger.error("rmdir on %s :: %s failed: %s" %
                               (path, real_path, err))
@@ -974,7 +977,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
         # self.logger.debug("readlink %s" % path)
         try:
             real_path = self._get_fs_path(path)
-        except ValueError, err:
+        except ValueError as err:
             self.logger.warning('readlink %s: %s' % (path, err))
             return paramiko.SFTP_PERMISSION_DENIED
         if not os.path.exists(real_path):
@@ -983,7 +986,7 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
             return paramiko.SFTP_NO_SUCH_FILE
         try:
             return self._strip_root(os.readlink(path))
-        except Exception, err:
+        except Exception as err:
             self.logger.warning("readlink on %s :: %s failed: %s" %
                                 (path, real_path, err))
             return paramiko.SFTP_FAILURE
@@ -1354,7 +1357,7 @@ def accept_client(client, addr, root_dir, host_rsa_key, conf={}):
     # Force keep-alive and see if it helps detect broken sessions in tracking
     transport.set_keepalive(900)
 
-    if conf.has_key("sftp_implementation"):
+    if "sftp_implementation" in conf:
         mod_name, class_name = conf['sftp_implementation'].split(':')
         fromlist = None
         try:
@@ -1376,7 +1379,7 @@ def accept_client(client, addr, root_dir, host_rsa_key, conf={}):
     try:
         transport.start_server(server=server)
         channel = transport.accept(conf['auth_timeout'])
-    except Exception, err:
+    except Exception as err:
         logger.warning('client negotiation error for %s: %s' %
                        (addr, err))
 
@@ -1413,11 +1416,11 @@ def accept_client(client, addr, root_dir, host_rsa_key, conf={}):
 
     if success:
         msg = "Login for %s from %s" % (username, addr, )
-        print msg
+        print(msg)
         logger.info(msg)
     else:
         msg = "Login from %s failed - closing connection" % (addr, )
-        print msg
+        print(msg)
         logger.info(msg)
         transport.close()
 
@@ -1436,7 +1439,7 @@ def accept_client(client, addr, root_dir, host_rsa_key, conf={}):
     if username is not None:
         if success:
             msg = "Logout for %s from %s" % (username, addr, )
-            print msg
+            print(msg)
             logger.info(msg)
         if active_session:
             track_close_session(configuration, 'sftp',
@@ -1462,10 +1465,10 @@ def start_service(configuration):
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server_socket.bind((daemon_conf['address'], daemon_conf['port']))
         server_socket.listen(10)
-    except Exception, err:
+    except Exception as err:
         err_msg = 'Could not open socket: %s' % err
         logger.error(err_msg)
-        print err_msg
+        print(err_msg)
         if server_socket:
             server_socket.close()
         sys.exit(1)
@@ -1489,7 +1492,7 @@ def start_service(configuration):
             # forward KeyboardInterrupt to main thread
             server_socket.close()
             raise
-        except Exception, err:
+        except Exception as err:
             logger.warning('ignoring failed client connection for %s: %s' %
                            (client_tuple, err))
             continue
@@ -1537,15 +1540,15 @@ if __name__ == "__main__":
     if not configuration.site_enable_sftp:
         err_msg = "SFTP access to user homes is disabled in configuration!"
         logger.error(err_msg)
-        print err_msg
+        print(err_msg)
         sys.exit(1)
-    print """
+    print("""
 Running grid sftp server for user sftp access to their MiG homes.
 
 Set the MIG_CONF environment to the server configuration path
 unless it is available in mig/server/MiGserver.conf
-"""
-    print __doc__
+""")
+    print(__doc__)
     address = configuration.user_sftp_address
     port = configuration.user_sftp_port
     default_host_key = """
@@ -1636,21 +1639,21 @@ i4HdbgS6M21GvqIfhN2NncJ00aJukr5L29JrKFgSCPP9BDRb9Jgy0gu1duhTv0C0
     logger.info("Starting SFTP server")
     info_msg = "Listening on address '%s' and port %d" % (address, port)
     logger.info(info_msg)
-    print info_msg
+    print(info_msg)
     try:
         start_service(configuration)
     except KeyboardInterrupt:
         info_msg = "Received user interrupt"
         logger.info(info_msg)
-        print info_msg
+        print(info_msg)
         configuration.daemon_conf['stop_running'].set()
     active = threading.active_count() - 1
     while active > 0:
         info_msg = "Waiting for %d worker threads to finish" % active
         logger.info(info_msg)
-        print info_msg
+        print(info_msg)
         time.sleep(1)
         active = threading.active_count() - 1
     info_msg = "Leaving with no more workers active"
     logger.info(info_msg)
-    print info_msg
+    print(info_msg)
