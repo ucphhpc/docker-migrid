@@ -576,6 +576,13 @@ class MiGRuleEventHandler(PatternMatchingEventHandler):
         state = event.event_type
         src_path = event.src_path
 
+        # match events within writable directory to trigger in files directory.
+        # Once migration to new structure is complete this can probably be
+        # removed.
+        src_path = src_path.replace(
+            configuration.vgrid_files_writable,
+            configuration.vgrid_files_home)
+
         if event.is_directory:
             self.__update_rule_monitor(configuration, src_path, state)
         elif src_path.endswith(configuration.vgrid_triggers):
