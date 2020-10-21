@@ -26,6 +26,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
+import datetime
 import fcntl
 import os
 import re
@@ -209,6 +210,196 @@ VALID_ACTION_REQUEST = {
     'persistence_id': str,
     'object_type': str
 }
+
+VALID_JOB_HISTORY = {
+    'job_id': str,
+    'trigger_id': str,
+    'trigger_path': str,
+    'pattern_name': str,
+    'pattern_id': str,
+    'recipes': list,
+    'start': str,
+    'write': list,
+    'end': str
+}
+
+
+def get_workflow_job_report(configuration, vgrid):
+    history_home = get_workflow_history_home(configuration, vgrid)
+
+    if not history_home:
+        feedback = 'No job history home in this Vgrid.'
+        configuration.logger.debug(feedback)
+        return (False, feedback)
+
+    histories = []
+    for (_, _, files) in os.walk(history_home):
+        for filename in files:
+            job_history_path = os.path.join(history_home, filename)
+            try:
+                history = load(job_history_path)
+            except Exception as err:
+                msg = 'Something went wrong loading history file %s. %s' \
+                      % (job_history_path, err)
+                print(msg)
+                configuration.logger.error(msg)
+                continue
+
+            valid, msg = is_valid_history(configuration, history)
+            if not valid:
+                msg = 'Job history file %s is not valid. %s' \
+                      % (job_history_path, msg)
+                print(msg)
+                configuration.logger.debug(msg)
+                continue
+
+            history['session_id'] = filename
+            histories.append(history)
+
+    for entry in histories:
+        print('Got job history entry: %s' % entry)
+
+
+def create_workflow_job_history_file(
+        configuration, vgrid, job_sessionid, job_id, trigger_id, trigger_path,
+        start_time, pattern_name, pattern_id, recipes):
+    history_home = get_workflow_history_home(configuration, vgrid)
+
+    # If history folder doesn't exist, create it.
+    if not history_home:
+        created, msg = init_workflow_home(configuration, vgrid,
+                                          WORKFLOW_HISTORY)
+        if not created:
+            return (False, msg)
+
+        history_home = get_workflow_history_home(configuration, vgrid)
+
+    # Create starting history file
+    job_history_path = os.path.join(history_home, job_sessionid)
+
+    history = {
+        'job_id': job_id,
+        'trigger_id': trigger_id,
+        'trigger_path': trigger_path,
+        'pattern_name': pattern_name,
+        'pattern_id': pattern_id,
+        'recipes': recipes,
+        'start': str(start_time),
+        'end': '',
+        'write': []
+    }
+
+    valid, msg = is_valid_history(configuration, history)
+    if not valid:
+        return False, msg
+:P
+    try:
+        dump(history, job_history_path)
+        configuration.logger.debug(
+            'Started new job history log at %s, for job %s'
+            % (job_history_path, job_id))
+    except Exception as err:
+        return (False, str(err))
+    return True, job_history_path
+
+
+def add_workflow_job_history_entry(
+        configuration, vgrid, job_session_id, operation, path):
+    history_home = get_workflow_history_home(configuration, vgrid)
+
+    if not history_home:
+        feedback = 'Not adding to job history as history home does not exist.'
+        configuration.logger.debug(feedback)
+        return (False, feedback)
+
+    job_history_path = os.path.join(history_home, job_session_id)
+    if not os.path.exists(job_history_path):
+        feedback = 'Not adding to job history as job history file does not ' \
+                   'exist for %s.' % job_session_id
+        configuration.logger.debug(feedback)
+        return (False, feedback)
+
+    try:
+        history = load(job_history_path)
+    except Exception as err:
+        return (False, str(err))
+
+    valid, msg = is_valid_history(configuration, history)
+    if not valid:
+        return False, msg
+
+    if history['end']:
+        msg = 'History is complete for %s. No more logging. ' % job_session_id
+        configuration.logger.debug(msg)
+        return (False, msg)
+
+    if operation not in history:
+        msg = 'Operation %s not supported in logging, ignored.' % operation
+        configuration.logger.debug(msg)
+        return (False, msg)
+
+    history[operation].append((path, str(datetime.datetime.now())))
+
+    try:
+        dump(history, job_history_path)
+    except Exception as err:
+        return (False, str(err))
+    return True, ''
+
+
+def finish_job_history(configuration, vgrid, job_session_id):
+    history_home = get_workflow_history_home(configuration, vgrid)
+
+    if not history_home:
+        feedback = 'Not finishing job history as history home does not exist.'
+        configuration.logger.debug(feedback)
+        return (False, feedback)
+
+    job_history_path = os.path.join(history_home, job_session_id)
+    if not os.path.exists(job_history_path):
+        feedback = 'Not finishing job history as job history file does not ' \
+                   'exist for %s.' % job_session_id
+        configuration.logger.debug(feedback)
+        return (False, feedback)
+
+    try:
+        history = load(job_history_path)
+    except Exception as err:
+        return (False, str(err))
+
+    valid, msg = is_valid_history(configuration, history)
+    if not valid:
+        return False, msg
+
+    history['end'] = str(datetime.datetime.now())
+
+    try:
+        dump(history, job_history_path)
+    except Exception as err:
+        return (False, str(err))
+    return True, ''
+
+
+def is_valid_history(configuration, history):
+    if not history:
+        msg = 'No history provided. '
+        configuration.logger.error(msg)
+        return False, msg
+    if not isinstance(history, dict):
+        msg = 'History is a %s, should be a dict. ' % type(history)
+        configuration.logger.error(msg)
+        return False, msg
+    for k, v in history.items():
+        if k not in VALID_JOB_HISTORY:
+            msg = 'Invalid key %s, found in history %s. ' % (k, history)
+            configuration.logger.error(msg)
+            return False, msg
+        if not isinstance(v, VALID_JOB_HISTORY.get(k)):
+            msg = 'Entry for %s is invalid in history. Is %s but should ' \
+                  'be %s. ' % (k, type(v), VALID_JOB_HISTORY[k])
+            configuration.logger.error(msg)
+            return False, msg
+    return True, ''
 
 
 def touch_workflow_sessions_db(configuration, force=False):
@@ -1118,7 +1309,9 @@ def get_workflow_home(configuration, vgrid, workflow_type=WORKFLOW_PATTERN):
     """
     if workflow_type == WORKFLOW_RECIPE:
         return get_workflow_recipe_home(configuration, vgrid)
-    return get_workflow_pattern_home(configuration, vgrid)
+    elif workflow_type == WORKFLOW_PATTERN:
+        return get_workflow_pattern_home(configuration, vgrid)
+    return get_workflow_history_home(configuration, vgrid)
 
 
 def get_workflow_pattern_home(configuration, vgrid):
@@ -1161,6 +1354,26 @@ def get_workflow_recipe_home(configuration, vgrid):
     if not os.path.exists(recipe_home):
         return False
     return recipe_home
+
+
+def get_workflow_history_home(configuration, vgrid):
+    """
+    Returns the path of the directory storing job history for a given vgrid.
+    :param configuration: The MiG configuration object.
+    :param vgrid: The MiG VGrid.
+    :return: (string or boolean) the job history path or False if the
+    path does not exist.
+    """
+    _logger = configuration.logger
+    vgrid_path = os.path.join(configuration.vgrid_home, vgrid)
+    if not os.path.exists(vgrid_path):
+        _logger.warning("WH: vgrid '%s' doesn't exist" % vgrid_path)
+        return False
+    history_home = os.path.join(vgrid_path,
+                                configuration.workflows_vgrid_history_home)
+    if not os.path.exists(history_home):
+        return False
+    return history_home
 
 
 def init_workflow_task_home(configuration, vgrid):
@@ -3101,3 +3314,9 @@ if __name__ == '__main__':
             delete_workflow_sessions_db(conf)
         if args[0] == 'reset_test_workflows':
             reset_workflows(conf, default_vgrid)
+        if args[0] == 'job_report':
+            if len(args) > 1 and args[1]:
+                get_workflow_job_report(conf, args[1])
+            else:
+                print('job report requires vgrid')
+

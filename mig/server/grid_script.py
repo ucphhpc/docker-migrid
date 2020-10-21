@@ -53,6 +53,7 @@ from mig.shared.gridscript import clean_grid_stdin, \
 from mig.shared.notification import notify_user_thread
 from mig.shared.resadm import atomic_resource_exe_restart, put_exe_pgid
 from mig.shared.vgrid import job_fits_res_vgrid, validated_vgrid_list
+from mig.shared.workflows import create_workflow_job_history_file
 
 try:
     from mig.server import servercomm
@@ -1096,6 +1097,36 @@ while True:
                         logger.info('Job %s assigned to %s execution unit %s'
                                     % (new_job['JOB_ID'],
                                        unique_resource_name, exe))
+
+                        # Setup base job history entry
+
+                        if 'WORKFLOW_TRIGGER_ID' in new_job:
+                            created, msg = create_workflow_job_history_file(
+                                configuration,
+                                new_job['VGRID'][0],
+                                new_job['SESSIONID'],
+                                new_job['JOB_ID'],
+                                mrsl_dict['WORKFLOW_TRIGGER_ID'],
+                                mrsl_dict['WORKFLOW_TRIGGER_PATH'],
+                                mrsl_dict['WORKFLOW_TRIGGER_TIME'],
+                                mrsl_dict['WORKFLOW_PATTERN_NAME'],
+                                mrsl_dict['WORKFLOW_PATTERN_ID'],
+                                mrsl_dict['WORKFLOW_RECIPES'],
+                            )
+
+                            if not created:
+                                logger.debug(
+                                    "Could not create job history file %s "
+                                    "for job %s. %s" % (
+                                        new_job['SESSIONID'],
+                                        new_job['JOB_ID'], msg))
+                            else:
+                                logger.debug(
+                                    "Created new history file at: %s" % msg)
+
+                        else:
+                            logger.debug("Skipping history creation for "
+                                         "job %s" % new_job['JOB_ID'])
 
                         # put job in executing queue - with maxfilled values
 

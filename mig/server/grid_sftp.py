@@ -106,6 +106,7 @@ from mig.shared.pwhash import make_scramble
 from mig.shared.useradm import check_password_hash
 from mig.shared.validstring import possible_user_id, possible_gdp_user_id, \
     possible_job_id, possible_sharelink_id, possible_jupyter_mount_id
+from mig.shared.workflows import add_workflow_job_history_entry
 
 configuration, logger = None, None
 
@@ -136,6 +137,25 @@ class SFTPHandle(paramiko.SFTPHandle):
                      'count': 0,
                      'logstatus': False}
         # self.logger.debug("SFTPHandle init: %s" % repr(flags))
+
+    def __workflow_history_log(method):
+        @wraps(method)
+        def _impl(self, *method_args, **method_kwargs):
+            operation = method.__name__
+            path = getattr(self, "path", None)
+            user_name = getattr(self, "user_name", None)
+
+            if os.path.sep in path:
+                vgrid = path[:path.find(os.path.sep)]
+            else:
+                vgrid = path
+
+            add_workflow_job_history_entry(
+                configuration, vgrid, user_name, operation, path)
+
+            method(self, *method_args, **method_kwargs)
+
+        return _impl
 
     def __gdp_log(method):
         """Decorator used for GDP logging
@@ -311,16 +331,19 @@ class SFTPHandle(paramiko.SFTPHandle):
         #                  (repr(attr), path))
         return self.sftpserver._chattr(path, attr, self)
 
+    @__workflow_history_log
     @__gdp_log
     def read(self, offset, length):
         """Handle operations of same name"""
         return super(SFTPHandle, self).read(offset, length)
 
+    @__workflow_history_log
     @__gdp_log
     def write(self, offset, data):
         """Handle operations of same name"""
         return super(SFTPHandle, self).write(offset, data)
 
+    @__workflow_history_log
     @__gdp_log
     def close(self):
         """Handle operations of same name"""
