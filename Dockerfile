@@ -5,6 +5,11 @@ FROM centos:7
 RUN sed -i '/nodocs/d' /etc/yum.conf
 
 RUN yum update -y \
+    && yum install -y epel-release \
+    && yum clean all \
+    && rm -fr /var/cache/yum
+
+RUN yum update -y \
     && yum install -y \
     gcc \
     pam-devel \
@@ -12,7 +17,6 @@ RUN yum update -y \
     htop \
     openssh \
     crontabs \
-    epel-release \
     nano \
     mod_ssl \
     mod_wsgi \
@@ -29,7 +33,8 @@ RUN yum update -y \
     openssh-server \
     rsyslog \
     openssh-clients \
-    lsof
+    lsof \
+    python-pip
 
 # Apache OpenID (provided by epel)
 RUN yum install -y mod_auth_openid
@@ -104,6 +109,9 @@ RUN ln -s MiG/*.$DOMAIN/server.crt server.crt \
     && ln -s MiG/*.$DOMAIN/combined.pub combined.pub \
     && ln -s MiG/*.$DOMAIN io.migrid.test
 
+# Upgrade pip, required by cryptography
+RUN python -m pip install -U pip==20.3.4
+
 WORKDIR $MIG_ROOT
 USER $USER
 
@@ -116,11 +124,8 @@ RUN mkdir -p MiG-certificates \
     && ln -s $CERT_DIR/dhparams.pem dhparams.pem
 
 # Prepare OpenID
-RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
-    && python get-pip.py --user
-
 ENV PATH=$PATH:/home/$USER/.local/bin
-RUN pip install --user https://github.com/openid/python-openid/archive/master.zip
+RUN pip install --user python-openid
 
 # Modules required by grid_events.py
 RUN pip install --user \
@@ -146,11 +151,14 @@ RUN pip install --user \
 
 # Module required to run pytests
 # 4.6 is the latest with python2 support
-RUN pip2 install --user \
+RUN pip install --user \
     pytest
 
+RUN pip install --user \
+    future
+
 # Install and configure MiG
-ARG CHECKOUT=4634
+ARG CHECKOUT=5205
 RUN svn checkout -r $CHECKOUT https://svn.code.sf.net/p/migrid/code/trunk .
 
 ADD mig $MIG_ROOT/mig
@@ -159,6 +167,8 @@ USER root
 RUN chown -R $USER:$USER $MIG_ROOT/mig
 
 USER $USER
+
+ENV PYTHONPATH=${MIG_ROOT}
 
 WORKDIR $MIG_ROOT/mig/install
 
