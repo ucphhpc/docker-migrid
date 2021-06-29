@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # useradm - user administration functions
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -26,6 +26,7 @@
 #
 
 """User administration functions"""
+
 from __future__ import print_function
 from __future__ import absolute_import
 
@@ -37,11 +38,14 @@ import re
 import shutil
 import sqlite3
 import sys
+import time
 
+from mig.shared.accountreq import get_accepted_peers
 from mig.shared.accountstate import update_account_expire_cache, \
     update_account_status_cache
 from mig.shared.base import client_id_dir, client_dir_id, client_alias, \
-    sandbox_resource, fill_user, fill_distinguished_name, extract_field
+    sandbox_resource, fill_user, fill_distinguished_name, extract_field, \
+    is_gdp_user
 from mig.shared.conf import get_configuration_object
 from mig.shared.configuration import Configuration
 from mig.shared.defaults import user_db_filename, keyword_auto, ssh_conf_dir, \
@@ -63,15 +67,16 @@ from mig.shared.serial import load, dump
 from mig.shared.settings import update_settings, update_profile, update_widgets
 from mig.shared.sharelinks import load_share_links, update_share_link, \
     get_share_link, mode_chars_map
+from mig.shared.twofactorkeywords import get_twofactor_specs
+from mig.shared.userdb import lock_user_db, unlock_user_db, load_user_db, \
+    load_user_dict, save_user_db
+from mig.shared.validstring import possible_user_id, valid_email_addresses
 from mig.shared.vgrid import vgrid_add_owners, vgrid_remove_owners, \
     vgrid_add_members, vgrid_remove_members, in_vgrid_share, \
     vgrid_sharelinks, vgrid_add_sharelinks
 from mig.shared.vgridaccess import get_resource_map, get_vgrid_map, \
     force_update_user_map, force_update_resource_map, force_update_vgrid_map, \
     VGRIDS, OWNERS, MEMBERS
-from mig.shared.twofactorkeywords import get_twofactor_specs
-from mig.shared.userdb import lock_user_db, unlock_user_db, load_user_db, \
-    load_user_dict, save_user_db
 
 ssh_authkeys = os.path.join(ssh_conf_dir, authkeys_filename)
 ssh_authpasswords = os.path.join(ssh_conf_dir, authpasswords_filename)
@@ -185,6 +190,7 @@ def create_user(
     ask_renew=True,
     default_renew=False,
     do_lock=True,
+    verify_peer=None,
 ):
     """Add user"""
     flock = None
@@ -214,6 +220,104 @@ def create_user(
         del user['authorized']
     else:
         authorized = False
+
+    accepted_peer_list = []
+    verify_pattern = verify_peer
+    if verify_peer == keyword_auto:
+        _logger.debug('auto-detect peers for: %s' % client_id)
+        peer_email_list = []
+        # extract email of vouchee from comment if possible
+        comment = user.get('comment', '')
+        all_matches = valid_email_addresses(configuration, comment)
+        for i in all_matches:
+            peer_email = "%s" % i
+            if not possible_user_id(configuration, peer_email):
+                _logger.warning('skip invalid peer: %s' % peer_email)
+                continue
+            peer_email_list.append(peer_email)
+
+        if not peer_email_list:
+            _logger.error("requested peer auto-detect failed for %s" %
+                          client_id)
+            raise Exception("Failed auto-detect peers in request for %s: %r"
+                            % (client_id, comment))
+        verify_pattern = '|'.join(['.*emailAddress=%s' %
+                                   i for i in peer_email_list])
+
+    if verify_pattern:
+        _logger.debug('verify peers for %s with %s' % (client_id,
+                                                       verify_pattern))
+        search_filter = default_search()
+        search_filter['distinguished_name'] = verify_pattern
+        if verify_peer == keyword_auto or verify_pattern.find('|') != -1:
+            regex_patterns = ['distinguished_name']
+        else:
+            regex_patterns = []
+        (_, hits) = search_users(search_filter, conf_path, db_path,
+                                 verbose, regex_match=regex_patterns)
+        peer_notes = []
+        if not hits:
+            peer_notes.append("no match for peers")
+        for (sponsor_id, sponsor_dict) in hits:
+            if configuration.site_enable_gdp and is_gdp_user(configuration, sponsor_id):
+                _logger.debug(
+                    "skip gdp project user %s as sponsor" % sponsor_id)
+                continue
+            _logger.debug("check %s in peers for %s" % (client_id, sponsor_id))
+            if client_id == sponsor_id:
+                warn_msg = "users cannot vouch for themselves: %s for %s" % \
+                           (client_id, sponsor_id)
+                _logger.warning(warn_msg)
+                continue
+            sponsor_expire = sponsor_dict.get('expire', -1)
+            if sponsor_expire >= 0 and time.time() > sponsor_expire:
+                warn_msg = "expire %s prevents %s as peer for %s" % \
+                           (sponsor_expire, sponsor_id, client_id)
+                _logger.warning(warn_msg)
+                peer_notes.append(warn_msg)
+                continue
+            sponsor_status = sponsor_dict.get('status', 'active')
+            if sponsor_status not in ['active', 'temporal']:
+                warn_msg = "status %s prevents %s as peer for %s" % \
+                           (sponsor_status, sponsor_id, client_id)
+                _logger.warning(warn_msg)
+                peer_notes.append(warn_msg)
+                continue
+            accepted_peers = get_accepted_peers(configuration, sponsor_id)
+            peer_entry = accepted_peers.get(client_id, None)
+            if not peer_entry:
+                _logger.warning("could not validate %s as peer for %s" %
+                                (sponsor_id, client_id))
+                continue
+            # NOTE: adjust expire date to mean end of that day
+            peer_expire = datetime.datetime.strptime(
+                peer_entry.get('expire', 0), '%Y-%m-%d') + \
+                datetime.timedelta(days=1, microseconds=-1)
+            client_expire = datetime.datetime.fromtimestamp(user['expire'])
+            if peer_expire < client_expire:
+                warn_msg = "expire %s vs %s prevents %s as peer for %s" % \
+                           (peer_expire, client_expire, sponsor_id, client_id)
+                _logger.warning(warn_msg)
+                peer_notes.append(warn_msg)
+                continue
+            _logger.debug("validated %s accepts %s as peer" % (sponsor_id,
+                                                               client_id))
+            accepted_peer_list.append(sponsor_id)
+        if not accepted_peer_list:
+            _logger.error("requested peer validation with %r for %s failed" %
+                          (verify_pattern, client_id))
+            raise Exception("Failed verify peers for %s using pattern %r: %s" %
+                            (client_id, verify_pattern, '\n'.join(peer_notes)))
+
+        # Save peers in user DB for updates etc. but ignore peer search pattern
+        user['peers'] = accepted_peer_list
+        if user.get('peer_pattern', None):
+            del user['peer_pattern']
+        _logger.info("accept create user %s with peer validator(s): %s" %
+                     (client_id, ', '.join(accepted_peer_list)))
+
+    else:
+        _logger.info('Skip peer verification for %s' % client_id)
 
     if verbose:
         print('User ID: %s\n' % client_id)
@@ -259,16 +363,27 @@ def create_user(
             if do_lock:
                 unlock_user_db(flock)
             if verbose:
-                print('Attempting create_user with conflicting alias %s' \
+                print('Attempting create_user with conflicting alias %s'
                       % alias)
             raise Exception(
                 'A conflicting user with alias %s already exists' % alias)
 
-    if client_id in user_db:
+    if client_id not in user_db:
+        default_ui = configuration.new_user_default_ui
+        user['created'] = time.time()
+    else:
+        default_ui = None
         account_status = user_db[client_id].get('status', 'active')
-        if account_status != 'active':
-            raise Exception('refusing to renew %s account!' % account_status)
-        elif ask_renew:
+        # Only allow renew if account is active or if temporal with peer list
+        if account_status == 'active':
+            _logger.debug("proceed with %s account" % account_status)
+        elif account_status == 'temporal' and accepted_peer_list:
+            _logger.debug("proceed with %s account and accepted peers %s" %
+                          (account_status, accepted_peer_list))
+        else:
+            raise Exception('refusing to renew %s account! (%s)' %
+                            (account_status, accepted_peer_list))
+        if ask_renew:
             print('User DB entry for "%s" already exists' % client_id)
             renew_answer = raw_input('Renew existing entry? [Y/n] ')
             renew = not renew_answer.lower().startswith('n')
@@ -323,6 +438,7 @@ with certificate or OpenID authentication to authorize the change."""
                     updated_user[key] = val
             user.clear()
             user.update(updated_user)
+            user['renewed'] = time.time()
         elif not force:
             if do_lock:
                 unlock_user_db(flock)
@@ -355,7 +471,7 @@ with certificate or OpenID authentication to authorize the change."""
         user_db[client_id] = user
         save_user_db(user_db, db_path, do_lock=False)
         if verbose:
-            print('User %s was successfully added/updated in user DB!'\
+            print('User %s was successfully added/updated in user DB!'
                   % client_id)
     except Exception as err:
         if do_lock:
@@ -479,10 +595,13 @@ require user "%(distinguished_name)s"
             access += '''require user "%(distinguished_name_enc)s"
 '''
 
+        # For OpenID 2.0 and OpenID Connect user IDs
         for name in user.get('openid_names', []):
             for oid_provider in configuration.user_openid_providers:
                 oid_url = os.path.join(oid_provider, name)
                 access += 'require user "%s"\n' % oid_url
+                access += 'require user "%s"\n' % name
+
         access += '''
 # IMPORTANT: do NOT set "all granted" for 2.3+ as it completely removes all
 # login requirements!
@@ -543,6 +662,8 @@ The %(short_title)s admins
     user_email = user.get('email', '')
     if user_email:
         settings_defaults['EMAIL'] = [user_email]
+    if default_ui:
+        settings_defaults['USER_INTERFACE'] = default_ui
     settings_defaults['CREATOR'] = client_id
     settings_defaults['CREATED_TIMESTAMP'] = datetime.datetime.now()
     try:
@@ -692,16 +813,16 @@ def fix_vgrid_sharelinks(conf_path, db_path, verbose=False, force=False):
             if not share_id in links_dict.keys():
                 user_path = os.readlink(sharelink_path)
                 if verbose:
-                    print('Handle missing vgrid %s sharelink %s to %s (%s)' % \
-                        (vgrid_name, share_id, sharelink_realpath, user_path))
+                    print('Handle missing vgrid %s sharelink %s to %s (%s)' %
+                          (vgrid_name, share_id, sharelink_realpath, user_path))
                 client_dir = user_path.replace(configuration.user_home, '')
                 client_dir = client_dir.split(os.sep)[0]
                 client_id = client_dir_id(client_dir)
                 (get_status, share_dict) = get_share_link(share_id, client_id,
                                                           configuration)
                 if not get_status:
-                    print('Error loading sharelink dict for %s of %s' % \
-                        (share_id, client_id))
+                    print('Error loading sharelink dict for %s of %s' %
+                          (share_id, client_id))
                     continue
 
                 print('Add missing sharelink %s to vgrid %s' % (share_id,
@@ -797,7 +918,7 @@ def edit_user(
         user_db[new_id] = user_dict
         save_user_db(user_db, db_path, do_lock=False)
         if verbose:
-            print('User %s was successfully edited in user DB!'\
+            print('User %s was successfully edited in user DB!'
                   % client_id)
     except Exception as err:
         import traceback
@@ -849,6 +970,13 @@ def edit_user(
     for base_dir in user_dirs:
         old_path = os.path.join(base_dir, client_dir)
         new_path = os.path.join(base_dir, new_client_dir)
+        # Skip rename if dir was already renamed either in partial run or on
+        # a shared FS sister site.
+        if os.path.exists(new_path) and not os.path.exists(old_path):
+            if verbose:
+                print('skip already complete rename of user dir %s to %s' %
+                      (old_path, new_path))
+            continue
         try:
             rename_dir(old_path, new_path)
         except Exception as exc:
@@ -856,8 +984,8 @@ def edit_user(
                 raise Exception('could not rename %s to %s: %s'
                                 % (old_path, new_path, exc))
     if verbose:
-        print('User dirs for %s was successfully renamed!'\
-            % client_id)
+        print('User dirs for %s was successfully renamed!'
+              % client_id)
 
     # Now create freeze_home alias to preserve access to published archives
 
@@ -885,19 +1013,20 @@ def edit_user(
                                                         [new_id])
                 if not add_status:
                     if verbose:
-                        print('Could not add new %s owner of %s: %s' \
+                        print('Could not add new %s owner of %s: %s'
                               % (new_id, res_id, err))
                     continue
                 (del_status, err) = resource_remove_owners(configuration, res_id,
                                                            [client_id])
                 if not del_status:
                     if verbose:
-                        print('Could not remove old %s owner of %s: %s' \
+                        print('Could not remove old %s owner of %s: %s'
                               % (client_id, res_id, err))
                     continue
                 if verbose:
-                    print('Updated %s owner from %s to %s' % (res_id, client_id,
-                                                              new_id))
+                    print(
+                        'Updated %s owner from %s to %s' % (res_id, client_id,
+                                                            new_id))
 
     # Loop through vgrid map and update user owner/membership
     # By using the high level add/remove API the corresponding vgrid components
@@ -912,14 +1041,14 @@ def edit_user(
                                                  [new_id])
             if not add_status:
                 if verbose:
-                    print('Could not add new %s owner of %s: %s' \
+                    print('Could not add new %s owner of %s: %s'
                           % (new_id, vgrid_name, err))
                 continue
             (del_status, err) = vgrid_remove_owners(configuration, vgrid_name,
                                                     [client_id])
             if not del_status:
                 if verbose:
-                    print('Could not remove old %s owner of %s: %s' \
+                    print('Could not remove old %s owner of %s: %s'
                           % (client_id, vgrid_name, err))
                 continue
             if verbose:
@@ -931,14 +1060,14 @@ def edit_user(
                                                   [new_id])
             if not add_status:
                 if verbose:
-                    print('Could not add new %s member of %s: %s' \
+                    print('Could not add new %s member of %s: %s'
                           % (new_id, vgrid_name, err))
                 continue
             (del_status, err) = vgrid_remove_members(configuration, vgrid_name,
                                                      [client_id])
             if not del_status:
                 if verbose:
-                    print('Could not remove old %s member of %s: %s' \
+                    print('Could not remove old %s member of %s: %s'
                           % (client_id, vgrid_name, err))
                 continue
             if verbose:
@@ -1036,6 +1165,13 @@ def delete_user(
     if verbose:
         print('User ID: %s\n' % client_id)
 
+    if not force:
+        delete_answer = raw_input(
+            "Really PERMANENTLY delete %r including user home data? [y/N] " %
+            client_id)
+        if not delete_answer.lower().startswith('y'):
+            raise Exception("Aborted removal of %s from user DB" % client_id)
+
     if do_lock:
         flock = lock_user_db(db_path)
 
@@ -1065,7 +1201,7 @@ def delete_user(
         del user_db[client_id]
         save_user_db(user_db, db_path, do_lock=False)
         if verbose:
-            print('User %s was successfully removed from user DB!'\
+            print('User %s was successfully removed from user DB!'
                   % client_id)
     except Exception as err:
         if not force:
@@ -1098,8 +1234,8 @@ def delete_user(
                 raise Exception('could not remove %s: %s'
                                 % (user_path, exc))
     if verbose:
-        print('User dirs for %s was successfully removed!'\
-            % client_id)
+        print('User dirs for %s was successfully removed!'
+              % client_id)
     mark_user_modified(configuration, client_id)
 
 
@@ -1156,6 +1292,47 @@ def get_openid_user_dn(configuration, login_url,
         _logger.error("openid login from invalid provider: %s" % login_url)
         return ''
     raw_login = login_url.replace(found_openid_prefix, '')
+    return get_any_oid_user_dn(configuration, raw_login, user_check, do_lock)
+
+
+def get_oidc_user_dn(configuration, login, user_check=True, do_lock=True):
+    """Translate OpenID Connect user identified by login into a
+    distinguished_name on the cert format.
+    We first lookup the login suffix in the user_home to find a matching
+    symlink from the simple ID to the cert-style user home and translate that
+    into the corresponding distinguished name.
+    If we don't succeed we try looking up the user from an optional oidc
+    login alias from the configuration and return the corresponding
+    distinguished name.
+    As a last resort we check if login is already on the cert distinguished
+    name or cert dir format and return the distinguished name format if so.
+    If the optional user_check flag is set to False the user dir check is
+    skipped resulting in the openid name being returned even for users not
+    yet signed up.
+    """
+    _logger = configuration.logger
+    _logger.debug('extracting openid dn from %s' % login)
+    return get_any_oid_user_dn(configuration, login, user_check, do_lock)
+
+
+def get_any_oid_user_dn(configuration, raw_login,
+                        user_check=True, do_lock=True):
+    """Translate OpenID or OpenID Connect user identified by raw_login into a
+    distinguished_name on the cert format.
+    We first lookup the raw_login in the user_home to find a matching symlink
+    from the simple ID to the cert-style user home and translate that into the
+    corresponding distinguished name.
+    If we don't succeed we try looking up the user from an optional openid
+    login alias from the configuration and return the corresponding
+    distinguished name.
+    As a last resort we check if login_url (suffix) is already on the cert
+    distinguished name or cert dir format and return the distinguished name
+    format if so.
+    If the optional user_check flag is set to False the user dir check is
+    skipped resulting in the openid name being returned even for users not
+    yet signed up.
+    """
+    _logger = configuration.logger
     _logger.debug("trying openid raw login: %s" % raw_login)
     # Lookup native user_home from openid user symlink
     link_path = os.path.join(configuration.user_home, raw_login)
@@ -1164,7 +1341,7 @@ def get_openid_user_dn(configuration, login_url,
         native_dir = os.path.basename(native_path)
         distinguished_name = client_dir_id(native_dir)
         _logger.info('found full ID %s from %s link'
-                     % (distinguished_name, login_url))
+                     % (distinguished_name, raw_login))
         return distinguished_name
     elif configuration.user_openid_alias:
         db_path = os.path.join(configuration.mig_server_home, user_db_filename)
@@ -1174,27 +1351,27 @@ def get_openid_user_dn(configuration, login_url,
         for (distinguished_name, user) in user_map.items():
             if user[user_alias] in (raw_login, client_alias(raw_login)):
                 _logger.info('found full ID %s from %s alias'
-                             % (distinguished_name, login_url))
+                             % (distinguished_name, raw_login))
                 return distinguished_name
 
     # Fall back to try direct DN (possibly on cert dir form)
     _logger.info('fall back to direct ID %s from %s'
-                 % (raw_login, login_url))
+                 % (raw_login, raw_login))
     # Force to dir format and check if user home exists
     cert_dir = client_id_dir(raw_login)
     base_path = os.path.join(configuration.user_home, cert_dir)
     if os.path.isdir(base_path):
         distinguished_name = client_dir_id(cert_dir)
         _logger.info('accepting direct user %s from %s'
-                     % (distinguished_name, login_url))
+                     % (distinguished_name, raw_login))
         return distinguished_name
     elif not user_check:
         _logger.info('accepting raw user %s from %s'
-                     % (raw_login, login_url))
+                     % (raw_login, raw_login))
         return raw_login
     else:
         _logger.error('no such openid user %s: %s'
-                      % (cert_dir, login_url))
+                      % (cert_dir, raw_login))
         return ''
 
 
@@ -1335,7 +1512,7 @@ def migrate_users(
                                     % new_id)
             else:
                 if verbose:
-                    print('Pruning old duplicate user %s from user DB' \
+                    print('Pruning old duplicate user %s from user DB'
                           % client_id)
                 del user_db[client_id]
         elif old_id in latest.keys():
@@ -1377,7 +1554,7 @@ def migrate_users(
         old_id = user['full_name'].replace(' ', '_')
         new_id = user['distinguished_name']
         if verbose:
-            print('updating user %s on old format %s to new format %s' \
+            print('updating user %s on old format %s to new format %s'
                   % (client_id, old_id, new_id))
 
         old_name = client_id_dir(old_id)
@@ -1450,7 +1627,7 @@ def migrate_users(
             user_db[new_id] = user
             save_user_db(user_db, db_path, do_lock=False)
             if verbose:
-                print('User %s was successfully updated in user DB!'\
+                print('User %s was successfully updated in user DB!'
                       % client_id)
         except Exception as err:
             if not force:
@@ -1498,7 +1675,7 @@ def fix_entities(
         old_id = user['full_name'].replace(' ', '_')
         new_id = user['distinguished_name']
         if verbose:
-            print('updating user %s on old format %s to new format %s' \
+            print('updating user %s on old format %s to new format %s'
                   % (client_id, old_id, new_id))
 
         for base_dir in (configuration.resource_home,
@@ -1566,7 +1743,7 @@ def fix_userdb_keys(
                 print('user %s is already updated to new format' % client_id)
             continue
         if verbose:
-            print('updating user on old format %s to new format %s' \
+            print('updating user on old format %s to new format %s'
                   % (old_id, new_id))
 
         try:
@@ -1574,7 +1751,7 @@ def fix_userdb_keys(
             user_db[new_id] = user
             save_user_db(user_db, db_path, do_lock=False)
             if verbose:
-                print('User %s was successfully updated in user DB!'\
+                print('User %s was successfully updated in user DB!'
                       % client_id)
         except Exception as err:
             if not force:
@@ -1596,8 +1773,11 @@ def default_search():
 
 
 def search_users(search_filter, conf_path, db_path,
-                 verbose=False, do_lock=True):
-    """Search for matching users"""
+                 verbose=False, do_lock=True, regex_match=[]):
+    """Search for matching users. The optional regex_match is a list of keys in
+    search_filter to apply regular expression match rather than the usual
+    fnmatch for.
+    """
 
     if conf_path:
         if isinstance(conf_path, basestring):
@@ -1634,9 +1814,15 @@ def search_users(search_filter, conf_path, db_path,
                 if user_dict.get('expire', 0) > val:
                     match = False
                     break
-            elif not fnmatch.fnmatch(str(user_dict.get(key, '')), val):
+            elif key in regex_match and \
+                    not re.match(val, str(user_dict.get(key, ''))):
                 match = False
                 break
+            elif key not in regex_match and \
+                    not fnmatch.fnmatch(str(user_dict.get(key, '')), val):
+                match = False
+                break
+
         if not match:
             continue
         hits.append((uid, user_dict))
@@ -1675,7 +1861,8 @@ def _user_general_notify(user_id, targets, conf_path, db_path,
         user_dict = user_db[user_id]
     else:
         user_dict = {}
-        errors.append('No such user: %s' % user_id)
+        if get_fields:
+            errors.append('No such user: %s' % user_id)
     # Extract username and password intelligently
     if 'username' in get_fields:
         username = user_dict.get(configuration.user_openid_alias, '')
@@ -1744,6 +1931,26 @@ def user_migoid_notify(user_id, targets, conf_path, db_path, verbose=False,
     """Alias for user_account_notify"""
     return user_account_notify(user_id, targets, conf_path, db_path, verbose,
                                admin_copy)
+
+
+def user_request_reject(user_id, targets, conf_path, db_path, verbose=False,
+                        admin_copy=False):
+    """Find notification addresses for user_id and targets"""
+
+    (configuration, _, addresses, errors) = _user_general_notify(
+        user_id, targets, conf_path, db_path, verbose)
+    # Optionally send a copy to site admins
+    if admin_copy and configuration.admin_email and \
+            isinstance(configuration.admin_email, basestring):
+        admin_addresses = []
+        # NOTE: Explicitly separated by ', ' to distinguish Name <abc> form
+        parts = configuration.admin_email.split(', ')
+        for addr in parts:
+            (real_name, plain_addr) = parseaddr(addr.strip())
+            if plain_addr:
+                admin_addresses.append(plain_addr)
+        addresses['email'] += admin_addresses
+    return (configuration, addresses, errors)
 
 
 def user_password_check(user_id, conf_path, db_path, verbose=False,

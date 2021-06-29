@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # ui - general UI V3 specific but skin-independent styling
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -991,6 +991,12 @@ background: url(/images/icons/compress.png) left center no-repeat;
     background-color: #FFF;
     border-radius: 4px;
 }
+.help, .question { 
+    background-image: url('/images/icons/question.svg');
+    background-repeat: no-repeat;
+    background-size: 16px 16px;
+    padding-left: 20px;
+}
 .tip {
     background-image: url('/images/icons/lightbulb_idea.svg');
     background-repeat: no-repeat;
@@ -1011,7 +1017,7 @@ background: url(/images/icons/compress.png) left center no-repeat;
     background-position: left center;
 }
 .sendemaillink {
-    background: url(/images/icons/email_protocol.svg) no-repeat;
+    background: url('/images/icons/email_protocol.svg') no-repeat;
     padding-left: 18px;
     background-size: 18px 18px;
     background-position: left center;
@@ -1036,6 +1042,18 @@ background: url(/images/icons/compress.png) left center no-repeat;
 }
 .editlink {
     background: url('/images/icons/page_edit.svg') no-repeat; 
+    padding-left: 18px;
+    background-size: 18px 18px;
+    background-position: left center;
+}
+.invitelink {
+    background: url('/images/icons/page_white_add.svg') no-repeat; 
+    padding-left: 18px;
+    background-size: 18px 18px;
+    background-position: left center;
+}
+.userlink {
+    background: url('/images/icons/anonymous.svg') no-repeat;
     padding-left: 18px;
     background-size: 18px 18px;
     background-position: left center;
@@ -1280,6 +1298,37 @@ background: url(/images/icons/compress.png) left center no-repeat;
     background-size: 18px 18px;
     background-position: left center;
 }
+.introguidelink {
+    background-image: url('/images/icons/lightbulb_idea.svg');
+    background-repeat: no-repeat;
+    background-size: 16px 16px; 
+    background-color: #FFF;
+    border-radius: 4px;
+}
+.userguidelink {
+    background: url('/images/icons/book.png') no-repeat;
+    padding-left: 18px;
+    background-size: 18px 18px;
+    background-position: left center;
+}
+.statusnewslink {
+    background: url('/images/icons/server_chart.png') no-repeat;
+    padding-left: 18px;
+    background-size: 18px 18px;
+    background-position: left center;
+}
+.userfaqlink {
+    background: url('/images/icons/table_go.svg') no-repeat;
+    padding-left: 18px;
+    background-size: 18px 18px;
+    background-position: left center;
+}
+.usertermslink {
+    background: url('/images/icons/txt.png') no-repeat;
+    padding-left: 18px;
+    background-size: 18px 18px;
+    background-position: left center;
+}
 
 /*JQUERY MANAGER CUSTOM ICONS */
 
@@ -1381,6 +1430,9 @@ body.openid #migheader {
 .adminlink {
     background: url('/images/icons/wrench.svg') no-repeat;
     padding-left: 18px;
+}
+.realres {
+    background-position: left center;
 }
 
 /* View user page */

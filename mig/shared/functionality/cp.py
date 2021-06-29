@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # cp - copy file between user home locations
-# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -26,6 +26,7 @@
 #
 
 """Emulate the un*x function with the same name"""
+
 from __future__ import absolute_import
 
 import os
@@ -40,10 +41,10 @@ from mig.shared.functional import validate_input_and_cert, REJECT_UNSET
 from mig.shared.handlers import safe_handler, get_csrf_limit
 from mig.shared.init import initialize_main_variables
 from mig.shared.parseflags import verbose, recursive, force
+from mig.shared.safeinput import valid_path_pattern
 from mig.shared.sharelinks import extract_mode_id
 from mig.shared.userio import GDPIOLogError, gdp_iolog
 from mig.shared.validstring import valid_user_path
-from mig.shared.vgrid import in_vgrid_share
 
 
 def signature():
@@ -77,6 +78,9 @@ def main(client_id, user_arguments_dict, environ=None):
         client_id,
         configuration,
         allow_rejects=False,
+        # NOTE: src and dst can use wildcards here
+        typecheck_overrides={'src': valid_path_pattern,
+                             'dst': valid_path_pattern},
     )
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
@@ -280,13 +284,6 @@ confirm it. You may want to back up any important data from %s first, however.
                     {'object_type': 'warning', 'text': """You're not allowed to
 copy entire special folders like %s shared folders!"""
                      % configuration.site_vgrid_label})
-                status = returnvalues.CLIENT_ERROR
-                continue
-            # Additionally refuse operations on inherited subvgrid share roots
-            elif in_vgrid_share(configuration, abs_path) == relative_path:
-                output_objects.append(
-                    {'object_type': 'warning', 'text': """You're not allowed to
-copy entire %s shared folders!""" % configuration.site_vgrid_label})
                 status = returnvalues.CLIENT_ERROR
                 continue
             elif os.path.realpath(abs_path) == os.path.realpath(base_dir):

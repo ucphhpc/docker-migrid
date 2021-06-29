@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # setup - back end for the client access setup page
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -35,9 +35,10 @@ from mig.shared import returnvalues
 from mig.shared.accountstate import account_expire_info
 from mig.shared.auth import get_twofactor_secrets
 from mig.shared.base import client_alias, client_id_dir, extract_field, get_xgi_bin, \
-    get_short_id
+    get_short_id, requested_url_base
 from mig.shared.defaults import seafile_ro_dirname, duplicati_conf_dir, csrf_field, \
-    duplicati_protocol_choices, duplicati_schedule_choices
+    duplicati_protocol_choices, duplicati_schedule_choices, keyword_all, \
+    AUTH_MIG_OID, AUTH_EXT_OID, AUTH_MIG_OIDC, AUTH_EXT_OIDC
 from mig.shared.duplicatikeywords import get_duplicati_specs
 from mig.shared.editing import cm_css, cm_javascript, cm_options, wrap_edit_area
 from mig.shared.functional import validate_input_and_cert
@@ -45,7 +46,11 @@ from mig.shared.handlers import get_csrf_limit, make_csrf_token
 from mig.shared.html import man_base_js, man_base_html, console_log_javascript, \
     twofactor_wizard_html, twofactor_wizard_js, twofactor_token_html, \
     save_settings_js, save_settings_html
+from mig.shared.httpsclient import detect_client_auth
 from mig.shared.init import initialize_main_variables, find_entry, extract_menu
+from mig.shared.pwhash import parse_password_policy
+from mig.shared.safeinput import html_escape, password_min_len, password_max_len, \
+    valid_password_chars
 from mig.shared.settings import load_settings, load_ssh, load_davs, load_ftps, \
     load_seafile, load_duplicati, load_cloud, load_twofactor
 from mig.shared.twofactorkeywords import get_twofactor_specs
@@ -67,6 +72,421 @@ def signature():
 
     defaults = {'topic': ['twofactor']}
     return ['html_form', defaults]
+
+
+def sftp_help_snippet(configuration, topics=[keyword_all], fill_vars=None):
+    """Genererates a HTML template with the corresponding help topic.
+    The optional fill_vars is used to expand variables if provided.
+    """
+    html = ''
+    if keyword_all in topics or 'drive' in topics:
+        html += '''
+<h3>SSHFS/SFTP Network Drive</h3>
+<div class="help-entry sftp-drive-help">
+<p>
+SSHFS/SFTP enables secure network drive access to your remote %(site)s data
+using the SFTP protocol. SSHFS is available on all popular computer platforms
+and allows you to use your usual programs to work directly on your remote
+%(site)s files and folders over the Internet.
+</p>
+<h4>SSHFS Drive on Windows</h4>
+<p>
+Download and install
+<a href="https://github.com/billziss-gh/sshfs-win#----sshfs-win--sshfs-for-windows"
+target="_blank">WinFsp and SSHFS-Win</a> as described under Installation.
+Then in your Windows file manager open the Map network drive wizard. Enter
+<var>%(sshfs_netloc)s</var> in the Folder field and click Finish.
+Finally supply your username <var>%(username)s</var> and your chosen password
+when prompted for login.
+</p>
+<h4>SSHFS Drive on Mac OSX</h4>
+<p>
+Download and install the
+<a href="https://osxfuse.github.io/">macFUSE and SSHFS</a> Stable Release
+packages.<br/>
+Save something like the following lines in your local ~/.ssh/config
+to avoid typing the full login details every time:</p>
+<textarea rows=8 cols=78 class="code" readonly=readonly>Host %(sftp_server)s %(mount_name)s
+Hostname %(sftp_server)s
+VerifyHostKeyDNS %(hostkey_from_dns)s
+User %(username)s
+Port %(sftp_port)s
+# Uncomment next line to use your private key in ~/.ssh/id_rsa
+# IdentityFile ~/.ssh/id_rsa</textarea>
+<br/>
+Then you can mount with the sshfs command to access your %(site)s home:
+</p>
+<pre class="codeblock">
+mkdir -p %(mount_dir)s && \\
+  sshfs %(sftp_server)s: %(mount_dir)s -o idmap=user -o reconnect \\
+    -o iosize=262144
+</pre>
+<p>where the iosize argument is used to tune read and write buffers for better
+performance.</p>
+<p>You can also integrate sshfs with ordinary mounts by adding a line like:</p>
+<pre class="codeblock">
+sshfs#%(username)s@%(sftp_server)s: /home/USER/%(mount_dir)s fuse noauto,user,idmap=user,reconnect,port=%(sftp_port)d,iosize=262144 0 0
+</pre>
+<p>
+to your /etc/fstab .
+</p>
+<h4>SFTP Drive on Linux/UN*X</h4>
+<p>
+Some Linux distributions natively integrate SFTP drive access in their file
+manager, so that one can connect %(site)s without installing anything. In the
+file manager you can Open Location or similar (Ctrl+L), insert<br/>
+<var>%(sftp_uri)s</var> in the address field and enter your username
+<var>%(username)s</var> and chosen password when prompted for login.
+</p>
+<h4>SSHFS Drive Linux/UN*X</h4>
+<p>
+On Linux/UN*X it also generally possible to install and use the
+low-level sshfs program to mount %(site)s as network drive.<br/>
+Install <a href="https://github.com/libfuse/sshfs#sshfs">SSHFS</a> including
+the FUSE and OpenSSH dependencies using your favorite software/package manager
+or the downloads online.<br/>
+Save something like the following lines in your local ~/.ssh/config
+to avoid typing the full login details every time:</p>
+<textarea rows=8 cols=78 class="code" readonly=readonly>Host %(sftp_server)s %(mount_name)s
+Hostname %(sftp_server)s
+VerifyHostKeyDNS %(hostkey_from_dns)s
+User %(username)s
+Port %(sftp_port)s
+# Uncomment next line to use your private key in ~/.ssh/id_rsa
+# IdentityFile ~/.ssh/id_rsa</textarea>
+<br/>
+Then you can mount with the sshfs command to access your %(site)s home:
+</p>
+<pre class="codeblock">
+mkdir -p %(mount_dir)s && \\
+  sshfs %(sftp_server)s: %(mount_dir)s -o idmap=user -o reconnect
+</pre>
+<p>For older sshfs/fuse versions you may want to add <pre>-o big_writes</pre>
+to the sshfs command in case you experience very slow writes.</p>
+<p>You can also integrate sshfs with ordinary mounts by adding a line like:</p>
+<pre class="codeblock">
+sshfs#%(username)s@%(sftp_server)s: /home/USER/%(mount_dir)s fuse noauto,user,idmap=user,reconnect,port=%(sftp_port)d 0 0
+</pre>
+<p>
+to your /etc/fstab .
+</p>
+</div>
+    '''
+    if keyword_all in topics or 'client' in topics:
+        html += '''
+<h3>Graphical SFTP File Transfers</h3>
+<div class="help-entry sftp-client-help">
+<p>
+SFTP enables basic file transfers to and from your %(site)s storage. That
+is, you can use a client to upload and download files and folders.
+</p>
+<h4>FileZilla on Windows, Mac OSX or Linux/UN*X</h4>
+<p>The FileZilla client is known to generally work for graphical access to your
+%(site)s home over SFTP. It runs on all popular computer platforms and in the
+<a href="http://portableapps.com/apps/internet/filezilla_portable">portable
+version</a> it does not even require install privileges.</p>
+<p>
+Enter the following values in the FileZilla Site Manager:</p>
+<ul>
+<li>Host <var>%(sftp_server)s</var></li>
+<li>Port <var>%(sftp_port)s</var></li>
+<li>Protocol <var>SFTP</var></li>
+<li>User <var>%(username)s</var></li>
+<li>Password <var>[YOUR CHOSEN PASSWORD]</var> (leave empty for ssh key from key-agent)</li>
+</ul>
+
+<h4>Other Graphical Clients</h4>
+<p>Other graphical clients like <a href="https://winscp.net/eng/index.php">
+WinSCP</a>, <a href="https://cyberduck.io/">CyberDuck</a> and
+<a href="https://www.gftp.org/">gFTP</a> should work just as well.
+</p>
+</div>
+'''
+    if keyword_all in topics or 'terminal' in topics:
+        html += '''
+<h3>Command-Line SFTP Access</h3>
+<div class="help-entry sftp-terminal-help">
+<h4>SFTP/LFTP on Windows, Mac OSX and Linux/UN*X</h4>
+<p>
+Install <a href="https://www.openssh.com/">OpenSSH</a> or
+<a href="https://lftp.yar.ru/">LFTP</a> using your favorite package manager.
+Save something like the following lines in your local ~/.ssh/config
+to avoid typing the full login details every time:</p>
+<textarea rows=8 cols=78 class="code" readonly=readonly>Host %(sftp_server)s %(mount_name)s
+Hostname %(sftp_server)s
+VerifyHostKeyDNS %(hostkey_from_dns)s
+User %(username)s
+Port %(sftp_port)s
+# Uncomment next line to use your private key in ~/.ssh/id_rsa
+# IdentityFile ~/.ssh/id_rsa</textarea>
+<p>From then on you can use sftp and lftp to access your %(site)s home:</p>
+<pre class="codeblock">
+sftp -B 258048 %(sftp_server)s
+
+lftp -e "set net:connection-limit %(max_sessions)d" -p %(sftp_port)s \\
+  sftp://%(sftp_server)s
+</pre>
+<p>Other command-line SFTP clients like PuTTY (psftp) also work.</p>
+
+<h4>Rclone on Windows, Mac OSX and Linux/UN*X</h4>
+<p>Last but not least you can install and use
+<a href="https://rclone.org/">Rclone</a> to e.g. synchronize files
+and folders between %(site)s and your computer (like rsync) or mount your
+%(site)s home as a network drive.<br/>
+For recent versions you configure rclone with the command:</p>
+<pre class="codeblock">
+rclone config create %(mount_name)s sftp host %(sftp_server)s \\
+  port %(sftp_port)s user %(username)s pass "[YOUR CHOSEN PASSWORD]"
+</pre>
+<p>
+Whereas older versions require interactively entering the same options in the
+config creator launched with:
+</p>
+<pre class="codeblock">
+rclone config
+</pre>
+<p>
+Once set up you can list, download, upload and sync files and folders
+or even mount as network drive:</p>
+<pre class="codeblock">
+rclone lsl --max-depth 1 %(mount_name)s:
+rclone copy %(mount_name)s:REMOTE_PATH LOCAL_PATH
+rclone copy LOCAL_PATH %(mount_name)s:REMOTE_PATH
+rclone sync LOCAL_PATH %(mount_name)s:REMOTE_PATH
+rclone sync %(mount_name)s:REMOTE_PATH LOCAL_PATH
+
+mkdir -p %(mount_dir)s && \\
+  rclone mount %(mount_name)s: %(mount_dir)s
+</pre>
+<p>
+More about another tried and trusted way of mounting %(site)s as a network
+drive with SSHFS above.
+</p>
+</div>
+    '''
+    if fill_vars is not None and isinstance(fill_vars, dict):
+        return html % fill_vars
+    else:
+        return html
+
+
+def davs_help_snippet(configuration, topics=[keyword_all], fill_vars=None):
+    """Genererates a HTML template with the corresponding help topic.
+    The optional fill_vars is used to expand variables if provided.
+    """
+    html = ''
+    if keyword_all in topics or 'drive' in topics:
+        html += '''
+<h3>WebDAVS Network Drive</h3>
+<div class="help-entry davs-drive-help">
+<p>
+All common computer platforms integrate secure network drive access to your
+remote %(site)s data using WebDAVS. That allows you to use your usual programs
+to work directly on your remote %(site)s files and folders over the Internet.
+</p>
+<h4>WebDAVS Drive Integration on Windows</h4>
+<p>
+In your Windows file manager open the Map network drive wizard. Enter
+<var>%(davs_url)s</var> in the Folder field and click Finish. Finally supply
+your username <var>%(username)s</var> and your chosen password when prompted for
+login.
+</p>
+<h4>WebDAVS Drive Integration on Mac OSX</h4>
+<p>
+On Mac OSX open Finder and in the menu under Go you select Connect to Server.
+Then enter <var>%(davs_url)s</var> in the Server address field. Click Connect and
+supply your username <var>%(username)s</var> and your chosen password when prompted
+for login.
+</p>
+<h4>WebDAVS Drive Integration on Linux/UN*X</h4>
+<p>
+In your favorite file manager on Linux/UN*X find Open Location or similar (Ctrl-L).
+Then insert <var>%(davs_url)s</var> in the address field. Click Connect and
+supply your username <var>%(username)s</var> and your chosen password when
+prompted for login. Please note that a few file managers like Thunar require
+the address to use <var>davs://</var> rather than <var>https://</var> in the
+address above.
+</p>
+</div>
+    '''
+    if keyword_all in topics or 'client' in topics:
+        html += '''
+<h3>Graphical WebDAVS File Transfers</h3>
+<div class="help-entry davs-client-help">
+<p>In addition to network drive integration in native file managers, various
+file transfer programs like <a href="https://winscp.net/eng/index.php">WinSCP
+</a> and <a href="https://cyberduck.io/">CyberDuck</a> support upload/download
+to and from your %(site)s home using WebDAVS.
+</p>
+<p>Enter the address <var>%(davs_url)s</var> and fill in the login details when
+prompted:</p>
+<ul>
+<li>Username <var>%(username)s</var></li>
+<li>Password <var>[YOUR CHOSEN PASSWORD]</var></li>
+</ul>
+Most web browsers also support WebDAVS at least for downloading files.
+Some web browsers also work with WebDAVS, if you navigate to the address<br/>
+<var>%(davs_url)s</var> and enter your username <var>%(username)s</var> and
+your chosen password when prompted for login.
+</p>
+</div>
+    '''
+    if keyword_all in topics or 'terminal' in topics:
+        html += '''
+<h3>Command-Line WebDAVS Access</h3>
+<div class="help-entry davs-terminal-help">
+<h3>Cadaver and FuseDAV on Mac OSX and Linux/UN*X</h3>
+<p>Save something like the following lines in your local ~/.netrc
+to avoid typing the full login details every time:</p>
+<textarea rows=4 cols=78 class="code" readonly=readonly>machine %(davs_server)s
+login %(username)s
+password [YOUR CHOSEN PASSWORD]</textarea>
+<p>Then you can install and use e.g. cadaver or fusedav to access your %(site)s
+home:</p>
+<pre class="codeblock">
+cadaver %(davs_url)s
+
+mkdir -p %(mount_dir)s && \\
+  fusedav %(davs_url)s %(mount_dir)s -o uid=$(id -u) -o gid=$(id -g)
+</pre>
+</div>
+'''
+    if fill_vars is not None and isinstance(fill_vars, dict):
+        return html % fill_vars
+    else:
+        return html
+
+
+def ftps_help_snippet(configuration, topics=[keyword_all], fill_vars=None):
+    """Genererates a HTML template with the corresponding help topic.
+    The optional fill_vars is used to expand variables if provided.
+    """
+    html = ''
+    if keyword_all in topics or 'drive' in topics:
+        # NOTE: currently n o recommended drive support for FTPS
+        html += ''
+    if keyword_all in topics or 'client' in topics:
+        html += '''
+<h3>Graphical FTPS File Transfers</h3>
+<div class="help-entry ftps-client-help">
+<p>
+FTPS enables basic file transfers to and from your %(site)s storage. That
+is, you can use a client to upload and download files and folders.
+</p>
+<h4>FileZilla on Windows, Mac OSX or Linux/UN*X</h4>
+<p>The FileZilla client is known to generally work for graphical access to your
+%(site)s home over FTPS. It runs on all popular computer platforms and in the
+<a href="http://portableapps.com/apps/internet/filezilla_portable">portable
+version</a> it does not even require install privileges.</p>
+<p>Enter the following values in the FileZilla Site Manager:</p>
+<ul>
+<li>Host <var>%(ftps_server)s</var></li>
+<li>Port <var>%(ftps_ctrl_port)s</var></li>
+<li>Protocol <var>FTP</var></li>
+<li>Encryption <var>Explicit FTP over TLS</var></li>
+<li>User <var>%(username)s</var></li>
+<li>Password <var>[YOUR CHOSEN PASSWORD]</var></li>
+</ul>
+<br/>
+<h4>Other Graphical Clients</h4>
+<p>Other graphical clients like <a href="https://winscp.net/eng/index.php">
+WinSCP</a> and <a href="https://cyberduck.io/">CyberDuck</a> should work as well.
+Some web browsers also work, if you navigate to the address<br/>
+<var>%(ftps_uri)s</var> and enter your username <var>%(username)s</var> and
+your chosen password when prompted for login.
+</p>
+</div>
+    '''
+    if keyword_all in topics or 'terminal' in topics:
+        html += '''
+<h3>Command-Line FTPS Access</h3>
+<div class="help-entry ftps-terminal-help">
+<h4>LFTP and CurlFTPFS on Mac OSX and Linux/UN*X</h4>
+<p>Save something like the following lines in your local ~/.netrc
+to avoid typing the full login details every time:</p>
+<textarea rows=4 cols=78 class="code" readonly=readonly>machine %(ftps_server)s
+login %(username)s
+password [YOUR CHOSEN PASSWORD]</textarea>
+<p>Then install and use e.g. <a href="https://lftp.yar.ru/">LFTP</a> or
+CurlFtpFS to access your %(site)s home:</p>
+<pre class="codeblock">
+lftp -e "set ftp:ssl-protect-data on; set net:connection-limit %(max_sessions)d" \\
+  -p %(ftps_ctrl_port)s %(ftps_server)s
+
+mkdir -p %(mount_dir)s && \\
+  curlftpfs -o ssl %(ftps_server)s:%(ftps_ctrl_port)s %(mount_dir)s \\
+  -o user=%(username)s -ouid=$(id -u) -o gid=$(id -g) -o no_verify_peer
+</pre>
+</div>
+    '''
+    if fill_vars is not None and isinstance(fill_vars, dict):
+        return html % fill_vars
+    else:
+        return html
+
+
+def cloud_help_snippet(configuration, topics=[keyword_all], fill_vars=None):
+    """Genererates a HTML template with the corresponding help topic.
+    The optional fill_vars is used to expand variables if provided.
+    """
+    html = ''
+    if keyword_all in topics or 'client' in topics:
+        html += '''
+<h3>Graphical Cloud Login</h3>
+<div class="help-entry cloud-client-help">
+<p>
+Cloud login is currently limited to terminal access over SSH. You can use
+different graphical or command-line clients to open your remote terminal
+session on %(site)s cloud instances.
+</p>
+<h4>PuTTY on Windows, Mac OSX or Linux</h4>
+<p>The <a href="https://www.putty.org">PuTTY</a> client is known to generally
+work for graphical SSH access to your %(site)s cloud instances. It runs on all
+popular platforms and in the
+<a href="https://portableapps.com/apps/internet/putty_portable">portable
+version</a> it does not even require install privileges.</p>
+<p>
+<!-- TODO: is this the right naming for PuTTY? -->
+Enter the following values in the PuTTY Site Manager:</p>
+<ul>
+<li>Host <var>%(cloud_host_pattern)s</var></li>
+<li>Port <var>22</var></li>
+<li>Protocol <var>SSH</var></li>
+<li>User <var>%(username)s</var></li>
+<li>Password <var>[YOUR CHOSEN PASSWORD]</var> (leave empty for ssh key from key-agent)</li>
+</ul>
+
+<h4>Other Graphical Clients</h4>
+<p>
+Other graphical clients like MindTerm, etc. should work as well using the above
+login details.
+</p>
+</div>
+'''
+
+    if keyword_all in topics or 'terminal' in topics:
+        html += '''
+<h3>Command-Line Cloud Login</h3>
+<div class="help-entry cloud-terminal-help">
+<h4>SSH Terminal Access on Mac OSX and Linux/UN*X</h3>
+<p>
+Save something like the following lines in your local ~/.ssh/config
+to avoid typing the full login details every time:</p>
+<textarea rows=6 cols=78 class="code" readonly=readonly>Host %(cloud_host_pattern)s
+Hostname %(cloud_host_pattern)s
+User %(username)s
+# Uncomment next line to use your private key in ~/.ssh/id_rsa
+# IdentityFile ~/.ssh/id_rsa</textarea>
+<p>From then on you can use ssh to access your %(site)s instance:</p>
+<pre class="codeblock">
+ssh %(cloud_host_pattern)s
+</pre>
+</div>
+'''
+    if fill_vars is not None and isinstance(fill_vars, dict):
+        return html % fill_vars
+    else:
+        return html
 
 
 def main(client_id, user_arguments_dict):
@@ -132,7 +552,7 @@ def main(client_id, user_arguments_dict):
     add_ready += '''
               /* Init variables helper as foldable but closed and with individual
               heights */
-              $(".variables-accordion").accordion({
+              $(".help-accordion").accordion({
                                            collapsible: true,
                                            active: false,
                                            heightStyle: "content"
@@ -152,8 +572,9 @@ def main(client_id, user_arguments_dict):
     output_objects.append({'object_type': 'html_form',
                            'text': man_base_html(configuration)})
 
-    valid_topics = []
     active_menu = extract_menu(configuration, title_entry)
+
+    valid_topics = []
     if configuration.site_enable_sftp or configuration.site_enable_sftp_subsys:
         valid_topics.append('sftp')
     if configuration.site_enable_davs:
@@ -175,7 +596,7 @@ def main(client_id, user_arguments_dict):
         topic_list.remove('ssh')
         topic_list.append('sftp')
     topic_list = [topic for topic in topic_list if topic in valid_topics]
-    # Default to general if no valid topics given
+    # Default to first valid topic if no valid topics requested
     if not topic_list:
         topic_list.append(valid_topics[0])
     topic_titles = dict([(i, i.title()) for i in valid_topics])
@@ -206,20 +627,13 @@ def main(client_id, user_arguments_dict):
                            'sep': '  '})
     output_objects.append({'object_type': 'text', 'text': ''})
 
-    # load current settings
-
-    current_settings_dict = load_settings(client_id, configuration)
-    if not current_settings_dict:
-
-        # no current settings found
-
-        current_settings_dict = {}
-
     if not topic_list:
         output_objects.append({'object_type': 'error_text', 'text':
                                'No valid topics!'})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
+    # Site policy dictates pw min length greater or equal than password_min_len
+    policy_min_len, policy_min_classes = parse_password_policy(configuration)
     save_html = save_settings_html(configuration)
     (expire_warn, expire_time, renew_days, extend_days) = account_expire_info(
         configuration, client_id)
@@ -228,7 +642,7 @@ def main(client_id, user_arguments_dict):
         expire_warn_msg = '''<p class="warningtext">
 NOTE: your %s account access including efficient file service access expires on
 %s. You can always repeat sign up to extend general access with another %s days.
-%s  
+%s
 </p>'''
         auto_renew_msg = '''Alternatively simply either hit Save below now
 <em>or</em> log in here again after that date to quickly extend your access for
@@ -243,10 +657,18 @@ NOTE: your %s account access including efficient file service access expires on
 
     form_method = 'post'
     csrf_limit = get_csrf_limit(configuration)
-    fill_helpers = {'site': configuration.short_title,
-                    'form_method': form_method, 'csrf_field': csrf_field,
-                    'csrf_limit': csrf_limit, 'save_html': save_html,
-                    'expire_html': expire_html}
+    compact_name = configuration.short_title.replace(' ', '-').lower()
+    fill_helpers = {
+        'site': configuration.short_title,
+        'mount_name': compact_name,
+        'mount_dir': "%s-home" % compact_name,
+        'form_method': form_method,
+        'csrf_field': csrf_field, 'csrf_limit': csrf_limit,
+        'valid_password_chars': html_escape(valid_password_chars),
+        'password_min_len': max(policy_min_len, password_min_len),
+        'password_max_len': password_max_len,
+        'password_min_classes': max(policy_min_classes, 1),
+        'save_html': save_html, 'expire_html': expire_html}
 
     if 'sftp' in topic_list:
 
@@ -275,12 +697,12 @@ NOTE: your %s account access including efficient file service access expires on
         fingerprints = []
         hostkey_from_dns = 'ask'
         if sftp_md5:
-            fingerprints.append("%s (MD5)" % sftp_md5)
+            fingerprints.append("<sampl>%s</sampl> (MD5)" % sftp_md5)
         if sftp_sha256:
-            fingerprints.append("%s (SHA256)" % sftp_sha256)
+            fingerprints.append("<sampl>%s</sampl> (SHA256)" % sftp_sha256)
         if fingerprints:
             fingerprint_info = '''You may be asked to verify the server key
-fingerprint <tt>%s</tt> first time you connect.''' % ' or '.join(fingerprints)
+fingerprint %s first time you connect.''' % ' or '.join(fingerprints)
         if sftp_trust_dns:
             hostkey_from_dns = 'yes'
         target_op = 'settingsaction'
@@ -288,101 +710,36 @@ fingerprint <tt>%s</tt> first time you connect.''' % ' or '.join(fingerprints)
                                      client_id, csrf_limit)
         fill_helpers.update({'target_op': target_op, 'csrf_token': csrf_token})
         html = '''
-<div id="sshaccess">
+<div id="sshaccess" class="row">
+<div class="col-12">
     <form class="save_settings save_sftp" method="%(form_method)s" action="%(target_op)s.py">
         <input type="hidden" name="%(csrf_field)s" value="%(csrf_token)s" />
+        <input type="hidden" name="topic" value="sftp" />
 
         <div class="vertical-spacer"></div>
         <div class="title centertext">SFTP access to your %(site)s account</div>
 
 <p>
-You can configure SFTP login to your %(site)s account for efficient file
-access. On Windows, Mac OS X and Linux/UN*X you can install and use SSHFS for
-transparent access to your data like on a network drive, and some Linux
-distributions even natively integrate SFTP access in the file manager.
+<p>You can enable SFTP login to your %(site)s account and use it for efficient
+file and folder upload/download or even for seamless data access from your
+Windows, Mac OS X and Linux/UN*X computer.
 </p>
 <h3>Login Details</h3>
 
 <ul>
-<li>Host <em>%(sftp_server)s</em></li>
-<li>Port <em>%(sftp_port)s</em></li>
-<li>Username <em>%(username)s</em></li>
-<li>%(auth_methods)s <em>as you choose below</em></li>
+<li>Host <var>%(sftp_server)s</var></li>
+<li>Port <var>%(sftp_port)s</var></li>
+<li>Username <var>%(username)s</var></li>
+<li>%(auth_methods)s <var>as you choose below</var></li>
 </ul>
-
-<p>
-<br />
-%(fingerprint_info)s
-</p>
-
-<input type="hidden" name="topic" value="sftp" />
-<div class="div-sftp-client-notes hidden">
-<a href="javascript:toggleHidden('.div-sftp-client-notes');"
-    class="removeitemlink iconspace" title="Toggle view">
-    Show less SFTP client details...</a>
-
-<h3>Graphical SFTP access</h3>
-<p>The FileZilla client is known to generally work for graphical access to your
-%(site)s home over SFTP. It runs on all popular platforms and in the
-<a href="http://portableapps.com/apps/internet/filezilla_portable">portable
-version</a> it does not even require install privileges.</p>
-<p>
-Enter the following values in the FileZilla Site Manager:</p>
-<ul>
-<li>Host %(sftp_server)s</li>
-<li>Port %(sftp_port)s</li>
-<li>Protocol SFTP</li>
-<li>User %(username)s</li>
-<li>Password YOUR_PASSWORD_HERE (leave empty for ssh key from key-agent)</li>
-</ul>
-
-<p>Other graphical clients like WinSCP should work as well.</p>
-
-<h3>Command line SFTP/SSHFS access on Linux/UN*X</h3>
-<p>
-Save something like the following lines in your local ~/.ssh/config
-to avoid typing the full login details every time:</p>
-<ul>
-<li>Host %(sftp_server)s</li>
-<li>Hostname %(sftp_server)s</li>
-<li>VerifyHostKeyDNS %(hostkey_from_dns)s</li>
-<li>User %(username)s</li>
-<li>Port %(sftp_port)s</li>
-<li># Assuming you have your private key in ~/.mig/id_rsa</li>
-<li>IdentityFile ~/.mig/id_rsa</li>
-</ul>
-
-<p>
-From then on you can use sftp, lftp and sshfs to access your %(site)s home:</p>
-<ul>
-<li>sftp -B 258048 %(sftp_server)s</li>
-<li>lftp -e "set net:connection-limit %(max_sessions)d" -p %(sftp_port)s sftp://%(sftp_server)s</li>
-<li>mkdir -p remote-home</li>
-<li>sshfs %(sftp_server)s: remote-home -o idmap=user -o big_writes -o reconnect</li>
-</ul>
-
-<p>
-You can also integrate with ordinary mounts by adding a line like:</p>
-<ul>
-<li>sshfs#%(username)s@%(sftp_server)s: /home/USER/remote-home fuse noauto,user,idmap=user,big_writes,reconnect,port=%(sftp_port)d 0 0</li>
-</ul>
-
-<p>
-to your /etc/fstab .
-</p>
-</div>
-<div class="div-sftp-client-notes">
-<a href="javascript:toggleHidden('.div-sftp-client-notes');"
-    class="additemlink iconspace" title="Toggle view">Show more SFTP client details...
-    </a>
-</div>
+<p>%(fingerprint_info)s</p>
 '''
 
         keyword_keys = "authkeys"
         if 'publickey' in configuration.user_sftp_auth:
             html += '''
 
-<h3>Authorized Public Keys</h3>
+<h3>Public Keys</h3>
 <p>You can use any existing RSA key, or create a new one. If you signed up with a
 x509 user certificate, you should also have received such an id_rsa key along with
 your user certificate. In any case you need to save the contents of the
@@ -407,13 +764,17 @@ with username and key as described in the Login Details.
             # We only want a single password and a masked input field
             html += '''
 
-<h3>Authorized Password</h3>
+<h3>Password</h3>
 <p>
 Please enter and save your desired password in the text field below, to be able
 to connect with username and password as described in the Login Details.
 </p>
 <p>
+<!-- NOTE: we currently allow empty here to disable password login -->
 <input class="fullwidth" type=password id="%(keyword_password)s" size=40 name="password"
+maxlength=%(password_max_len)d pattern=".{0,%(password_max_len)d}"
+title="Password of your choice with at least %(password_min_len)d characters
+from %(password_min_classes)d classes (lowercase, uppercase, digits and other)"
 value="%(default_authpassword)s" />
 (leave empty to disable sftp access with password)
 </p>
@@ -423,13 +784,27 @@ value="%(default_authpassword)s" />
 %(expire_html)s
 %(save_html)s
 <input type="submit" value="Save SFTP Settings" />
-'''
-
-        html += '''
-
 </form>
+'''
+        # Client help fold-out
+        html += '''
+<hr/>
+<h4>How to proceed after enabling login above ...</h4>
+<br/>
+<div class="help-accordion">
+%s
+</div>
+''' % sftp_help_snippet(configuration, ['drive', 'client', 'terminal'])
+        html += '''
+</div>
 </div>
 '''
+        # Hide port if same as implicit
+        sftp_uri = 'sftp://%s' % sftp_server
+        sshfs_netloc = '\\\\sshfs\\%s@%s' % (username, sftp_server)
+        if sftp_port != 22:
+            sftp_uri += ':%d' % sftp_port
+            sshfs_netloc += ':%d' % sftp_port
         fill_helpers.update({
             'default_authkeys': default_authkeys,
             'default_authpassword': default_authpassword,
@@ -438,6 +813,8 @@ value="%(default_authpassword)s" />
             'username': username,
             'sftp_server': sftp_server,
             'sftp_port': sftp_port,
+            'sftp_uri': sftp_uri,
+            'sshfs_netloc': sshfs_netloc,
             'hostkey_from_dns': hostkey_from_dns,
             'max_sessions': configuration.user_sftp_max_sessions,
             'fingerprint_info': fingerprint_info,
@@ -474,9 +851,9 @@ value="%(default_authpassword)s" />
         davs_sha256 = configuration.user_davs_key_sha256
         fingerprints = []
         if davs_sha1:
-            fingerprints.append("%s (SHA1)" % davs_sha1)
+            fingerprints.append("<sampl>%s</sampl> (SHA1)" % davs_sha1)
         if davs_sha256:
-            fingerprints.append("%s (SHA256)" % davs_sha256)
+            fingerprints.append("<sampl>%s</sampl> (SHA256)" % davs_sha256)
         if fingerprints:
             fingerprint_info = '''You may be asked to verify the server key
 fingerprint %s first time you connect.''' % ' or '.join(fingerprints)
@@ -489,66 +866,30 @@ fingerprint %s first time you connect.''' % ' or '.join(fingerprints)
 <div class="col-12">
 <form class="save_settings save_davs" method="%(form_method)s" action="%(target_op)s.py">
 <input type="hidden" name="%(csrf_field)s" value="%(csrf_token)s" />
+<input type="hidden" name="topic" value="webdavs" />
 
 <div class="vertical-spacer"></div>
 <div class="title centertext">WebDAVS access to your %(site)s account</div>
 
-<p>You can configure WebDAVS login to your %(site)s account for transparent file
-access from your PC or workstation.</p>
+<p>You can enable WebDAVS login to your %(site)s account and use it for file
+and folder upload/download or even for seamless data access from your Windows,
+Mac OS X and Linux/UN*X computer.
+</p>
 <h3>Login Details</h3>
 <ul>
-<li>Host <em>%(davs_server)s</em></li>
-<li>Port <em>%(davs_port)s</em></li>
-<li>Username <em>%(username)s</em></li>
-<li>%(auth_methods)s <em>as you choose below</em></li>
+<li>Host <var>%(davs_server)s</var></li>
+<li>Port <var>%(davs_port)s</var></li>
+<li>Username <var>%(username)s</var></li>
+<li>%(auth_methods)s <var>as you choose below</var></li>
 </ul>
 <p class="wordbreak">%(fingerprint_info)s</p>
-
-<input type="hidden" name="topic" value="webdavs" />
-<div class="div-webdavs-client-notes hidden">
-<a href="javascript:toggleHidden('.div-webdavs-client-notes');"
-    class="removeitemlink iconspace" title="Toggle view">
-    Show less WebDAVS client details...</a>
-<h3>Graphical WebDAVS access</h3>
-<p>Several native file browsers and web browsers are known to generally work for
-graphical access to your %(site)s home over WebDAVS.
-</p>
-<p>Enter the address https://%(davs_server)s:%(davs_port)s and when fill in the
-login details:</p>
-
-<ul>
-<li>Username %(username)s</li>
-<li>Password YOUR_PASSWORD_HERE</li>
-</ul>
-<p>other graphical clients should work as well.</p>
-
-<h3>Command line WebDAVS access on Linux/UN*X</h3>
-<p>Save something like the following lines in your local ~/.netrc
-to avoid typing the full login details every time:</p>
-<ul>
-    <li>machine %(davs_server)s</li>
-    <li>login %(username)s</li>
-    <li>password YOUR_PASSWORD_HERE</li>
-</ul>
-</br>
-<p>From then on you can use e.g. cadaver or fusedav to access your %(site)s home:</p>
-<ul>
-    <li>cadaver https://%(davs_server)s:%(davs_port)s</li>
-    <li>fusedav https://%(davs_server)s:%(davs_port)s remote-home -o uid=$(id -u) -o gid=$(id -g)</li>
-</ul>
-</div>
-<div class="div-webdavs-client-notes">
-<a href="javascript:toggleHidden('.div-webdavs-client-notes');"
-    class="additemlink iconspace" title="Toggle view">
-    Show more WebDAVS client details...</a>
-</div>
 '''
 
         keyword_keys = "authkeys"
         if 'publickey' in configuration.user_davs_auth:
             html += '''
 
-<h3>Authorized Public Keys</h3>
+<h3>Public Keys</h3>
 <p>You can use any existing RSA key, or create a new one. If you signed up with a
 x509 user certificate, you should also have received such an id_rsa key along with
 your user certificate. In any case you need to save the contents of the
@@ -571,13 +912,17 @@ with username and key as described in the Login Details.
             # We only want a single password and a masked input field
             html += '''
 
-<h3>Authorized Password</h3>
+<h3>Password</h3>
 <p>
 Please enter and save your desired password in the text field below, to be able
 to connect with username and password as described in the Login Details.
 </p>
 <p>
+<!-- NOTE: we currently allow empty here to disable password login -->
 <input class="fullwidth" type=password id="%(keyword_password)s" size=40 name="password"
+maxlength=%(password_max_len)d pattern="(.{0,%(password_max_len)d})?"
+title="Password of your choice with at least %(password_min_len)d characters
+from %(password_min_classes)d classes (lowercase, uppercase, digits and other)"
 value="%(default_authpassword)s" />
 (leave empty to disable davs access with password)
 </p>
@@ -587,15 +932,25 @@ value="%(default_authpassword)s" />
 %(expire_html)s
 %(save_html)s
 <input type="submit" value="Save WebDAVS Settings" />
-
+</form>
 '''
 
         html += '''
+<hr/>
+<h4>How to proceed after enabling login above ...</h4>
+<br/>
+<div class="help-accordion">
+%s
+</div>
+''' % davs_help_snippet(configuration, ['drive', 'client', 'terminal'])
 
-</form>
+        html += '''
 </div>
 </div>
 '''
+        davs_url = 'https://%s' % davs_server
+        if davs_port != 443:
+            davs_url += ':%d' % davs_port
         fill_helpers.update({
             'default_authkeys': default_authkeys,
             'default_authpassword': default_authpassword,
@@ -604,6 +959,7 @@ value="%(default_authpassword)s" />
             'username': username,
             'davs_server': davs_server,
             'davs_port': davs_port,
+            'davs_url': davs_url,
             'fingerprint_info': fingerprint_info,
             'auth_methods': ' / '.join(configuration.user_davs_auth).title(),
         })
@@ -637,93 +993,49 @@ value="%(default_authpassword)s" />
         ftps_sha256 = configuration.user_ftps_key_sha256
         fingerprints = []
         if ftps_sha1:
-            fingerprints.append("%s (SHA1)" % ftps_sha1)
+            fingerprints.append("<sampl>%s</sampl> (SHA1)" % ftps_sha1)
         if ftps_sha256:
-            fingerprints.append("%s (SHA256)" % ftps_sha256)
+            fingerprints.append("<sampl>%s</sampl> (SHA256)" % ftps_sha256)
         if fingerprints:
             fingerprint_info = '''You may be asked to verify the server key
-fingerprint <tt>%s</tt> first time you connect.''' % ' or '.join(fingerprints)
+fingerprint <sampl>%s</sampl> first time you connect.''' % ' or '.join(fingerprints)
         target_op = 'settingsaction'
         csrf_token = make_csrf_token(configuration, form_method, target_op,
                                      client_id, csrf_limit)
         fill_helpers.update({'target_op': target_op, 'csrf_token': csrf_token})
         html = '''
-<div id="ftpsaccess">
+<div id="ftpsaccess" class="row">
+<div class="col-12">
 <form class="save_settings save_ftps" method="%(form_method)s" action="%(target_op)s.py">
 <input type="hidden" name="%(csrf_field)s" value="%(csrf_token)s" />
+<input type="hidden" name="topic" value="ftps" />
 
 <div class="vertical-spacer"></div>
 <div class="title centertext">FTPS access to your %(site)s account</div>
 
-<p>You can configure FTPS login to your %(site)s account for efficient file
-access.</p>
+<p>You can enable FTPS login to your %(site)s account and use it for efficient
+file and folder upload/download.</p>
 <h3>Login Details</h3>
 <ul>
-<li>Host <em>%(ftps_server)s</em></li>
-<li>Port <em>%(ftps_ctrl_port)s</em></li>
-<li>Username <em>%(username)s</em></li>
-<li>%(auth_methods)s <em>as you choose below</em></li>
+<li>Host <var>%(ftps_server)s</var></li>
+<li>Port <var>%(ftps_ctrl_port)s</var></li>
+<li>Username <var>%(username)s</var></li>
+<li>%(auth_methods)s <var>as you choose below</var></li>
 </ul>
 <p>%(fingerprint_info)s</p>
-
-<input type="hidden" name="topic" value="ftps" />
-<div class="div-ftps-client-notes hidden">
-<a href="javascript:toggleHidden('.div-ftps-client-notes');"
-    class="removeitemlink iconspace" title="Toggle view">
-    Show less FTPS client details...</a>
-<h3>Graphical FTPS access</h3>
-<p>The FileZilla client is known to generally work for graphical access to your
-%(site)s home over FTPS.</p>
-<p>Enter the following values in the FileZilla Site Manager:</p>
-<ul>
-<li>Host %(ftps_server)s</li>
-<li>Port %(ftps_ctrl_port)s</li>
-<li>Protocol FTP</li>
-<li>Encryption Explicit FTP over TLS</li>
-<li>User %(username)s</li>
-<li>Password YOUR_PASSWORD_HERE</li>
-</ul>
-<p><br/>Other graphical clients like WinSCP should work as well. Some web browsers may
-also work, if you enter the address ftps://%(ftps_server)s:%(ftps_ctrl_port)s
-and fill in the login details when prompted:</p>
-<ul>
-<li>Username %(username)s</li>
-<li>Password YOUR_PASSWORD_HERE</li>
-</ul>
-<h3>Command line FTPS access on Linux/UN*X</h3>
-<p>Save something like the following lines in your local ~/.netrc
-to avoid typing the full login details every time:</p>
-<ul>
-<li>machine %(ftps_server)s</li>
-<li>login %(username)s</li>
-<li>password YOUR_PASSWORD_HERE</li>
-</ul>
-<p><br/>From then on you can use e.g. lftp or CurlFtpFS to access your %(site)s home:</p>
-<ul>
-<li>lftp -e "set ssl:verify-certificate no; set ftp:ssl-protect-data on; set net:connection-limit %(max_sessions)d" -p %(ftps_ctrl_port)s %(ftps_server)s</li>
-</ul>
-<ul>
-<li>curlftpfs -o ssl %(ftps_server)s:%(ftps_ctrl_port)s remote-home -o user=%(username)s -ouid=$(id -u) -o gid=$(id -g) -o no_verify_peer</li>
-</ul>
-</div>
-<div class="div-ftps-client-notes">
-<a href="javascript:toggleHidden('.div-ftps-client-notes');"
-    class="additemlink iconspace" title="Toggle view">Show more FTPS client details...
-</a>
-</div>
 '''
 
         keyword_keys = "authkeys"
         if 'publickey' in configuration.user_ftps_auth:
             html += '''
 
-<h3>Authorized Public Keys</h3>
-You can use any existing RSA key, or create a new one. If you signed up with a
+<h3>Public Keys</h3>
+<p>You can use any existing RSA key, or create a new one. If you signed up with a
 x509 user certificate, you should also have received such an id_rsa key along with
 your user certificate. In any case you need to save the contents of the
 corresponding public key (id_rsa.pub) in the text area below, to be able to connect
 with username and key as described in the Login Details.
-<br/>
+</p>
 '''
             area = '''
 <textarea id="%(keyword_keys)s" cols=82 rows=5 name="publickeys">
@@ -742,13 +1054,17 @@ with username and key as described in the Login Details.
             # We only want a single password and a masked input field
             html += '''
 
-<h3>Authorized Password</h3>
+<h3>Password</h3>
 <p>
 Please enter and save your desired password in the text field below, to be able
 to connect with username and password as described in the Login Details.
 </p>
 <p>
+<!-- NOTE: we currently allow empty here to disable password login -->
 <input class="fullwidth" type=password id="%(keyword_password)s" size=40 name="password"
+maxlength=%(password_max_len)d pattern=".{0,%(password_max_len)d}"
+title="Password of your choice with at least %(password_min_len)d characters
+from %(password_min_classes)d classes (lowercase, uppercase, digits and other)"
 value="%(default_authpassword)s" />
 (leave empty to disable ftps access with password)
 </p>
@@ -758,14 +1074,26 @@ value="%(default_authpassword)s" />
 %(expire_html)s
 %(save_html)s
 <input type="submit" value="Save FTPS Settings" />
-
+</form>
 '''
 
         html += '''
+<hr/>
+<h4>How to proceed after enabling login above ...</h4>
+<br/>
+<div class="help-accordion">
+%s
+</div>
+''' % ftps_help_snippet(configuration, ['client', 'terminal'])
 
-</form>
+        html += '''
+</div>
 </div>
 '''
+        # Hide port if same as implicit
+        ftps_uri = 'ftps://%s' % ftps_server
+        if ftps_ctrl_port != 21:
+            ftps_uri += ':%d' % ftps_ctrl_port
         fill_helpers.update({
             'default_authkeys': default_authkeys,
             'default_authpassword': default_authpassword,
@@ -774,6 +1102,7 @@ value="%(default_authpassword)s" />
             'username': username,
             'ftps_server': ftps_server,
             'ftps_ctrl_port': ftps_ctrl_port,
+            'ftps_uri': ftps_uri,
             'max_sessions': configuration.user_sftp_max_sessions,
             'fingerprint_info': fingerprint_info,
             'auth_methods': ' / '.join(configuration.user_ftps_auth).title(),
@@ -860,7 +1189,7 @@ function open_login_window(url, username) {
 <p>You can register a Seafile account on %(site)s to get synchronization and
 sharing features like those known from e.g. Dropbox.<br/>
 This enables you to keep one or more folders synchronized between
-all your computers and to share those files and folders with other people.<br/></p>
+all your computers and to share those files and folders with other people.</p>
 
 <fieldset>
 <legend><p>Register %(site)s Seafile Account</p></legend>
@@ -872,20 +1201,26 @@ all your computers and to share those files and folders with other people.<br/><
 <input class="input" id="dummy_email" type="text" value="%(username)s"
     readonly />
 <br/>
+<!-- NOTE: we require password policy in this case because pw MUST be set -->
 <label for="id_password1">Choose Password</label>
 <input class="input" id="id_password1" name="password1"
-    type="password" />
+minlength=%(password_min_len)d maxlength=%(password_max_len)d required
+pattern=".{%(password_min_len)d,%(password_max_len)d}"
+title="Password of your choice with at least %(password_min_len)d characters
+from %(password_min_classes)d classes (lowercase, uppercase, digits and other)"
+type="password" />
 <br/>
 <label for="id_password2">Confirm Password</label>
-<input class="input" id="id_password2" name="password2" type="password" />
+<input class="input" id="id_password2" name="password2"
+minlength=%(password_min_len)d maxlength=%(password_max_len)d required
+pattern=".{%(password_min_len)d,%(password_max_len)d}"
+title="Repeat your chosen password" type="password" />
 <br/>
 <input id="seafileregbutton" type="submit" value="Register" class="submit" />
 and wait for email confirmation before continuing below.</p>
 </fieldset>
 
-
 </form>
-
 
 <fieldset>
 <legend><p>Login and Install Clients</p></legend>
@@ -946,7 +1281,7 @@ and sharing solution.</p>
 <p>If you wish you can additionally save your credentials here for Seafile
 integration in your %(site)s user home.<br/>
 Then your Seafile libraries will show up in a read-only mode under a new
-<em>%(seafile_ro_dirname)s</em> folder e.g. on the Files page.</p>
+<var>%(seafile_ro_dirname)s</var> folder e.g. on the Files page.</p>
 '''
 
             if 'password' in configuration.user_seafile_auth:
@@ -958,7 +1293,11 @@ Please enter and save your chosen Seafile password again in the text field
 below, to enable the read-only Seafile integration in your user home.
 </p>
 <p>
-<input type=password id="%(keyword_password)s" size=40 name="password"
+<!-- NOTE: we currently allow empty here to disable password login -->
+<input class="fullwidth" type=password id="%(keyword_password)s" size=40 name="password"
+maxlength=%(password_max_len)d pattern=".{0,%(password_max_len)d}"
+title="Password of your choice with at least %(password_min_len)d characters
+from %(password_min_classes)d classes (lowercase, uppercase, digits and other)"
 value="%(default_authpassword)s" />
 (leave empty to disable seafile integration)
 </p>
@@ -1115,7 +1454,7 @@ for %(site)s backup use.</p>
                     valid_choices = eval('configuration.%s' % keyword.lower())
 
                     if valid_choices:
-                        html += '<select class="styled-select semi-square html-select"name="%s">' % keyword
+                        html += '<select class="styled-select semi-square html-select" name="%s">' % keyword
                         for choice in valid_choices:
                             selected = ''
                             if choice == current_choice:
@@ -1140,14 +1479,6 @@ for %(site)s backup use.</p>
                 current_choice = ''
                 if keyword in current_duplicati_dict:
                     current_choice = current_duplicati_dict[keyword]
-                #html += '<select class="styled-select semi-square html-select" name="%s">' % keyword
-                # for choice in valid_choices:
-                #    selected = ''
-                #    if choice == current_choice:
-                #        selected = 'selected'
-                #    html += '<option %s value="%s">%s</option>'\
-                #        % (selected, choice, choice)
-                #html += '</select><br />'
                 checked = ''
                 if current_choice == True:
                     checked = 'checked'
@@ -1158,7 +1489,7 @@ for %(site)s backup use.</p>
                 html += '<br /><br />'
 
             html += '''
-            
+
         '''
         html += '''
         <br/>
@@ -1221,7 +1552,7 @@ client versions from the link above.</p>
         default_authkeys = current_cloud_dict.get('authkeys', '')
         default_authpassword = current_cloud_dict.get('authpassword', '')
         username = client_alias(client_id)
-        cloud_host_pattern = '[One of your Cloud instances]'
+        cloud_host_pattern = '[cloud-instance-address]'
         if configuration.user_cloud_alias:
             username = get_short_id(configuration, client_id,
                                     configuration.user_cloud_alias)
@@ -1231,9 +1562,11 @@ client versions from the link above.</p>
                                      client_id, csrf_limit)
         fill_helpers.update({'target_op': target_op, 'csrf_token': csrf_token})
         html = '''
-<div id="cloudaccess">
+<div id="cloudaccess" class="row">
+<div class="col-12">
     <form class="save_settings save_cloud" method="%(form_method)s" action="%(target_op)s.py">
         <input type="hidden" name="%(csrf_field)s" value="%(csrf_token)s" />
+        <input type="hidden" name="topic" value="cloud" />
 
 <div class="vertical-spacer"></div>
 <div class="title centertext">SSH access to your %(site)s cloud instance(s)</div>
@@ -1243,69 +1576,21 @@ You can configure SSH login to your %(site)s cloud instance(s) for interactive
 use.
 </p>
 <h3>Login Details</h3>
-Please refer to your Cloud management page for specific instance login details.
-However, in general login requires the following: 
+<p>Please refer to your <a href="cloud.py">Cloud management</a> page for
+specific instance login details.
+However, in general login requires the following:</p>
 <ul>
-<li>Host <em>%(cloud_host_pattern)s</em></li>
-<li>Username <em>%(username)s</em></li>
-<li>%(auth_methods)s <em>as you choose below</em></li>
+<li>Host <var>%(cloud_host_pattern)s</var></li>
+<li>Username <var>%(username)s</var></li>
+<li>%(auth_methods)s <var>as you choose below</var></li>
 </ul>
-
-<input type="hidden" name="topic" value="cloud" />
-<div class="div-cloud-client-notes hidden">
-<a href="javascript:toggleHidden('.div-cloud-client-notes');"
-    class="removeitemlink iconspace" title="Toggle view">
-    Show less cloud client details...</a>
-
-<h3>Graphical Cloud access</h3>
-<p>The PuTTY client is known to generally work for graphical SSH access to
-your %(site)s cloud instances. It runs on all popular platforms and in the
-<a href="https://portableapps.com/apps/internet/putty_portable">portable
-version</a> it does not even require install privileges.</p>
-<p>
-<!-- TODO: is this the right naming for PuTTY? -->
-Enter the following values in the PuTTY Site Manager:</p>
-<ul>
-<li>Host %(cloud_host_pattern)s</li>
-<li>Port 22</li>
-<li>Protocol SSH</li>
-<li>User %(username)s</li>
-<li>Password YOUR_PASSWORD_HERE (leave empty for ssh key from key-agent)</li>
-</ul>
-
-<p>Other graphical clients like MindTerm, etc. should work as well.</p>
-
-<h3>Command line SSH access on Linux/UN*X</h3>
-<p>
-Save something like the following lines in your local ~/.ssh/config
-to avoid typing the full login details every time:</p>
-<ul>
-<li>Host %(cloud_host_pattern)s</li>
-<li>Hostname %(cloud_host_pattern)s</li>
-<li>User %(username)s</li>
-<li># Assuming you have your private key in ~/.mig/id_rsa</li>
-<li>IdentityFile ~/.mig/id_rsa</li>
-</ul>
-
-<p>
-From then on you can use ssh to access your %(site)s instance:</p>
-<ul>
-<li>ssh %(cloud_host_pattern)s</li>
-</ul>
-
-</div>
-<div class="div-cloud-client-notes">
-<a href="javascript:toggleHidden('.div-cloud-client-notes');"
-    class="additemlink iconspace" title="Toggle view">Show more cloud client details...
-    </a>
-</div>
 '''
 
         keyword_keys = "authkeys"
         if 'publickey' in configuration.user_cloud_ssh_auth:
             html += '''
 
-<h3>Authorized Public Keys</h3>
+<h3>Public Keys</h3>
 <p>You can use any existing RSA key, or create a new one. If you signed up with a
 x509 user certificate, you should also have received such an id_rsa key along with
 your user certificate. In any case you need to save the contents of the
@@ -1330,13 +1615,17 @@ with username and key as described in the Login Details.
             # We only want a single password and a masked input field
             html += '''
 
-<h3>Authorized Password</h3>
+<h3>Password</h3>
 <p>
 Please enter and save your desired password in the text field below, to be able
 to connect with username and password as described in the Login Details.
 </p>
 <p>
+<!-- NOTE: we currently allow empty here to disable password login -->
 <input class="fullwidth" type=password id="%(keyword_password)s" size=40 name="password"
+maxlength=%(password_max_len)d pattern=".{0,%(password_max_len)d}"
+title="Password of your choice with at least %(password_min_len)d characters
+from %(password_min_classes)d classes (lowercase, uppercase, digits and other)"
 value="%(default_authpassword)s" />
 (leave empty to disable cloud access with password)
 </p>
@@ -1346,12 +1635,20 @@ value="%(default_authpassword)s" />
 
 %(save_html)s
 <input type="submit" value="Save Cloud Settings" />
-
+</form>
 '''
 
+        # Client help fold-out
         html += '''
-
-</form>
+<hr/>
+<h4>How to proceed after enabling login above ...</h4>
+<br/>
+<div class="help-accordion">
+%s
+</div>
+''' % cloud_help_snippet(configuration, ['client', 'terminal'])
+        html += '''
+</div>
 </div>
 '''
         fill_helpers.update({
@@ -1393,6 +1690,7 @@ value="%(default_authpassword)s" />
 <div id="twofactor">
 <form class="save_settings save_twofactor" method="%(form_method)s" action="%(target_op)s.py">
 <input type="hidden" name="%(csrf_field)s" value="%(csrf_token)s" />
+<input type="hidden" name="topic" value="twofactor" />
 <table class="twofactor fixedlayout">
 <tr><td>
 <div class="vertical-spacer"></div>
@@ -1420,11 +1718,21 @@ value="%(default_authpassword)s" />
         twofactor_entries = get_twofactor_specs(configuration)
         html += '''
         <tr class="otp_wizard otp_ready hidden"><td>
-        <input type="hidden" name="topic" value="twofactor" />
         </td></tr>
         <tr class="otp_wizard otp_ready hidden"><td>
         </td></tr>
         '''
+        cur_url = requested_url_base()
+        auth_type, auth_flavor = detect_client_auth(configuration, os.environ)
+        is_mig = auth_flavor in [AUTH_MIG_OID, AUTH_MIG_OIDC]
+        is_ext = auth_flavor in [AUTH_EXT_OID, AUTH_EXT_OIDC]
+        # NOTE: re-order to show active access method OpenID 2.0/Connect first
+        if is_ext and twofactor_entries[0][0] == 'MIG_OID_TWOFACTOR' and \
+                twofactor_entries[1][0] == 'EXT_OID_TWOFACTOR' or \
+                is_mig and twofactor_entries[1][0] == 'MIG_OID_TWOFACTOR' and \
+                twofactor_entries[0][0] == 'EXT_OID_TWOFACTOR':
+            twofactor_entries[0], twofactor_entries[1] = \
+                twofactor_entries[1], twofactor_entries[0]
         for (keyword, val) in twofactor_entries:
             if val.get('Editor', None) == 'hidden':
                 continue
@@ -1432,6 +1740,9 @@ value="%(default_authpassword)s" />
             val['__extra_class__'] = ''
             if val.get('Context', None) == 'twofactor':
                 val['__extra_class__'] = 'provides-twofactor-base'
+                if keyword == 'MIG_OID_TWOFACTOR' and is_mig or \
+                        keyword == 'EXT_OID_TWOFACTOR' and is_ext:
+                    val['__extra_class__'] += ' active-openid-access'
             if val.get('Context', None) == 'twofactor_dep':
                 val['__extra_class__'] = 'requires-twofactor-base manual-show'
             entry = """
@@ -1488,7 +1799,7 @@ value="%(default_authpassword)s" />
                     current_choice = current_twofactor_dict[keyword]
 
                 if valid_choices:
-                    entry += '<select class="styled-select semi-square html-select"name="%s">' % keyword
+                    entry += '<select class="styled-select semi-square html-select" name="%s">' % keyword
                     for choice in valid_choices:
                         selected = ''
                         if choice == current_choice:

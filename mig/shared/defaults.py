@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # defaults - default constant values used in many locations
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -56,6 +56,19 @@ all_jobs = keyword_all
 any_protocol = keyword_any
 any_state = keyword_any
 
+AUTH_NONE, AUTH_GENERIC, AUTH_CERTIFICATE = "None", "Generic", "X.509 Certificate"
+AUTH_OPENID_CONNECT, AUTH_OPENID_V2 = "OpenID Connect", "OpenID 2.0"
+
+AUTH_MIG_OID = "Site %s" % AUTH_OPENID_V2
+AUTH_EXT_OID = "Ext %s" % AUTH_OPENID_V2
+AUTH_MIG_OIDC = "Site %s" % AUTH_OPENID_CONNECT
+AUTH_EXT_OIDC = "Ext %s" % AUTH_OPENID_CONNECT
+AUTH_MIG_CERT = "Site %s" % AUTH_CERTIFICATE
+AUTH_EXT_CERT = "Ext %s" % AUTH_CERTIFICATE
+AUTH_SID_GENERIC = "Session ID %s" % AUTH_GENERIC
+
+AUTH_UNKNOWN = "Unknown"
+
 cert_field_order = [
     ('country', 'C'),
     ('state', 'ST'),
@@ -76,7 +89,7 @@ final_states = ['FINISHED', 'CANCELED', 'EXPIRED', 'FAILED']
 maxfill_fields = ['CPUTIME', 'NODECOUNT', 'CPUCOUNT', 'MEMORY', 'DISK']
 
 peer_kinds = ['course', 'project', 'collaboration']
-peers_fields = ['full_name', 'organization', 'email', 'country']
+peers_fields = ['full_name', 'organization', 'email', 'country', 'state']
 
 mqueue_prefix = 'message_queues'
 default_mqueue = 'default'
@@ -117,10 +130,17 @@ default_pager_entries = 25
 default_http_port = 80
 default_https_port = 443
 
+# Account types and their default validity
+valid_auth_types = ('cert', 'oid', 'custom')
 cert_valid_days = 365
 oid_valid_days = 365
+generic_valid_days = custom_valid_days = 365
 cert_auto_extend_days = 30
 oid_auto_extend_days = 30
+generic_auto_extend_days = custom_auto_extend_days = 30
+# Number of days before expire that auto extend attempts kick in
+# NOTE: must be lower than all X_auto_extend_days values to avoid hammering
+attempt_auto_extend_days = 10
 
 # Strictly ordered list of account status values to enable use of filemarks
 # for caching account status using integer timestamps outside user DB.
@@ -146,6 +166,7 @@ duplicati_conf_dir = '.duplicati'
 cloud_conf_dir = '.cloud'
 expire_marks_dir = 'expire_marks'
 status_marks_dir = 'status_marks'
+archive_marks_dir = 'archive_marks'
 job_output_dir = 'job_output'
 transfer_output_dir = 'transfer_output'
 cron_output_dir = 'cron_output'
@@ -159,7 +180,9 @@ twofactor_filename = 'twofactor'
 duplicati_filename = 'duplicati'
 freeze_meta_filename = 'meta.pck'
 freeze_lock_filename = 'freeze.lock'
+freeze_on_tape_filename = 'onTape'
 datatransfers_filename = 'transfers'
+archives_cache_filename = 'archives-cache.pck'
 user_keys_dir = 'keys'
 sharelinks_filename = 'sharelinks'
 seafile_ro_dirname = 'seafile_readonly'
@@ -334,8 +357,8 @@ io_session_timeout = {'davs': 60}
 # NOTE: harden in line with Mozilla recommendations:
 # https://wiki.mozilla.org/Security/Server_Side_TLS#Apache
 # Use ciphers and order recommended for 'Intermediate compatibility' as a base
-# to get a good balance between strength and legacy support. We further prune
-# the list from Mozilla to explicitly disable a handful of possibly weak
+# to get a good balance between strength and legacy support. We may further
+# prune the list from Mozilla to explicitly disable a handful of possibly weak
 # ciphers, not really needed to support all the common platforms (only still
 # maintained ones).
 # In short it makes sure TLSv1.2 and secure but light-weight elliptic curve
@@ -343,7 +366,9 @@ io_session_timeout = {'davs': 60}
 # ciphers.
 # On older versions of OpenSSL, unavailable ciphers will be discarded
 # automatically.
-STRONG_TLS_CIPHERS = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES:CAMELLIA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!SEED:!IDEA:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA:!DES-CBC3-SHA:!AES128-GCM-SHA256:!AES256-GCM-SHA384:!AES128-SHA256:!AES256-SHA256:!AES128-SHA:!AES256-SHA:!CAMELLIA256-SHA:!CAMELLIA128-SHA"
+STRONG_TLS_CIPHERS = "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"
+# NOTE: keep the previous list around in case of problems e.g. with IO clients
+STRONG_TLS_LEGACY_CIPHERS = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES:CAMELLIA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!SEED:!IDEA:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA:!DES-CBC3-SHA:!AES128-GCM-SHA256:!AES256-GCM-SHA384:!AES128-SHA256:!AES256-SHA256:!AES128-SHA:!AES256-SHA:!CAMELLIA256-SHA:!CAMELLIA128-SHA"
 # TODO: enforce curve order in Apache (2.4.8+), too?
 #       https://superuser.com/questions/964907/apache-and-ecc-curve-order
 # TODO: add curve 'X25519' as first choice once we reach openssl-1.1?
@@ -382,7 +407,7 @@ STRONG_SSH_LEGACY_MACS = ",".join([BEST_SSH_LEGACY_MACS, SAFE_SSH_LEGACY_MACS])
 CRACK_USERNAME_REGEX = '(root|bin|daemon|adm|admin|administrator|superadmin|localadmin|mysqladmin|lp|operator|controller|ftp|irc|nobody|sys|pi|guest|financeiro|Management|www|www-data|mysql|postgres|oracle|mongodb|sybase|redis|hadoop|zimbra|cpanel|plesk|openhabian|tomcat|exim|postfix|sendmail|mailnull|postmaster|mail|uucp|news|teamspeak|git|svn|cvs|user|ftpuser|ubuntu|ubnt|supervisor|csgoserver|device|laboratory|deploy|support|info|test[0-9]*|user[0-9]*|[0-9]+|root;[a-z0-9]+)'
 # A pattern to match failed web access prefixes unambiguously identifying
 # unauthorized vulnerability scans
-CRACK_WEB_REGEX = '((HNAP1|GponForm|provisioning|provision|prov|polycom|yealink|CertProv|phpmyadmin|admin|cfg|wp|wordpress|cms|blog|old|new|test|dev|tmp|temp|remote|mgmt|properties|authenticate|tmui|ddem|a2billing|vtigercrm|secure|rpc|recordings|dana-na)(/.*|)|.*(Login|login|configuration|header|admin)\.(php|jsp|asp))'
+CRACK_WEB_REGEX = '((HNAP1|GponForm|provisioning|provision|prov|polycom|yealink|CertProv|phpmyadmin|admin|cfg|wp|wordpress|cms|blog|old|new|test|dev|tmp|temp|remote|mgmt|properties|authenticate|tmui|ddem|a2billing|vtigercrm|secure|rpc|recordings|dana-na)(/.*|)|.*(Login|login|logon|configuration|header|admin|index)\.(php|jsp|asp)|(api/v1/pods|Telerik.Web.UI.WebResource.axd))'
 
 # GDP mode settings
 gdp_distinguished_field = "GDP"
@@ -418,6 +443,7 @@ valid_gdp_anon_scripts = [
     'reqcertaction.py',
     'oiddiscover.py',
     'oidping.py',
+    'oidresponse.py',
     'login.py',
     'signup.py',
 ]

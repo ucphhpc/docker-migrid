@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # settingsaction - handle user settings updates
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -25,24 +25,27 @@
 # -- END_HEADER ---
 #
 
-"""Backe end for personal settings"""
+"""Backend for personal settings"""
+
 from __future__ import absolute_import
 
 import os
 import tempfile
 
 from mig.shared import returnvalues
-from mig.shared.accountstate import check_update_account_expire
+from mig.shared.accountstate import check_update_account_expire, \
+    account_expire_info
 from mig.shared.duplicatikeywords import get_keywords_dict as duplicati_keywords
 from mig.shared.functional import validate_input_and_cert
 from mig.shared.gdp.all import get_client_id_from_project_client_id
 from mig.shared.handlers import get_csrf_limit, safe_handler
 from mig.shared.init import initialize_main_variables
+from mig.shared.profilekeywords import get_keywords_dict as profile_keywords
+from mig.shared.safeinput import valid_email_addresses
 from mig.shared.settings import parse_and_save_settings, parse_and_save_widgets, \
     parse_and_save_profile, parse_and_save_ssh, parse_and_save_davs, \
     parse_and_save_ftps, parse_and_save_seafile, parse_and_save_duplicati, \
     parse_and_save_cloud, parse_and_save_twofactor
-from mig.shared.profilekeywords import get_keywords_dict as profile_keywords
 from mig.shared.settingskeywords import get_keywords_dict as settings_keywords
 from mig.shared.useradm import create_seafile_mount_link, remove_seafile_mount_link
 from mig.shared.twofactorkeywords import get_keywords_dict as twofactor_keywords
@@ -104,6 +107,7 @@ def main(client_id, user_arguments_dict):
 
     defaults = signature()[1]
     extend_defaults(configuration, defaults, user_arguments_dict)
+    # NOTE: EMAIL from general settings is a newline-separated list of emails
     (validate_status, accepted) = validate_input_and_cert(
         user_arguments_dict,
         defaults,
@@ -111,6 +115,7 @@ def main(client_id, user_arguments_dict):
         client_id,
         configuration,
         allow_rejects=False,
+        typecheck_overrides={'EMAIL': valid_email_addresses},
     )
     if not validate_status:
         logger.debug("failed validation: %s %s" % (accepted, defaults))
@@ -248,8 +253,9 @@ CSRF-filtered POST requests to prevent unintended updates'''
 
         # Try to refresh expire if possible to make sure it works for a while
         if topic in ['sftp', 'webdavs', 'ftps']:
+            (_, _, _, extend_days) = account_expire_info(configuration, client_id)
             (_, account_expire, _) = check_update_account_expire(
-                configuration, client_id, min_days_left=14)
+                configuration, client_id, min_days_left=extend_days)
             logger.debug("check and update account expire returned %s" %
                          account_expire)
 

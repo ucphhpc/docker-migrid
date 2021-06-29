@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # reqacceptpeer - Forward account request from peer to existing user(s)
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -32,6 +32,7 @@ By default sends instructions on email to the registered notification address
 or email from Distinguished Name field of employee user entry. If user
 configured additional messaging protocols they can also be used.
 """
+
 from __future__ import print_function
 from __future__ import absolute_import
 
@@ -48,6 +49,7 @@ from mig.shared.notification import notify_user
 from mig.shared.serial import load, dump
 from mig.shared.useradm import init_user_adm, search_users, default_search, \
     user_account_notify
+from mig.shared.validstring import valid_email_addresses
 
 
 def usage(name='reqacceptpeer.py'):
@@ -62,12 +64,19 @@ Where NOTIFY_OPTIONS may be one or more of:
    -c CONF_FILE        Use CONF_FILE as server configuration
    -C                  Send a copy of notifications to configured site admins
    -d DB_PATH          Use DB_PATH as user data base file path
-   -e EMAIL            Send instructions to custom email address
+   -e EMAIL            Send instructions to custom EMAIL address
+   -E EMAIL            Forward peer request to user(s) with EMAIL (AUTO to parse Comment)
    -h                  Show this help
    -I CERT_DN          Forward peer request to user(s) with ID (distinguished name)
    -s PROTOCOL         Send instructions to notification protocol from settings
    -u USER_FILE        Read user request information from pickle file
    -v                  Verbose output
+
+You should always provide the -I 'CLIENT_ID' argument where CLIENT_ID may be
+either a complete user ID or a wild-card pattern similar to the one used in
+searchusers.
+The user to request acceptance for can either be provided with -u REQUEST_PATH
+argument or with the trailing ID arguments mentioned above.
 
 One or more destinations may be set by combining multiple -e, -s and -a
 options.
@@ -83,11 +92,12 @@ if '__main__' == __name__:
     user_file = None
     user_id = None
     search_filter = default_search()
-    # Default to all users
-    search_filter['distinguished_name'] = '*'
+    # IMPORTANT: Default to nobody to avoid spam if called without -I CLIENT_ID
+    search_filter['distinguished_name'] = ''
     peer_dict = {}
+    regex_keys = []
     exit_code = 0
-    opt_args = 'ac:Cd:e:hI:s:u:v'
+    opt_args = 'ac:Cd:e:E:hI:s:u:v'
     try:
         (opts, args) = getopt.getopt(args, opt_args)
     except getopt.GetoptError as err:
@@ -108,6 +118,11 @@ if '__main__' == __name__:
         elif opt == '-e':
             raw_targets['email'] = raw_targets.get('email', [])
             raw_targets['email'].append(val)
+        elif opt == '-E':
+            if val != keyword_auto:
+                search_filter['email'] = val.lower()
+            else:
+                search_filter['email'] = keyword_auto
         elif opt == '-h':
             usage()
             sys.exit(0)
@@ -154,8 +169,8 @@ if '__main__' == __name__:
             peer_dict['email'] = args[4]
             peer_dict['comment'] = args[5]
         except IndexError:
-            print('Error: too few arguments given (expected 6 got %d)'\
-                % len(args))
+            print('Error: too few arguments given (expected 6 got %d)'
+                  % len(args))
             usage()
             sys.exit(1)
     elif user_file:
@@ -173,13 +188,48 @@ if '__main__' == __name__:
     fill_distinguished_name(peer_dict)
     peer_id = peer_dict['distinguished_name']
 
+    if search_filter['email'] == keyword_auto:
+        peer_emails = valid_email_addresses(
+            configuration, peer_dict['comment'])
+        if peer_emails[1:]:
+            regex_keys.append('email')
+            search_filter['email'] = '(' + '|'.join(peer_emails) + ')'
+        elif peer_emails:
+            search_filter['email'] = peer_emails[0]
+        elif search_filter['distinguished_name']:
+            search_filter['email'] = '*'
+        else:
+            search_filter['email'] = ''
+
+    # If email is provided or detected DN may be almost anything
+    if search_filter['email'] and not search_filter['distinguished_name']:
+        search_filter['distinguished_name'] = '*emailAddress=*'
+
     if verbose:
-        print('Handling peer %s' % peer_id)
+        print('Handling peer %s request to users matching %s' %
+              (peer_id, search_filter))
 
     # Lookup users to request formal acceptance from
-    (_, hits) = search_users(search_filter, conf_path, db_path, verbose)
+    (_, hits) = search_users(search_filter, conf_path,
+                             db_path, verbose, regex_match=regex_keys)
     logger = configuration.logger
     gdp_prefix = "%s=" % gdp_distinguished_field
+
+    if len(hits) < 1:
+        print(
+            "Aborting attempt to request peer acceptance without target users")
+        print(" ... did you forget or supply too rigid -E EMAIL or -I DN arg?")
+        sys.exit(1)
+    elif len(hits) > 3:
+        print("Aborting attempt to request peer acceptance from %d users!" %
+              len(hits))
+        print(" ... did you supply too lax -E EMAIL or -I DN argument?")
+        sys.exit(1)
+    else:
+        if verbose:
+            print("Attempt to request peer acceptance from users: %s" %
+                  '\n'.join([i[0] for i in hits]))
+
     for (user_id, user_dict) in hits:
         if verbose:
             print('Check for %s' % user_id)
@@ -190,14 +240,18 @@ if '__main__' == __name__:
                 print("Skip GDP project account: %s" % user_id)
             continue
 
+        if peer_id == user_id:
+            print("Skip same user account %s as own peer" % user_id)
+            continue
+
         if not peers_permit_allowed(configuration, user_dict):
-            if verbose:
-                print("Skip account %s without vouching permission" % user_id)
+            print("Skip account %s without vouching permission" % user_id)
             continue
 
         if not manage_pending_peers(configuration, user_id, "add",
                                     [(peer_id, peer_dict)]):
-            print("Failed to forward accept peer %s to %s" % (peer_id, user_id))
+            print("Failed to forward accept peer %s to %s" %
+                  (peer_id, user_id))
             continue
 
         print("Added peer request from %s to %s" % (peer_id, user_id))
@@ -216,14 +270,14 @@ if '__main__' == __name__:
                 notify_dict['NOTIFY'].append('%s: %s' % (proto, address))
         # Don't actually send unless requested
         if not raw_targets and not admin_copy:
-            print("No email targets for request accept peer %s from %s" % \
+            print("No email targets for request accept peer %s from %s" %
                   (peer_id, user_id))
             continue
-        print("Send request accept peer message for '%s' to:\n%s" \
+        print("Send request accept peer message for '%s' to:\n%s"
               % (peer_id, '\n'.join(notify_dict['NOTIFY'])))
         notify_user(notify_dict, [peer_id, configuration.short_title,
                                   'peeraccount', peer_dict['comment'],
-                                  peer_dict['email']],
+                                  peer_dict['email'], user_id],
                     'SENDREQUEST', logger, '', configuration)
 
     sys.exit(exit_code)

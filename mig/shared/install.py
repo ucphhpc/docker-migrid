@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # install - MiG server install helpers
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -32,6 +32,7 @@ Creates MiG server and Apache configurations to fit the provided settings.
 
 Create MiG developer account with dedicated web server and daemons.
 """
+
 from __future__ import print_function
 from __future__ import absolute_import
 
@@ -205,17 +206,20 @@ def generate_confs(
     source=os.path.dirname(sys.argv[0]),
     destination=os.path.dirname(sys.argv[0]),
     destination_suffix="",
-    base_fqdn='localhost',
-    public_fqdn='localhost',
+    base_fqdn='',
+    public_fqdn='',
     public_alias_fqdn='',
-    mig_cert_fqdn='localhost',
-    ext_cert_fqdn='localhost',
-    mig_oid_fqdn='localhost',
-    ext_oid_fqdn='localhost',
-    sid_fqdn='localhost',
-    io_fqdn='localhost',
-    cloud_fqdn='localhost',
-    seafile_fqdn='localhost',
+    public_sec_fqdn='',
+    mig_cert_fqdn='',
+    ext_cert_fqdn='',
+    mig_oid_fqdn='',
+    ext_oid_fqdn='',
+    mig_oidc_fqdn='',
+    ext_oidc_fqdn='',
+    sid_fqdn='',
+    io_fqdn='',
+    cloud_fqdn='',
+    seafile_fqdn='',
     seafile_base='/seafile',
     seafmedia_base='/seafmedia',
     seafhttp_base='/seafhttp',
@@ -273,6 +277,11 @@ def generate_confs(
     user_interface="V2 V3",
     mig_oid_provider='',
     ext_oid_provider='',
+    mig_oidc_provider_meta_url='',
+    ext_oidc_provider_meta_url='',
+    ext_oidc_client_name='',
+    ext_oidc_client_id='',
+    ext_oidc_scope='sub upn fullName organization state country email role',
     dhparams_path='',
     daemon_keycert='',
     daemon_pubkey='',
@@ -288,12 +297,15 @@ def generate_confs(
     trac_admin_path='',
     trac_ini_path='',
     public_port=default_http_port,
-    public_alias_port=default_https_port,
+    public_http_port=default_http_port,
+    public_https_port=default_https_port,
     mig_cert_port=default_https_port,
-    ext_cert_port=default_https_port + 1,
-    mig_oid_port=default_https_port + 3,
-    ext_oid_port=default_https_port + 2,
-    sid_port=default_https_port + 4,
+    ext_cert_port=default_https_port,
+    mig_oid_port=default_https_port,
+    ext_oid_port=default_https_port,
+    mig_oidc_port=default_https_port,
+    ext_oidc_port=default_https_port,
+    sid_port=default_https_port,
     sftp_port=2222,
     sftp_subsys_port=22,
     sftp_show_port=22,
@@ -308,6 +320,7 @@ def generate_confs(
     seafile_client_port=13419,
     seafile_quota=2,
     seafile_ro_access=True,
+    public_use_https=True,
     user_clause='User',
     group_clause='Group',
     listen_clause='#Listen',
@@ -326,15 +339,26 @@ def generate_confs(
 
     expanded = locals()
 
+    # Backwards compatibility with old name
+    if public_port and not public_http_port:
+        public_http_port = public_port
+
     user_dict = {}
     user_dict['__GENERATECONFS_COMMAND__'] = generateconfs_command
     user_dict['__BASE_FQDN__'] = base_fqdn
     user_dict['__PUBLIC_FQDN__'] = public_fqdn
     user_dict['__PUBLIC_ALIAS_FQDN__'] = public_alias_fqdn
+    if public_use_https:
+        if public_sec_fqdn:
+            user_dict['__PUBLIC_SEC_FQDN__'] = public_sec_fqdn
+        else:
+            user_dict['__PUBLIC_SEC_FQDN__'] = public_fqdn
     user_dict['__MIG_CERT_FQDN__'] = mig_cert_fqdn
     user_dict['__EXT_CERT_FQDN__'] = ext_cert_fqdn
     user_dict['__MIG_OID_FQDN__'] = mig_oid_fqdn
     user_dict['__EXT_OID_FQDN__'] = ext_oid_fqdn
+    user_dict['__MIG_OIDC_FQDN__'] = mig_oidc_fqdn
+    user_dict['__EXT_OIDC_FQDN__'] = ext_oidc_fqdn
     user_dict['__SID_FQDN__'] = sid_fqdn
     user_dict['__IO_FQDN__'] = io_fqdn
     user_dict['__CLOUD_FQDN__'] = cloud_fqdn
@@ -352,12 +376,14 @@ def generate_confs(
     user_dict['__CLOUD_SECTIONS__'] = ''
     user_dict['__USER__'] = user
     user_dict['__GROUP__'] = group
-    user_dict['__PUBLIC_PORT__'] = str(public_port)
-    user_dict['__PUBLIC_ALIAS_PORT__'] = str(public_alias_port)
+    user_dict['__PUBLIC_HTTP_PORT__'] = str(public_http_port)
+    user_dict['__PUBLIC_HTTPS_PORT__'] = str(public_https_port)
     user_dict['__MIG_CERT_PORT__'] = str(mig_cert_port)
     user_dict['__EXT_CERT_PORT__'] = str(ext_cert_port)
     user_dict['__MIG_OID_PORT__'] = str(mig_oid_port)
     user_dict['__EXT_OID_PORT__'] = str(ext_oid_port)
+    user_dict['__MIG_OIDC_PORT__'] = str(mig_oidc_port)
+    user_dict['__EXT_OIDC_PORT__'] = str(ext_oidc_port)
     user_dict['__SID_PORT__'] = str(sid_port)
     user_dict['__MIG_BASE__'] = os.path.dirname(mig_code.rstrip(os.sep))
     user_dict['__MIG_CODE__'] = mig_code
@@ -372,7 +398,9 @@ def generate_confs(
     user_dict['__OPENSSH_VERSION__'] = openssh_version
     user_dict['__ENABLE_SFTP__'] = str(enable_sftp)
     user_dict['__ENABLE_SFTP_SUBSYS__'] = str(enable_sftp_subsys)
-    user_dict['__SFTP_SUBSYS_AUTH_PROCS__'] = str(sftp_subsys_auth_procs)
+    user_dict['__SFTP_SUBSYS_START_AUTH_PROCS__'] = str(sftp_subsys_auth_procs)
+    user_dict['__SFTP_SUBSYS_MAX_AUTH_PROCS__'] = str(
+        max(4*sftp_subsys_auth_procs, 100))
     user_dict['__ENABLE_DAVS__'] = str(enable_davs)
     user_dict['__ENABLE_FTPS__'] = str(enable_ftps)
     user_dict['__ENABLE_WSGI__'] = str(enable_wsgi)
@@ -413,12 +441,20 @@ def generate_confs(
     user_dict['__EXT_OID_PROVIDER_BASE__'] = ext_oid_provider
     user_dict['__EXT_OID_PROVIDER_ID__'] = ext_oid_provider
     user_dict['__EXT_OID_AUTH_DB__'] = auth_openid_ext_db
+    user_dict['__MIG_OIDC_PROVIDER_META_URL__'] = mig_oidc_provider_meta_url
+    user_dict['__EXT_OIDC_PROVIDER_META_URL__'] = ext_oidc_provider_meta_url
+    user_dict['__EXT_OIDC_SCOPE__'] = ext_oidc_scope
     user_dict['__PUBLIC_URL__'] = ''
-    user_dict['__PUBLIC_ALIAS_URL__'] = ''
+    user_dict['__PUBLIC_HTTP_URL__'] = ''
+    user_dict['__PUBLIC_HTTPS_URL__'] = ''
+    user_dict['__PUBLIC_ALIAS_HTTP_URL__'] = ''
+    user_dict['__PUBLIC_ALIAS_HTTPS_URL__'] = ''
     user_dict['__MIG_CERT_URL__'] = ''
     user_dict['__EXT_CERT_URL__'] = ''
     user_dict['__MIG_OID_URL__'] = ''
     user_dict['__EXT_OID_URL__'] = ''
+    user_dict['__MIG_OIDC_URL__'] = ''
+    user_dict['__EXT_OIDC_URL__'] = ''
     user_dict['__SID_URL__'] = ''
     user_dict['__DHPARAMS_PATH__'] = dhparams_path
     user_dict['__DAEMON_KEYCERT__'] = daemon_keycert
@@ -442,6 +478,7 @@ def generate_confs(
     user_dict['__SEAFILE_CLIENT_PORT__'] = str(seafile_client_port)
     user_dict['__SEAFILE_QUOTA__'] = str(seafile_quota)
     user_dict['__SEAFILE_RO_ACCESS__'] = str(seafile_ro_access)
+    user_dict['__PUBLIC_USE_HTTPS__'] = str(public_use_https)
     user_dict['__ALIAS_FIELD__'] = alias_field
     user_dict['__SIGNUP_METHODS__'] = signup_methods
     user_dict['__LOGIN_METHODS__'] = login_methods
@@ -460,7 +497,8 @@ def generate_confs(
     user_dict['__SHORT_TITLE__'] = short_title
     user_dict['__VGRID_LABEL__'] = vgrid_label
     user_dict['__SECSCAN_ADDR__'] = secscan_addr
-    user_dict['__PUBLIC_ALIAS_LISTEN__'] = listen_clause
+    user_dict['__PUBLIC_HTTPS_LISTEN__'] = listen_clause
+    user_dict['__PUBLIC_ALIAS_HTTPS_LISTEN__'] = listen_clause
 
     # Needed for PAM/NSS
     pw_info = pwd.getpwnam(user)
@@ -470,9 +508,9 @@ def generate_confs(
     fail2ban_daemon_ports = []
     # Apache fails on duplicate Listen directives so comment in that case
     port_list = [mig_cert_port, ext_cert_port, mig_oid_port, ext_oid_port,
-                 sid_port]
+                 mig_oidc_port, ext_oidc_port, sid_port]
     fqdn_list = [mig_cert_fqdn, ext_cert_fqdn, mig_oid_fqdn, ext_oid_fqdn,
-                 sid_fqdn]
+                 mig_oidc_fqdn, ext_oidc_fqdn, sid_fqdn]
     listen_list = zip(fqdn_list, port_list)
     enabled_list = [(i, j) for (i, j) in listen_list if i]
     enabled_ports = [j for (i, j) in enabled_list]
@@ -559,16 +597,16 @@ cert, oid and sid based https!
     user_dict['__IFDEF_PUBLIC_FQDN__'] = 'UnDefine'
     if user_dict['__PUBLIC_FQDN__']:
         user_dict['__IFDEF_PUBLIC_FQDN__'] = 'Define'
-    user_dict['__IFDEF_PUBLIC_PORT__'] = 'UnDefine'
-    if user_dict['__PUBLIC_PORT__']:
-        user_dict['__IFDEF_PUBLIC_PORT__'] = 'Define'
+    user_dict['__IFDEF_PUBLIC_HTTP_PORT__'] = 'UnDefine'
+    if user_dict['__PUBLIC_HTTP_PORT__']:
+        user_dict['__IFDEF_PUBLIC_HTTP_PORT__'] = 'Define'
+    user_dict['__IFDEF_PUBLIC_HTTPS_PORT__'] = 'UnDefine'
+    if user_dict['__PUBLIC_HTTPS_PORT__']:
+        user_dict['__IFDEF_PUBLIC_HTTPS_PORT__'] = 'Define'
 
     user_dict['__IFDEF_PUBLIC_ALIAS_FQDN__'] = 'UnDefine'
     if user_dict['__PUBLIC_ALIAS_FQDN__']:
         user_dict['__IFDEF_PUBLIC_ALIAS_FQDN__'] = 'Define'
-    user_dict['__IFDEF_PUBLIC_ALIAS_PORT__'] = 'UnDefine'
-    if user_dict['__PUBLIC_ALIAS_PORT__']:
-        user_dict['__IFDEF_PUBLIC_ALIAS_PORT__'] = 'Define'
 
     user_dict['__IFDEF_MIG_CERT_FQDN__'] = 'UnDefine'
     if user_dict['__MIG_CERT_FQDN__']:
@@ -600,6 +638,20 @@ cert, oid and sid based https!
     user_dict['__IFDEF_EXT_OID_PORT__'] = 'UnDefine'
     if user_dict['__EXT_OID_PORT__']:
         user_dict['__IFDEF_EXT_OID_PORT__'] = 'Define'
+
+    user_dict['__IFDEF_MIG_OIDC_FQDN__'] = 'UnDefine'
+    if user_dict['__MIG_OIDC_FQDN__']:
+        user_dict['__IFDEF_MIG_OIDC_FQDN__'] = 'Define'
+    user_dict['__IFDEF_MIG_OIDC_PORT__'] = 'UnDefine'
+    if user_dict['__MIG_OIDC_PORT__']:
+        user_dict['__IFDEF_MIG_OIDC_PORT__'] = 'Define'
+
+    user_dict['__IFDEF_EXT_OIDC_FQDN__'] = 'UnDefine'
+    if user_dict['__EXT_OIDC_FQDN__']:
+        user_dict['__IFDEF_EXT_OIDC_FQDN__'] = 'Define'
+    user_dict['__IFDEF_EXT_OIDC_PORT__'] = 'UnDefine'
+    if user_dict['__EXT_OIDC_PORT__']:
+        user_dict['__IFDEF_EXT_OIDC_PORT__'] = 'Define'
 
     user_dict['__IFDEF_SID_FQDN__'] = 'UnDefine'
     if user_dict['__SID_FQDN__']:
@@ -747,6 +799,10 @@ cert, oid and sid based https!
             # Remote Seafile additionally requires reverse *https* proxy
             user_dict['__PROXY_HTTPS_COMMENTED__'] = ''
 
+    user_dict['__PREFER_HTTPS_COMMENTED__'] = '#'
+    if public_use_https:
+        user_dict['__PREFER_HTTPS_COMMENTED__'] = ''
+
     if user_dict['__ENABLE_JUPYTER__'].lower() == 'true':
         try:
             import requests
@@ -765,14 +821,14 @@ cert, oid and sid based https!
         try:
             descs = ast.literal_eval(jupyter_services_desc)
         except SyntaxError as err:
-            print('Error: jupyter_services_desc ' \
-                'could not be intepreted correctly. Double check that your ' \
-                'formatting is correct, a dictionary formatted string is expected.')
+            print('Error: jupyter_services_desc '
+                  'could not be intepreted correctly. Double check that your '
+                  'formatting is correct, a dictionary formatted string is expected.')
             sys.exit(1)
 
         if not isinstance(descs, dict):
-            print('Error: %s was incorrectly formatted,' \
-                ' expects a string formatted as a dictionary' % descs)
+            print('Error: %s was incorrectly formatted,'
+                  ' expects a string formatted as a dictionary' % descs)
             sys.exit(1)
 
         service_hosts = {}
@@ -780,19 +836,19 @@ cert, oid and sid based https!
             # TODO, do more checks on format
             name_hosts = service.split(".", 1)
             if len(name_hosts) != 2:
-                print('Error: You have not correctly formattet ' \
-                    'the jupyter_services parameter, ' \
-                    'expects --jupyter_services="service_name.' \
-                    'http(s)://jupyterhost-url-or-ip ' \
-                    'other_service.http(s)://jupyterhost-url-or-ip"')
+                print('Error: You have not correctly formattet '
+                      'the jupyter_services parameter, '
+                      'expects --jupyter_services="service_name.'
+                      'http(s)://jupyterhost-url-or-ip '
+                      'other_service.http(s)://jupyterhost-url-or-ip"')
                 sys.exit(1)
             name, host = name_hosts[0], name_hosts[1]
             try:
                 valid_alphanumeric(name)
             except InputException as err:
-                print('Error: The --jupyter_services name: %s was incorrectly ' \
-                    'formatted, only allows alphanumeric characters %s' % (name,
-                                                                           err))
+                print('Error: The --jupyter_services name: %s was incorrectly '
+                      'formatted, only allows alphanumeric characters %s' % (name,
+                                                                             err))
             if name and host:
                 if name not in service_hosts:
                     service_hosts[name] = {'hosts': []}
@@ -851,7 +907,7 @@ cert, oid and sid based https!
             for i_h, host in enumerate(values['hosts']):
                 name_index = '%s_%s' % (u_name, i_h)
                 # https://httpd.apache.org/docs/2.4/mod/mod_proxy.html
-                member = "BalancerMember %s route=%s retry=600 timeout=60 keepalive=On\n" \
+                member = "BalancerMember %s route=%s retry=600 timeout=60 keepalive=On connectiontimeout=60\n" \
                     % ("${JUPYTER_%s}" % name_index, i_h)
                 ws_member = member.replace("${JUPYTER_%s}" % name_index,
                                            "${WS_JUPYTER_%s}" % name_index)
@@ -903,14 +959,14 @@ cert, oid and sid based https!
         try:
             descs = ast.literal_eval(cloud_services_desc)
         except SyntaxError as err:
-            print('Error: cloud_services_desc ' \
-                'could not be intepreted correctly. Double check that your ' \
-                'formatting is correct, a dictionary formatted string is expected.')
+            print('Error: cloud_services_desc '
+                  'could not be intepreted correctly. Double check that your '
+                  'formatting is correct, a dictionary formatted string is expected.')
             sys.exit(1)
 
         if not isinstance(descs, dict):
-            print('Error: %s was incorrectly formatted,' \
-                ' expects a string formatted as a dictionary' % descs)
+            print('Error: %s was incorrectly formatted,'
+                  ' expects a string formatted as a dictionary' % descs)
             sys.exit(1)
 
         cloud_service_hosts = {}
@@ -918,19 +974,19 @@ cert, oid and sid based https!
             # TODO: do more checks on format?
             name_hosts = service.split(".", 1)
             if len(name_hosts) != 2:
-                print('Error: You have not correctly formattet ' \
-                    'the cloud_services parameter, ' \
-                    'expects --cloud_services="service_name.' \
-                    'http(s)://cloudhost-url-or-ip ' \
-                    'other_service.http(s)://cloudhost-url-or-ip"')
+                print('Error: You have not correctly formattet '
+                      'the cloud_services parameter, '
+                      'expects --cloud_services="service_name.'
+                      'http(s)://cloudhost-url-or-ip '
+                      'other_service.http(s)://cloudhost-url-or-ip"')
                 sys.exit(1)
             name, host = name_hosts[0], name_hosts[1]
             try:
                 valid_alphanumeric(name)
             except InputException as err:
-                print('Error: The --cloud_services name: %s was incorrectly ' \
-                    'formatted, only allows alphanumeric characters %s' % (name,
-                                                                           err))
+                print('Error: The --cloud_services name: %s was incorrectly '
+                      'formatted, only allows alphanumeric characters %s' % (name,
+                                                                             err))
             if name and host:
                 if name not in cloud_service_hosts:
                     cloud_service_hosts[name] = {'hosts': []}
@@ -1006,6 +1062,13 @@ cert, oid and sid based https!
         user_dict['__CRON_JOB_CLEANUP__'] = '1'
     else:
         user_dict['__CRON_JOB_CLEANUP__'] = '0'
+    if user_dict['__ENABLE_SFTP_SUBSYS__'].lower() == 'true' or \
+            user_dict['__ENABLE_SFTP__'].lower() == 'true' or \
+            user_dict['__ENABLE_DAVS__'].lower() == 'true' or \
+            user_dict['__ENABLE_FTPS__'].lower() == 'true':
+        user_dict['__CRON_SESSION_CLEANUP__'] = '1'
+    else:
+        user_dict['__CRON_SESSION_CLEANUP__'] = '0'
 
     # Enable 2FA only if explicitly requested
     if user_dict['__ENABLE_TWOFACTOR__'].lower() == 'true':
@@ -1023,8 +1086,8 @@ cert, oid and sid based https!
     # Enable 2FA strict address only if explicitly requested
     if user_dict['__ENABLE_TWOFACTOR_STRICT_ADDRESS__'].lower() == 'true':
         if not user_dict['__ENABLE_TWOFACTOR__'].lower() == 'true':
-            print("ERROR: twofactor strict address use requested" \
-                + " but twofactor is disabled!")
+            print("ERROR: twofactor strict address use requested"
+                  + " but twofactor is disabled!")
             sys.exit(1)
         user_dict['__TWOFACTOR_STRICT_ADDRESS_COMMENTED__'] = ''
     else:
@@ -1043,17 +1106,17 @@ cert, oid and sid based https!
         try:
             import nbformat
         except ImportError:
-            print("ERROR: workflows use requested but " \
+            print("ERROR: workflows use requested but "
                   "nbformat is not installed!")
             sys.exit(1)
         except SyntaxError:
-            print("ERROR: workflows requires that the more-itertools package" \
+            print("ERROR: workflows requires that the more-itertools package"
                   "is installed as version 5.0.0")
             sys.exit(1)
         try:
             import nbconvert
         except ImportError:
-            print("ERROR: workflows use requested but " \
+            print("ERROR: workflows use requested but "
                   "nbconvert is not installed!")
             sys.exit(1)
 
@@ -1072,7 +1135,7 @@ cert, oid and sid based https!
         except ImportError:
             print("ERROR: openid use requested but lib is not installed!")
             sys.exit(1)
-    # Enable OpenID auth module only if openid_providers is given
+    # Enable OpenID 2.0 auth module only if openid_providers is given
     if user_dict['__EXT_OID_PROVIDER_BASE__'].strip() or \
             user_dict['__MIG_OID_PROVIDER_BASE__'].strip():
         user_dict['__OPENID_COMMENTED__'] = ''
@@ -1083,6 +1146,27 @@ cert, oid and sid based https!
         fail2ban_daemon_ports.append(openid_show_port)
     else:
         user_dict['__OPENID_COMMENTED__'] = '#'
+    # Enable OpenID Connect auth module only if openidconnect_providers is given
+    if user_dict['__EXT_OIDC_PROVIDER_META_URL__'].strip() or \
+            user_dict['__MIG_OIDC_PROVIDER_META_URL__'].strip():
+        user_dict['__OPENIDCONNECT_COMMENTED__'] = ''
+        # TODO: enable next lines if openid connect requires proxy for
+        #       cert_redirect support
+        #user_dict['__PROXY_HTTP_COMMENTED__'] = ''
+        #user_dict['__PROXY_HTTPS_COMMENTED__'] = ''
+        # TODO: enable next lines if implementing native openid connect service
+        # fail2ban_daemon_ports.append(openidconnect_port)
+        # fail2ban_daemon_ports.append(openidconnect_show_port)
+    else:
+        user_dict['__OPENIDCONNECT_COMMENTED__'] = '#'
+    if ext_oidc_client_name:
+        user_dict['__EXT_OIDC_CLIENT_NAME__'] = ext_oidc_client_name
+    else:
+        user_dict['__EXT_OIDC_CLIENT_NAME__'] = 'INSERT OIDC CLIENT NAME'
+    if ext_oidc_client_id:
+        user_dict['__EXT_OIDC_CLIENT_ID__'] = ext_oidc_client_id
+    else:
+        user_dict['__EXT_OIDC_CLIENT_ID__'] = 'INSERT OIDC CLIENT ID'
 
     # Enable alternative daemon show address only if explicitly requested
     if user_dict['__DAEMON_SHOW_ADDRESS__']:
@@ -1118,7 +1202,7 @@ openssl genrsa -out %(__DAEMON_KEYCERT__)s 2048""" % user_dict)
             daemon_keycert_sha256 = raw_sha256.replace("SHA256 Fingerprint=",
                                                        "")
         except Exception as exc:
-            print("ERROR: failed to extract sha256 fingerprint of %s: %s" % \
+            print("ERROR: failed to extract sha256 fingerprint of %s: %s" %
                   (key_path, exc))
         user_dict['__DAEMON_KEYCERT_SHA256__'] = daemon_keycert_sha256
     if user_dict['__DAEMON_PUBKEY__']:
@@ -1147,7 +1231,7 @@ ssh-keygen -f %(__DAEMON_KEYCERT__)s -y > %(__DAEMON_PUBKEY__)s""" % user_dict)
             raw_sha256 = hashlib.sha256(b64_key).digest()
             daemon_pubkey_sha256 = base64.b64encode(raw_sha256).rstrip('=')
         except Exception as exc:
-            print("ERROR: failed to extract fingerprints of %s : %s" % \
+            print("ERROR: failed to extract fingerprints of %s : %s" %
                   (pubkey_path, exc))
         user_dict['__DAEMON_PUBKEY_MD5__'] = daemon_pubkey_md5
         user_dict['__DAEMON_PUBKEY_SHA256__'] = daemon_pubkey_sha256
@@ -1174,10 +1258,17 @@ ssh-keygen -f %(__DAEMON_KEYCERT__)s -y > %(__DAEMON_PUBKEY__)s""" % user_dict)
         user_dict['__EXT_OID_PROVIDER_ID__'] = ext_oid_provider_id
         all_oid_provider_ids.append(ext_oid_provider_id)
     user_dict['__ALL_OID_PROVIDER_IDS__'] = ' '.join(all_oid_provider_ids)
+    all_oidc_provider_meta_urls = []
+    if user_dict['__MIG_OIDC_PROVIDER_META_URL__']:
+        all_oidc_provider_meta_urls.append(mig_oidc_provider_meta_url)
+    if user_dict['__EXT_OIDC_PROVIDER_META_URL__']:
+        all_oidc_provider_meta_urls.append(ext_oidc_provider_meta_url)
+    user_dict['__ALL_OIDC_PROVIDER_META_URLS__'] = ' '.join(
+        all_oidc_provider_meta_urls)
 
     destination_path = "%s%s" % (destination, destination_suffix)
     if not os.path.islink(destination) and os.path.isdir(destination):
-        print("ERROR: Legacy %s dir in the way - please remove first" % \
+        print("ERROR: Legacy %s dir in the way - please remove first" %
               destination)
         sys.exit(1)
     try:
@@ -1190,23 +1281,42 @@ ssh-keygen -f %(__DAEMON_KEYCERT__)s -y > %(__DAEMON_PUBKEY__)s""" % user_dict)
 
     # Implicit ports if they are standard: cleaner and removes double hg login
     if public_fqdn:
-        user_dict['__PUBLIC_URL__'] = 'http://%(__PUBLIC_FQDN__)s' % user_dict
-        if str(public_port) != str(default_http_port):
-            print("adding explicit public port (%s)" % [public_port,
+        user_dict['__PUBLIC_HTTP_URL__'] = 'http://%(__PUBLIC_FQDN__)s' % user_dict
+        if str(public_http_port) != str(default_http_port):
+            print("adding explicit public port (%s)" % [public_http_port,
                                                         default_http_port])
-            user_dict['__PUBLIC_URL__'] += ':%(__PUBLIC_PORT__)s' % user_dict
+            user_dict['__PUBLIC_HTTP_URL__'] += ':%(__PUBLIC_HTTP_PORT__)s' % user_dict
+        if public_use_https:
+            user_dict['__PUBLIC_HTTPS_URL__'] = 'https://%(__PUBLIC_SEC_FQDN__)s' \
+                                                % user_dict
+            if str(public_https_port) != str(default_https_port):
+                print("adding explicit public https port (%s)" %
+                      [public_https_port, default_https_port])
+                user_dict['__PUBLIC_HTTPS_URL__'] += ':%(__PUBLIC_HTTPS_PORT__)s' \
+                                                     % user_dict
+            user_dict['__PUBLIC_URL__'] = user_dict['__PUBLIC_HTTPS_URL__']
+        else:
+            user_dict['__PUBLIC_URL__'] = user_dict['__PUBLIC_HTTP_URL__']
+            user_dict['__PUBLIC_HTTPS_URL__'] = ''
+            user_dict['__PUBLIC_HTTPS_LISTEN__'] = "# %s" % listen_clause
     if public_alias_fqdn:
-        user_dict['__PUBLIC_ALIAS_URL__'] = 'https://%(__PUBLIC_ALIAS_FQDN__)s' \
-                                            % user_dict
-        if str(public_alias_port) != str(default_https_port):
-            print("adding explicit public alias port (%s)" % [public_alias_port,
-                                                              default_https_port])
-            user_dict['__PUBLIC_ALIAS_URL__'] += ':%(__PUBLIC_ALIAS_PORT__)s' \
-                                                 % user_dict
+        user_dict['__PUBLIC_ALIAS_HTTP_URL__'] = 'http://%(__PUBLIC_ALIAS_FQDN__)s' \
+            % user_dict
+        user_dict['__PUBLIC_ALIAS_HTTPS_URL__'] = 'https://%(__PUBLIC_ALIAS_FQDN__)s' \
+            % user_dict
+        if str(public_http_port) != str(default_http_port):
+            print("adding explicit public alias port (%s)" % [public_http_port,
+                                                              default_http_port])
+            user_dict['__PUBLIC_ALIAS_HTTP_URL__'] += ':%(__PUBLIC_HTTP_PORT__)s' \
+                % user_dict
+        if str(public_https_port) != str(default_https_port):
+            print("adding explicit public alias https port (%s)" %
+                  [public_https_port, default_https_port])
+            user_dict['__PUBLIC_ALIAS_HTTPS_URL__'] += ':%(__PUBLIC_HTTPS_PORT__)s' \
+                % user_dict
         # Apache fails on duplicate listen clauses
-        if public_alias_fqdn == public_fqdn and \
-                public_alias_port == public_port:
-            user_dict['__PUBLIC_ALIAS_LISTEN__'] = "# %s" % listen_clause
+        if public_use_https and public_alias_fqdn == public_fqdn:
+            user_dict['__PUBLIC_ALIAS_HTTPS_LISTEN__'] = "# %s" % listen_clause
 
     if mig_cert_fqdn:
         user_dict['__MIG_CERT_URL__'] = 'https://%(__MIG_CERT_FQDN__)s' % \
@@ -1238,6 +1348,20 @@ ssh-keygen -f %(__DAEMON_KEYCERT__)s -y > %(__DAEMON_PUBKEY__)s""" % user_dict)
             print("adding explicit org oid port (%s)" % [ext_oid_port,
                                                          default_https_port])
             user_dict['__EXT_OID_URL__'] += ':%(__EXT_OID_PORT__)s' % user_dict
+    if mig_oidc_fqdn:
+        user_dict['__MIG_OIDC_URL__'] = 'https://%(__MIG_OIDC_FQDN__)s' % \
+            user_dict
+        if str(ext_oidc_port) != str(default_https_port):
+            print("adding explicit org oidc port (%s)" % [ext_oidc_port,
+                                                          default_https_port])
+            user_dict['__MIG_OIDC_URL__'] += ':%(__MIG_OIDC_PORT__)s' % user_dict
+    if ext_oidc_fqdn:
+        user_dict['__EXT_OIDC_URL__'] = 'https://%(__EXT_OIDC_FQDN__)s' % \
+            user_dict
+        if str(ext_oidc_port) != str(default_https_port):
+            print("adding explicit org oidc port (%s)" % [ext_oidc_port,
+                                                          default_https_port])
+            user_dict['__EXT_OIDC_URL__'] += ':%(__EXT_OIDC_PORT__)s' % user_dict
     if sid_fqdn:
         user_dict['__SID_URL__'] = 'https://%(__SID_FQDN__)s' % user_dict
         if str(sid_port) != str(default_https_port):
@@ -1545,6 +1669,8 @@ def create_user(
     ext_cert_fqdn=socket.getfqdn(),
     mig_oid_fqdn=socket.getfqdn(),
     ext_oid_fqdn=socket.getfqdn(),
+    mig_oidc_fqdn=socket.getfqdn(),
+    ext_oidc_fqdn=socket.getfqdn(),
     sid_fqdn=socket.getfqdn(),
     io_fqdn=socket.getfqdn(),
 ):
@@ -1636,8 +1762,11 @@ def create_user(
 
     svc_ports = 6
     reserved_ports = range(svc_ports * uid, svc_ports * uid + svc_ports)
-    public_port, mig_cert_port, ext_cert_port, mig_oid_port, ext_oid_port, sid_port = \
+    public_http_port, mig_cert_port, ext_cert_port, mig_oid_port, ext_oid_port, sid_port = \
         reserved_ports[:svc_ports]
+    # Only one port for openid or openid connect
+    mig_oidc_port = mig_oid_port
+    ext_oidc_port = ext_oid_port
 
     mig_dir = os.path.join(home, 'mig')
     server_dir = os.path.join(mig_dir, 'server')
@@ -1689,6 +1818,11 @@ def create_user(
     user_interface = "V2 V3"
     mig_oid_provider = ''
     ext_oid_provider = ''
+    mig_oidc_provider_meta_url = ''
+    ext_oidc_provider_meta_url = ''
+    ext_oidc_client_name = ''
+    ext_oidc_client_id = ''
+    ext_oidc_scope = ''
     dhparams_path = ''
     daemon_keycert = ''
     daemon_pubkey = ''
@@ -1701,32 +1835,32 @@ def create_user(
     trac_ini_path = '%s/trac.ini' % server_dir
 
     firewall_script = '/root/scripts/firewall'
-    print('# Add the next line to %s and run the script:'\
-        % firewall_script)
-    print('iptables -A INPUT -p tcp --dport %d:%d -j ACCEPT # webserver: %s'\
-        % (reserved_ports[0], reserved_ports[-1], user))
+    print('# Add the next line to %s and run the script:'
+          % firewall_script)
+    print('iptables -A INPUT -p tcp --dport %d:%d -j ACCEPT # webserver: %s'
+          % (reserved_ports[0], reserved_ports[-1], user))
 
     sshd_conf = '/etc/ssh/sshd_config'
     print("""# Unless 'AllowGroups %s' is already included, append %s
-# to the AllowUsers line in %s and restart sshd."""\
-         % (ssh_login_group, user, sshd_conf))
+# to the AllowUsers line in %s and restart sshd."""
+          % (ssh_login_group, user, sshd_conf))
     print("""# Add %s to the sudoers file (visudo) with privileges
 # to run apache init script in %s
 visudo""" % (user, apache_dir))
     print("""# Set disk quotas for %s using reference user quota:
-edquota -u %s -p LOGIN_OF_SIMILAR_USER"""\
-         % (user, user))
+edquota -u %s -p LOGIN_OF_SIMILAR_USER"""
+          % (user, user))
     expire = datetime.date.today()
     expire = expire.replace(year=expire.year + 1)
     print("""# Optionally set account expire date for user:
-chage -E %s %s"""\
-         % (expire, user))
+chage -E %s %s"""
+          % (expire, user))
     print("""# Attach full name of user to login:
-usermod -c 'INSERT FULL NAME HERE' %s"""\
-         % user)
+usermod -c 'INSERT FULL NAME HERE' %s"""
+          % user)
     print("""# Add mount point for sandbox generator:
-echo '/home/%s/state/sss_home/MiG-SSS/hda.img      /home/%s/state/sss_home/mnt  auto    user,loop       0       0' >> /etc/fstab"""\
-         % (user, user))
+echo '/home/%s/state/sss_home/MiG-SSS/hda.img      /home/%s/state/sss_home/mnt  auto    user,loop       0       0' >> /etc/fstab"""
+          % (user, user))
 
     src = os.path.abspath(os.path.dirname(sys.argv[0]))
     dst = os.path.join(src, '%s-confs' % user)
@@ -1734,14 +1868,15 @@ echo '/home/%s/state/sss_home/MiG-SSS/hda.img      /home/%s/state/sss_home/mnt  
 
     server_alias = '#ServerAlias'
     https_fqdns = [mig_cert_fqdn, ext_cert_fqdn, mig_oid_fqdn, ext_oid_fqdn,
-                   sid_fqdn]
+                   mig_oidc_fqdn, ext_oidc_fqdn, sid_fqdn]
     https_resolved = [socket.gethostbyname(fqdn) for fqdn in https_fqdns]
     uniq_resolved = []
     for fqdn in https_resolved:
         if fqdn not in uniq_resolved:
             uniq_resolved.append(fqdn)
     if len(uniq_resolved) == len(https_fqdns):
-        mig_cert_port = ext_cert_port = mig_oid_port = ext_oid_port = sid_port
+        mig_cert_port = ext_cert_port = mig_oid_port = ext_oid_port = \
+            mig_oidc_port = ext_oidc_port = sid_port
         server_alias = 'ServerAlias'
     generate_confs(
         ' '.join(sys.argv),
@@ -1755,6 +1890,8 @@ echo '/home/%s/state/sss_home/MiG-SSS/hda.img      /home/%s/state/sss_home/mnt  
         ext_cert_fqdn,
         mig_oid_fqdn,
         ext_oid_fqdn,
+        mig_oidc_fqdn,
+        ext_oidc_fqdn,
         sid_fqdn,
         io_fqdn,
         user,
@@ -1805,6 +1942,11 @@ echo '/home/%s/state/sss_home/MiG-SSS/hda.img      /home/%s/state/sss_home/mnt  
         user_interface,
         mig_oid_provider,
         ext_oid_provider,
+        mig_oidc_provider_meta_url,
+        ext_oidc_provider_meta_url,
+        ext_oidc_client_name,
+        ext_oidc_client_id,
+        ext_oidc_scope,
         dhparams_path,
         daemon_keycert,
         daemon_pubkey,
@@ -1815,12 +1957,15 @@ echo '/home/%s/state/sss_home/MiG-SSS/hda.img      /home/%s/state/sss_home/mnt  
         hgweb_scripts,
         trac_admin_path,
         trac_ini_path,
-        public_port,
+        public_http_port,
+        '',
         '',
         mig_cert_port,
         ext_cert_port,
         mig_oid_port,
         ext_oid_port,
+        mig_oidc_port,
+        ext_oidc_port,
         sid_port,
         'User',
         'Group',
@@ -1896,8 +2041,8 @@ sudo cp -f -p %(server_conf)s %(trac_ini)s %(server_dir)s/
 %(sudo_cmd)s '%(server_dir)s/checkconf.py'
 """ % settings)
 
-    used_ports = [public_port, mig_cert_port, ext_cert_port, mig_oid_port,
-                  ext_oid_port, sid_port]
+    used_ports = [public_http_port, mig_cert_port, ext_cert_port, mig_oid_port,
+                  ext_oid_port, mig_oidc_port, ext_oidc_port, sid_port]
     extra_ports = [port for port in reserved_ports if not port in used_ports]
     print("""
 #############################################################
@@ -1908,6 +2053,8 @@ HTTPS internal certificate users:\t\t%d
 HTTPS external certificate users:\t\t%d
 HTTPS Internal openid users:\t\t%d
 HTTPS external openid users:\t\t%d
+HTTPS internal openid connect users:\t\t%d
+HTTPS external openid connect users:\t\t%d
 HTTPS resources:\t\t%d
 Extra ports:\t\t%s
 
@@ -1915,19 +2062,21 @@ The dedicated apache server can be started with the command:
 sudo %s/%s start
 
 #############################################################
-"""\
-         % (
-        user,
-        group,
-        pw,
-        public_port,
-        mig_cert_port,
-        ext_cert_port,
-        mig_oid_port,
-        ext_oid_port,
-        sid_port,
-        ', '.join(["%d" % port for port in extra_ports]),
-        apache_dir,
-        os.path.basename(apache_initd_script),
-    ))
+"""
+          % (
+              user,
+              group,
+              pw,
+              public_http_port,
+              mig_cert_port,
+              ext_cert_port,
+              mig_oid_port,
+              ext_oid_port,
+              mig_oidc_port,
+              ext_oidc_port,
+              sid_port,
+              ', '.join(["%d" % port for port in extra_ports]),
+              apache_dir,
+              os.path.basename(apache_initd_script),
+          ))
     return True

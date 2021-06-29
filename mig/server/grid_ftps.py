@@ -72,6 +72,7 @@ only used in plain FTP mode.
 from __future__ import print_function
 from __future__ import absolute_import
 
+import base64
 import os
 import sys
 import time
@@ -102,10 +103,11 @@ from mig.shared.griddaemons.ftps import default_max_user_hits, \
     update_login_map, login_map_lookup, hit_rate_limit, expire_rate_limit, \
     check_twofactor_session, validate_auth_attempt
 from mig.shared.logger import daemon_logger, register_hangup_handler
-from mig.shared.pwhash import make_scramble
+from mig.shared.pwhash import make_simple_hash
 from mig.shared.tlsserver import hardened_openssl_context
 from mig.shared.useradm import check_password_hash
 from mig.shared.validstring import possible_user_id, possible_sharelink_id
+from mig.shared.vgrid import in_vgrid_share
 
 
 configuration, logger = None, None
@@ -198,7 +200,7 @@ class MiGUserAuthorizer(DummyAuthorizer):
         5) Hit rate limit (Too many auth attempts)
         6) Valid password (if password enabled)
         """
-        secret = None
+        hashed_secret = None
         disconnect = False
         strict_password_policy = True
         password_offered = None
@@ -217,9 +219,7 @@ class MiGUserAuthorizer(DummyAuthorizer):
         user_abuse_hits = daemon_conf['auth_limits']['user_abuse_hits']
         proto_abuse_hits = daemon_conf['auth_limits']['proto_abuse_hits']
         max_secret_hits = daemon_conf['auth_limits']['max_secret_hits']
-        logger.debug("Run authentication of %s from %s" % (username,
-                                                           client_ip))
-        logger.info("refresh user %s" % username)
+        logger.debug("Authentication for %s from %s" % (username, client_ip))
         logger.debug("daemon_conf['allow_password']: %s" %
                      daemon_conf['allow_password'])
 
@@ -244,12 +244,13 @@ class MiGUserAuthorizer(DummyAuthorizer):
         elif daemon_conf['allow_password']:
             hash_cache = daemon_conf['hash_cache']
             password_offered = password
-            secret = make_scramble(password_offered, None)
+            hashed_secret = make_simple_hash(
+                base64.b64encode(password_offered))
             # Only sharelinks should be excluded from strict password policy
             if configuration.site_enable_sharelinks and \
                     possible_sharelink_id(configuration, username):
                 strict_password_policy = False
-            logger.debug("refresh user %s" % username)
+            logger.info("refresh login for %s" % username)
             self._update_logins(configuration, username)
             if not self.has_user(username):
                 if not os.path.islink(
@@ -259,6 +260,9 @@ class MiGUserAuthorizer(DummyAuthorizer):
             else:
                 # list of User login objects for username
                 entries = [self.user_table[username]]
+            # NOTE: always check accessible unless invalid_user to make sure
+            #       we don't report expired for active users with auth disabled
+            if not invalid_user:
                 account_accessible = check_account_accessible(configuration,
                                                               username, 'ftps')
             for entry in entries:
@@ -285,7 +289,7 @@ class MiGUserAuthorizer(DummyAuthorizer):
             username,
             client_ip,
             client_port,
-            secret=secret,
+            secret=hashed_secret,
             invalid_username=invalid_username,
             invalid_user=invalid_user,
             account_accessible=account_accessible,
@@ -394,6 +398,37 @@ class MiGRestrictedFilesystem(AbstractedFS):
         except:
             return False
 
+    def rmdir(self, path):
+        """Handle operations of same name"""
+        ftp_path = self.fs2ftp(path)
+        # Prevent removal of special dirs
+        if in_vgrid_share(configuration, path) == ftp_path[1:]:
+            logger.error("rmdir on vgrid src %s :: %s" % (ftp_path,
+                                                          path))
+            raise FilesystemError("requested rmdir not allowed")
+        return AbstractedFS.rmdir(self, path)
+
+    def remove(self, path):
+        """Handle operations of same name"""
+        ftp_path = self.fs2ftp(path)
+        # Prevent removal of special files
+        if in_vgrid_share(configuration, path) == ftp_path[1:]:
+            logger.error("remove on vgrid src %s :: %s" % (ftp_path,
+                                                           path))
+            raise FilesystemError("requested remove not allowed")
+        return AbstractedFS.remove(self, path)
+
+    def rename(self, old_path, new_path):
+        """Handle operations of same name"""
+        ftp_old_path = self.fs2ftp(old_path)
+        ftp_new_path = self.fs2ftp(new_path)
+        # Prevent rename of special files
+        if in_vgrid_share(configuration, old_path) == ftp_old_path[1:]:
+            logger.error("rename on vgrid src %s :: %s" % (ftp_old_path,
+                                                           old_path))
+            raise FilesystemError("requested rename not allowed")
+        return AbstractedFS.rename(self, old_path, new_path)
+
 
 def update_users(configuration, login_map, username):
     """Update login_map with username/password pairs for username and any
@@ -434,9 +469,11 @@ def start_service(conf):
         # Harden TLS/SSL if possible, requires recent pyftpdlib
         if hasattr(handler, 'ssl_context'):
             dhparamsfile = configuration.user_shared_dhparams
+            legacy_tls = configuration.site_enable_ftps_legacy_tls
             ssl_ctx = hardened_openssl_context(conf, OpenSSL, keyfile,
                                                certfile,
-                                               dhparamsfile=dhparamsfile)
+                                               dhparamsfile=dhparamsfile,
+                                               allow_pre_tlsv12=legacy_tls)
             handler.ssl_context = ssl_ctx
         else:
             logger.warning("Unable to enforce explicit strong TLS connections")

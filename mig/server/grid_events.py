@@ -59,21 +59,22 @@ except ImportError:
     print('ERROR: the python watchdog module is required for this daemon')
     sys.exit(1)
 
-# Use the scandir module version if available:
-# https://github.com/benhoyt/scandir
-# Otherwise fail
+# Use the native os.scandir function on python 3+ or rely on similar function
+# from the stand-alone module of the same name when on python 2.
+if sys.version_info[0] >= 3:
+    from os import scandir
+else:
+    try:
+        from distutils.version import StrictVersion
+        from scandir import scandir, __version__ as scandir_version
+        if StrictVersion(scandir_version) < StrictVersion("1.3"):
 
-try:
-    from distutils.version import StrictVersion
-    from scandir import scandir, walk, __version__ as scandir_version
-    if StrictVersion(scandir_version) < StrictVersion("1.3"):
+            # Important os.walk compatibility utf8 fixes were not added until 1.3
 
-        # Important os.walk compatibility utf8 fixes were not added until 1.3
-
-        raise ImportError('scandir version is too old >= 1.3 required')
-except ImportError as exc:
-    print('ERROR: %s' % str(exc))
-    sys.exit(1)
+            raise ImportError('scandir version is too old >= 1.3 required')
+    except ImportError as exc:
+        print('ERROR: this daemon requires the scandir module on python 2')
+        sys.exit(1)
 
 from mig.shared.base import force_utf8
 from mig.shared.cmdapi import parse_command_args
@@ -81,7 +82,7 @@ from mig.shared.conf import get_configuration_object
 from mig.shared.defaults import valid_trigger_changes, workflows_log_name, \
     workflows_log_size, workflows_log_cnt, csrf_field, default_vgrid
 from mig.shared.events import get_path_expand_map
-from mig.shared.fileio import makedirs_rec, pickle, unpickle
+from mig.shared.fileio import makedirs_rec, pickle, unpickle, walk
 from mig.shared.handlers import get_csrf_limit, make_csrf_token
 from mig.shared.job import fill_mrsl_template, new_job
 from mig.shared.listhandling import frange
@@ -577,13 +578,6 @@ class MiGRuleEventHandler(PatternMatchingEventHandler):
         state = event.event_type
         src_path = event.src_path
 
-        # match events within writable directory to trigger in files directory.
-        # Once migration to new structure is complete this can probably be
-        # removed.
-        src_path = src_path.replace(
-            configuration.vgrid_files_writable,
-            configuration.vgrid_files_home)
-
         if event.is_directory:
             self.__update_rule_monitor(configuration, src_path, state)
         elif src_path.endswith(configuration.vgrid_triggers):
@@ -674,6 +668,7 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
         ignore_patterns=None,
         ignore_directories=False,
         case_sensitive=False,
+        sub_vgrids=None
     ):
         """Constructor"""
 
@@ -681,6 +676,7 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
                                              ignore_patterns,
                                              ignore_directories,
                                              case_sensitive)
+        self.sub_vgrids = sub_vgrids
 
     def __workflow_log(
         self,
@@ -947,7 +943,11 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
 
                     pattern = pattern_map[CONF]
 
+                    # logger.debug('DM setting up logging for job with '
+                    #              'pattern: %s' % pattern)
+
                     rule_id = rule['rule_id']
+
                     recipe_list = \
                         [(recipe['name'], recipe['persistence_id'])
                          for recipe
@@ -958,10 +958,11 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
                         'trigger_path': src_path,
                         'trigger_time':
                             datetime.datetime.fromtimestamp(time_stamp),
-                        'patter_id': pattern['persistence_id'],
+                        'pattern_id': pattern['persistence_id'],
                         'pattern_name': pattern['name'],
                         'recipes': recipe_list
                     }
+                    # logger.debug('DM workflow_dict: %s' % workflow_dict)
 
                     # In cases where parameterize over is defined in a workflow
                     # Pattern, many different  but related jobs will need to be
@@ -1113,11 +1114,13 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
 
         pid = multiprocessing.current_process().pid
         state = event.event_type
-        src_path = event.src_path
         is_directory = event.is_directory
 
         # If dir_modified is due to a file event we ignore it
+
         if is_directory and state == 'created':
+            src_path = self.__get_masked_event_path(event)
+
             rel_path = strip_base_dirs(src_path)
 
             # TODO: Optimize this such that only '.'
@@ -1235,17 +1238,45 @@ class MiGFileEventHandler(PatternMatchingEventHandler):
             # logger.debug('(%s) no recent miss for %s' % (pid, event_id))
             return False
 
+    def __get_masked_event_path(self, event):
+        """Mask event paths in writable files homes to appear in base vgrid
+        files directory."""
+        # Masking events to deal with symlinked directories. Enables matching
+        # of events within writable directory to triggers in base files
+        # directory. Once migration to new structure is complete this can
+        # probably be removed in favour of only monitoring writable directory.
+        src_path = event.src_path
+
+        if ':' in src_path:
+            for sub_vgrid in self.sub_vgrids:
+                if sub_vgrid in src_path:
+                    mask = sub_vgrid.replace(':', os.path.sep)
+                    masked = src_path.replace(sub_vgrid, mask)
+                    if os.path.exists(masked):
+                        src_path = masked
+
+        masked = src_path.replace(
+            configuration.vgrid_files_writable,
+            configuration.vgrid_files_home)
+        if os.path.exists(masked):
+            src_path = masked
+
+        # logger.debug('(%s) event at %s was really at %s' %
+        #              (pid, src_path, event.src_path))
+
+        return src_path
+
     def run_handler(self, event):
         """Trigger any rule actions bound to file state change"""
 
         pid = multiprocessing.current_process().pid
         state = event.event_type
-        src_path = event.src_path
-
+        src_path = self.__get_masked_event_path(event)
         is_directory = event.is_directory
 
         # logger.debug('(%s) got %s event for src_path: %s, directory: %s' % \
         #             (pid, state, src_path, is_directory))
+
         # logger.debug('(%s) filter %s against %s' % (pid,
         #             all_rules.keys(), src_path))
 
@@ -1416,7 +1447,8 @@ def add_vgrid_file_monitor_watch(configuration, path):
     pid = multiprocessing.current_process().pid
 
     vgrid_files_path = os.path.join(configuration.vgrid_files_home, path)
-    vgrid_files_writable = os.path.join(configuration.vgrid_files_writable, path)
+    vgrid_files_writable = os.path.join(
+        configuration.vgrid_files_writable, path)
 
     if path not in shared_state['file_inotify']._wd_for_path:
         shared_state['file_inotify'].add_watch(force_utf8(vgrid_files_path))
@@ -1425,7 +1457,8 @@ def add_vgrid_file_monitor_watch(configuration, path):
         #             vgrid_files_path, path))
 
         if os.path.sep not in path:
-            shared_state['file_inotify'].add_watch(force_utf8(vgrid_files_writable))
+            shared_state['file_inotify'].add_watch(
+                force_utf8(vgrid_files_writable))
 
             # logger.debug('(%s) Adding watch for: %s' % (pid,
             #             vgrid_files_writable))
@@ -1688,7 +1721,8 @@ def monitor(configuration, vgrid_name):
     shared_state['base_dir'] = os.path.join(configuration.vgrid_files_home)
     shared_state['base_dir_len'] = len(shared_state['base_dir'])
 
-    shared_state['writable_dir'] = os.path.join(configuration.vgrid_files_writable)
+    shared_state['writable_dir'] = os.path.join(
+        configuration.vgrid_files_writable)
     shared_state['writable_dir_len'] = len(shared_state['writable_dir'])
 
     # Allow e.g. logrotate to force log re-open after rotates
@@ -1696,6 +1730,7 @@ def monitor(configuration, vgrid_name):
 
     # Monitor rule configurations
 
+    writeable_sub_vgrids = []
     if vgrid_name == '.':
         vgrid_home = configuration.vgrid_home
         file_monitor_home = shared_state['base_dir']
@@ -1706,6 +1741,24 @@ def monitor(configuration, vgrid_name):
         file_monitor_home = os.path.join(shared_state['base_dir'], vgrid_name)
         writable_dir = os.path.join(shared_state['writable_dir'], vgrid_name)
         recursive_rule_monitor = True
+
+        # Check for sub vgrids by checking for sub directories in vgrid_home
+        for (root, dirs, _) in walk(vgrid_home):
+            for dir_name in dirs:
+                # Need to join then replace here to catch sub-sub vgrids
+                sub_vgrid = os.path.join(root, dir_name).replace(
+                    configuration.vgrid_home, '').replace(os.path.sep, ':')
+
+                sub_vgrid_path = os.path.join(
+                    configuration.vgrid_files_writable, sub_vgrid)
+                if not sub_vgrid.startswith('.') \
+                        and os.path.exists(sub_vgrid_path):
+                    writeable_sub_vgrids.append(sub_vgrid)
+    if writeable_sub_vgrids:
+        msg = 'Within vgrid %s, Found sub vgrids: %s' \
+              % (vgrid_name, writeable_sub_vgrids)
+        print(msg)
+        logger.info(msg)
 
     rule_monitor = Observer()
     rule_patterns = [os.path.join(vgrid_home, '*')]
@@ -1735,24 +1788,44 @@ def monitor(configuration, vgrid_name):
         os.path.join(file_monitor_home, '*'),
         os.path.join(writable_dir, '*')
     ]
+    for sub_vgrid in writeable_sub_vgrids:
+        sub_vgrid_home = os.path.join(configuration.vgrid_files_home,
+                                      sub_vgrid.replace(':', os.path.sep), )
+        if os.path.exists(sub_vgrid_home):
+            file_patterns.append(os.path.join(sub_vgrid_home, '*'))
+
+        sub_vgrid_writeable = os.path.join(configuration.vgrid_files_writable,
+                                           sub_vgrid)
+        if os.path.exists(sub_vgrid_writeable):
+            file_patterns.append(os.path.join(sub_vgrid_writeable, '*'))
 
     logger.info('(%s) initializing listener with patterns: %s'
                 % (pid, file_patterns))
 
     shared_state['file_handler'] = MiGFileEventHandler(
-        patterns=file_patterns, ignore_directories=False, case_sensitive=True)
-    file_monitor.schedule(shared_state['file_handler'], file_monitor_home,
-                          recursive=False)
-    file_monitor.start()
+        patterns=file_patterns, ignore_directories=False, case_sensitive=True,
+        sub_vgrids=writeable_sub_vgrids)
 
-    if len(file_monitor._emitters) != 1:
-        logger.error('(%s) Number of file_monitor._emitters != 1' % pid)
-        return 1
-    file_monitor_emitter = min(file_monitor._emitters)
-    if not hasattr(file_monitor_emitter, '_inotify'):
-        logger.error('(%s) file_monitor require inotify' % pid)
-        return 1
-    shared_state['file_inotify'] = file_monitor_emitter._inotify._inotify
+    vgrid_homes = [os.path.join(configuration.vgrid_files_writable, sub_vgrid)
+                   for sub_vgrid in writeable_sub_vgrids]
+    vgrid_homes.append(file_monitor_home)
+
+    for monitor_home in vgrid_homes:
+        logger.info('(%s) starting observer for: %s' % (pid, monitor_home))
+
+        file_monitor = Observer()
+        file_monitor.schedule(shared_state['file_handler'], monitor_home,
+                              recursive=False)
+        file_monitor.start()
+
+        if len(file_monitor._emitters) != 1:
+            logger.error('(%s) Number of file_monitor._emitters != 1' % pid)
+            return 1
+        file_monitor_emitter = min(file_monitor._emitters)
+        if not hasattr(file_monitor_emitter, '_inotify'):
+            logger.error('(%s) file_monitor require inotify' % pid)
+            return 1
+        shared_state['file_inotify'] = file_monitor_emitter._inotify._inotify
 
     logger.info('(%s) trigger rule refresh for: %s' % (pid, vgrid_name))
 

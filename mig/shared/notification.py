@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # notification - instant message and email notification helpers
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -26,6 +26,7 @@
 #
 
 """Notification functions"""
+
 from __future__ import print_function
 from __future__ import absolute_import
 
@@ -41,7 +42,7 @@ from email.MIMEBase import MIMEBase
 from email.MIMEMultipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.Utils import formatdate
-from urllib import quote
+from urllib import quote, urlencode
 
 # Optional gnupg support - delay any error until use
 try:
@@ -49,9 +50,10 @@ try:
 except ImportError as ierr:
     gnupg = None
 
-from mig.shared.base import force_utf8, generate_https_urls
+from mig.shared.base import force_utf8, generate_https_urls, canonical_user, \
+    cert_field_map, extract_field, get_site_base_url
 from mig.shared.defaults import email_keyword_list, job_output_dir, \
-    transfer_output_dir
+    transfer_output_dir, keyword_auto
 from mig.shared.fileio import send_message_to_grid_notify
 from mig.shared.safeinput import is_valid_simple_email
 from mig.shared.settings import load_settings
@@ -219,12 +221,16 @@ who would like it to be added as a %s in %s and included the reason:
 %s
 """ % (request_type, from_id, entity, target_name, request_text)
             elif request_type == "peeraccount":
+                recipient_id = args_list[5]
+                recipient_email = extract_field(recipient_id, 'email')
+                from_name = extract_field(from_id, 'full_name')
+                header += ' for %s' % from_name
                 txt += """This is a %s request sent on behalf of
 %s
-who requested an external user account on %s and specifically pointed to you as
-the local sponsor or representative with the account request comment:
+who requested an external user account on %s and specifically pointed to you
+(%s) as the local sponsor or representative with the account request comment:
 %s
-""" % (request_type, from_id, target_name, request_text)
+""" % (request_type, from_id, target_name, recipient_email, request_text)
             else:
                 txt += """This is a %s request sent on behalf of
 %s
@@ -315,6 +321,38 @@ The full status and output files are available at:
  e.g. in case you think this is a spam message.
 ****************************************************************************
         ''' % var_dict
+    elif status == 'ACCOUNTREQUESTREJECT':
+        from_id = args_list[0]
+        user_dict = args_list[1]
+        auth_type = args_list[2]
+        reason = args_list[3]
+        short_title = configuration.short_title
+        anon_migoid_url = configuration.migserver_https_sid_url
+        # Only include actual values in query
+        req_fields = [i for i in cert_field_map if user_dict.get(i, '')]
+        user_req = canonical_user(configuration, user_dict, req_fields)
+        # Mark ID fields as readonly in the form to limit errors
+        user_req['ro_fields'] = keyword_auto
+        id_query = '%s' % urlencode(user_req)
+        user_dict.update(user_req)
+        header = '%s account request rejected' % configuration.short_title
+        txt += """This is an auto-generated account request rejection from %s.
+
+Reject message: %s
+
+Please refer to the inline form help and the online account sign up intros for
+detailed instructions.
+""" % (short_title, reason)
+        txt += """
+To try again with most fields pre-filled please head to:
+%s/cgi-sid/req%s.py?%s
+
+Feel free to contact the site admins (%s) if you are still in doubt.
+
+Regards,
+The %s Admins.
+""" % (anon_migoid_url, auth_type, id_query, configuration.admin_email,
+            short_title)
     elif status == 'PASSWORDREMINDER':
         from_id = args_list[0]
         password = args_list[1]
@@ -332,7 +370,7 @@ documentation.
         short_title = configuration.short_title
         migoid_title = configuration.user_mig_oid_title
         migoid_url = configuration.migserver_https_mig_oid_url
-        entry_url = configuration.migserver_http_url
+        entry_url = get_site_base_url(configuration)
         header = 'Re: %s OpenID request for %s' % (short_title, user_name)
         txt += """This is an auto-generated intro message from %s to inform
 about the creation or renewal of your user account with OpenID login.
@@ -360,6 +398,13 @@ The %s Admins
         auth_migoid_url = configuration.migserver_https_mig_oid_url
         anon_migoid_url = configuration.migserver_https_sid_url
         expire = datetime.datetime.fromtimestamp(user_dict['expire'])
+        # Only include actual values in query
+        req_fields = [i for i in cert_field_map if user_dict.get(i, '')]
+        user_req = canonical_user(configuration, user_dict, req_fields)
+        # Mark ID fields as readonly in the form to limit errors
+        user_req['ro_fields'] = keyword_auto
+        id_query = '%s' % urlencode(user_req)
+        user_dict.update(user_req)
         id_lines = """Full name: %(full_name)s
 Email address: %(email)s
 Organization: %(organization)s
@@ -375,12 +420,16 @@ semi-automatic renewal, only filling the password and comment fields at
 %s/cgi-bin/reqoid.py
 In that way you can also choose a new password if you like.
 
-After account access expiry you can only manually renew by opening the basic
-account request page at
+After account access expiry you can only renew by submitting another account
+request matching your original one. I.e. open the semi-filled account request
+page at
+%s/cgi-sid/reqoid.py?%s
+or manually fill it all on
 %s/cgi-sid/reqoid.py
-and entering the values you're signed up with, namely:
+For expired accounts the form MUST be filled with the exact values you're
+signed up with - including your EXISTING password!
+In case you use the last link you need to enter your ID values:
 %s
-Importantly you then have to use your EXISTING password!
 
 In either case please enter a few lines of comment including why you (still)
 need access. Mentioning names of project and main collaboration partners
@@ -393,7 +442,7 @@ hold of your login.
 Regards,
 The %s Admins
 """ % (short_title, expire, user_email, auth_migoid_url, anon_migoid_url,
-            id_lines, short_title, short_title)
+            id_query, anon_migoid_url, id_lines, short_title, short_title)
     elif status == 'FORUMUPDATE':
         vgrid_name = args_list[0]
         author = args_list[1]
@@ -450,8 +499,8 @@ def send_instant_message(
     except Exception as err:
         logger.error('could not get exclusive access or write to %s: %s %s'
                      % (im_in_path, message, err))
-        print('could not get exclusive access or write to %s!'\
-            % im_in_path)
+        print('could not get exclusive access or write to %s!'
+              % im_in_path)
         return False
 
 
@@ -775,8 +824,8 @@ Hosturl: '%s'
 
 Configfile: '%s'
 
-Resource creation command to run from mig/server/ directory:
-./createresource.py '%s' '%s' '%s'
+Resource creation command to run from 'mig' base directory:
+./mig/server/createresource.py '%s' '%s' '%s'
 """\
          % (
         client_id,

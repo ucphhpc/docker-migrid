@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # freezefunctions - freeze archive helper functions
-# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -26,6 +26,7 @@
 #
 
 """Freeze archive functions"""
+
 from __future__ import print_function
 from __future__ import absolute_import
 
@@ -35,29 +36,22 @@ import json
 import os
 import sys
 import time
-# NOTE: Use faster scandir if available
-try:
-    from distutils.version import StrictVersion
-    from scandir import walk, __version__ as scandir_version
-    if StrictVersion(scandir_version) < StrictVersion("1.3"):
-        # Important os.walk compatibility utf8 fixes were not added until 1.3
-        raise ImportError("scandir version is too old: fall back to os.walk")
-except ImportError:
-    from os import walk
 from urllib import quote
 
 from mig.shared.base import client_id_dir, distinguished_name_to_user, \
-    brief_list, pretty_format_user
+    brief_list, pretty_format_user, get_site_base_url
 from mig.shared.defaults import freeze_meta_filename, freeze_lock_filename, \
     wwwpublic_alias, public_archive_dir, public_archive_index, \
     public_archive_files, public_archive_doi, freeze_flavors, keyword_final, \
-    keyword_pending, keyword_updating, keyword_auto, max_freeze_files, \
-    csrf_field
+    keyword_pending, keyword_updating, keyword_auto, keyword_any, \
+    keyword_all, max_freeze_files, archives_cache_filename, \
+    freeze_on_tape_filename, archive_marks_dir, csrf_field
 from mig.shared.fileio import md5sum_file, sha1sum_file, sha256sum_file, \
     sha512sum_file, supported_hash_algos, write_file, copy_file, copy_rec, \
     move_file, move_rec, remove_rec, delete_file, delete_symlink, \
     makedirs_rec, make_symlink, make_temp_dir, acquire_file_lock, \
-    release_file_lock
+    release_file_lock, walk, listdir
+from mig.shared.filemarks import get_filemark, update_filemark
 from mig.shared.html import get_xgi_html_preamble, get_xgi_html_footer, \
     man_base_js, themed_styles, themed_scripts, tablesorter_pager
 from mig.shared.pwhash import make_path_hash
@@ -134,18 +128,18 @@ def published_url(freeze_dict, configuration, target=public_archive_index):
     target argument is used to request a specific archive helper instead of
     the landing page.
     """
-    base_url = configuration.migserver_http_url
-    if configuration.migserver_https_sid_url:
-        base_url = configuration.migserver_https_sid_url
-    return os.path.join(base_url, 'public', public_archive_dir,
+    base_url = get_site_base_url(configuration)
+    return os.path.join(base_url, public_archive_dir,
                         public_freeze_id(freeze_dict, configuration),
                         target)
 
 
-def build_freezeitem_object(configuration, freeze_dict, summary=False):
+def build_freezeitem_object(configuration, freeze_dict, summary=False,
+                            pending_updates=False):
     """Build a frozen archive object based on input freeze_dict.
     The optional summary argument can be used to build just a archive summary
     rather than the full dictionary of individual file details.
+    The optional pending_updates is simply inserted as-is.
     """
     freeze_id = freeze_dict['ID']
     flavor = freeze_dict.get('FLAVOR', 'freeze')
@@ -163,7 +157,7 @@ def build_freezeitem_object(configuration, freeze_dict, summary=False):
                 'object_type': 'link',
                 'destination': 'showfreezefile.py?freeze_id=%s;path=%s' %
                 (freeze_dict['ID'], quoted_name),
-                'class': '%s iconspace' % type_icon,
+                'class': '%s iconleftpad iconspace' % type_icon,
                 'title': 'Show archive file %(name)s' % file_item,
                 'text': ''
             }
@@ -191,7 +185,7 @@ def build_freezeitem_object(configuration, freeze_dict, summary=False):
                      (quoted_name, freeze_id), 'undefined',
                      "{freeze_id: '%s', flavor: '%s', 'path': '%s'}" %
                      (freeze_id, flavor, quoted_name)),
-                    'class': 'removelink iconspace', 'title':
+                    'class': 'removelink iconleftpad iconspace', 'title':
                     'Remove %s from %s' % (quoted_name, freeze_id),
                     'text': ''
                 }
@@ -215,6 +209,7 @@ def build_freezeitem_object(configuration, freeze_dict, summary=False):
                                                         created_asctime),
         'state': freeze_dict.get('STATE', keyword_final),
         'frozenfiles': freeze_files,
+        'pending_updates': pending_updates
     }
 
     for field in ('author', 'department', 'organization', 'publish',
@@ -252,15 +247,129 @@ def parse_time_delta(str_value):
     return datetime.timedelta(minutes=minutes)
 
 
-def list_frozen_archives(configuration, client_id, strict_owner=False):
+def parse_isoformat(str_value):
+    """Translate a ISO8601 string like 2020-09-30T15:51:17+0200 into a datetime
+    object. This is a convenience wrapper using datetime.strptime until we get
+    native datetime.fromisoformat() in python 3.7+
+    Please note that it completely ignores timezone offset assuming it matches
+    local timezone.
+    """
+    format_str = "%Y-%m-%dT%H:%M:%S"
+    # Simply ignore timezone offset expecting it to match local timezone
+    if len(str_value) > 19:
+        stripped = str_value[:19]
+    else:
+        stripped = str_value
+    return datetime.datetime.strptime(stripped, format_str)
+
+
+def load_cached_meta(configuration, client_id, freeze_id=keyword_all):
+    """Helper to fetch cached metadata dictionary for freeze_id archive of
+    client_id. Uses a private dictionary mapping freeze_id to meta data dicts
+    in the user_cache subdir for the user.
+    The default freeze_id of keyword_all means return complete cache dictionary
+    and a specific freeze_id returns only that entry or None if it doesn't
+    exist.
+    """
+    _logger = configuration.logger
+    client_dir = client_id_dir(client_id)
+    user_cache = os.path.join(configuration.user_cache, client_dir)
+    archives_cache = os.path.join(user_cache, archives_cache_filename)
+    lock_path = "%s.lock" % archives_cache
+    _logger.debug('load archives cache %s' % archives_cache)
+    lock_handle = None
+    try:
+        lock_handle = acquire_file_lock(lock_path, exclusive=False)
+        frozen_cache = load(archives_cache)
+    except Exception as err:
+        frozen_cache = {}
+        _logger.warning('could not load freeze cache %s: %s' %
+                        (archives_cache, err))
+    if lock_handle:
+        release_file_lock(lock_handle)
+    if freeze_id == keyword_all:
+        return frozen_cache
+    return frozen_cache.get(freeze_id, None)
+
+
+def update_cached_meta(configuration, client_id, freeze_id, freeze_meta):
+    """Helper to update cached metadata dictionary for freeze_id archive of
+    client_id. Uses a private dictionary mapping freeze_id to meta data dicts
+    in the user_cache subdir for the user.
+    """
+    _logger = configuration.logger
+    client_dir = client_id_dir(client_id)
+    user_cache = os.path.join(configuration.user_cache, client_dir)
+    archives_cache = os.path.join(user_cache, archives_cache_filename)
+    lock_path = "%s.lock" % archives_cache
+    _logger.debug('load archives cache %s' % archives_cache)
+    lock_handle = None
+    try:
+        lock_handle = acquire_file_lock(lock_path, exclusive=True)
+        if os.path.exists(archives_cache):
+            frozen_cache = load(archives_cache)
+        else:
+            frozen_cache = {}
+        frozen_cache[freeze_id] = freeze_meta
+        dump(frozen_cache, archives_cache)
+        update_status = True
+    except Exception as err:
+        update_status = False
+        _logger.warning('could not update %s in freeze cache %s: %s' %
+                        (freeze_id, archives_cache, err))
+    if lock_handle:
+        release_file_lock(lock_handle)
+    return update_status
+
+
+def prune_cached_meta(configuration, client_id, freeze_id):
+    """Helper to prune freeze_id archive from cached metadata dictionary of
+    client_id. Acts on a private dictionary mapping freeze_id to meta data
+    dicts in the user_cache subdir for the user.
+    """
+    _logger = configuration.logger
+    client_dir = client_id_dir(client_id)
+    user_cache = os.path.join(configuration.user_cache, client_dir)
+    archives_cache = os.path.join(user_cache, archives_cache_filename)
+    prune_status = False
+    lock_path = "%s.lock" % archives_cache
+    _logger.debug('load archives cache %s' % archives_cache)
+    lock_handle = None
+    try:
+        lock_handle = acquire_file_lock(lock_path, exclusive=True)
+        if os.path.exists(archives_cache):
+            frozen_cache = load(archives_cache)
+        else:
+            frozen_cache = {}
+        del frozen_cache[freeze_id]
+        dump(frozen_cache, archives_cache)
+        prune_status = True
+    except Exception as err:
+        _logger.warning('could not prune %s in freeze cache %s: %s' %
+                        (freeze_id, archives_cache, err))
+    if lock_handle:
+        release_file_lock(lock_handle)
+    return prune_status
+
+
+def list_frozen_archives(configuration, client_id, strict_owner=False,
+                         caching=False):
     """Find all frozen_archives owned by user. We used to store all archives
     directly in freeze_home, but have switched to client_id sub dirs since they
     are personal anyway. Look in the client_id folder first.
     If strict_owner is requested the list will only include archives where the
     CREATOR meta field matches client_id. This may leave out archives for
     renamed users or any future shared archives.
+    The optional caching argument specifies whether any cached version should
+    unconditionally be used.
     """
     _logger = configuration.logger
+    # NOTE: we rely on quite lax cache locking here as it's single user cache
+    #       and we should get eventual consistency anyway
+    frozen_cache = load_cached_meta(configuration, client_id)
+    if caching and frozen_cache:
+        return (True, frozen_cache.keys())
+
     frozen_list = []
     dir_content = []
 
@@ -269,12 +378,11 @@ def list_frozen_archives(configuration, client_id, strict_owner=False):
     user_archives = os.path.join(configuration.freeze_home, client_dir)
     for archive_home in (user_archives, configuration.freeze_home):
         try:
-            dir_content += os.listdir(archive_home)
+            dir_content += listdir(archive_home)
         except Exception:
             if not makedirs_rec(archive_home, configuration):
                 _logger.error(
-                    'freezefunctions.py: not able to create directory %s'
-                    % archive_home)
+                    'could not able to create directory %s' % archive_home)
                 return (False, "archive setup is broken")
 
     for entry in dir_content:
@@ -287,17 +395,29 @@ def list_frozen_archives(configuration, client_id, strict_owner=False):
 
             # entry is a frozen archive - check ownership
 
-            (meta_status, meta_out) = get_frozen_meta(client_id, entry,
-                                                      configuration)
+            freeze_id = entry
+
+            (meta_status, meta_out) = get_frozen_meta(client_id, freeze_id,
+                                                      configuration, caching)
             if not meta_status:
-                _logger.warning("skip archive %s without metadata" % entry)
+                _logger.warning("skip archive %s without metadata" % freeze_id)
                 continue
-            if not strict_owner or meta_out['CREATOR'] == client_id:
-                frozen_list.append(entry)
+            if strict_owner and meta_out['CREATOR'] != client_id:
+                _logger.warning("skip archive %s with wrong owner (%s)" %
+                                (freeze_id, client_id))
+                continue
+            frozen_list.append(freeze_id)
+            if not freeze_id in frozen_cache:
+                update_cached_meta(configuration, client_id, freeze_id,
+                                   meta_out)
         else:
-            _logger.warning(
-                '%s in %s is not a directory, move it?'
-                % (entry, configuration.freeze_home))
+            _logger.warning('%s in %s is not a directory, move it?' %
+                            (entry, configuration.freeze_home))
+            # Remove any bogus or no longer available archives from cache
+            if entry in frozen_cache:
+                _logger.info('pruning stale %s from %s archive cache' %
+                             (entry, client_id))
+                prune_cached_meta(configuration, client_id, entry)
     return (True, frozen_list)
 
 
@@ -334,11 +454,61 @@ def is_frozen_archive(client_id, freeze_id, configuration):
     return False
 
 
-def get_frozen_meta(client_id, freeze_id, configuration):
+def mark_archives_modified(configuration, client_id, freeze_id, when):
+    """Make file markers to tell other callers about changed or new archives.
+    Makes a marker for the given freeze_id plus a shared ANY archive.
+    """
+    client_dir = client_id_dir(client_id)
+    base_dir = os.path.join(configuration.mig_system_run, archive_marks_dir,
+                            client_dir)
+    # NOTE: always update shared ANY marker, too
+    if freeze_id != keyword_any:
+        update_filemark(configuration, base_dir, keyword_any, when)
+    return update_filemark(configuration, base_dir, freeze_id, when)
+
+
+def pending_archives_update(configuration, client_id, freeze_id=keyword_any):
+    """Check if archive with freeze_id for client_id indicates a pending
+    update. The default is to check for any archive if no explicit freeze_id
+    is provided.
+    """
+    _logger = configuration.logger
+    client_dir = client_id_dir(client_id)
+    base_dir = os.path.join(configuration.mig_system_run,
+                            archive_marks_dir, client_dir)
+    last_changed = get_filemark(configuration, base_dir, freeze_id)
+    user_archives = os.path.join(configuration.freeze_home, client_dir)
+    user_cache = os.path.join(configuration.user_cache, client_dir)
+    archives_cache = os.path.join(user_cache, archives_cache_filename)
+    cache_changed = 0
+    if os.path.exists(archives_cache):
+        cache_changed = os.path.getmtime(archives_cache)
+    if last_changed is None:
+        _logger.debug("missing archive change marker for %s - update" %
+                      client_id)
+        # NOTE: set last changed now to force update check first time
+        last_changed = time.time()
+        update_filemark(configuration, base_dir, freeze_id, last_changed)
+    if cache_changed < last_changed:
+        _logger.debug("stale cache or missing archive marker for %s - update" %
+                      client_id)
+        return True
+    else:
+        return False
+
+
+def get_frozen_meta(client_id, freeze_id, configuration, caching=False):
     """Helper to fetch dictionary of metadata for a frozen archive. I.e. load
     the data either from the new client_id sub-dir or directly from the legacy
     freeze_home location.
+    The optional caching argument toggles unconditional load from any cache.
     """
+    _logger = configuration.logger
+    freeze_dict = {}
+    if caching:
+        freeze_dict = load_cached_meta(configuration, client_id, freeze_id)
+    if freeze_dict:
+        return (True, freeze_dict)
     # TODO: remove legacy look-up directly in freeze_home when migrated
     client_dir = client_id_dir(client_id)
     user_archives = os.path.join(configuration.freeze_home, client_dir)
@@ -353,9 +523,11 @@ def get_frozen_meta(client_id, freeze_id, configuration):
         freeze_dict = load(meta_path)
         release_file_lock(meta_lock)
         if freeze_dict:
-            return (True, freeze_dict)
-    return (False, 'Could not open metadata for frozen archive %s' %
-            freeze_id)
+            break
+    if freeze_dict:
+        update_cached_meta(configuration, client_id, freeze_id, freeze_dict)
+        return (True, freeze_dict)
+    return (False, 'Could not open metadata for frozen archive %s' % freeze_id)
 
 
 def get_frozen_files(client_id, freeze_id, configuration,
@@ -383,6 +555,7 @@ def get_frozen_files(client_id, freeze_id, configuration,
             break
     if not found:
         return (False, 'Could not open frozen archive %s' % freeze_id)
+    # NOTE: this is the files-only cache stored in ARCHIVE.cache
     cache_path = "%s%s" % (arch_dir, CACHE_EXT)
     meta_path = os.path.join(arch_dir, freeze_meta_filename)
     file_map = {}
@@ -393,6 +566,8 @@ def get_frozen_files(client_id, freeze_id, configuration,
             cached = load(cache_path)
         if cached:
             if os.path.getmtime(cache_path) < os.path.getmtime(meta_path):
+                _logger.debug("files cache is older than meta for %s in %s" %
+                              (freeze_id, cache_path))
                 needs_update = True
             elif checksum_list:
                 for checksum in checksum_list:
@@ -478,26 +653,33 @@ def get_frozen_files(client_id, freeze_id, configuration,
 
 
 def get_frozen_archive(client_id, freeze_id, configuration,
-                       checksum_list=['md5']):
+                       checksum_list=['md5'], caching=False):
     """Helper to extract all details for a frozen archive. I.e. extract the
     contents of the archive either in the new client_id sub-dir or directly in
     the legacy freeze_home location.
     The optional checksum_list argument can be used to switch between
     potentially heavy checksum calculation e.g. when used in freezedb.
+    The optional caching argument specifies whether any cached version should
+    unconditionally be used.
     """
     _logger = configuration.logger
     if not is_frozen_archive(client_id, freeze_id, configuration):
         return (False, 'no such frozen archive id: %s' % freeze_id)
+
     (meta_status, meta_out) = get_frozen_meta(client_id, freeze_id,
-                                              configuration)
+                                              configuration, caching)
     if not meta_status:
         return (False, 'failed to extract meta data for %s' % freeze_id)
-    _logger.debug("loaded meta for '%s': %s" %
-                  (freeze_id, brief_freeze(meta_out)))
+
     # Keep refreshing cache while archive operations are in progress
-    cache_refresh = False
-    if meta_out.get('STATE', keyword_final) == keyword_updating:
+    if caching:
+        cache_refresh = False
+    elif meta_out.get('STATE', keyword_final) == keyword_updating:
         cache_refresh = True
+    else:
+        cache_refresh = False
+    _logger.debug("get frozen files for %s with refresh: %s" %
+                  (freeze_id, cache_refresh))
     (files_status, files_out) = get_frozen_files(client_id, freeze_id,
                                                  configuration, checksum_list,
                                                  force_refresh=cache_refresh)
@@ -508,11 +690,36 @@ def get_frozen_archive(client_id, freeze_id, configuration,
     freeze_dict = {'ID': freeze_id}
     freeze_dict.update(meta_out)
     freeze_dict['FILES'] = files_out
+    # NOTE: optional marker from actual tape writing
+    if configuration.site_freeze_to_tape and configuration.freeze_tape:
+        arch_dir = get_frozen_root(client_id, freeze_id, configuration)
+        tape_marker_path = os.path.join(arch_dir, freeze_on_tape_filename)
+        tape_marker_path = tape_marker_path.replace(
+            configuration.freeze_home, configuration.freeze_tape)
+        if os.path.isfile(tape_marker_path):
+            try:
+                with open(tape_marker_path) as marker_fd:
+                    on_tape_value = marker_fd.readline().strip()
+                # NOTE: the required date format is ISO8601
+                #       like 2020-09-30T15:51:17+0200)
+                on_tape_date = parse_isoformat(on_tape_value)
+                # NOTE: mark legacy tape deadline entry to current naming
+                last = freeze_dict['LOCATION'][-1]
+                if last[0] == 'tape':
+                    freeze_dict['LOCATION'][-1] = ('tape deadline', last[1])
+                freeze_dict['LOCATION'].append(('tape', on_tape_date))
+                _logger.debug("added on tape date for '%s': %s" %
+                              (freeze_id, on_tape_date))
+            except Exception as err:
+                _logger.error("failed to extract on tape date from %s: %s" %
+                              (tape_marker_path, err))
+
     return (True, freeze_dict)
 
 
 def get_frozen_root(client_id, freeze_id, configuration):
     """Lookup the directory root of freeze_id of client_id"""
+    _logger = configuration.logger
     client_dir = client_id_dir(client_id)
     archive_path = os.path.join(configuration.freeze_home, client_dir)
     if freeze_id:
@@ -682,7 +889,7 @@ THIS IS ONLY A DRAFT - EXPLICIT FREEZE IS STILL PENDING!
     # table initially sorted by col. 0 (filename)
 
     refresh_call = 'ajax_showfiles("%s", "%s")' % \
-                   (freeze_id, ['md5'])
+        (freeze_id, ['md5'])
     table_spec = {'table_id': 'frozenfilestable', 'sort_order': '[[0,0]]',
                   'refresh_call': refresh_call}
     (add_import, add_init, add_ready) = man_base_js(configuration,
@@ -723,10 +930,14 @@ THIS IS ONLY A DRAFT - EXPLICIT FREEZE IS STILL PENDING!
                 for (i=0; i < jsonRes.length; i++) {
                     console.debug('found file: '+ jsonRes[i].name);
                     entry = jsonRes[i];
-                    files_data += '<tr><td><a href=\"'+entry.name+'\">'+entry.name+'</a></td><td><div class=\"sortkey hidden\">'+entry.timestamp+'</div>'+entry.date+'</td><td>'+entry.size+'</td><td class=\"md5sum hidden\"><pre>'+entry.md5sum+'</pre></td><td class=\"sha1sum hidden\"><pre>'+entry.sha1sum+'</pre></td><td class=\"sha256sum hidden\"><pre>'+entry.sha256sum+'</pre></td><td class=\"sha512sum hidden\"><pre>'+entry.sha512sum+'</pre></td></tr>';
+                    files_data += '<tr><td><a href=\"'+entry.name+'\">'+entry.name+'</a></td><td><div class=\"sortkey hidden\">'+entry.timestamp+'</div>'+entry.date+'</td><td>'+entry.size+'</td><td class=\"md5sum hidden\"><pre>'+entry.md5sum+ \
+                        '</pre></td><td class=\"sha1sum hidden\"><pre>'+entry.sha1sum+'</pre></td><td class=\"sha256sum hidden\"><pre>'+ \
+                            entry.sha256sum+'</pre></td><td class=\"sha512sum hidden\"><pre>'+ \
+                                entry.sha512sum+'</pre></td></tr>';
                     /* chunked updates - append after after every chunk_size entries */
                     if (i > 0 && i %% chunk_size === 0) {
-                        console.debug('append chunk of ' + chunk_size + ' entries');
+                        console.debug('append chunk of ' + \
+                                      chunk_size + ' entries');
                         $(tbody_elem).append(files_data);
                         files_data = "";
                     }
@@ -755,7 +966,8 @@ THIS IS ONLY A DRAFT - EXPLICIT FREEZE IS STILL PENDING!
                 $('#frozenfilestable').trigger('update');
             },
             error: function(jqXHR, textStatus, errorThrown) {
-                console.error('files lookup failed: '+textStatus+' : '+errorThrown);
+                console.error('files lookup failed: '+ \
+                              textStatus+' : '+errorThrown);
                 $('#ajax_status').html('No files data available');
                 $('#ajax_status').removeClass('spinner iconleftpad');
             }
@@ -804,7 +1016,8 @@ THIS IS ONLY A DRAFT - EXPLICIT FREEZE IS STILL PENDING!
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.info('No DOI data found')
-                console.debug('DOI request said: '+textStatus+' : '+errorThrown);
+                console.debug('DOI request said: '+ \
+                              textStatus+' : '+errorThrown);
                 doi_data = 'No DOI data found';
                 $('#doicontents').html(doi_data);
                 $('#doicontents').removeClass('spinner iconleftpad');
@@ -911,7 +1124,7 @@ on %(created_timestamp)s by %(creator)s.""" % auto_map
     contents += """
 <div class='archive-filestable'>
 <h2 class='staticpage'>Archive Files</h2>
-    %s    
+    %s
     <table id='frozenfilestable' class='frozenfiles columnsort'>
         <thead class='title'>
             <tr><th>Name</th><th>Date</th><th>Size</th>
@@ -993,8 +1206,9 @@ def commit_frozen_archive(freeze_dict, arch_dir, configuration):
     if freeze_dict.get('STATE', keyword_final) == keyword_final and \
             configuration.site_freeze_to_tape:
         delay = parse_time_delta(configuration.site_freeze_to_tape)
-        on_tape_date = on_disk_date + delay
-        archive_locations.append(('tape', on_tape_date))
+        on_tape_deadline = on_disk_date + delay
+        archive_locations.append(('tape deadline', on_tape_deadline))
+
         # TODO: maintain or calculate total file count and size here
         total_files = freeze_dict.get('TOTALFILES', '?')
         total_size = freeze_dict.get('TOTALSIZE', '?')
@@ -1002,7 +1216,7 @@ def commit_frozen_archive(freeze_dict, arch_dir, configuration):
                      (freeze_dict['FLAVOR'], freeze_id, freeze_dict['CREATOR'],
                       freeze_dict['STATE'], total_files, total_size))
         _logger.info("%s archive %s finalized with on-tape deadline %s" %
-                     (freeze_dict['FLAVOR'], freeze_id, on_tape_date))
+                     (freeze_dict['FLAVOR'], freeze_id, on_tape_deadline))
     freeze_dict['LOCATION'] = archive_locations
     (save_status, save_res) = save_frozen_meta(freeze_dict, arch_dir,
                                                configuration)
@@ -1116,7 +1330,7 @@ def create_frozen_archive(freeze_meta, freeze_copy, freeze_move,
         # Add human-friendly text timestamp
         for i in cached:
             i['date'] = "%s" % \
-                        datetime.datetime.fromtimestamp(int(i['timestamp']))
+                datetime.datetime.fromtimestamp(int(i['timestamp']))
         (web_status, web_res) = write_landing_page(freeze_dict, arch_dir,
                                                    frozen_files, cached,
                                                    configuration)
@@ -1143,6 +1357,7 @@ def create_frozen_archive(freeze_meta, freeze_copy, freeze_move,
         return (False, commit_res)
     # We received location updates from commit
     freeze_dict = commit_res
+    mark_archives_modified(configuration, client_id, freeze_id, time.time())
     return (True, freeze_dict)
 
 
@@ -1194,6 +1409,7 @@ def delete_archive_files(freeze_dict, client_id, path_list, configuration):
     freeze_dict['FILES'] = [i for i in freeze_dict.get('FILES', []) if
                             i['name'] not in deleted]
 
+    # NOTE: this is the files-only cache stored in ARCHIVE.cache
     cache_path = "%s%s" % (arch_dir, CACHE_EXT)
     if os.path.isfile(cache_path):
         cached = load(cache_path)
@@ -1227,6 +1443,7 @@ def delete_archive_files(freeze_dict, client_id, path_list, configuration):
         _logger.error(commit_res)
         return (False, commit_res)
 
+    mark_archives_modified(configuration, client_id, freeze_id, time.time())
     return (status, msg_list)
 
 
@@ -1250,6 +1467,7 @@ def delete_frozen_archive(freeze_dict, client_id, configuration):
         _logger.error("could not remove archive dir for %s" %
                       brief_freeze(freeze_dict))
         return (False, 'Error deleting frozen archive %s' % freeze_id)
+    mark_archives_modified(configuration, client_id, freeze_id, time.time())
     return (True, '')
 
 
@@ -1337,24 +1555,37 @@ def import_freeze_form(configuration, client_id, output_format,
 
 
 if __name__ == "__main__":
-    if not sys.argv[2:]:
-        print("USAGE: freezefunctions.py CLIENT_ID ARCHIVE_ID")
-        print("       Runs basic unit tests for the ARCHIVE_ID of CLIENT_ID")
+    if not sys.argv[1:]:
+        print("USAGE: freezefunctions.py CLIENT_ID [ARCHIVE_ID ...]")
+        print("       Runs basic unit tests for the given ARCHIVE_IDs or all")
+        print("       archives of CLIENT_ID")
         sys.exit(1)
     from mig.shared.conf import get_configuration_object
     configuration = get_configuration_object()
+    caching = True
     client_id = sys.argv[1]
-    freeze_id = sys.argv[2]
-    print("Loading %s of %s" % (freeze_id, client_id))
-    (load_status, freeze_dict) = get_frozen_archive(client_id, freeze_id,
-                                                    configuration)
-    if not load_status:
-        print("Failed to load %s for %s: %s" % (freeze_id, client_id,
-                                                freeze_dict))
-        sys.exit(1)
-    print("Metadata for %s is:" % freeze_id)
-    for (meta_key, meta_label) in __public_meta:
-        meta_value = freeze_dict.get(meta_key, '')
-        if meta_value:
-            # Preserve any text formatting in e.g. description
-            print("%s: %s" % (meta_label, format_meta(meta_key, meta_value)))
+    if sys.argv[2:]:
+        freeze_id_list = sys.argv[2:]
+    else:
+        (loaded, freeze_id_list) = list_frozen_archives(configuration,
+                                                        client_id,
+                                                        strict_owner=False,
+                                                        caching=caching)
+        if not loaded:
+            print("Error: failed to load list of archives for %s" % client_id)
+            sys.exit(1)
+
+    for freeze_id in freeze_id_list:
+        print("Loading %s of %s" % (freeze_id, client_id))
+        (load_status, freeze_dict) = get_frozen_archive(client_id, freeze_id,
+                                                        configuration)
+        if not load_status:
+            print("Failed to load %s for %s: %s" % (freeze_id, client_id,
+                                                    freeze_dict))
+            continue
+        print("Metadata for %s is:" % freeze_id)
+        for (meta_key, meta_label) in __public_meta:
+            meta_value = freeze_dict.get(meta_key, '')
+            if meta_value:
+                # Preserve any text formatting in e.g. description
+                print("%s: %s" % (meta_label, format_meta(meta_key, meta_value)))

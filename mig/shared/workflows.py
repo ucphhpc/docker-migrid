@@ -3,7 +3,7 @@
 #
 # workflows.py - Collection of workflows related functions
 #
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -75,7 +75,8 @@ CANCEL_JOB = 'cancel_job'
 RESUBMIT_JOB = 'resubmit_job'
 WORKFLOW_ACTION_TYPES = [MANUAL_TRIGGER, CANCEL_JOB, RESUBMIT_JOB]
 PATTERN_GRAPH = 'pattern_graph'
-WORKFLOW_SEARCH_TYPES = [PATTERN_GRAPH]
+WORKFLOW_REPORT = 'workflow_report'
+WORKFLOW_SEARCH_TYPES = [PATTERN_GRAPH, WORKFLOW_REPORT]
 
 WORKFLOW_PATTERNS, WORKFLOW_RECIPES, MODTIME, CONF = \
     ['__workflowpatterns__', '__workflow_recipes__', '__modtime__', '__conf__']
@@ -232,32 +233,70 @@ def get_workflow_job_report(configuration, vgrid):
         configuration.logger.debug(feedback)
         return (False, feedback)
 
-    histories = []
+    workflow_history = {}
+    outputs = {}
     for (_, _, files) in os.walk(history_home):
         for filename in files:
             job_history_path = os.path.join(history_home, filename)
             try:
-                history = load(job_history_path)
+                job_history = load(job_history_path)
             except Exception as err:
                 msg = 'Something went wrong loading history file %s. %s' \
                       % (job_history_path, err)
-                print(msg)
                 configuration.logger.error(msg)
                 continue
 
-            valid, msg = is_valid_history(configuration, history)
+            valid, msg = is_valid_history(configuration, job_history)
             if not valid:
                 msg = 'Job history file %s is not valid. %s' \
                       % (job_history_path, msg)
-                print(msg)
                 configuration.logger.debug(msg)
                 continue
 
-            history['session_id'] = filename
-            histories.append(history)
+            job_history['session_id'] = filename
+            job_history['parents'] = []
+            job_history['children'] = []
 
-    for entry in histories:
-        print('Got job history entry: %s' % entry)
+            job_id = job_history['job_id']
+            trigger_path = job_history['trigger_path']
+
+            if trigger_path.startswith(configuration.vgrid_files_home):
+                trigger_path = trigger_path[
+                               len(configuration.vgrid_files_home):]
+            if trigger_path.startswith(configuration.vgrid_files_writable):
+                trigger_path = trigger_path[
+                               len(configuration.vgrid_files_writable):]
+            # Hide internal structure of the mig from the report
+            job_history['trigger_path'] = trigger_path
+
+            workflow_history[job_id] = job_history
+
+            for write_path, write_time in job_history['write']:
+                if write_path in outputs:
+                    outputs[write_path].append((job_id, write_time))
+                    outputs[write_path].sort(key=lambda x: x[1], reverse=True)
+                else:
+                    outputs[write_path] = [(job_id, write_time)]
+
+    for job_id, entry in workflow_history.items():
+        trigger_path = entry['trigger_path']
+        start_time = entry['start']
+        if trigger_path not in outputs:
+            continue
+        possible_links = outputs[trigger_path]
+        try:
+            # Find job output that occurred last before our start.
+            i = next(x[0] for x in enumerate(possible_links) if
+                     x[1][1] < start_time)
+            parent_job_id = possible_links[i][0]
+        except StopIteration:
+            continue
+        if parent_job_id not in entry['parents']:
+            entry['parents'].append(parent_job_id)
+        parent_job = workflow_history[parent_job_id]
+        parent_job['children'].append(job_id)
+
+    return (True, workflow_history)
 
 
 def create_workflow_job_history_file(
@@ -292,7 +331,7 @@ def create_workflow_job_history_file(
     valid, msg = is_valid_history(configuration, history)
     if not valid:
         return False, msg
-:P
+
     try:
         dump(history, job_history_path)
         configuration.logger.debug(
@@ -309,14 +348,20 @@ def add_workflow_job_history_entry(
 
     if not history_home:
         feedback = 'Not adding to job history as history home does not exist.'
-        configuration.logger.debug(feedback)
+        # Enabling this debug will create a log entry for ALL MiG job writes
+        # through sshfs that are not from MEOW workflows. This will very
+        # quickly snowball if left enabled. Ye have been warned.
+        # configuration.logger.debug(feedback)
         return (False, feedback)
 
     job_history_path = os.path.join(history_home, job_session_id)
     if not os.path.exists(job_history_path):
         feedback = 'Not adding to job history as job history file does not ' \
                    'exist for %s.' % job_session_id
-        configuration.logger.debug(feedback)
+        # Enabling this debug will create a log entry for ALL MiG job writes
+        # through sshfs that are not from MEOW workflows. This will very
+        # quickly snowball if left enabled. Ye have been warned.
+        # configuration.logger.debug(feedback)
         return (False, feedback)
 
     try:
@@ -929,7 +974,7 @@ def __load_map(configuration, workflow_type=WORKFLOW_PATTERN, do_lock=True):
 
 
 def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN,
-                  client_id=None):
+                  client_id=None, modified=None):
     """
     Refresh map of workflow objects. Uses a pickled dictionary for efficiency.
     Only update map for workflow objects that appeared, disappeared, or have
@@ -938,6 +983,9 @@ def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN,
     :param configuration: The MiG configuration object.
     :param workflow_type: A MiG workflow type.
     :param client_id: [optional] A MiG user client. Default is None
+    :param modified: [optional] A list of modified objects to be reload. Is
+    required if several patterns and recipes are defined together, updates are
+    not always loaded otherwise.
     :return: (dictionary) The system dictionary of the given workflow_type.
     """
     _logger = configuration.logger
@@ -969,8 +1017,13 @@ def __refresh_map(configuration, workflow_type=WORKFLOW_PATTERN,
             workflow_map[workflow_file] = workflow_map.get(workflow_file, {})
             wp_mtime = os.path.getmtime(os.path.join(workflow_dir,
                                                      workflow_file))
-            if CONF not in workflow_map[
-                    workflow_file] or wp_mtime >= map_stamp:
+
+            # Cannot rely on mtime here, appears to be slight inconsistency in
+            # rounding mod times meaning >= does not match all the expected
+            # files if patterns and recipes are defined together.
+            if CONF not in workflow_map[workflow_file] \
+                    or wp_mtime >= map_stamp \
+                    or workflow_file in modified:
                 workflow_object = ''
                 if workflow_type == WORKFLOW_PATTERN:
                     workflow_object = __load_wp(configuration,
@@ -1309,9 +1362,9 @@ def get_workflow_home(configuration, vgrid, workflow_type=WORKFLOW_PATTERN):
     """
     if workflow_type == WORKFLOW_RECIPE:
         return get_workflow_recipe_home(configuration, vgrid)
-    elif workflow_type == WORKFLOW_PATTERN:
-        return get_workflow_pattern_home(configuration, vgrid)
-    return get_workflow_history_home(configuration, vgrid)
+    elif workflow_type == WORKFLOW_HISTORY:
+        return get_workflow_history_home(configuration, vgrid)
+    return get_workflow_pattern_home(configuration, vgrid)
 
 
 def get_workflow_pattern_home(configuration, vgrid):
@@ -1364,13 +1417,16 @@ def get_workflow_history_home(configuration, vgrid):
     :return: (string or boolean) the job history path or False if the
     path does not exist.
     """
+
     _logger = configuration.logger
     vgrid_path = os.path.join(configuration.vgrid_home, vgrid)
     if not os.path.exists(vgrid_path):
-        _logger.warning("WH: vgrid '%s' doesn't exist" % vgrid_path)
+        _logger.warning("vgrid '%s' doesn't exist" % vgrid_path)
         return False
+
     history_home = os.path.join(vgrid_path,
                                 configuration.workflows_vgrid_history_home)
+
     if not os.path.exists(history_home):
         return False
     return history_home
@@ -1393,7 +1449,7 @@ def init_workflow_task_home(configuration, vgrid):
     task_home = os.path.join(vgrid_path,
                              configuration.workflows_vgrid_tasks_home)
     if not task_home:
-        return (False, "Failed to setup tasks workflow home '%s' in grid '%s'"
+        return (False, "Failed to setup tasks workflow home '%s' in vgrid '%s'"
                 % (task_home, vgrid_path))
 
     if not os.path.exists(task_home) and \
@@ -1437,7 +1493,8 @@ def get_wp_map(configuration, client_id=None):
 
     if modified_patterns:
         map_stamp = time.time()
-        workflow_p_map = __refresh_map(configuration, client_id=client_id)
+        workflow_p_map = __refresh_map(configuration, client_id=client_id,
+                                       modified=modified_patterns)
         reset_workflow_p_modified(configuration)
     else:
         workflow_p_map, map_stamp = __load_map(configuration)
@@ -1467,7 +1524,8 @@ def get_wr_map(configuration, client_id=None):
         map_stamp = time.time()
         workflow_r_map = __refresh_map(configuration,
                                        workflow_type=WORKFLOW_RECIPE,
-                                       client_id=client_id)
+                                       client_id=client_id,
+                                       modified=modified_recipes)
         reset_workflow_r_modified(configuration)
     else:
         workflow_r_map, map_stamp = __load_map(configuration,
@@ -2100,7 +2158,7 @@ def __create_workflow_recipe_entry(configuration, client_id, vgrid,
     if existing_recipe:
         return (False, "An existing recipe in vgrid '%s'"
                        " already exist with name '%s'" % (
-                        vgrid, workflow_recipe['name']))
+                           vgrid, workflow_recipe['name']))
 
     # Create an associated task file that contains the code to be executed
     converted, source_code = convert_to(configuration,
@@ -3011,8 +3069,13 @@ def create_workflow_trigger(configuration, client_id, vgrid, path, pattern,
             for env_var in job_env_vars:
                 full_env_var = "{%s}" % env_var
                 if isinstance(var_value, str) and full_env_var in var_value:
-                    environment_variables[var_name] = \
-                        var_value.replace(
+                    if var_name in environment_variables:
+                        environment_variables[var_name] = \
+                            environment_variables[var_name].replace(
+                                full_env_var,
+                                vgrid_env_vars_map[job_env_vars_map[env_var]])
+                    else:
+                        environment_variables[var_name] = var_value.replace(
                             full_env_var,
                             vgrid_env_vars_map[job_env_vars_map[env_var]])
 
@@ -3024,8 +3087,14 @@ def create_workflow_trigger(configuration, client_id, vgrid, path, pattern,
                 for env_var in job_env_vars:
                     full_env_var = "{%s}" % env_var
                     if isinstance(var_value, str) and full_env_var in var_value:
-                        environment_variables[var_name] = \
-                            var_value.replace(
+                        if var_name in environment_variables:
+                            environment_variables[var_name] = \
+                                environment_variables[var_name].replace(
+                                    full_env_var,
+                                    vgrid_env_vars_map[job_env_vars_map[env_var]])
+                        else:
+                            environment_variables[
+                                var_name] = var_value.replace(
                                 full_env_var,
                                 vgrid_env_vars_map[job_env_vars_map[env_var]])
 
@@ -3316,7 +3385,14 @@ if __name__ == '__main__':
             reset_workflows(conf, default_vgrid)
         if args[0] == 'job_report':
             if len(args) > 1 and args[1]:
-                get_workflow_job_report(conf, args[1])
+                status, report = get_workflow_job_report(conf, args[1])
+                print(status)
+                for job_id, job in report.items():
+                    print(job_id)
+                    print('  parents:')
+                    print('    %s' % job['parents'])
+                    print('  children:')
+                    print('    %s' % job['children'])
             else:
                 print('job report requires vgrid')
 

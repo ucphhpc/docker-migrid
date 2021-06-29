@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # html - html helper functions
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -25,8 +25,11 @@
 # -- END_HEADER ---
 #
 
+"""Shared HTML generators"""
+
 from __future__ import print_function
 from __future__ import absolute_import
+
 import os
 import sys
 
@@ -265,7 +268,7 @@ def render_menu(configuration, menu_class='navmenu',
             menu_entry[name] = spec.get(name, '')
         menu_entry['target'] = 'target="%s"' % spec.get('target', '')
         if os.path.splitext(spec['url'])[0] == current_element:
-            menu_entry['selected'] = 'id="selected"'
+            menu_entry['selected'] = 'selected="selected"'
             menu_entry['class'] += " selected"
         # Optional display of icons or text only
         if display == ICONS_ONLY:
@@ -371,7 +374,11 @@ def render_before_menu(configuration, script_map={}, user_settings={}):
     """
     fill_helper = {'short_title': configuration.short_title,
                    'status_url': configuration.site_status_url,
-                   'sitestatus_button': ''}
+                   'sitestatus_button': '', 'support_icon': '',
+                   'support_text': configuration.site_support_text}
+    if configuration.site_support_image:
+        fill_helper['support_icon'] = '<img src="%s" id="supportimage" />' % \
+                                      configuration.site_support_image
     if legacy_user_interface(configuration, user_settings):
         html = '''
 <div id="topspace">
@@ -394,7 +401,7 @@ def render_before_menu(configuration, script_map={}, user_settings={}):
     else:
         if configuration.site_enable_sitestatus:
             fill_helper['sitestatus_button'] = '''
-                <li id="sitestatus-button" class="nav__item nav_item--expanded fas fa-question-circle custom-show" onclick="show_message()"></li>
+                <li id="sitestatus-button" class="nav__item nav_item--expanded fas fa-question-circle custom-show" onclick="show_message()" title="Site status - click for details"></li>
             '''
 
         html = '''
@@ -454,14 +461,10 @@ def render_before_menu(configuration, script_map={}, user_settings={}):
     <span class="far fa-times-circle close_btn" onclick="toggle_info(\'supportInfo\')"></span>
     <div class="popup container">
         <div class="row">
-            <div id="quickstart-content" class="col-lg-12">
-            <!-- Filled by AJAX -->
+            <!-- NOTE: we invert color coding scheme for FAQ accordion -->
+            <div id="support-content" class="col-lg-12 invert-theme">
+                <!-- Filled by AJAX -->
             </div>
-
-            <div id="faq-content" class="col-lg-12 invert-theme">
-            <!-- Filled by AJAX -->
-            </div>
-
             <div class="vertical-spacer"></div>
         </div>
     </div>
@@ -473,9 +476,8 @@ def render_before_menu(configuration, script_map={}, user_settings={}):
         <div class="row">
             <div id="about-content" class="col-lg-12">
                 <!-- Filled by AJAX -->
-                </div>
-
-                <div class="vertical-spacer"></div>
+            </div>
+            <div class="vertical-spacer"></div>
         </div>
     </div>
 </div>
@@ -620,20 +622,14 @@ def themed_scripts(configuration, base=[], advanced=[], skin=[], init=[],
 <script src="/assets/js/V3/ui-extra.js"></script>
 <script src="/assets/js/V3/ui-dynamic.js"></script>
         ''')
-        if logged_in:
-            quickstart_init = 'load_quickstart_dynamic'
-        else:
-            quickstart_init = 'load_quickstart_static'
-        quickstart_url = configuration.site_quickstart_snippet_url
-        faq_url = configuration.site_faq_snippet_url
+        support_url = configuration.site_support_snippet_url
         about_url = configuration.site_about_snippet_url
         dyn_scripts = '''
             var locale = extract_default_locale()
             console.log("loading dynamic snippet content");
-            %s("%s");
-            load_faq("%s");
+            load_support("%s", %s);
             load_about("%s");
-        ''' % (quickstart_init, quickstart_url, faq_url, about_url)
+        ''' % (support_url, str(logged_in).lower(), about_url)
         if configuration.site_enable_sitestatus:
             # TODO: remote status page may require CORS headers
             sitestatus_url = configuration.site_status_url
@@ -869,7 +865,7 @@ def fancy_upload_js(configuration, callback=None, share_id='', csrf_token='',
     # TODO: migrate to assets
     add_import = '''
 <!--  Filemanager is only needed for fancy upload init wrapper -->
-<script type="text/javascript" src="/images/js/jquery.form.js"></script>
+<script type="text/javascript" src="/assets/vendor/jquery.form/js/jquery.form.js"></script>
 <script type="text/javascript" src="/images/js/jquery.filemanager.js"></script>
 
 <!-- Fancy file uploader and dependencies -->
@@ -1082,10 +1078,9 @@ def save_settings_js(configuration):
         save_url = "/wsgi-bin/settingsaction.py"
     else:
         save_url = "/cgi-bin/settingsaction.py"
-    # TODO: migrate to assets
     add_import = '''
 <!-- for AJAX submit form -->
-<script type="text/javascript" src="/images/js/jquery.form.js"></script>
+<script type="text/javascript" src="/assets/vendor/jquery.form/js/jquery.form.js"></script>
     '''
     add_init = '''
     function renderWorking(msg) {
@@ -1110,7 +1105,6 @@ def save_settings_js(configuration):
                         minWidth: 600, width: "auto", autoOpen: false, closeOnEscape: true,
                         modal: true};
 
-    //console.debug("submit form serialized: "+$(".save_settings").serialize());
     var options = {
                     url: "%(save_url)s?output_format=json",
                     dataType: "json",
@@ -1197,15 +1191,15 @@ def save_settings_js(configuration):
                         $(".savestatus span").fadeIn(100);
                     }
                 };
+    ''' % {'save_url': save_url}
+    add_ready = '''
+    //console.debug("submit form serialized: "+$(".save_settings").serialize());
     /* Prevent enter in fields submitting directly to backend */
     $(".save_settings").on("keypress", function(e) {
             return e.which !== 13;
             });
     $(".save_settings").ajaxForm(options);
-    $(".save_settings").submit();
-    console.debug("fired ajaxform");
-    ''' % {'save_url': save_url}
-    add_ready = ''
+    '''
     return (add_import, add_init, add_ready)
 
 
@@ -1224,7 +1218,7 @@ def twofactor_wizard_js(configuration):
     # TODO: migrate to assets
     add_import = '''
 <!-- for AJAX submit token verification -->
-<script type="text/javascript" src="/images/js/jquery.form.js"></script>
+<script type="text/javascript" src="/assets/vendor/jquery.form/js/jquery.form.js"></script>
 <!-- for 2FA QR codes -->
 <script type="text/javascript" src="/images/js/qrious.js"></script>
 '''
@@ -1994,13 +1988,13 @@ def get_xgi_html_header(
         </div>
     </div>
     <div class="popup-middle col-12">
-        <a class="user-menu__item" href="home.py">Home</a>
-        <a class="user-menu__item" href="settings.py">Settings</a>
-        <a class="user-menu__item" href="setup.py">Setup</a>
-        <a class="user-menu__item" href="%(help_url)s">Help</a>
+        <a class="user-menu__item link-home" href="home.py">Home</a>
+        <a class="user-menu__item link-settings" href="settings.py">Settings</a>
+        <a class="user-menu__item link-setup" href="setup.py">Setup</a>
+        <a class="user-menu__item link-help" href="%(help_url)s">Help</a>
     </div>
     <div class="popup-footer col-12">
-        <a href="logout.py">Sign Out</a>
+        <a class="user-menu__item link-logout" href="logout.py">Sign Out</a>
     </div>
 </div>
                 ''' % profile_helper

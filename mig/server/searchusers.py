@@ -26,6 +26,7 @@
 #
 
 """Find all users with given data base field(s)"""
+
 from __future__ import print_function
 from __future__ import absolute_import
 
@@ -33,7 +34,6 @@ import getopt
 import sys
 import time
 
-from mig.shared.defaults import cert_valid_days, oid_valid_days
 from mig.shared.useradm import init_user_adm, search_users, default_search
 
 
@@ -49,9 +49,9 @@ Where SEARCH_OPTIONS may be one or more of:
    -C COUNTRY          Search for country
    -c CONF_FILE        Use CONF_FILE as server configuration
    -d DB_PATH          Use DB_PATH as user data base file path
-   -f FIELD            Show only FIELD value for matching users
    -E EMAIL            Search for email
    -F FULLNAME         Search for full name
+   -f FIELD            Show only FIELD value for matching users
    -h                  Show this help
    -I CERT_DN          Search for user ID (distinguished name)
    -n                  Show only name (equals -f full_name)
@@ -117,8 +117,13 @@ if '__main__' == __name__:
             usage()
             sys.exit(0)
 
+    regex_patterns = []
+    for (key, val) in search_filter.items():
+        if isinstance(val, basestring) and val.find('|') != -1:
+            regex_patterns.append(key)
+
     (configuration, hits) = search_users(search_filter, conf_path, db_path,
-                                         verbose)
+                                         verbose, regex_match=regex_patterns)
     print("Matching users:")
     for (uid, user_dict) in hits:
         if only_fields:

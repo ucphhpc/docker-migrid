@@ -33,8 +33,9 @@ import os
 from mig.shared import returnvalues
 from mig.shared.accountreq import valid_name_chars, dn_max_len, \
     account_css_helpers, account_js_helpers, account_request_template
-from mig.shared.base import distinguished_name_to_user
-from mig.shared.defaults import csrf_field
+from mig.shared.base import distinguished_name_to_user, canonical_user, \
+    cert_field_map
+from mig.shared.defaults import csrf_field, keyword_auto
 from mig.shared.functional import validate_input_and_cert
 from mig.shared.handlers import get_csrf_limit, make_csrf_token
 from mig.shared.init import initialize_main_variables, find_entry
@@ -44,7 +45,14 @@ from mig.shared.safeinput import html_escape
 def signature():
     """Signature of the main function"""
 
-    defaults = {}
+    defaults = {'full_name': [''],
+                'organization': [''],
+                'email': [''],
+                'country': [''],
+                'state': [''],
+                'comment': [''],
+                'ro_fields': [''],
+                }
     return ['html_form', defaults]
 
 
@@ -52,7 +60,7 @@ def main(client_id, user_arguments_dict):
     """Main function used by front end"""
 
     (configuration, logger, output_objects, op_name) = \
-        initialize_main_variables(client_id, op_header=False)
+        initialize_main_variables(client_id, op_header=False, op_menu=False)
     defaults = signature()[1]
     (validate_status, accepted) = validate_input_and_cert(
         user_arguments_dict,
@@ -65,6 +73,12 @@ def main(client_id, user_arguments_dict):
     )
     if not validate_status:
         return (accepted, returnvalues.CLIENT_ERROR)
+
+    if not 'extcert' in configuration.site_signup_methods:
+        output_objects.append(
+            {'object_type': 'error_text', 'text':
+             '''X.509 certificate login is not enabled on this site'''})
+        return (output_objects, returnvalues.SYSTEM_ERROR)
 
     title_entry = find_entry(output_objects, 'title')
     title_entry['text'] = '%s certificate account sign up' % \
@@ -91,6 +105,9 @@ def main(client_id, user_arguments_dict):
                     configuration.short_title}
     output_objects.append(header_entry)
 
+    user_fields = {'full_name': '', 'organization': '', 'email': '',
+                   'state': '', 'country': '', 'comment': ''}
+
     # Redirect to reqcert page without certificate requirement but without
     # changing access method (CGI vs. WSGI).
 
@@ -99,7 +116,18 @@ def main(client_id, user_arguments_dict):
     certreq_link = {'object_type': 'link', 'destination': certreq_url,
                     'text': 'Request a new %s certificate account' %
                             configuration.short_title}
-    new_user = distinguished_name_to_user(client_id)
+    id_fields = distinguished_name_to_user(client_id)
+    user_fields.update(id_fields)
+
+    # Override with arg values if set
+    for field in user_fields:
+        if not field in accepted:
+            continue
+        override_val = accepted[field][-1].strip()
+        if override_val:
+            user_fields[field] = override_val
+    user_fields = canonical_user(configuration, user_fields,
+                                 user_fields.keys())
 
     # If cert auto create is on, add user without admin interaction
 
@@ -107,12 +135,8 @@ def main(client_id, user_arguments_dict):
     csrf_limit = get_csrf_limit(configuration)
     fill_helpers = {'valid_name_chars': valid_name_chars,
                     'client_id': client_id,
+                    'cert_id': client_id,
                     'dn_max_len': dn_max_len,
-                    'full_name': new_user.get('full_name', ''),
-                    'organization': new_user.get('organization', ''),
-                    'email': new_user.get('email', ''),
-                    'state': new_user.get('state', ''),
-                    'country': new_user.get('country', ''),
                     'site': configuration.short_title,
                     'form_method': form_method,
                     'csrf_field': csrf_field,
@@ -125,6 +149,17 @@ def main(client_id, user_arguments_dict):
                                  client_id, csrf_limit)
     fill_helpers.update({'target_op': target_op, 'csrf_token': csrf_token})
     fill_helpers.update({'site_signup_hint': configuration.site_signup_hint})
+    # Write-protect ID fields if requested
+    for field in cert_field_map:
+        fill_helpers['readonly_%s' % field] = ''
+    ro_fields = [i for i in accepted['ro_fields'] if i in cert_field_map]
+    if keyword_auto in accepted['ro_fields']:
+        ro_fields += [i for i in cert_field_map if not i in ro_fields]
+    # NOTE: lock all ID fields to current certificate here
+    ro_fields += [i for i in id_fields if not i in ro_fields]
+    for field in ro_fields:
+        fill_helpers['readonly_%s' % field] = 'readonly'
+    fill_helpers.update(user_fields)
 
     html = """This page is
 used to sign up for %(site)s with an existing certificate from a Certificate
@@ -135,13 +170,14 @@ instead of requesting a new one.
 <br />
 The page tries to auto load any certificate your browser provides and fill in
 the fields accordingly, but in case it can't guess all
-<span class=highlight_required>mandatory</span> fields, you still need to fill in
-those.<br />
+<span class=highlight_required>mandatory</span> fields, you still need to fill
+in those.<br />
 Please enter any missing information below and press the Send button to submit
 the external certificate sign up request to the %(site)s administrators.
+
 <p class='personal leftpad highlight_message'>
-IMPORTANT: we need to verify your identity, so please use an Email address
-clearly affiliated with your Organization!
+IMPORTANT: we need to identify and notify you about login info, so please use a
+working Email address clearly affiliated with your Organization!
 </p>
 
 %(site_signup_hint)s
@@ -149,9 +185,8 @@ clearly affiliated with your Organization!
 <hr />
 """
 
-    user_country = new_user.get('country', '')
     html += account_request_template(configuration, password=False,
-                                     default_country=user_country)
+                                     default_values=fill_helpers)
 
     # TODO : remove this legacy version?
     html += """

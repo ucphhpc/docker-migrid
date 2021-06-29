@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # migcore - a library of core selenium-based web helpers
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -46,6 +46,14 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 
+AUTH_UNKNOWN = "Unknown"
+AUTH_OPENID_V2 = "OpenID 2.0"
+AUTH_OPENID_CONNECT = "OpenID Connect"
+
+NAVMENU_ID = "sideBar"
+USERMENU_ID = "userMenu"
+USERMENUBUTTON_ID = "userMenuButton"
+
 
 def init_driver(browser):
     """Init the requested browser driver"""
@@ -64,6 +72,9 @@ def init_driver(browser):
     else:
         print("ERROR: Browser _NOT_ supported: %s" % browser)
         driver = None
+    # Add a little slack for pages to load when finding elems
+    if driver:
+        driver.implicitly_wait(5)
     return driver
 
 
@@ -93,18 +104,28 @@ def save_screen(driver, path):
 
 
 def ucph_login(driver, url, login, passwd, callbacks={}):
-    """Login through the UCPH OpenID web form and optionally execute any
-    provided callbacks for ready and filled states. The callbacks dictionary
-    should contain state names bound to functions accepting driver and state
-    name like do_stuff(driver, state) .
+    """Login through the UCPH OpenID 2.0 or Connect web form and optionally
+    execute any provided callbacks for ready and filled states. The callbacks
+    dictionary should contain state names bound to functions accepting driver
+    and state name like do_stuff(driver, state) .
     """
     status = True
     do_login = False
+    auth_flavor = AUTH_UNKNOWN
     try:
         elem = driver.find_element_by_class_name('form-signin')
         action = elem.get_property('action')
-        if action == "https://openid.ku.dk/processTrustResult":
+        if action in ["https://openid.ku.dk/processTrustResult",
+                      "https://t-openid.ku.dk/processTrustResult"]:
             do_login = True
+            auth_flavor = AUTH_OPENID_V2
+            state = 'login-ready'
+            if callbacks.get(state, None):
+                callbacks[state](driver, state)
+        elif action in ["https://id.ku.dk/nidp/app/login?sid=0&sid=0",
+                        "https://t-id.ku.dk/nidp/app/login?sid=0&sid=0"]:
+            do_login = True
+            auth_flavor = AUTH_OPENID_CONNECT
             state = 'login-ready'
             if callbacks.get(state, None):
                 callbacks[state](driver, state)
@@ -112,45 +133,60 @@ def ucph_login(driver, url, login, passwd, callbacks={}):
         print("ERROR: failed in UCPH login: %s" % exc)
 
     if do_login:
-        print("Starting UCPH OpenID login")
-        login_elem = driver.find_element_by_name("user")
-        pass_elem = driver.find_element_by_name("pwd")
+        print("Starting UCPH %s login" % auth_flavor)
+        if auth_flavor == AUTH_OPENID_V2:
+            login_elem = driver.find_element_by_name("user")
+            pass_elem = driver.find_element_by_name("pwd")
+        elif auth_flavor == AUTH_OPENID_CONNECT:
+            login_elem = driver.find_element_by_id("inputUsername")
+            pass_elem = driver.find_element_by_id("inputPassword")
+        else:
+            # Fall back to sane defaults
+            login_elem = driver.find_element_by_name("username")
+            pass_elem = driver.find_element_by_name("password")
         login_elem.send_keys(login)
         pass_elem.send_keys(passwd)
         state = 'login-filled'
         if callbacks.get(state, None):
             callbacks[state](driver, state)
-        driver.find_element_by_name("allow").click()
+        if auth_flavor == AUTH_OPENID_V2:
+            driver.find_element_by_name("allow").click()
+        else:
+            # Just mimic Enter key on password field to submit
+            pass_elem.submit()
         # Check for login error msg to return proper status
         try:
             error_elem = driver.find_element_by_class_name("alert")
             if error_elem:
-                print("UCPH OpenID login error: %s" % error_elem.text)
+                print("UCPH %s login error: %s" %
+                      (auth_flavor, error_elem.text))
                 status = False
         except Exception:
             pass
     else:
         status = False
-        print("UCPH OpenID login _NOT_ found")
+        print("UCPH %s login _NOT_ found" % auth_flavor)
 
-    print("UCPH OpenID login result: %s" % status)
+    print("UCPH %s login result: %s" % (auth_flavor, status))
     return status
 
 
 def mig_login(driver, url, login, passwd, callbacks={}):
-    """Login through the MiG OpenID web form and optionally execute any
+    """Login through the MiG OpenID 2.0 web form and optionally execute any
     provided callbacks for ready and filled states. The callbacks dictionary
     should contain state names bound to functions accepting driver and state
     name like do_stuff(driver, state) .
     """
     status = True
     do_login = False
+    auth_flavor = AUTH_UNKNOWN
     try:
         elem = driver.find_element_by_class_name('openidlogin')
         form = elem.find_element_by_xpath("//form")
         action = form.get_property('action')
         if action == "%s/openid/allow" % url:
             do_login = True
+            auth_flavor = AUTH_OPENID_V2
             state = 'login-ready'
             if callbacks.get(state, None):
                 callbacks[state](driver, state)
@@ -158,28 +194,37 @@ def mig_login(driver, url, login, passwd, callbacks={}):
         print("ERROR: failed in MiG login: %s" % exc)
 
     if do_login:
-        print("Starting MiG OpenID login")
-        login_elem = driver.find_element_by_name("identifier")
-        pass_elem = driver.find_element_by_name("password")
+        print("Starting MiG %s login" % auth_flavor)
+        if auth_flavor == AUTH_OPENID_V2:
+            login_elem = driver.find_element_by_name("identifier")
+            pass_elem = driver.find_element_by_name("password")
+        else:
+            login_elem = driver.find_element_by_name("username")
+            pass_elem = driver.find_element_by_name("password")
         login_elem.send_keys(login)
         pass_elem.send_keys(passwd)
         state = 'login-filled'
         if callbacks.get(state, None):
             callbacks[state](driver, state)
-        driver.find_element_by_name("yes").click()
+        if auth_flavor == AUTH_OPENID_V2:
+            driver.find_element_by_name("yes").click()
+        else:
+            # Just mimic Enter key on password field to submit
+            pass_elem.submit()
         # Check for login error msg to return proper status
         try:
             error_elem = driver.find_element_by_class_name("errortext")
             if error_elem:
-                print("UCPH OpenID login error: %s" % error_elem.text)
+                print("MiG %s login error: %s" %
+                      (auth_flavor, error_elem.text))
                 status = False
         except Exception:
             pass
     else:
         status = False
-        print("MiG OpenID login _NOT_ found")
+        print("MiG %s login _NOT_ found" % auth_flavor)
 
-    print("MiG OpenID login result: %s" % status)
+    print("MiG %s login result: %s" % (auth_flavor, status))
     return status
 
 
@@ -220,6 +265,31 @@ def shared_twofactor(driver, url, twofactor_key, callbacks={}):
     return status
 
 
+def get_nav_link(driver, url, nav_class):
+    """Find nav link in UI V3 or V2 structure"""
+    link, menu = None, None
+    try:
+        menu = driver.find_element_by_id(NAVMENU_ID)
+        link = menu.find_element_by_class_name(nav_class)
+    except:
+        link = None
+
+    if link:
+        return link
+
+    try:
+        menu = driver.find_element_by_id(USERMENU_ID)
+        link = menu.find_element_by_class_name(nav_class)
+        menubutton = driver.find_element_by_id(USERMENUBUTTON_ID)
+        # Make sure menu link item is visible for callee
+        if menu and link and menubutton:
+            menubutton.click()
+    except:
+        link = None
+
+    return link
+
+
 def shared_logout(driver, url, login, passwd, callbacks={}):
     """Logout through the shared logout navmenu entry and confirm. Optionally
     execute any provided callbacks for confirm states. The callbacks dictionary
@@ -228,9 +298,10 @@ def shared_logout(driver, url, login, passwd, callbacks={}):
     """
     status = True
     do_logout = False
+    nav_class = "link-logout"
     print("Do logout")
     try:
-        link = driver.find_element_by_link_text('Logout')
+        link = get_nav_link(driver, url, nav_class)
         # print "DEBUG: found link: %s" % link
         if link:
             # print "DEBUG: use link: %s" % link

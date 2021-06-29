@@ -4,7 +4,7 @@
   # --- BEGIN_HEADER ---
   #
   # ui-dynamic - dynamic helpers to fill support, about and status content
-  # Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+  # Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
   #
   # This file is part of MiG.
   #
@@ -42,8 +42,10 @@ function switch_language(lang) {
     $(".i18n:lang(en)").hide();
     $(".i18n:lang(da)").hide();
 
-    $("div:lang("+lang+")").show();
-    $(".i18n:lang("+lang+")").show();
+    /* Use fade in to reduce flickering and improve rendering */
+    var fade_time = 500;
+    $("div:lang("+lang+")").fadeIn(fade_time);
+    $(".i18n:lang("+lang+")").fadeIn(fade_time);
 }
 
 /* NOTE: extract browser/user language dynamically if possible */
@@ -53,6 +55,15 @@ function extract_default_lang() {
 function extract_default_locale() {
     var req_lang = extract_default_lang();
     return req_lang.split(/[_-]/)[0].toLowerCase();
+}
+function locale_to_country(locale) {
+    if (locale === "da") {
+        return "danish";
+    } else if (locale === "en") {
+        return "english";
+    } else {
+        return "english";
+    }
 }
 
 /* Helper to lookup optional site-specific JS conf values with get_site_conf
@@ -73,60 +84,52 @@ function lookup_site_conf(key, default_value) {
 
 /* Load information snippets on-demand */
 
-function init_quickstart_shared(intro_target, transfer_target, backup_target,
-                                security_target) {
-    console.debug("init quickstart");
-    if (intro_target) {
-        $("#getting-started-en-button").click(function() {
-            console.debug("clicked getting started");
-            window.open(intro_target);
-        });
-    }
-    if (transfer_target) {
-        $("#file-transfer-en-button").click(function() {
-            window.open(transfer_target);
-        });
-    }
-    if (backup_target) {
-        $("#backup-en-button").click(function() {
-            window.open(backup_target);
-        });
-    }
-    if (security_target) {
-        $("#security-en-button").click(function() {
-            window.open(security_target);
-        });
-    }
-}
-
 function init_quickstart_static() {
-    init_quickstart_shared("/public/user-guide.pdf", "", "", "");
-    /* Make dynamic buttons inactive until logged in */
-    $("div.quick-support.requires-login").prop('disabled', true).css('opacity', 0.5).css('cursor', 'default').prop('title', 'Please log in first to view specific feature help and setup');
-    /*
-      $("div.quick-support.requires-login").click(function() {
-      //window.location.href="setup.py";
-      show_login_msg('Please log in first to view specific feature help and setup');
-      });
+    /* NOTE: simply keep all site specific actions and targets in quickstart
+       html snippet. We just use requires-login class markers to mark and
+       distinguish static and dynamic content.
     */
+    /* Show English content by default */
+    $("#quickstart-english").show();
+    /* Make dynamic buttons inactive until logged in */
+    $("div.quick-support.requires-login").prop('disabled', true).css('opacity', 0.5).css('cursor', 'default').prop('title', 'Please log in first to view specific feature help and setup').prop("onclick", null);
 }
 
 function init_quickstart_dynamic() {
-    init_quickstart_shared("http://www.erda.dk/public/ucph-erda-user-guide.pdf", 
-                           "setup.py?topic=sftp", "setup.py?topic=duplicati",
-                           "setup.py?topic=twofactor");
+    /* NOTE: default logged in user - nothing special to do here */
+    /* Show English content by default */
+    $("#quickstart-english").show();
 }
-
+function init_quickstart(logged_in) {
+    console.debug("init QuickStart");
+    if (logged_in) {
+        init_quickstart_dynamic();
+    } else {
+        init_quickstart_static();
+    }
+}
 function init_faq() {
-    console.debug("init faq");
+    console.debug("init FAQ");
     /* Init FAQ as foldable but closed and with individual heights */
     accordion_init(".faq-entries.accordion", false);
 }
+function init_support(logged_in) {
+    console.debug("init Support");
+    $(".snippet-disclaimer").remove();
+    $("#support-content .privacytext").remove();
+    init_quickstart(logged_in);
+    init_faq();
+    $("#support-english").show();
+}
 function init_about() {
     console.debug("init About");
+    $(".snippet-disclaimer").remove();
+    $("#about-english").show();
+    $("#about-content .privacytext").show();
 }
 function init_tips() {
     console.debug("init Tips");
+    $(".snippet-disclaimer").remove();
     /* Init Tips as single entry selected based on current date */
     $("#tips-content .tips-entries").hide();
     //console.debug("hiding all tips");
@@ -141,7 +144,7 @@ function init_tips() {
         /* Prefix: tip title with Tip marker */
         //console.debug("found title: "+index);
         /* NOTE: leave a little room between fold icon and info icon */
-        var title_text = "<span class='leftpad'/>";
+        var title_text = "<span class='leftpad'></span>";
         title_text += "<span class='tip iconleftpad'>Quick Tip:</span> ";
         title_text += $(title).html() + " ... ";
         $(title).html(title_text);
@@ -160,58 +163,24 @@ function init_tips() {
     accordion_init("#tips-content .tips-entries.accordion", false, "h4");
     $("#tips-content").removeClass("tips-placeholder");
     $("#tips-content .tips-entries").show();
+    $("#tips-english").show();
 }
 
-function load_quickstart_static(base_url) {
-    /* Fetch quickstart contents from snippet specified in configuration */
-    var content_url = base_url+" #quickstart-english";
+function load_support(base_url, logged_in) {
+    /* Fetch Support contents from snippet on base_url */
+    var content_url = base_url+" .english";
     console.debug("get content from "+content_url);
     /* Load content: roughly equivalent to $.get(url, data, success) */
     try {
-        $("#quickstart-content").load(content_url, init_quickstart_static);
+        $("#support-content").load(content_url, function() {
+            init_support(logged_in);
+        });
     } catch(err) {
-        console.error("load quickstart failed: "+err);
-    }
-}
-function load_quickstart_dynamic(base_url) {
-    /* Fetch quickstart contents from snippet specified in configuration */
-    var content_url = base_url+" #quickstart-english";
-    console.debug("get content from "+content_url);
-    /* Load content: roughly equivalent to $.get(url, data, success) */
-    try {
-        $("#quickstart-content").load(content_url, init_quickstart_dynamic);
-    } catch(err) {
-        console.error("load quickstart failed: "+err);
-    }
-}
-function load_faq(base_url) {
-    /* Fetch FAQ contents from snippet specified in configuration */
-    var content_url = base_url+" #faq-english";
-    console.debug("get content from "+content_url);
-    /* Load content: roughly equivalent to $.get(url, data, success) */
-    try {
-        $("#faq-content").load(content_url, init_faq);
-    } catch(err) {
-        console.error("load faq failed: "+err);
-    }
-}
-function init_faq_content() {
-    console.log("init faq");
-    accordion_init(".faq-entries.accordion", false);
-}
-function load_faq_content(base_url, country) {
-    /* Fetch FAQ contents from snippet specified in configuration */
-    var content_url = base_url+" #faq-"+country;
-    console.log("get content from "+content_url);
-    /* Load content: roughly equivalent to $.get(url, data, success) */
-    try {
-        $("#faq-content-"+country).load(content_url, init_faq_content);
-    } catch(err) {
-        console.error("load "+country+" faq failed: "+err);
+        console.error("load support failed: "+err);
     }
 }
 function load_about(base_url) {
-    /* Fetch About contents from snippet specified in configuration */
+    /* Fetch About contents from snippet on base_url */
     var content_url = base_url+" .english";
     console.debug("get content from "+content_url);
     /* Load content: roughly equivalent to $.get(url, data, success) */
@@ -221,22 +190,8 @@ function load_about(base_url) {
         console.error("load about failed: "+err);
     }
 }
-function init_about_content() {
-    console.log("init About");
-}
-function load_about_content(base_url, country) {
-    /* Fetch About contents from snippet specified in configuration */
-    var content_url = base_url+" ."+country;
-    console.log("get content from "+content_url);
-    /* Load content: roughly equivalent to $.get(url, data, success) */
-    try {
-        $("#about-content-"+country).load(content_url, init_about_content);
-    } catch(err) {
-        console.error("load "+country+" about failed: "+err);
-    }
-}
 function load_tips(base_url) {
-    /* Fetch Tips contents from snippet specified in configuration */
+    /* Fetch Tips contents from snippet on base_url */
     var content_url = base_url+" #tips-english";
     console.debug("get content from "+content_url);
     /* Load content: roughly equivalent to $.get(url, data, success) */
@@ -250,9 +205,10 @@ function load_tips(base_url) {
 function init_tips_content() {
     /* TODO: update to match init_tips if ever used */
     console.log("init tips");
+    $(".snippet-disclaimer").remove();
 }
 function load_tips_content(base_url, country) {
-    /* Fetch Tips contents from snippet specified in configuration */
+    /* Fetch Tips contents from snippet on base_url */
     var content_url = base_url+" #tips-"+country;
     console.log("get content from "+content_url);
     /* Load content: roughly equivalent to $.get(url, data, success) */
@@ -262,11 +218,100 @@ function load_tips_content(base_url, country) {
         console.error("load "+country+" tips failed: "+err);
     }
 }
+function load_tips_lang_content(base_url, language_list) {
+    /* Fetch Tips contents from base_url for for each lang in language_list */
+    /* TODO: fetch base_url content only once and fill in turn? */
+    console.log("get Tips lang content from "+base_url);
+    for (let i = 0; i < language_list.length; i++) {
+        load_tips_content(base_url, locale_to_country(language_list[i]));
+    }
+}
 function load_sitestatus(base_url, system_match, locale) {
     /* Fetch and render Sitestatus contents from JSON events */
     var content_url = base_url;
     //console.debug("get content from "+content_url);
     fill_server_status_popup(content_url, system_match, locale);
+}
+
+/* NOTE: these about/support helpers are for legacy use on site front page */
+function init_support_content(country) {
+    console.log("init Suppport content");
+    $(".snippet-disclaimer").remove();
+    console.debug("distribute support section content: "+country);
+    /* TODO: switch to dynamic detection of all content based on ID pattern */
+    var sections = ["faq"];
+    var content = '', anchor;
+    for (let i = 0; i < sections.length; i++) {
+        anchor = "#support-content-helper-"+country+" #"+sections[i]+"-"+country;
+        console.debug("distribute support section content: "+anchor);
+        content = $(anchor);
+        console.debug("xfer section content: "+content);
+        $("#support-content-"+country+"_"+sections[i]).html(content);
+    }
+    console.debug("clean up support helper");
+    $("#support-content-helper-"+country).remove();
+    /* Init FAQ accordion after inserting content */
+    accordion_init(".faq-entries.accordion", false);
+}
+function load_support_content(base_url, country) {
+    /* Fetch Support contents from snippet on base_url */
+    var content_url = base_url+" #support-"+country;
+    console.log("get content from "+content_url);
+    /* Load content: roughly equivalent to $.get(url, data, success) */
+    try {
+        $("#support-content-helper-"+country).load(content_url, function() {
+            init_support_content(country);
+        });
+    } catch(err) {
+        console.error("load "+country+" support failed: "+err);
+    }
+}
+function load_support_lang_content(base_url, language_list) {
+    /* Fetch Support contents from base_url for for each lang in language_list */
+    /* TODO: fetch base_url content only once and fill in turn? */
+    console.log("get Support lang content from "+base_url);
+    for (let i = 0; i < language_list.length; i++) {
+        load_support_content(base_url, locale_to_country(language_list[i]));
+    }
+}
+function init_about_content(country) {
+    /* Distribute loaded content into sections */
+    console.log("init About content");
+    $(".snippet-disclaimer").remove();
+    console.debug("distribute about section content: "+country);
+    /* TODO: switch to dynamic detection of all content based on ID pattern */
+    var sections = ["intro", "targetdata", "statusnews", "terms"];
+    var content = '', anchor;
+    for (let i = 0; i < sections.length; i++) {
+        anchor = "#about-content-helper-"+country+" #"+sections[i]+"-"+country;
+        console.debug("distribute about section content: "+anchor);
+        content = $(anchor);
+        console.debug("xfer section content: "+content);
+        $("#about-content-"+country+"_"+sections[i]).html(content);
+    }
+    console.debug("clean up about helper");
+    $("#about-content-helper-"+country).remove();
+}
+function load_about_content(base_url, country) {
+    /* Fetch About contents from snippet on base_url */
+    var content_url = base_url+" ."+country;
+    console.log("get content from "+content_url);
+    /* Load content: roughly equivalent to $.get(url, data, success) */
+    try {
+        $("#about-content-helper-"+country).load(content_url, function() {
+            init_about_content(country);
+        });
+    } catch(err) {
+        console.error("load "+country+" about failed: "+err);
+    }
+}
+function load_about_lang_content(base_url, language_list) {
+    /* Fetch About contents from base_url for for each lang in language_list */
+    /* TODO: fetch base_url content only once and fill in turn? */
+    console.log("get About lang content from "+base_url);
+    for (let i = 0; i < language_list.length; i++) {
+        load_about_content(base_url, locale_to_country(language_list[i]));
+    }
 }
 
 
@@ -297,8 +342,8 @@ function fill_server_status_accordion(status_events, brief_targets, status_targe
     /* Load content: roughly equivalent to $.get(url, data, success) */
     console.debug("AJAX fill server status accordion");
     
-    $(brief_targets["EN"]).html("Loading status ...").addClass("leftpad").addClass("spinner");
-    $(brief_targets["DK"]).html("Henter status ...").addClass("leftpad").addClass("spinner");
+    $(brief_targets["EN"]).html("Loading status ...").addClass("spinner iconleftpad");
+    $(brief_targets["DK"]).html("Henter status ...").addClass("spinner iconleftpad");
     $(status_targets["EN"]).html("<p class='leftpad spinner'>Loading status and news entries ...</p>");
     $(status_targets["DK"]).html("<p class='leftpad spinner'>Henter status og nyheder ...</p>");
     
@@ -324,6 +369,7 @@ function fill_server_status_accordion(status_events, brief_targets, status_targe
             var now = new Date();
             var work_dates = "";
             var work_datetimes = "";
+            var active_announcements = 0;
             var title_class, workdatetimes_class, systems_class, services_class;
             var description_class, references_class;
             $.each(response, function (index, item) {
@@ -350,6 +396,7 @@ function fill_server_status_accordion(status_events, brief_targets, status_targe
                 outage_start = outage_end = new Date();
                 work_start = work_end = new Date();
                 announce_start = announce_end = new Date();
+
                 /* Show all except system-filtered entries here */ 
                 show_entry = true; 
                 $.each(item, function(key, val) {
@@ -420,8 +467,7 @@ function fill_server_status_accordion(status_events, brief_targets, status_targe
                     title_class += "announce info iconleftpad";
                     //console.debug("announce ahead: " + announce_start +" < " +now+ " < "+announce_end);
                     if (status_res["status_icon"] == 'icon_online') {
-                        status_res["EN"] += ", but with active announcements";
-                        status_res["DK"] += ", men med aktuelle varsler";
+                        active_announcements += 1;
                     }
                 } else if (now < announce_start) {
                     //console.debug("skip future marker: " + announce_start + " vs "+now);
@@ -452,8 +498,12 @@ function fill_server_status_accordion(status_events, brief_targets, status_targe
                 }
                 
             });
-            $(brief_targets["EN"]).removeClass("spinner");
-            $(brief_targets["DK"]).removeClass("spinner");
+            if (active_announcements > 0) {
+                status_res["EN"] += ", with " + active_announcements + " active announcements";
+                status_res["DK"] += ", med " + active_announcements + " aktuelle varsler";
+            }
+            $(brief_targets["EN"]).removeClass("spinner iconleftpad");
+            $(brief_targets["DK"]).removeClass("spinner iconleftpad");
             $(brief_targets["EN"]).html(status_res["EN"]).addClass(status_res["status_icon"]);
             $(brief_targets["DK"]).html(status_res["DK"]).addClass(status_res["status_icon"]);
             $(status_targets["EN"]).html(en_items.join(""));
@@ -491,7 +541,7 @@ function fill_server_status_popup(status_events, system_match, locale) {
     var time = now.toLocaleTimeString(locale);
     var outage_count = 0, warn_count = 0, announce_count = 0;
 
-    $("#sitestatus-line").addClass("spinner").addClass("iconleftpad");
+    $("#sitestatus-line").addClass("spinner iconleftpad");
     $("#sitestatus-line").html("Loading status information ... please wait");
     try {
         $.getJSON(status_events).done(function(response) {
@@ -574,7 +624,7 @@ function fill_server_status_popup(status_events, system_match, locale) {
                 status_line = "Currently one or more active site service warnings.";
             } else if (announce_count > 0) {
                 status_icon = "fa-info-circle";
-                status_color = "green";
+                status_color = "orange";
                 status_caption = "ANNOUNCED";
                 status_line = "All site services online but pending notices.";
             } else {
@@ -594,15 +644,15 @@ function fill_server_status_popup(status_events, system_match, locale) {
             $("#sitestatus-icon").css("color", status_color);
             $("#sitestatus-caption").html(status_caption);
             $("#sitestatus-timestamp").html("at "+time);
-            $("#sitestatus-line").removeClass("spinner").removeClass("iconleftpad");
+            $("#sitestatus-line").removeClass("spinner iconleftpad");
             $("#sitestatus-line").html(status_line);
-            $("#sitestatus-announce").removeClass("spinner");
+            $("#sitestatus-announce").removeClass("spinner iconleftpad");
             $("#sitestatus-announce").html(announce_text);
 
             console.debug("update server status complete");
         }).fail(function(response) {
             console.error("get status failed: "+ response);
-            $("#sitestatus-line").removeClass("spinner");
+            $("#sitestatus-line").removeClass("spinner iconleftpad");
             $("#sitestatus-line").html("Failed to dynamically load status information.");
         });
     } catch(err) {

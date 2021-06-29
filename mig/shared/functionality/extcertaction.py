@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # extcertaction - handle external certificate sign up and send email to admins
-# Copyright (C) 2003-2017  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -35,9 +35,11 @@ import time
 import tempfile
 
 from mig.shared import returnvalues
+from mig.shared.accountreq import user_manage_commands
+from mig.shared.accountstate import default_account_expire
 from mig.shared.base import force_utf8, force_unicode, generate_https_urls, \
-     distinguished_name_to_user, fill_distinguished_name, fill_user
-from mig.shared.defaults import user_db_filename, cert_valid_days
+    distinguished_name_to_user, fill_distinguished_name, fill_user
+from mig.shared.defaults import user_db_filename
 from mig.shared.functional import validate_input_and_cert, REJECT_UNSET
 from mig.shared.handlers import safe_handler, get_csrf_limit
 from mig.shared.init import initialize_main_variables
@@ -57,7 +59,8 @@ def signature():
         'country': REJECT_UNSET,
         'state': [''],
         'comment': [''],
-        }
+        'accept_terms': [''],
+    }
     return ['text', defaults]
 
 
@@ -66,9 +69,9 @@ def main(client_id, user_arguments_dict):
 
     (configuration, logger, output_objects, op_name) = \
         initialize_main_variables(client_id, op_header=False)
-    output_objects.append({'object_type': 'header', 'text'
-                          : '%s external certificate sign up' % \
-                            configuration.short_title })
+    output_objects.append({'object_type': 'header', 'text':
+                           '%s external certificate sign up' %
+                           configuration.short_title})
 
     defaults = signature()[1]
     (validate_status, accepted) = validate_input_and_cert(
@@ -79,7 +82,7 @@ def main(client_id, user_arguments_dict):
         configuration,
         allow_rejects=False,
         require_user=False
-        )
+    )
     if not validate_status:
         logger.warning('%s invalid input: %s' % (op_name, accepted))
         return (accepted, returnvalues.CLIENT_ERROR)
@@ -90,17 +93,18 @@ def main(client_id, user_arguments_dict):
 
     cert_id = accepted['cert_id'][-1].strip()
 
+    # TODO: switch to canonical_user fra mig.shared.base instead?
     # force name to capitalized form (henrik karlsen -> Henrik Karlsen)
     # please note that we get utf8 coded bytes here and title() treats such
     # chars as word termination. Temporarily force to unicode.
 
-    raw_name = accepted['cert_name'][-1].strip() 
+    raw_name = accepted['cert_name'][-1].strip()
     try:
         cert_name = force_utf8(force_unicode(raw_name).title())
     except Exception:
         cert_name = raw_name.title()
     country = accepted['country'][-1].strip().upper()
-    state = accepted['state'][-1].strip().title()
+    state = accepted['state'][-1].strip().upper()
     org = accepted['org'][-1].strip()
 
     # lower case email address
@@ -114,6 +118,8 @@ def main(client_id, user_arguments_dict):
     # single quotes break command line format - remove
 
     comment = comment.replace("'", ' ')
+    accept_terms = (accepted['accept_terms'][-1].strip().lower() in
+                    ('1', 'o', 'y', 't', 'on', 'yes', 'true'))
 
     if not safe_handler(configuration, 'post', op_name, client_id,
                         get_csrf_limit(configuration), accepted):
@@ -121,6 +127,14 @@ def main(client_id, user_arguments_dict):
             {'object_type': 'error_text', 'text': '''Only accepting
 CSRF-filtered POST requests to prevent unintended updates'''
              })
+        return (output_objects, returnvalues.CLIENT_ERROR)
+
+    if not accept_terms:
+        output_objects.append({'object_type': 'error_text', 'text':
+                               'You must accept the terms of use in sign up!'})
+        output_objects.append(
+            {'object_type': 'link', 'destination': 'javascript:history.back();',
+             'class': 'genericbutton', 'text': "Try again"})
         return (output_objects, returnvalues.CLIENT_ERROR)
 
     is_diku_email = False
@@ -135,8 +149,8 @@ CSRF-filtered POST requests to prevent unintended updates'''
         is_diku_org = True
 
     if is_diku_org != is_diku_email:
-        output_objects.append({'object_type': 'error_text', 'text'
-                              : '''Illegal email and organization combination:
+        output_objects.append({'object_type': 'error_text', 'text':
+                               '''Illegal email and organization combination:
 Please read and follow the instructions in red on the request page!
 If you are a DIKU student with only a @*.ku.dk address please just use KU as
 organization.
@@ -148,8 +162,8 @@ comment field, you will be given access to the necessary resources anyway.
     try:
         distinguished_name_to_user(cert_id)
     except:
-        output_objects.append({'object_type': 'error_text', 'text'
-                              : '''Illegal Distinguished name:
+        output_objects.append({'object_type': 'error_text', 'text':
+                               '''Illegal Distinguished name:
 Please note that the distinguished name must be a valid certificate DN with
 multiple "key=val" fields separated by "/".
 '''})
@@ -164,20 +178,20 @@ multiple "key=val" fields separated by "/".
         'email': email,
         'password': '',
         'comment': '%s: %s' % ('Existing certificate', comment),
-        'expire': int(time.time() + cert_valid_days * 24 * 60 * 60),
+        'expire': default_account_expire(configuration, 'cert'),
         'openid_names': [],
         'auth': ['extcert'],
-        }
+    }
     fill_distinguished_name(user_dict)
     user_id = user_dict['distinguished_name']
     if configuration.user_openid_providers and configuration.user_openid_alias:
         user_dict['openid_names'] += \
-                                  [user_dict[configuration.user_openid_alias]]
+            [user_dict[configuration.user_openid_alias]]
     logger.info('got extcert request: %s' % user_dict)
 
     # If server allows automatic addition of users with a CA validated cert
     # we create the user immediately and skip mail
-    
+
     if configuration.auto_add_cert_user:
         fill_user(user_dict)
 
@@ -189,16 +203,16 @@ multiple "key=val" fields separated by "/".
                         ask_renew=False)
         except Exception as err:
             logger.error('Failed to create user with existing cert %s: %s'
-                     % (cert_id, err))
+                         % (cert_id, err))
             output_objects.append(
-                {'object_type': 'error_text', 'text'
-                 : '''Could not create the user account for you:
-Please report this problem to the grid administrators (%s).''' % \
+                {'object_type': 'error_text', 'text':
+                 '''Could not create the user account for you:
+Please report this problem to the site administrators (%s).''' %
                  admin_email})
             return (output_objects, returnvalues.SYSTEM_ERROR)
 
-        output_objects.append({'object_type': 'text', 'text'
-                                   : '''Created the user account for you:
+        output_objects.append({'object_type': 'text', 'text':
+                               '''Created the user account for you:
 Please use the navigation menu to the left to proceed using it.
 '''})
         return (output_objects, returnvalues.OK)
@@ -213,9 +227,9 @@ Please use the navigation menu to the left to proceed using it.
         logger.error('Failed to write existing certificate request to %s: %s'
                      % (req_path, err))
         output_objects.append(
-            {'object_type': 'error_text', 'text'
-             : """Request could not be sent to grid administrators. Please
-contact them manually on %s if this error persists.""" % \
+            {'object_type': 'error_text', 'text':
+             """Request could not be sent to site administrators. Please
+contact them manually on %s if this error persists.""" %
              admin_email})
         return (output_objects, returnvalues.SYSTEM_ERROR)
 
@@ -224,21 +238,9 @@ contact them manually on %s if this error persists.""" % \
     user_dict['tmp_id'] = tmp_id
 
     mig_user = os.environ.get('USER', 'mig')
-    command_user_create = \
-        """
-As '%s' on %s:
-cd ~/mig/server
-./createuser.py -i '%s' -u '%s'"""\
-         % (mig_user, configuration.server_fqdn, cert_id, req_path)
-    command_user_delete = \
-        """
-As '%s' user on %s:
-cd ~/mig/server
-./deleteuser.py -i '%s'"""\
-         % (mig_user, configuration.server_fqdn, cert_id)
-
-    user_dict['command_user_create'] = command_user_create
-    user_dict['command_user_delete'] = command_user_delete
+    helper_commands = user_manage_commands(configuration, mig_user, req_path,
+                                           user_id, user_dict, 'cert')
+    user_dict.update(helper_commands)
     user_dict['site'] = configuration.short_title
     user_dict['vgrid_label'] = configuration.site_vgrid_label
     user_dict['vgridman_links'] = generate_https_urls(
@@ -266,30 +268,36 @@ to any relevant %(vgrid_label)ss using one of the management links:
 %(vgridman_links)s
 
 ---
+
+Command to reject user account request on %(site)s server:
+%(command_user_reject)s
+
+Command to suspend user on %(site)s server:
+%(command_user_suspend)s
+
 Command to delete user again on %(site)s server:
 %(command_user_delete)s
 ---
 
-"""\
-         % user_dict
+""" % user_dict
 
     logger.info('Sending email: to: %s, header: %s, msg: %s, smtp_server: %s'
-                 % (admin_email, email_header, email_msg, smtp_server))
+                % (admin_email, email_header, email_msg, smtp_server))
     if not send_email(admin_email, email_header, email_msg, logger,
                       configuration):
         output_objects.append(
-            {'object_type': 'error_text', 'text'
-             : """An error occured trying to send the email requesting the
-grid administrators to sign up with an existing certificate. Please email the
-grid administrators (%s) manually and include the session ID: %s"""
+            {'object_type': 'error_text', 'text':
+             """An error occured trying to send the email requesting the
+sign up with an existing certificate. Please email the site administrators (%s)
+manually and include the session ID: %s"""
              % (admin_email, tmp_id)})
         return (output_objects, returnvalues.SYSTEM_ERROR)
 
     output_objects.append(
-        {'object_type': 'text', 'text'
-         : """Request sent to grid administrators: Your request for a %s user
+        {'object_type': 'text', 'text':
+         """Request sent to site administrators: Your request for a %s user
 account with your existing certificate will be verified and handled as soon as
 possible, so please be patient. In case of inquiries about this request,
-please email the grid administrators (%s) and include the session ID: %s"""
+please email the site administrators (%s) and include the session ID: %s"""
          % (configuration.short_title, admin_email, tmp_id)})
     return (output_objects, returnvalues.OK)

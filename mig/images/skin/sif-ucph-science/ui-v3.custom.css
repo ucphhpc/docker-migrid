@@ -425,6 +425,11 @@ a {
 
 
 /* PAGE - FILE MANAGER */
+/* Avoid white and grey interference */
+#fm_filemanager, #fm_filechooser {
+  background: #fff;
+}
+
 /*HEADER BAR*/
 #fm_filemanager > .container-fluid {
     padding-left: 0;
@@ -700,6 +705,12 @@ a {
 
 .editlink {
     background-image: url('/images/icons/page_edit_46743c.svg'); 
+}
+.invitelink {
+    background-image: url('/images/icons/page_white_add_46743c.svg');
+}
+.userlink {
+    background-image: url('/images/icons/anonymous_46743c.svg');
 }
 .sharedfolderlink {
     background-image: url('/images/icons/folder_link_46743c.svg');

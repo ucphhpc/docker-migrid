@@ -38,6 +38,7 @@ per-user subdir chrooting inside root_dir.
 from __future__ import print_function
 from __future__ import absolute_import
 
+import base64
 import os
 import sys
 import threading
@@ -69,7 +70,8 @@ except ImportError as ierr:
 from mig.shared.accountstate import check_account_accessible
 from mig.shared.base import invisible_path, force_unicode
 from mig.shared.conf import get_configuration_object
-from mig.shared.defaults import dav_domain, litmus_id, io_session_timeout
+from mig.shared.defaults import dav_domain, litmus_id, io_session_timeout, \
+    STRONG_TLS_CIPHERS, STRONG_TLS_LEGACY_CIPHERS
 from mig.shared.fileio import check_write_access, user_chroot_exceptions
 from mig.shared.gdp.all import project_open, project_close, project_log
 from mig.shared.griddaemons.davs import get_fs_path, acceptable_chmod, \
@@ -84,18 +86,19 @@ from mig.shared.logger import daemon_logger, daemon_gdp_logger, \
     register_hangup_handler
 from mig.shared.notification import send_system_notification
 from mig.shared.pwhash import make_scramble, unscramble_digest, \
-    assure_password_strength
+    make_simple_hash, assure_password_strength
 from mig.shared.sslsession import ssl_session_token
 from mig.shared.tlsserver import hardened_ssl_context
 from mig.shared.useradm import check_password_hash, generate_password_hash, \
     generate_password_digest
 from mig.shared.validstring import possible_user_id, possible_gdp_user_id, \
     possible_sharelink_id
+from mig.shared.vgrid import in_vgrid_share
 
 configuration, logger = None, None
 
 
-def _handle_allowed(request, abs_path):
+def _handle_allowed(request, abs_path, path):
     """Helper to make sure ordinary handle of a COPY, MOVE or DELETE
     request is allowed on abs_path.
 
@@ -105,7 +108,11 @@ def _handle_allowed(request, abs_path):
     NOTE: We prevent any direct operation on symlinks used in vgrid shares.
     This is in line with other grid_X daemons and the web interface.
     """
-    if os.path.islink(abs_path):
+    if request != "copy" \
+            and in_vgrid_share(configuration, abs_path) == path[1:]:
+        logger.warning("refused %s on vgrid: %s" % (request, abs_path))
+        raise DAVError(HTTP_FORBIDDEN)
+    elif os.path.islink(abs_path):
         logger.warning("refused %s on symlink: %s" % (request, abs_path))
         raise DAVError(HTTP_FORBIDDEN)
     elif invisible_path(abs_path):
@@ -243,16 +250,29 @@ class HardenedSSLAdapter(BuiltinSSLAdapter):
     certificate = None
     private_key = None
 
-    def __init__(self, certificate, private_key, certificate_chain=None):
+    def __init__(self, certificate, private_key, certificate_chain=None,
+                 legacy_tls=False):
         """Initialize with parent constructor and set up a shared hardened SSL
         context to use in all future connections in the wrap method.
+
+        If the optional legacy_tls arg is set the STRONG_TLS_LEGACY_CIPHERS
+        are used instead of the STRONG_TLS_CIPHERS, and the limitation to
+        TSLv1.2+ is left out to allow legacy TLSv1.0 and TLSv1.1 connections.
+        This is required to support e.g. native Windows 7 WebDAVS access with
+        the weak ECDHE-RSA-AES128-SHA cipher.
         """
         BuiltinSSLAdapter.__init__(self, certificate, private_key,
                                    certificate_chain)
         # Set up hardened SSL context once and for all
         dhparams = configuration.user_shared_dhparams
+        if legacy_tls:
+            use_ciphers = STRONG_TLS_LEGACY_CIPHERS
+        else:
+            use_ciphers = STRONG_TLS_CIPHERS
         self.ssl_ctx = hardened_ssl_context(configuration, self.private_key,
-                                            self.certificate, dhparams)
+                                            self.certificate, dhparams,
+                                            ciphers=use_ciphers,
+                                            allow_pre_tlsv12=legacy_tls)
 
     def __force_close(self, socket_list):
         """Force close each socket in socket_list ignoring any errors"""
@@ -501,7 +521,7 @@ class MiGHTTPAuthenticator(HTTPAuthenticator):
         result = None
         response_ok = False
         pre_authorized = False
-        secret = None
+        hashed_secret = None
         authorized = False
         disconnect = False
         valid_session = False
@@ -558,8 +578,8 @@ class MiGHTTPAuthenticator(HTTPAuthenticator):
                     .authDigestAuthRequest(environ, start_response)
             auth_username = environ.get('http_authenticator.username', None)
             auth_realm = environ.get('http_authenticator.realm', None)
-            #print "DEBUG: auth_username: %s" % auth_username
-            #print "DEBUG: auth_realm: %s" % auth_realm
+            # print "DEBUG: auth_username: %s" % auth_username
+            # print "DEBUG: auth_realm: %s" % auth_realm
             if auth_username and auth_username == username and auth_realm:
                 if password_auth:
                     valid_password = True
@@ -585,9 +605,10 @@ class MiGHTTPAuthenticator(HTTPAuthenticator):
             # and therefore we do not have any other unique identifiers
 
             if password_auth:
-                secret = authheader.get('password', '')
-            if not secret:
-                secret = environ.get('SSL_SESSION_TOKEN', None)
+                hashed_secret = make_simple_hash(base64.b64encode(
+                    authheader.get('password', '')))
+            if not hashed_secret:
+                hashed_secret = environ.get('SSL_SESSION_TOKEN', None)
 
             # Update rate limits and write to auth log
 
@@ -602,7 +623,7 @@ class MiGHTTPAuthenticator(HTTPAuthenticator):
                 username,
                 ip_addr,
                 tcp_port,
-                secret=secret,
+                secret=hashed_secret,
                 invalid_username=invalid_username,
                 invalid_user=invalid_user,
                 account_accessible=account_accessible,
@@ -862,13 +883,13 @@ class MiGFileResource(FileResource):
         @wraps(method)
         def _impl(self, *method_args, **method_kwargs):
             if method.__name__ == 'handleCopy':
-                _handle_allowed("copy", self._filePath)
+                _handle_allowed("copy", self._filePath, self.path)
             elif method.__name__ == 'handleMove':
-                _handle_allowed("move", self._filePath)
+                _handle_allowed("move", self._filePath, self.path)
             elif method.__name__ == 'handleDelete':
-                _handle_allowed("delete", self._filePath)
+                _handle_allowed("delete", self._filePath, self.path)
             else:
-                _handle_allowed("unknown", self._filePath)
+                _handle_allowed("unknown", self._filePath, self.path)
             return method(self, *method_args, **method_kwargs)
         return _impl
 
@@ -989,13 +1010,13 @@ class MiGFolderResource(FolderResource):
         @wraps(method)
         def _impl(self, *method_args, **method_kwargs):
             if method.__name__ == 'handleCopy':
-                _handle_allowed("copy", self._filePath)
+                _handle_allowed("copy", self._filePath, self.path)
             elif method.__name__ == 'handleMove':
-                _handle_allowed("move", self._filePath)
+                _handle_allowed("move", self._filePath, self.path)
             elif method.__name__ == 'handleDelete':
-                _handle_allowed("delete", self._filePath)
+                _handle_allowed("delete", self._filePath, self.path)
             else:
-                _handle_allowed("unknown", self._filePath)
+                _handle_allowed("unknown", self._filePath, self.path)
             return method(self, *method_args, **method_kwargs)
         return _impl
 
@@ -1577,7 +1598,7 @@ def run(configuration):
         # wsgiserver.CherryPyWSGIServer.ssl_adapter = BuiltinSSLAdapter(
         #     cert, key, chain)
         wsgiserver.CherryPyWSGIServer.ssl_adapter = HardenedSSLAdapter(
-            cert, key, chain)
+            cert, key, chain, configuration.site_enable_davs_legacy_tls)
 
     # Use bundled CherryPy WSGI Server to support SSL
     version = "%s WebDAV" % configuration.short_title

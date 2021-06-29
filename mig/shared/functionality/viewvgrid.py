@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # viewvgrid - Display public details about a vgrid
-# Copyright (C) 2003-2019 The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021 The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -26,6 +26,7 @@
 #
 
 """Get info about a VGrid"""
+
 from __future__ import absolute_import
 
 from mig.shared import returnvalues
@@ -33,6 +34,8 @@ from mig.shared.defaults import keyword_owners, keyword_members, keyword_none, \
     keyword_all
 from mig.shared.functional import validate_input_and_cert, REJECT_UNSET
 from mig.shared.init import initialize_main_variables, find_entry
+from mig.shared.output import html_link
+from mig.shared.user import anon_user_id
 from mig.shared.vgrid import vgrid_owners, vgrid_members, vgrid_resources, \
     vgrid_settings, vgrid_is_owner, vgrid_is_owner_or_member
 from mig.shared.vgridaccess import user_vgrid_access
@@ -45,6 +48,21 @@ def signature():
 
     defaults = {'vgrid_name': REJECT_UNSET}
     return ['vgrid_info', defaults]
+
+
+def translate_legacy_value(name, vgrid_dict, keyword_map):
+    """Legacy vgrids may have True or False values where we now expect keys to
+    be a group constant. Translate any such legacy values to the modern value.
+    """
+    raw_val = vgrid_dict.get(name, True)
+    if raw_val in keyword_map:
+        return raw_val
+    translate_map = {'write_shared_files': {True: keyword_members, False: keyword_none},
+                     'write_priv_web': {True: keyword_owners, False: keyword_none},
+                     'write_pub_web': {True: keyword_owners, False: keyword_none}}
+    if not name in translate_map:
+        return keyword_none
+    return translate_map[name].get(raw_val, keyword_none)
 
 
 def build_vgriditem_object_from_vgrid_dict(configuration, vgrid_name,
@@ -72,12 +90,17 @@ def build_vgriditem_object_from_vgrid_dict(configuration, vgrid_name,
     resource_visibility = keyword_map[visible_resources]
     create_sharelink = vgrid_dict.get('create_sharelink', keyword_owners)
     sharelink_access = keyword_map[create_sharelink]
-    write_shared_files = keyword_map[vgrid_dict.get('write_shared_files',
-                                                    keyword_members)]
-    write_priv_web = keyword_map[vgrid_dict.get('write_priv_web',
-                                                keyword_owners)]
-    write_pub_web = keyword_map[vgrid_dict.get('write_pub_web',
-                                               keyword_owners)]
+
+    # NOTE: legacy vgrids may have True or False value here instead
+    write_val = translate_legacy_value('write_shared_files', vgrid_dict,
+                                       keyword_map)
+    write_shared_files = keyword_map[write_val]
+    write_val = translate_legacy_value('write_priv_web', vgrid_dict,
+                                       keyword_map)
+    write_priv_web = keyword_map[write_val]
+    write_val = translate_legacy_value('write_pub_web', vgrid_dict,
+                                       keyword_map)
+    write_pub_web = keyword_map[write_val]
     hidden = bool_map[vgrid_dict.get('hidden', False)]
     vgrid_item['fields'].append(('Description', description))
     vgrid_item['fields'].append(('Owners', '\n'.join(owners)))
@@ -152,12 +175,29 @@ def main(client_id, user_arguments_dict):
                             'visible_owners'):
             (owners_status, owners) = vgrid_owners(vgrid_name, configuration)
             if owners_status:
-                vgrid_dict['owners'] = owners
+                vgrid_dict['owners'] = []
+                for user_id in owners:
+                    anon_id = anon_user_id(user_id)
+                    user_link = html_link({
+                        'destination': 'viewuser.py?cert_id=%s' % anon_id,
+                        'class': 'userlink iconspace',
+                        'title': 'View user details for %s' % user_id,
+                        'text': user_id})
+                    vgrid_dict['owners'].append(user_link)
+
         if user_view_access(configuration, vgrid_name, client_id, settings_dict,
                             'visible_members'):
             (members_status, members) = vgrid_members(vgrid_name, configuration)
             if members_status:
-                vgrid_dict['members'] = members
+                vgrid_dict['members'] = []
+                for user_id in members:
+                    anon_id = anon_user_id(user_id)
+                    user_link = html_link({
+                        'destination': 'viewuser.py?cert_id=%s' % anon_id,
+                        'class': 'userlink iconspace',
+                        'title': 'View user details for %s' % user_id,
+                        'text': user_id})
+                    vgrid_dict['members'].append(user_link)
         if user_view_access(configuration, vgrid_name, client_id, settings_dict,
                             'visible_resources'):
             (res_status, resources) = vgrid_resources(vgrid_name, configuration)

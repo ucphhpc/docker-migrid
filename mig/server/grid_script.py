@@ -84,7 +84,7 @@ def time_out_jobs(stop_event):
     and handling may result in this function sending multiple
     JOBTIMEOUT messages for the same job to the input pipe before
     the first one gets through the pipe and handled. Thus we may see
-    'echoes' in the log. 
+    'echoes' in the log.
     """
 
     # We must make sure that thread keeps running even
@@ -1098,8 +1098,6 @@ while True:
                                     % (new_job['JOB_ID'],
                                        unique_resource_name, exe))
 
-                        # Setup base job history entry
-
                         if 'WORKFLOW_TRIGGER_ID' in new_job:
                             created, msg = create_workflow_job_history_file(
                                 configuration,
@@ -1115,18 +1113,16 @@ while True:
                             )
 
                             if not created:
-                                logger.debug(
-                                    "Could not create job history file %s "
-                                    "for job %s. %s" % (
-                                        new_job['SESSIONID'],
-                                        new_job['JOB_ID'], msg))
-                            else:
-                                logger.debug(
-                                    "Created new history file at: %s" % msg)
-
-                        else:
-                            logger.debug("Skipping history creation for "
-                                         "job %s" % new_job['JOB_ID'])
+                                logger.error("Could not create job history "
+                                             "file %s for job %s. %s"
+                                             % (new_job['SESSIONID'],
+                                                new_job['JOB_ID'], msg))
+                            # else:
+                            #     logger.debug("Created new history file at: "
+                            #                  "%s" % msg)
+                        # else:
+                        #     logger.debug("Skipping history creation for "
+                        #                  "job %s" % new_job['JOB_ID'])
 
                         # put job in executing queue - with maxfilled values
 

@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # safeinput - user input validation functions
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -41,6 +41,11 @@ import cgi
 from email.utils import parseaddr, formataddr
 from string import ascii_letters, digits, printable
 from unicodedata import category, normalize, name as unicode_name
+
+try:
+    import nbformat
+except ImportError:
+    nbformat = None
 
 from mig.shared.base import force_unicode, force_utf8
 from mig.shared.defaults import src_dst_sep, user_id_charset, user_id_max_length, \
@@ -97,7 +102,7 @@ _ACCENT_CATS = frozenset(('Lu', 'Ll', 'Lt', ))
 # found glyphs: áÁàÀâÂäÄãÃåÅæÆçÇéÉèÈêÊëËíÍìÌîÎïÏñÑóÓòÒôÔöÖõÕøØœŒßúÚùÙûÛüÜ
 
 VALID_ACCENTED = \
-    'áÁàÀâÂäÄãÃåÅæÆçÇéÉèÈêÊëËíÍìÌîÎïÏñÑóÓòÒôÔöÖõÕøØœŒßúÚùÙûÛüÜ'
+    'áÁàÀâÂäÄãÃåÅæÆçÇéÉèÈêÊëËíÍìÌîÎïÏñÑóÓòÒôÔöÖõÕøØœŒßúÚùÙûÛüÜ' + 'ıİ'
 
 # NOTE: we carefully avoid shell interpretation of dollar everywhere
 
@@ -138,21 +143,25 @@ ALLOW_UNSAFE = \
 # Allow these chars in addition to plain letters and digits
 # We explicitly allow email chars in CN to work around broken DNs
 
-#*****************************************************************************
-#* IMPORTANT: never allow '+' or '_' in name: reserved for path translation! *
-#*****************************************************************************
+# *****************************************************************************
+# * IMPORTANT: never allow '+' or '_' in name: reserved for path translation! *
+# *****************************************************************************
 
-name_extras = ' -@.'
+# NOTE: only real name extra chars here
+name_extras = ' -.'
+# NOTE: organization may also contain comma as in UNIVERSITY, DEPARTMENT
+org_extras = name_extras + ','
 
-#*****************************************************************************
-#* IMPORTANT: never allow '+' in DN: reserved for path translation!          *
-#*****************************************************************************
+# *****************************************************************************
+# * IMPORTANT: never allow '+' in DN: reserved for path translation!          *
+# *****************************************************************************
 # We allow ':' in DN, however, as it is used by e.g. DanID:
 # /C=DK/O=Ingen organisatorisk tilknytning/CN=${NAME}/serialNumber=PID:${SERIAL}
 # Similarly we must allow '_' in DN since it is valid in emailAddress. We only
 # need to make sure it doesn't appear in name parts above.
 
-dn_extras = name_extras + '/=:_'
+# NOTE: org_extras includes name_extras, and we add @ for email part.
+dn_extras = org_extras + '/=:_@'
 
 # Allow explicit sign and exponential notation in integers and floats
 integer_extras = '+-eE'
@@ -167,12 +176,14 @@ valid_integer_chars = digits + integer_extras
 valid_float_chars = digits + float_extras
 valid_password_chars = ascii_letters + digits + password_extras
 valid_name_chars = ascii_letters + digits + name_extras
+valid_org_chars = ascii_letters + digits + org_extras
 valid_dn_chars = ascii_letters + digits + dn_extras
 valid_username_chars = user_id_charset
 VALID_INTEGER_CHARACTERS = valid_integer_chars
 VALID_FLOAT_CHARACTERS = valid_float_chars
 VALID_PASSWORD_CHARACTERS = valid_password_chars
 VALID_NAME_CHARACTERS = valid_name_chars
+VALID_ORG_CHARACTERS = valid_org_chars
 VALID_DN_CHARACTERS = valid_dn_chars
 VALID_USERNAME_CHARACTERS = valid_username_chars
 
@@ -238,7 +249,7 @@ def __valid_contents(
            include_accented == COMMON_ACCENTED and char in accented_chars or \
            include_accented == ANY_ACCENTED and category(char) in _ACCENT_CATS:
             continue
-        raise InputException("found invalid character: '%s' (allowed: %s)"
+        raise InputException("found invalid character: %r (allowed: %s)"
                              % (char, valid_chars))
 
 
@@ -320,7 +331,7 @@ def valid_alphanumeric(contents, min_length=0, max_length=-1, extra_chars=''):
 
     __valid_contents(
         contents, ascii_letters + digits + extra_chars, min_length,
-                     max_length)
+        max_length)
 
 
 def valid_alphanumeric_and_spaces(contents, min_length=0, max_length=-1,
@@ -447,6 +458,21 @@ def valid_commonname(
 
     valid_chars = VALID_NAME_CHARACTERS + extra_chars
     __valid_contents(commonname, valid_chars, min_length, max_length,
+                     COMMON_ACCENTED)
+
+
+def valid_organization(
+    organization,
+    min_length=1,
+    max_length=255,
+    extra_chars='',
+):
+    """Verify that supplied organization name only contains
+    characters that we consider valid.
+    """
+
+    valid_chars = VALID_ORG_CHARACTERS + extra_chars
+    __valid_contents(organization, valid_chars, min_length, max_length,
                      COMMON_ACCENTED)
 
 
@@ -803,6 +829,14 @@ def valid_simple_email_address(addr):
     valid_email_address(addr, False)
 
 
+def valid_email_addresses(addresses, allow_real_name=False):
+    """Parse one or more whitespace-separated email addresses contained in a
+    single string. Useful e.g. for checking textarea emails.
+    """
+    for addr in addresses.split():
+        valid_email_address(addr, allow_real_name)
+
+
 def is_valid_simple_email(addr):
     """Helper for quick testing of plain email address validity"""
     try:
@@ -1014,6 +1048,25 @@ def valid_workflow_param_over(params):
         )
 
 
+def valid_workflow_source(source):
+    """Verify that supplied source dictionary expressed a valid jupyter
+    notebook.
+    """
+    if not nbformat:
+        return False
+    try:
+        nbformat.validate(source, version=4)
+    except nbformat.ValidationError:
+        return False
+    return True
+
+
+def valid_workflow_recipe(recipe):
+    """Verify that supplied recipe name only contains valid characters.
+    """
+    valid_alphanumeric(recipe, extra_chars='+-=:_-')
+
+
 def valid_workflow_attributes(attributes):
     """Verify that supplied attributes dictionary only contains entries that
       we consider valid workflow attribute keys.
@@ -1037,6 +1090,32 @@ def valid_workflow_operation(operation):
 def valid_workflow_type(type):
     """Verify that the supplied workflow type only contains letters"""
     valid_ascii(type, extra_chars='_')
+
+
+def valid_request_operation(operation):
+    """Verify that the supplied request operation only contains letters and
+    underscores.
+    """
+    valid_ascii(operation, extra_chars='_')
+
+
+def valid_request_type(type):
+    """Verify that the supplied request type only contains letters"""
+    valid_ascii(type, extra_chars='_')
+
+
+def valid_request_vgrid(vgrid):
+    """Verify that supplied vgrid only contains characters that
+    we consider valid in a vgrid name."""
+    valid_vgrid_name(vgrid)
+
+
+def valid_request_attributes(attributes):
+    """Verify that supplied attributes is a dictionary. Note, does not check
+    contents of said dictionary.
+    """
+    if not isinstance(attributes, dict):
+        raise InputException("Expects requests attributes to be a dictionary")
 
 
 def valid_job_vgrid(vgrid):
@@ -1105,6 +1184,12 @@ def filter_commonname(contents):
     """Filter supplied contents to only contain valid commonname characters"""
 
     return __filter_contents(contents, VALID_NAME_CHARACTERS, COMMON_ACCENTED)
+
+
+def filter_organization(contents):
+    """Filter supplied contents to only contain valid organization characters"""
+
+    return __filter_contents(contents, VALID_ORG_CHARACTERS, COMMON_ACCENTED)
 
 
 def filter_password(contents):
@@ -1306,6 +1391,30 @@ def validated_commonname(user_arguments_dict, name, default):
     return (filter_commonname(first), err)
 
 
+def validated_organization(user_arguments_dict, name, default):
+    """Fetch first value of name argument and validate it"""
+
+    err = ''
+
+    # Force default value into a string
+
+    default_value = str(default)
+    if default != default_value:
+        err += 'Invalid string default value (%s)' % default
+    try:
+        first = user_arguments_dict[name][0]
+    except:
+        first = str(default)
+
+    # Validate input
+
+    try:
+        valid_organization(first)
+    except InputException as iex:
+        err += '%s' % iex
+    return (filter_commonname(first), err)
+
+
 def validated_password(user_arguments_dict, name, default):
     """Fetch first value of name argument and validate it"""
 
@@ -1395,23 +1504,30 @@ def guess_type(name):
 
         # TODO: extend to include all used variables here
 
+        # NOTE: we keep the defaults tight here and force 'path' to be a plain
+        #       path and not a path pattern, although it sometimes may be.
+        #       One should *explicitly* override the validator for 'path' vars
+        #       using the typecheck_overrides arg in validate_input calls in
+        #       the backends where wildcard paths are accepted (i.e. in ls,
+        #       cat, head, ...) but leave it to default for all the others.
         for key in (
             'path',
             'src',
             'dst',
             'current_dir',
+            'fileupload',
+            'public_image',
+            'script_dir',
+        ):
+            # IMPORTANT: please do NOT change this to valid_path_pattern!
+            __type_map[key] = valid_path
+        for key in (
             'pattern',
             'arguments',
             'hostkey',
             'exclude',
         ):
             __type_map[key] = valid_path_pattern
-        for key in (
-            'fileupload',
-            'public_image',
-            'script_dir',
-        ):
-            __type_map[key] = valid_path
         for key in (
             'executables',
             'inputfiles',
@@ -1536,35 +1652,46 @@ def guess_type(name):
             __type_map[key] = lambda x: valid_fqdn(x, min_length=0)
         for key in ('execution_user', 'storage_user'):
             __type_map[key] = lambda x: valid_job_id(x, min_length=0)
+        # dept org and author may be empty or a comma-separated list
         for key in ('freeze_department', 'freeze_organization',
+                    'freeze_author',
                     ):
-            __type_map[key] = lambda x: valid_commonname(x, min_length=0)
-        # author may be empty or a comma-separated list
-        for key in ('freeze_author', ):
-            __type_map[key] = lambda x: valid_commonname(x, min_length=0,
-                                                         extra_chars=',')
+            __type_map[key] = lambda x: valid_organization(x, min_length=0)
         # EXECONFIG vgrid field which may be empty or a comma-separated list
         for key in ('vgrid', ):
             __type_map[key] = lambda x: valid_vgrid_name(x, min_length=0,
                                                          extra_chars=",")
         for key in (
+            'full_name',
             'cert_name',
-            'org',
             'machine_software',
             'openid.sreg.cn',
             'openid.sreg.fullname',
             'openid.sreg.full_name',
-            'openid.sreg.nickname',
-            'openid.sreg.o',
-            'openid.sreg.ou',
             'openid.sreg.role',
             'openid.sreg.association',
+            'oidc.claim.fullname',
+            'oidc.claim.role',
+            'oidc.claim.association',
+            'oidc.claim.sub',
             'changes',
             'version',
-            'peers_id',
-            'organization',
         ):
             __type_map[key] = valid_commonname
+        # openid.sreg.required may have commas - reuse organization
+        for key in (
+            'org',
+            'openid.sreg.o',
+            'openid.sreg.ou',
+            'organization',
+            'oidc.claim.o',
+            'oidc.claim.organization',
+            'oidc.claim.ou',
+            'oidc.claim.organizational_unit',
+            'oidc.claim.locality',
+            'openid.sreg.required',
+        ):
+            __type_map[key] = valid_organization
         for key in ('cert_id',
                     'run_as',):
             __type_map[key] = valid_distinguished_name
@@ -1613,12 +1740,15 @@ def guess_type(name):
             'icq',
             'jabber',
             'email',
+            'openid.sreg.nickname',
             'openid.sreg.email',
             'openid.sreg.mail',
+            'oidc.claim.email',
+            'oidc.claim.upn',
             'adminemail',
         ):
             __type_map[key] = valid_email_address
-        for key in ('username', ):
+        for key in ('username', 'ro_fields', ):
             __type_map[key] = valid_username
         for key in (
             'editarea',
@@ -1638,12 +1768,7 @@ def guess_type(name):
             __type_map[key] = valid_free_text
         for key in ('show', 'modauthopenid.error', ):
             __type_map[key] = valid_label_text
-
-        # sreg required may have commas - reuse password
-
-        for key in ('password', 'verifypassword', 'openid.sreg.required',
-                    'transfer_pw',
-                    ):
+        for key in ('password', 'verifypassword', 'transfer_pw', ):
             __type_map[key] = valid_password
         for key in ('hostidentifier'):
             __type_map[key] = valid_alphanumeric
@@ -1903,8 +2028,9 @@ class InputException(Exception):
 
 if __name__ == '__main__':
     for test_cn in ('Firstname Lastname', 'Test Æøå', 'Test Überh4x0r',
-                    u'Unicode æøå', 'Test Maybe Invalid Źacãŕ',
-                    'Test Invalid ?', 'Test HTML Invalid <code/>'):
+                    'Harry S. Truman',  u'Unicode æøå', "Invalid D'Angelo",
+                    'Test Maybe Invalid Źacãŕ', 'Test Invalid ?',
+                    'Test HTML Invalid <code/>'):
         try:
             print('Testing valid_commonname: %s' % test_cn)
             print('Filtered commonname: %s' % filter_commonname(test_cn))
@@ -1913,7 +2039,18 @@ if __name__ == '__main__':
             valid_commonname(test_cn)
             print('Accepted raw commonname!')
         except Exception as exc:
-            print('Rejected raw commonname %s : %s' % (test_cn, exc))
+            print('Rejected raw commonname %r: %s' % (test_cn, exc))
+
+    for test_org in ('UCPH', 'Some University, Some Dept.', 'Green Shoes Ltd.',
+                     u'Unicode Org', "Invalid R+D", "Invalid R/D",
+                     "Invalid R@D", 'Test HTML Invalid <code/>'):
+        try:
+            print('Testing valid_organization: %r' % test_org)
+            print('Filtered organization: %s' % filter_organization(test_org))
+            valid_organization(test_org)
+            print('Accepted raw organization!')
+        except Exception as exc:
+            print('Rejected raw organization %r: %s' % (test_org, exc))
 
     for test_path in ('test.txt', 'Test Æøå', 'Test Überh4x0r',
                       'Test valid Jean-Luc Géraud', 'Test valid Źacãŕ',
@@ -1930,7 +2067,7 @@ if __name__ == '__main__':
             valid_path(test_path)
             print('Accepted raw path!')
         except Exception as exc:
-            print('Rejected raw path %s : %s' % (test_path, exc))
+            print('Rejected raw path %r: %s' % (test_path, exc))
 
     for test_addr in ('', 'invalid', 'abc@dk', 'abc@def.org', 'abc@def.gh.org',
                       'aBc@Def.org', '<invalid@def.org>',
@@ -1952,8 +2089,9 @@ if __name__ == '__main__':
             valid_email_address(test_addr)
             print('Accepted raw address! %s' % [parseaddr(test_addr)])
         except Exception as exc:
-            print('Rejected raw address %s : %s' % (test_addr, exc))
+            print('Rejected raw address %r: %s' % (test_addr, exc))
 
+    # OpenID 2.0 version
     autocreate_defaults = {
         'openid.ns.sreg': [''],
         'openid.sreg.nickname': [''],
@@ -2002,6 +2140,46 @@ if __name__ == '__main__':
         force_unicode('Jonas Æøå Bardino')]
     (accepted, rejected) = validated_input(
         user_arguments_dict, autocreate_defaults)
+    print("Accepted:")
+    for (key, val) in accepted.items():
+        print("\t%s: %s" % (key, val))
+    print("Rejected:")
+    for (key, val) in rejected.items():
+        print("\t%s: %s" % (key, val))
+
+    # OpenID Connect version
+    autocreate_defaults = {
+        'oidc.claim.upn': [''],
+        'oidc.claim.sub': [''],
+        'oidc.claim.nickname': [''],
+        'oidc.claim.email': [''],
+        'oidc.claim.fullname': [''],
+        'oidc.claim.o': [''],
+        'oidc.claim.ou': [''],
+        'oidc.claim.organization': [''],
+        'oidc.claim.organizational_unit': [''],
+        'oidc.claim.country': ['DK'],
+        'oidc.claim.state': [''],
+        'oidc.claim.locality': [''],
+        'oidc.claim.role': [''],
+        'oidc.claim.association': [''],
+        'oidc.claim.timezone': [''],
+        'password': [''],
+        'comment': ['(Created through autocreate)'],
+        'proxy_upload': [''],
+        'proxy_uploadfilename': [''],
+    }
+    user_arguments_dict = {'oidc.claim.sub': ['xyz-123-nsd-e2e-e3e-dd3'],
+                           'oidc.claim.ou': ['nbi'],
+                           'oidc.claim.upn': ['brs278@ku.dk'],
+                           'oidc.claim.nickname': ['brs278'],
+                           'oidc.claim.fullname': ['Jonas Bardino'],
+                           'oidc.claim.role': ['tap'],
+                           'oidc.claim.association': ['sci-nbi-tap'],
+                           'oidc.claim.o': ['science'],
+                           'oidc.claim.email': ['bardino@nbi.ku.dk']}
+    (accepted, rejected) = validated_input(user_arguments_dict,
+                                           autocreate_defaults)
     print("Accepted:")
     for (key, val) in accepted.items():
         print("\t%s: %s" % (key, val))

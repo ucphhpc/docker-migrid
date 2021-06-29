@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # grid_sftp - SFTP server providing access to MiG user homes
-# Copyright (C) 2010-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2010-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -65,6 +65,7 @@ Requires Paramiko module (http://pypi.python.org/pypi/paramiko).
 from __future__ import print_function
 from __future__ import absolute_import
 
+import base64
 import os
 import shutil
 import socket
@@ -97,15 +98,16 @@ from mig.shared.griddaemons.sftp import default_username_validator, \
     refresh_user_creds, refresh_job_creds, refresh_share_creds, \
     refresh_jupyter_creds, update_login_map, login_map_lookup, \
     hit_rate_limit, expire_rate_limit, clear_sessions, \
-    track_open_session, track_close_session, active_sessions, \
-    check_twofactor_session, validate_auth_attempt
+    track_open_session, track_close_session, expire_dead_sessions, \
+    active_sessions, check_twofactor_session, validate_auth_attempt, authlog
 from mig.shared.logger import daemon_logger, daemon_gdp_logger, \
     register_hangup_handler
 from mig.shared.notification import send_system_notification
-from mig.shared.pwhash import make_scramble
+from mig.shared.pwhash import make_simple_hash
 from mig.shared.useradm import check_password_hash
 from mig.shared.validstring import possible_user_id, possible_gdp_user_id, \
     possible_job_id, possible_sharelink_id, possible_jupyter_mount_id
+from mig.shared.vgrid import in_vgrid_share
 from mig.shared.workflows import add_workflow_job_history_entry
 
 configuration, logger = None, None
@@ -141,19 +143,37 @@ class SFTPHandle(paramiko.SFTPHandle):
     def __workflow_history_log(method):
         @wraps(method)
         def _impl(self, *method_args, **method_kwargs):
+            if not configuration.site_enable_workflow_history:
+                return method(self, *method_args, **method_kwargs)
             operation = method.__name__
+
+            if operation != 'write':
+                return method(self, *method_args, **method_kwargs)
+
             path = getattr(self, "path", None)
             user_name = getattr(self, "user_name", None)
 
+            # Get rid of leading '/'. This should only be
+            # necesary when testing manually
+            if path.startswith(os.path.sep):
+                path = path[1:]
             if os.path.sep in path:
                 vgrid = path[:path.find(os.path.sep)]
             else:
                 vgrid = path
 
-            add_workflow_job_history_entry(
-                configuration, vgrid, user_name, operation, path)
+            # logger.debug('path is now %s' % path)
 
-            method(self, *method_args, **method_kwargs)
+            status, msg = add_workflow_job_history_entry(
+                configuration,
+                vgrid,
+                user_name,
+                operation,
+                path)
+
+            # logger.debug('logging status: %s, %s' % (status, msg))
+
+            return method(self, *method_args, **method_kwargs)
 
         return _impl
 
@@ -331,19 +351,17 @@ class SFTPHandle(paramiko.SFTPHandle):
         #                  (repr(attr), path))
         return self.sftpserver._chattr(path, attr, self)
 
-    @__workflow_history_log
     @__gdp_log
     def read(self, offset, length):
         """Handle operations of same name"""
         return super(SFTPHandle, self).read(offset, length)
 
-    @__workflow_history_log
     @__gdp_log
+    @__workflow_history_log
     def write(self, offset, data):
         """Handle operations of same name"""
         return super(SFTPHandle, self).write(offset, data)
 
-    @__workflow_history_log
     @__gdp_log
     def close(self):
         """Handle operations of same name"""
@@ -370,6 +388,9 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
     logger = None
     transport = None
     root = None
+    ip_addr = None
+    src_port = None
+    active_session = None
 
     def __init__(self, server, *largs, **kwargs):
         """Init"""
@@ -409,7 +430,9 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
             # untrusted transport.get_username() here
             # logger.debug('extract authenticated user from server')
             self.user_name = server.get_authenticated_user()
-            self.ip_addr = self.transport.getpeername()[0]
+            self.ip_addr, self.src_port = self.transport.getpeername()
+            logger.debug('setting up session for %s from %s:%s' %
+                         (self.user_name, self.ip_addr, self.src_port))
         else:
             # logger.debug('active env: %s' % os.environ)
             username = force_utf8(os.environ.get('USER', 'INVALID'))
@@ -419,7 +442,55 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
             update_sftp_login_map(daemon_conf, username,
                                   password=True, key=True)
             self.user_name = username
-            self.ip_addr = "unknown"
+
+            # NOTE: we do not yet have session limit in sftp subsys handler
+            #       so we implement it as a workaround here and in __del__
+            #       handler for now.
+            # TODO: implement session limit in subsys and disable workaround
+            # Env holds client info in 'SSH_CLIENT' as 'a.b.c.d rport lport'
+            ssh_client = force_utf8(os.environ.get('SSH_CLIENT', 'NONE'))
+            # Pad with zeros to make sure exraction fails gracefully if missing
+            ssh_client += ' 0 0'
+            src_ip, src_port = ssh_client.split()[0:2]
+            self.ip_addr = src_ip
+            self.src_port = src_port
+            active_count = active_sessions(configuration, 'sftp',
+                                           self.user_name)
+            # NOTE: we delay dead session cleanup until actually hitting limit
+            if configuration.user_sftp_max_sessions > 0:
+                connections_left = configuration.user_sftp_max_sessions - active_count
+            else:
+                # Arbitrary 'big enough' number
+                connections_left = 4096
+            logger.debug("login from %s with %d sessions left" %
+                         (username, connections_left))
+            if connections_left < 1 and connections_left + \
+                    len(expire_dead_sessions(configuration, 'sftp',
+                                             username)) < 1:
+                notify = True
+                if self.ip_addr in configuration.site_security_scanners:
+                    notify = False
+                auth_msg = "Too many open sessions"
+                log_msg = auth_msg + " %d for %s" \
+                    % (active_count, username)
+                logger.warning(log_msg)
+                authlog(configuration, 'WARNING', 'sftp', 'unknown',
+                        self.user_name, self.ip_addr, auth_msg, notify=notify)
+
+                raise Exception("reject further sessions for %s" % username)
+
+            logger.info("proceed with session for %s with %d active sessions"
+                        % (self.user_name, active_count))
+            active_session = track_open_session(configuration,
+                                                'sftp',
+                                                self.user_name,
+                                                self.ip_addr,
+                                                self.src_port,
+                                                authorized=True)
+            if not active_session:
+                raise Exception("failed to track open session for %s" %
+                                self.user_name)
+            self.active_session = active_session
 
         # logger.debug('auth user is %s' % self.user_name)
 
@@ -436,6 +507,30 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
                 self.root = force_utf8("%s/%s" % (self.root, entry.home))
                 break
         # logger.debug('auth user chroot is %s' % self.root)
+
+    def __del__(self):
+        """Called on session shutdown. Only really needed to finish session
+        tracking in sftp subsys mode.
+        """
+
+        # TODO: remove this function along with max session workaround above
+
+        if self.transport is None and self.active_session is not None:
+            logger.debug("session clean up for %s from %s:%s" %
+                         (self.user_name, self.ip_addr, self.src_port))
+            try:
+                self.active_session = None
+                track_close_session(configuration, 'sftp',
+                                    self.user_name, self.ip_addr, self.src_port)
+                active_count = active_sessions(configuration, 'sftp',
+                                               self.user_name)
+                logger.info("remaining %d active sessions for %s"
+                            % (active_count, self.user_name))
+            except Exception as exc:
+                logger.error("failed in clean up: %s" % exc)
+        else:
+            logger.debug("no session to clean up for %s from %s:%s" %
+                         (self.user_name, self.ip_addr, self.src_port))
 
     def __gdp_log(self,
                   operation,
@@ -598,8 +693,8 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
         # silently ignore them otherwise. It turns out to have caused problems
         # if we rejected those other attribute changes in the past but it may
         # not be a problem anymore. If it ain't broken...
-        self.logger.info("chattr %s for path %s :: %s" %
-                         (repr(attr), path, real_path))
+        # self.logger.debug("chattr %s for path %s :: %s" %
+        #                  (repr(attr), path, real_path))
         ignored = True
         if getattr(attr, 'st_mode', None) is not None and attr.st_mode > 0:
             # self.logger.debug('_chattr st_mode: %s' % attr.st_mode)
@@ -635,7 +730,8 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
                 os.ftruncate(file_obj.fileno(), attr.st_size)
             self.logger.info("truncated file: %s to size: %s" %
                              (real_path, attr.st_size))
-        if ignored:
+        # NOTE: chmod 0 PATH are very common - silently ignore to reduce noise
+        if ignored and getattr(attr, 'st_mode', 0) > 0:
             self.logger.warning("chattr %s ignored on path %s :: %s" %
                                 (repr(attr), path, real_path))
         return paramiko.SFTP_OK
@@ -861,6 +957,10 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
             self.logger.error("remove rejected on link path %s :: %s" %
                               (path, real_path))
             return paramiko.SFTP_PERMISSION_DENIED
+        if in_vgrid_share(configuration, real_path) == path[1:]:
+            self.logger.error("remove rejected on vgrid path %s :: %s" %
+                              (path, real_path))
+            return paramiko.SFTP_PERMISSION_DENIED
         if not os.path.exists(real_path):
             self.logger.error("remove on missing path %s :: %s" % (path,
                                                                    real_path))
@@ -891,6 +991,10 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
         if os.path.islink(real_oldpath):
             self.logger.error("rename on link src %s :: %s" % (oldpath,
                                                                real_oldpath))
+            return paramiko.SFTP_PERMISSION_DENIED
+        if in_vgrid_share(configuration, real_oldpath) == oldpath[1:]:
+            self.logger.error("rename on vgrid src %s :: %s" % (oldpath,
+                                                                real_oldpath))
             return paramiko.SFTP_PERMISSION_DENIED
         if not os.path.exists(real_oldpath):
             self.logger.error("rename on missing path %s :: %s" %
@@ -963,6 +1067,10 @@ class SimpleSftpServer(paramiko.SFTPServerInterface):
         # Prevent removal of special files - link to vgrid dirs, etc.
         if os.path.islink(real_path):
             self.logger.error("rmdir rejected on link path %s :: %s" %
+                              (path, real_path))
+            return paramiko.SFTP_PERMISSION_DENIED
+        if in_vgrid_share(configuration, real_path) == path[1:]:
+            self.logger.error("rmdir rejected on vgrid path %s :: %s" %
                               (path, real_path))
             return paramiko.SFTP_PERMISSION_DENIED
         if not os.path.exists(real_path):
@@ -1067,7 +1175,7 @@ class SimpleSSHServer(paramiko.ServerInterface):
         7) Valid password (if password enabled)
         8) Valid key (if key enabled)
         """
-        secret = None
+        hashed_secret = None
         disconnect = False
         strict_password_policy = True
         password_offered = None
@@ -1123,12 +1231,16 @@ class SimpleSSHServer(paramiko.ServerInterface):
             if key is not None:
                 update_key_map = True
                 key_offered = key.get_base64()
-                secret = key_offered
+                hashed_secret = key_offered
             if password is not None:
                 update_password_map = True
                 hash_cache = daemon_conf['hash_cache']
                 password_offered = password
-                secret = make_scramble(password_offered, None)
+                # IMPORTANT: pass a hash of password to register_auth_attempt
+                # since we NEVER want to save passwords to disk. We base64
+                # encode it before hashing for symmetry with how we do in PAM.
+                hashed_secret = make_simple_hash(base64.b64encode(
+                    password_offered))
                 # Only sharelinks should be excluded from strict password policy
                 if possible_sharelink_id(configuration, username):
                     strict_password_policy = False
@@ -1190,7 +1302,7 @@ class SimpleSSHServer(paramiko.ServerInterface):
                 username,
                 client_ip,
                 tcp_port,
-                secret=secret,
+                secret=hashed_secret,
                 invalid_username=invalid_username,
                 invalid_user=invalid_user,
                 account_accessible=account_accessible,

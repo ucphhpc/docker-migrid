@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # output - general formatting of backend output objects
-# Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -27,6 +27,7 @@
 
 """Module with functions to generate output in format
 specified by the client."""
+
 from __future__ import absolute_import
 
 import os
@@ -35,7 +36,8 @@ import traceback
 from binascii import hexlify
 
 from mig.shared import returnvalues
-from mig.shared.bailout import bailout_title
+from mig.shared.bailout import bailout_title, crash_helper, \
+    filter_output_objects
 from mig.shared.defaults import file_dest_sep, keyword_any
 from mig.shared.html import get_xgi_html_header, get_xgi_html_footer, \
     vgrid_items, html_post_helper, tablesorter_pager
@@ -1416,6 +1418,7 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
         <th>Organization</th>
         <th>Email</th>
         <th>Country</th>
+        <th>State</th>
         <th>Kind</th>
         <th>Label</th>
         <th>Expire</th>
@@ -1431,15 +1434,26 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
 
             for single_peer in peers:
                 editlink = single_peer.get('editpeerlink', '')
+                invitelink = single_peer.get('invitepeerlink', '')
+                viewlink = single_peer.get('viewpeerlink', '')
                 dellink = single_peer.get('delpeerlink', '')
                 if editlink:
                     editlink = html_link(editlink)
+                if invitelink:
+                    invitelink = html_link(invitelink)
+                if viewlink:
+                    viewlink = html_link(viewlink)
                 if dellink:
                     dellink = html_link(dellink)
-                single_peer['action_links'] = "%s %s" % (editlink, dellink)
+                single_peer['action_links'] = "%s %s %s %s" % \
+                                              (editlink, invitelink, viewlink,
+                                               dellink)
+                single_peer['state'] = single_peer.get('state', '')
+                if not single_peer['state']:
+                    single_peer['state'] = 'NA'
                 lines.append('''<tr>
 <td>%(full_name)s</td><td>%(organization)s</td><td>%(email)s</td>
-<td>%(country)s</td><td>%(kind)s</td><td>%(label)s</td><td>%(expire)s</td>
+<td>%(country)s</td><td>%(state)s</td><td>%(kind)s</td><td>%(label)s</td><td>%(expire)s</td>
 <td>%(action_links)s</td>
 </tr>
 ''' % single_peer)
@@ -1892,7 +1906,7 @@ def html_format(configuration, ret_val, ret_msg, out_obj):
                     if obj.get('SANDBOX', False):
                         res_type = 'sandbox'
                     lines.append(
-                        '<td class="%sres" title="%s resource">%s</td>' %
+                        '<td class="%sres iconspace iconleftpad" title="%s resource">%s</td>' %
                         (res_type, res_type, obj['name']))
                     lines.append('<td class="centertext">')
                     # view or admin link depending on ownership
@@ -2484,6 +2498,7 @@ def get_valid_outputformats():
 
 def format_output(
     configuration,
+    backend,
     ret_val,
     ret_msg,
     out_obj,
@@ -2491,6 +2506,7 @@ def format_output(
 ):
     """This is the public method that should be called from other scripts"""
 
+    logger = configuration.logger
     valid_formats = get_valid_outputformats()
     (val_ret, val_msg) = validate(out_obj)
     if not val_ret:
@@ -2538,8 +2554,20 @@ def format_output(
         return eval('%s_format(configuration, ret_val, ret_msg, out_obj)' %
                     outputformat)
     except Exception as err:
-        configuration.logger.error("%s formatting failed: %s\n%s" %
-                                   (outputformat, err, traceback.format_exc()))
+        logger.error("%s formatting failed: %s\n%s" %
+                     (outputformat, err, traceback.format_exc()))
+        out_filtered = filter_output_objects(configuration, out_obj)
+        logger.error("original %r response was: %s" % (backend, out_filtered))
+
+    # Try simple crash message on requested format
+    try:
+        crash_out = crash_helper(configuration, backend, [])
+        return eval('%s_format(configuration, ret_val, ret_msg, crash_out)' %
+                    outputformat)
+    except Exception as err:
+        logger.error("%s formatting even simple crash info failed: %s\n%s" %
+                     (outputformat, err, traceback.format_exc()))
+        # Return None and leave bailout to caller
         return None
 
 

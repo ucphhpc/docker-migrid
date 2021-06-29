@@ -41,6 +41,12 @@ import re
 import sys
 import time
 
+# IMPORTANT: sshd sftp subsys calls this script directly without user env so
+#            we cannot rely on PYTHONPATH and instead explictly set load path
+#            to include user home to allow from mig.X import Y
+# NOTE: __file__ is /MIG_BASE/mig/server/sftp_subsys.py and we need MIG_BASE
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
 from mig.shared.accountstate import check_account_accessible
 from mig.shared.base import client_dir_id
 from mig.shared.conf import get_configuration_object
@@ -113,8 +119,9 @@ unless it is available in mig/server/MiGserver.conf
             #       with e.g. /PATH/TO/OWNUSER/../OTHERUSER/somefile.txt
             root = configuration.user_home.rstrip(os.sep) + os.sep
             if not path.startswith(root):
-                logger.error("got path from %s with invalid root: %s" %
-                             (client_ip, path))
+                # Only warn to avoid excessive noise from scanners
+                logger.warning("got path from %s with invalid root: %s" %
+                               (client_ip, path))
                 print(INVALID_MARKER)
                 continue
             # Extract name of home as first component after root base
@@ -146,8 +153,9 @@ unless it is available in mig/server/MiGserver.conf
                 print(INVALID_MARKER)
                 continue
             elif not check_account_accessible(configuration, user_id, 'https'):
-                logger.error("path from %s in inaccessible %s account: %s (%s)"
-                             % (client_ip, user_id, raw_path, real_path))
+                # Only warn to avoid excessive noise from scanners
+                logger.warning("path from %s in inaccessible %s account: %s (%s)"
+                               % (client_ip, user_id, raw_path, real_path))
                 print(INVALID_MARKER)
                 continue
 

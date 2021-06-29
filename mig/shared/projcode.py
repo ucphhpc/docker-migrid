@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # projcode - simple helpers for transforming or searching project code
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -34,7 +34,6 @@ py_code_files = [
     '%s' % plain,
     'cgi-bin/%s' % plain,
     'cgi-sid/%s' % plain,
-    'wsgi-bin/%s' % plain,
     'install/%s' % plain,
     'migfs-fuse/%s' % plain,
     'resource/bin/%s' % plain,
@@ -44,6 +43,8 @@ py_code_files = [
     'shared/%s' % plain,
     'shared/functionality/%s' % plain,
     'shared/distos/%s' % plain,
+    'shared/gdp/%s' % plain,
+    'shared/griddaemons/%s' % plain,
     'simulation/%s' % plain,
     'user/%s' % plain,
     'vm-proxy/%s' % plain,

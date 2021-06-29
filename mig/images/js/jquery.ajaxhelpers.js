@@ -4,7 +4,7 @@
   # --- BEGIN_HEADER ---
   #
   # jquery.ajaxhelpers - jquery based ajax helpers for managers
-  # Copyright (C) 2003-2019  The MiG Project lead by Brian Vinter
+  # Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
   #
   # This file is part of MiG.
   #
@@ -191,17 +191,22 @@ function ajax_redb() {
   });
 }
 
-function ajax_freezedb(permanent_freeze, keyword_final) {
-    console.debug("load archives");
+function ajax_freezedb(permanent_freeze, keyword_final, caching) {
+    console.debug("load archives - with caching "+caching);
     var tbody_elem = $("#frozenarchivetable tbody");
-    //console.debug("empty table");
-    $(tbody_elem).empty();
+    var pending_updates = false;
+    var loading_msg = "Loading archives ...";
+    /* Force caching to boolean if e.g. left out */
+    if (!caching) {
+        caching = false;
+        loading_msg = "Updating archives - may take a while";
+    }
     $("#ajax_status").addClass("spinner iconleftpad");
-    $("#ajax_status").html("Loading archives ...");
+    $("#ajax_status").html(loading_msg);
     /* Request archive list in the background and handle as soon as
     results come in */
     $.ajax({
-      url: "?output_format=json;operation=list",
+      url: "?output_format=json;operation=list;caching="+caching,
       type: "GET",
       dataType: "json",
       cache: false,
@@ -211,6 +216,8 @@ function ajax_freezedb(permanent_freeze, keyword_final) {
           var table_entries = "", error = "";
           var i, j;
           var arch, entry;
+          //console.debug("empty table");
+          $(tbody_elem).empty();
           /* Grab results from json response and insert items in table */
           for (i=0; i<jsonRes.length; i++) {
               //console.debug("looking for content: "+ jsonRes[i].object_type);
@@ -218,6 +225,9 @@ function ajax_freezedb(permanent_freeze, keyword_final) {
                   console.error("list: "+jsonRes[i].text);
                   error += jsonRes[i].text;
               } else if (jsonRes[i].object_type === "frozenarchives") {
+                  if (caching) {
+                      pending_updates = jsonRes[i].pending_updates;
+                  }
                   var archives = jsonRes[i].frozenarchives;
                   for (j=0; j<archives.length; j++) {
                       arch = archives[j];
@@ -263,6 +273,13 @@ function ajax_freezedb(permanent_freeze, keyword_final) {
           if (error) {
               $("#ajax_status").append("<span class=\'errortext\'>"+
                                        "Error: "+error+"</span>");
+          } else if (pending_updates) {
+              /* NOTE: pending archive update detected - background update */
+              $("#ajax_status").append("<span class=\'infotext\'>"+
+                                       "Loaded cached archives - update pending</span>");
+              setTimeout(function() {
+                  ajax_freezedb(permanent_freeze, keyword_final, false);
+              }, 3000);
           }
           $("#frozenarchivetable").trigger("update");
 
@@ -275,21 +292,25 @@ function ajax_freezedb(permanent_freeze, keyword_final) {
 }
 
 function ajax_showfreeze(freeze_id, flavor, checksum_list, keyword_updating,
-                         keyword_final, freeze_doi_url, freeze_doi_url_field) {
+                         keyword_final, freeze_doi_url, freeze_doi_url_field, caching) {
     console.debug("load archive "+freeze_id+" of flavor "+flavor+" with "+
-                  checksum_list.toString()+" checksums");
+                  checksum_list.toString()+" checksums with caching "+caching);
     var tbody_elem = $("#frozenfilestable tbody");
     var arch_tbody = $(".frozenarchivedetails tbody");
-    //console.debug("empty table");
-    $(tbody_elem).empty();
-    $(arch_tbody).empty();
+    var pending_updates = false;
+    var loading_msg = "Loading archives ...";
+    /* Force caching to boolean if e.g. left out */
+    if (!caching) {
+        caching = false;
+        loading_msg = "Updating archives - may take a while";
+    }
     $("#ajax_status").addClass("spinner iconleftpad");
     $("#ajax_status").html("Loading archive "+freeze_id+" ...");
     /* Request archive list in the background and handle as soon as
     results come in */
     $.ajax({
         url: "?freeze_id="+freeze_id+";flavor="+flavor+";checksum="+
-            checksum_list.join(";checksum=")+";output_format=json;operation=list",
+            checksum_list.join(";checksum=")+";output_format=json;operation=list;caching="+caching,
       type: "GET",
       dataType: "json",
       cache: false,
@@ -299,6 +320,9 @@ function ajax_showfreeze(freeze_id, flavor, checksum_list, keyword_updating,
           var table_entries = "", error = "";
           var i, j;
           var arch, file, entry, publish_url = "";
+          //console.debug("empty table");
+          $(tbody_elem).empty();
+          $(arch_tbody).empty();
           /* Grab results from json response and insert items in table */
           for (i=0; i<jsonRes.length; i++) {
               //console.debug("looking for content: "+ jsonRes[i].object_type);
@@ -306,6 +330,9 @@ function ajax_showfreeze(freeze_id, flavor, checksum_list, keyword_updating,
                   console.error("list: "+jsonRes[i].text);
                   error += " "+jsonRes[i].text;
               } else if (jsonRes[i].object_type === "frozenarchive") {
+                  if (caching) {
+                      pending_updates = jsonRes[i].pending_updates;
+                  }
                   //console.debug("found frozenarchive");
                   arch = jsonRes[i];
                   //console.debug("append details");
@@ -383,6 +410,15 @@ function ajax_showfreeze(freeze_id, flavor, checksum_list, keyword_updating,
           if (error) {
               $("#ajax_status").append("<span class=\'errortext\'>"+
                                        "Error: "+error+"</span>");
+          } else if (pending_updates) {
+              /* NOTE: pending archive update detected - background update */
+              $("#ajax_status").append("<span class=\'infotext\'>"+
+                                       "Loaded cached archive - update pending</span>");
+              setTimeout(function() {
+                  ajax_showfreeze(freeze_id, flavor, checksum_list, 
+                                  keyword_updating, keyword_final, 
+                                  freeze_doi_url, freeze_doi_url_field, false);
+              }, 3000);
           }
           /* Make sure requested checksum columns are visible */
           console.debug("show checksums");
@@ -631,7 +667,7 @@ function ajax_resman(caching) {
                       if (resource.SANDBOX) {
                           res_type = 'sandbox';
                       }
-                      res_hint = 'class="'+res_type+'res" title="'+res_type+
+                      res_hint = 'class="'+res_type+'res iconspace iconleftpad" title="'+res_type+
                           ' resource"';
                       rte_hint = center_class+' title="'+
                           resource.RUNTIMEENVIRONMENT.toString()+'"';
@@ -912,7 +948,7 @@ function ajax_gdp_project_info(callback, project_name) {
 function check_oid_available(action, oid_title, oid_url, tag_prefix) {
     $("#"+tag_prefix+"status").removeClass();
     $("#"+tag_prefix+"status").addClass("status_box");
-    $("#"+tag_prefix+"status").addClass("spinner").css("padding-left", "20px");
+    $("#"+tag_prefix+"status").addClass("spinner iconleftpad");
     $("#"+tag_prefix+"status").append("<span>"+oid_title+" OpenID server status: </span>");
     $("#"+tag_prefix+"status").append("<span id="+tag_prefix+"msg></span> <span id="+tag_prefix+"err></span>");
     $("#"+tag_prefix+"msg").append("checking availability ...");
@@ -934,17 +970,17 @@ function check_oid_available(action, oid_title, oid_url, tag_prefix) {
                 if (jsonRes[i].object_type === "openid_status") {
                     online = jsonRes[i].status;
                     err = jsonRes[i].error;
-                    $("#"+tag_prefix+"status").removeClass("spinner").css("padding-left", "0px");
+                    $("#"+tag_prefix+"status").removeClass("spinner iconleftpad");
                     $("#"+tag_prefix+"msg").empty();
                     $("#"+tag_prefix+"msg").append(online);
                     if (online === "online") {
-                        $("#"+tag_prefix+"status").addClass("ok").css("padding-left", "20px");
+                        $("#"+tag_prefix+"status").addClass("ok iconleftpad");
                         $("#"+tag_prefix+"msg").addClass("status_online");
                         $("#"+tag_prefix+"button").attr("disabled", false);
                     } else {
                         $("#"+tag_prefix+"err").append("("+err+")<br/>");
                         $("#"+tag_prefix+"status").append("<span>Unable to "+action+" with this method until OpenID server comes back online. Please report the problem to the "+oid_title+" OpenID administrators.</span>");
-                        $("#"+tag_prefix+"status").addClass("error").css("padding-left", "20px");
+                        $("#"+tag_prefix+"status").addClass("error iconleftpad");
                         $("#"+tag_prefix+"msg").addClass("status_offline");
                         $("#"+tag_prefix+"button").attr("disabled", true);
                     }
@@ -982,7 +1018,7 @@ function prepare_seafile_settings(reg_url, username, integration,
     $("#"+save_prefix+"button").attr("disabled", false);
     $("#"+status_prefix+"status").removeClass();
     $("#"+status_prefix+"status").addClass("status_box");
-    $("#"+status_prefix+"status").addClass("spinner").css("padding-left", "20px");
+    $("#"+status_prefix+"status").addClass("spinner iconleftpad");
     $("#"+status_prefix+"status").append("<span>Seafile server status: </span>");
     $("#"+status_prefix+"status").append("<span id="+status_prefix+"msg></span>");
     $("#"+status_prefix+"msg").append("checking availability ...");
@@ -1005,7 +1041,7 @@ function prepare_seafile_settings(reg_url, username, integration,
             //console.log("DEBUG: got csrf output: "+output);
             //alert("DEBUG: got csrf status: "+status);
             $("#"+status_prefix+"msg").empty();
-            $("#"+status_prefix+"status").removeClass("spinner");
+            $("#"+status_prefix+"status").removeClass("spinner iconleftpad");
             var csrf_token = $("input[name=csrfmiddlewaretoken]", output).val();
             /* NOTE: until Seafile 7.x the sign-up page contained the username
                of any logged in user, but from 7.x we can only rely on a more
@@ -1013,14 +1049,16 @@ function prepare_seafile_settings(reg_url, username, integration,
             */
             var id_user = $("#account", output).find("div.txt:contains("+username+")").text();
             var account_name = $("#account", output).find("div.txt").text();
+            var signed_in_msg = $("#main .login-panel", output).find("p").text();
+            var signed_in = signed_in_msg.includes("already signed in");
             var logged_in = "";
             $("#"+status_prefix+"msg").append('online');
-            if (id_user || account_name) {
+            if (id_user || account_name || signed_in) {
                 logged_in = "you are already registered and logged in as "+username;
                 //alert("DEBUG: "+logged_in+" ("+id_user+")");
                 // Try to avoid confusion if user is already registered
                 $("#"+reg_prefix+"button").attr("disabled", true);
-                $("#"+status_prefix+"status").addClass("ok").css("padding-left", "20px");
+                $("#"+status_prefix+"status").addClass("ok iconleftpad");
                 $("#"+status_prefix+"msg").addClass("status_online");
                 select_seafile_section(save_prefix);
             } else if (csrf_token !== undefined) {
@@ -1035,14 +1073,16 @@ function prepare_seafile_settings(reg_url, username, integration,
                     select_seafile_section(reg_prefix);
                 }
                 //alert("DEBUG: "+logged_in+" ("+id_user+")");
-                $("#"+status_prefix+"status").addClass("ok").css("padding-left", "20px");
+                $("#"+status_prefix+"status").addClass("ok iconleftpad");
                 $("#"+status_prefix+"msg").addClass("status_online");
                 $("input[name=csrfmiddlewaretoken]").val(csrf_token);
                 //console.log("cookies: "+document.cookie);
             } else {
+                console.error("unknown seafile state: id "+id_user+" account "+
+                              account_name+" signed_in "+signed_in);
                 //alert("Warning: unknown state");
                 logged_in = "unexpected response from server";
-                $("#"+status_prefix+"status").addClass("warn").css("padding-left", "20px");
+                $("#"+status_prefix+"status").addClass("warn iconleftpad");
                 $("#"+status_prefix+"msg").addClass("status_slack");
             }
             $("#"+status_prefix+"status").append(" <span>("+logged_in+")</span>");
@@ -1053,7 +1093,7 @@ function prepare_seafile_settings(reg_url, username, integration,
             $("#"+status_prefix+"msg").empty();
             $("#"+status_prefix+"msg").append('offline');
             $("#"+status_prefix+"status").append(" <span>(Error: "+error+")</span>");
-            $("#"+status_prefix+"status").addClass("error").css("padding-left", "20px");
+            $("#"+status_prefix+"status").addClass("error iconleftpad");
             $("#"+status_prefix+"msg").addClass("status_offline");
             select_seafile_section(save_prefix);
         }

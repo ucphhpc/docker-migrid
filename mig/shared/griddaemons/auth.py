@@ -164,7 +164,7 @@ def authlog(configuration,
         # else:
         #     logger.debug("Skipped send_system_notification to user: %r" \
         #         % user_id)
-        
+
     return status
 
 
@@ -286,6 +286,7 @@ def validate_auth_attempt(configuration,
         auth_msg = "Too many open sessions"
         log_msg = auth_msg + " %d for %s" \
             % (active_count, username)
+        # Only warn since it can get rather noise and it's intermittent
         logger.warning(log_msg)
         authlog(configuration, 'WARNING', protocol, authtype,
                 username, ip_addr, auth_msg, notify=notify)
@@ -318,13 +319,24 @@ def validate_auth_attempt(configuration,
     elif not account_accessible:
         disconnect = True
         auth_msg = "Account disabled or expired"
+        expire_hint = """
+HINT: For security reasons %s account access is time-limited and must be
+regularly short-term refreshed with web log in or long-term renewed with repeat
+sign up. """ % configuration.short_title
         log_msg = auth_msg + " %s from %s" % (username, ip_addr)
         if tcp_port > 0:
             log_msg += ":%s" % tcp_port
         logger.error(log_msg)
+        if protocol in ["openid"]:
+            expire_hint += """
+%s OpenID users need to renew their account every %d days for continued
+access by repeat sign up with the same ID values at
+%s/cgi-sid/reqoid.py""" % \
+                (configuration.user_mig_oid_title, configuration.oid_valid_days,
+                 configuration.migserver_https_sid_url)
         authlog(configuration, 'ERROR', protocol, authtype,
                 username, ip_addr,
-                auth_msg, notify=notify)
+                auth_msg + expire_hint, notify=notify)
     elif not authtype_enabled:
         disconnect = True
         auth_msg = "%s auth disabled or %s not set" % (authtype, authtype)
@@ -340,7 +352,8 @@ def validate_auth_attempt(configuration,
         log_msg = auth_msg + " for %s from %s" % (username, ip_addr)
         if tcp_port > 0:
             log_msg += ":%s" % tcp_port
-        logger.error(log_msg)
+        # Only warn since it can get rather noise and it's intermittent
+        logger.warning(log_msg)
         authlog(configuration, 'WARNING', protocol, authtype,
                 username, ip_addr, auth_msg, notify=notify)
     elif authtype_enabled and not valid_auth:

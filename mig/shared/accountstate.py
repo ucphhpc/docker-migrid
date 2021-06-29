@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # accountstate - various user account state helpers
-# Copyright (C) 2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2020-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -28,6 +28,7 @@
 """This module contains various helpers used to check and update internal user
 account state in relation to web and IO daemon access control.
 """
+
 from __future__ import print_function
 from __future__ import absolute_import
 
@@ -37,10 +38,32 @@ import time
 from mig.shared.base import client_id_dir, client_dir_id, requested_url_base
 from mig.shared.defaults import expire_marks_dir, status_marks_dir, \
     valid_account_status, oid_auto_extend_days, cert_auto_extend_days, \
-    cert_valid_days, oid_valid_days
+    attempt_auto_extend_days, AUTH_GENERIC, AUTH_CERTIFICATE, AUTH_OPENID_V2, \
+    AUTH_OPENID_CONNECT
 from mig.shared.filemarks import get_filemark, update_filemark, reset_filemark
 from mig.shared.gdp.userid import get_base_client_id
 from mig.shared.userdb import load_user_dict, default_db_path, update_user_dict
+from mig.shared.validstring import possible_sharelink_id, possible_job_id, \
+    possible_jupyter_mount_id
+
+
+def default_account_valid_days(configuration, auth_type):
+    """Lookup default account valid days from configuration"""
+
+    _valid_map = {AUTH_CERTIFICATE: configuration.cert_valid_days,
+                  AUTH_OPENID_V2: configuration.oid_valid_days,
+                  AUTH_OPENID_CONNECT: configuration.oidc_valid_days,
+                  AUTH_GENERIC: configuration.generic_valid_days}
+    valid_days = _valid_map.get(auth_type, configuration.generic_valid_days)
+    return valid_days
+
+
+def default_account_expire(configuration, auth_type, start_time=int(time.time())):
+    """Lookup default account expire value (epoch) based on start_time"""
+
+    valid_days = default_account_valid_days(configuration, auth_type)
+    expire = int(start_time + valid_days * 24 * 60 * 60)
+    return expire
 
 
 def update_account_expire_cache(configuration, user_dict):
@@ -152,7 +175,7 @@ def check_account_status(configuration, client_id):
         user_dict = load_user_dict(_logger, client_id,
                                    default_db_path(configuration))
         if not user_dict:
-            _logger.error("no such account: %s" % client_id)
+            _logger.warning("no such account: %s" % client_id)
             return (False, "missing", user_dict)
         account_status = user_dict['status'] = user_dict.get('status',
                                                              'active')
@@ -207,12 +230,13 @@ def check_account_expire(configuration, client_id, environ=None):
 
 
 def check_update_account_expire(configuration, client_id, environ=None,
-                                min_days_left=0):
+                                min_days_left=attempt_auto_extend_days):
     """Check and possibly update client_id expire field in cache and user DB
     if configured. The optional environ can be used to provide current environ
     dict instead of the default os.environ. The optional min_days_left
     argument is used to attempt renew if the account is set to expire before N
-    days from now. Default is zero days to only renew if expired.
+    days from now. If not provided the default is to attempt renewal some days
+    before expiry and then extend for longer than that to delay next try.
     """
     _logger = configuration.logger
     if not environ:
@@ -222,7 +246,13 @@ def check_update_account_expire(configuration, client_id, environ=None,
         configuration, client_id, environ)
     # Now check actual expire
     if account_expire and account_expire < time.time() + min_days_left * 86400:
-        _logger.info("user is marked expired at %s" % account_expire)
+        try_renew = True
+    else:
+        try_renew = False
+
+    if try_renew:
+        _logger.debug("attempt user %s expiry %d extension" %
+                      (client_id, account_expire))
         # NOTE: users who got this far obviously has a working auth method
         vhost_url = requested_url_base(environ)
         update_expire = False
@@ -244,7 +274,8 @@ def check_update_account_expire(configuration, client_id, environ=None,
                           (client_id, vhost_url))
 
         if update_expire and extend_days > 0:
-            _logger.info("trying to update expire for: %s" % client_id)
+            _logger.info("trying to update %s expire with %d days" %
+                         (client_id, extend_days))
             if not user_dict:
                 user_dict = load_user_dict(_logger, client_id,
                                            default_db_path(configuration))
@@ -261,19 +292,21 @@ def check_update_account_expire(configuration, client_id, environ=None,
                 # NOTE: write through to user db
                 update_user_dict(_logger, client_id, renew,
                                  default_db_path(configuration))
-                _logger.info("user expire updated to %(expire)s" % user_dict)
+                _logger.info("account expire updated to %(expire)d" %
+                             user_dict)
                 pending_expire = True
             else:
-                _logger.warning("extend expire refused for %s with status %r" %
-                                (client_id, account_status))
-                pending_expire = False
+                _logger.info("extend expire skipped for %s with status %r" %
+                             (client_id, account_status))
+        elif pending_expire:
+            _logger.debug("user %s about to expire %d but no auto update" %
+                          (client_id, account_expire))
         else:
-            _logger.warning("user account expired at %s" % account_expire)
-            pending_expire = False
+            _logger.warning("user %s expired at %d" % (client_id,
+                                                       account_expire))
     else:
-        _logger.debug("user %s is still active - expire is %s" %
+        _logger.debug("user %s is still active - expire is %d" %
                       (client_id, account_expire))
-        pending_expire = True
     return (pending_expire, account_expire, user_dict)
 
 
@@ -294,17 +327,29 @@ def account_expire_info(configuration, username, environ=None,
     if account_expire and account_expire < time.time() + min_days_left * 86400:
         expire_warn = True
         if vhost_url == configuration.migserver_https_ext_oid_url:
-            renew_days = oid_valid_days
+            renew_days = default_account_valid_days(configuration,
+                                                    AUTH_OPENID_V2)
             if account_status == 'active' and configuration.auto_add_oid_user:
                 extend_days = oid_auto_extend_days
-        elif vhost_url == configuration.migserver_https_mig_oid_url:
-            renew_days = oid_valid_days
+        elif vhost_url == configuration.migserver_https_ext_oidc_url:
+            renew_days = default_account_valid_days(configuration,
+                                                    AUTH_OPENID_CONNECT)
+            if account_status == 'active' and configuration.auto_add_oid_user:
+                extend_days = oid_auto_extend_days
         elif vhost_url == configuration.migserver_https_ext_cert_url:
-            renew_days = cert_valid_days
+            renew_days = default_account_valid_days(configuration,
+                                                    AUTH_CERTIFICATE)
             if account_status == 'active' and configuration.auto_add_cert_user:
                 extend_days = cert_auto_extend_days
+        elif vhost_url == configuration.migserver_https_mig_oid_url:
+            renew_days = default_account_valid_days(configuration,
+                                                    AUTH_OPENID_V2)
+        elif vhost_url == configuration.migserver_https_mig_oidc_url:
+            renew_days = default_account_valid_days(configuration,
+                                                    AUTH_OPENID_CONNECT)
         elif vhost_url == configuration.migserver_https_mig_cert_url:
-            renew_days = cert_valid_days
+            renew_days = default_account_valid_days(configuration,
+                                                    AUTH_CERTIFICATE)
         else:
             _logger.warning("unexpected vhost in expire detection: %s" %
                             vhost_url)
@@ -318,7 +363,7 @@ def detect_special_login(configuration, username, proto):
     _logger = configuration.logger
     try:
         if proto in ('sftp', 'ftps', 'davs') and \
-                configuration.site_enable_sharelinks:
+                possible_sharelink_id(configuration, username):
             for mode in ['read-write']:
                 real_path = os.path.realpath(os.path.join(
                     configuration.sharelink_home, mode, username))
@@ -326,16 +371,17 @@ def detect_special_login(configuration, username, proto):
                     _logger.info("%s sharelink %s detected - always accessible" %
                                  (mode, username))
                     return True
-        elif proto == 'sftp' and configuration.site_enable_jobs:
+        if proto == 'sftp' and possible_job_id(configuration, username):
             real_path = os.path.realpath(os.path.join(
-                configuration.sessid_to_mrsl_link_home))
+                configuration.sessid_to_mrsl_link_home, username + '.mRSL'))
             if os.path.exists(real_path):
                 _logger.info(
                     "job mount %s detected - always accessible" % username)
                 return True
-        elif proto == 'sftp' and configuration.site_enable_jupyter:
+        if proto == 'sftp' and possible_jupyter_mount_id(configuration,
+                                                         username):
             real_path = os.path.realpath(os.path.join(
-                configuration.sessid_to_jupyter_mount_link_home))
+                configuration.sessid_to_jupyter_mount_link_home, username))
             if os.path.exists(real_path):
                 _logger.info(
                     "jupyter mount %s detected - always accessible" % username)
@@ -343,6 +389,7 @@ def detect_special_login(configuration, username, proto):
     except Exception as exc:
         _logger.error("detect special login for %r failed: %s" %
                       (username, exc))
+    _logger.debug("login for %s was detected as normal login" % username)
     return False
 
 
@@ -369,13 +416,14 @@ def check_account_accessible(configuration, username, proto, environ=None,
     # jupyter mounts. We should let all but actual user logins pass for now.
     # TODO: consider checking underlying user for other types eventually?
     if detect_special_login(configuration, username, proto):
+        _logger.debug("found %s as special %s login" % (username, proto))
         return True
 
     # NOTE: now we know username must be an ordinary user to check
     client_id = username
     if configuration.site_enable_gdp:
         client_id = get_base_client_id(configuration, client_id,
-                                    expand_oid_alias=expand_alias)
+                                       expand_oid_alias=expand_alias)
     elif expand_alias:
         # Use client_id_dir to make it work even if already expanded
         home_dir = os.path.join(configuration.user_home,
@@ -438,3 +486,7 @@ if __name__ == "__main__":
     sharelink = 'JFPyQ7Gt2p'
     print("check account accessible for %s" % sharelink)
     print(check_account_accessible(conf, sharelink, 'sftp', expand_alias=True))
+
+    job_id = 'eaeeff724b8d0d73b55b50b880a4c76873eb44cbfe1f97e67dd251d1002ad748'
+    print("check account accessible for %s" % job_id)
+    print(check_account_accessible(conf, job_id, 'sftp', expand_alias=True))

@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # twofactorkeywords - supported two factor settings
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -54,10 +54,13 @@ def get_twofactor_specs(configuration):
     """
 
     specs = []
+    # NOTE: we currently share OpenID 2.0 and Connect settings
     if configuration.migserver_https_mig_oid_url and \
-            configuration.user_mig_oid_provider:
+            configuration.user_mig_oid_provider or \
+            configuration.migserver_https_mig_oidc_url and \
+            configuration.user_mig_oidc_provider:
         specs.append(('MIG_OID_TWOFACTOR', {
-            'Title': 'Enable 2-FA for %s OpenID login' %
+            'Title': 'Enable 2-FA for %s OpenID web login' %
             configuration.user_mig_oid_title,
             'Description': '''Add an extra layer of security to your %s OpenID
 web logins through a personal auth token generator on your phone or tablet.
@@ -70,9 +73,11 @@ web logins through a personal auth token generator on your phone or tablet.
             'Required': False,
         }))
     if configuration.migserver_https_ext_oid_url and \
-            configuration.user_ext_oid_provider:
+            configuration.user_ext_oid_provider or \
+            configuration.migserver_https_ext_oidc_url and \
+            configuration.user_ext_oidc_provider:
         specs.append(('EXT_OID_TWOFACTOR', {
-            'Title': 'Enable 2-FA for %s OpenID login' %
+            'Title': 'Enable 2-FA for %s OpenID web login' %
             configuration.user_ext_oid_title,
             'Description': '''Add an extra layer of security to your %s OpenID
 web logins through a personal auth token generator on your phone or tablet.
@@ -86,7 +91,7 @@ web logins through a personal auth token generator on your phone or tablet.
         }))
     if configuration.site_enable_davs:
         specs.append(('WEBDAVS_TWOFACTOR', {
-            'Title': 'Enable 2-FA for WebDAVS login',
+            'Title': 'Enable 2-FA for WebDAVS network drive or client login',
             'Description': '''Add an extra layer of security to your WebDAVS
 logins through a personal auth token generator on your phone or tablet.
 Works by logging in to the %s web site with 2FA enabled to start
@@ -102,7 +107,7 @@ an authenticated session and then logging into WebDAVS as usual.
     if configuration.site_enable_sftp \
             or configuration.site_enable_sftp_subsys:
         specs.append(('SFTP_PASSWORD_TWOFACTOR', {
-            'Title': 'Enable 2-FA for SFTP password login',
+            'Title': 'Enable 2-FA for SFTP network drive or client login with password',
             'Description': '''Add an extra layer of security to your SFTP password
 logins through a personal auth token generator on your phone or tablet.
 Works by logging in to the %s web site with 2FA enabled to start
@@ -117,7 +122,7 @@ an authenticated session and then logging into SFTP as usual.
         }))
     if configuration.site_enable_sftp:
         specs.append(('SFTP_KEY_TWOFACTOR', {
-            'Title': 'Enable 2-FA for SFTP key login',
+            'Title': 'Enable 2-FA for SFTP network drive or client login with key',
             'Description': '''Add an extra layer of security to your SFTP key
 logins through a personal auth token generator on your phone or tablet.
 Works by logging in to the %s web site with 2FA enabled to start
@@ -132,7 +137,7 @@ an authenticated session and then logging into SFTP as usual.
         }))
     if configuration.site_enable_ftps:
         specs.append(('FTPS_TWOFACTOR', {
-            'Title': 'Enable 2-FA for FTPS login',
+            'Title': 'Enable 2-FA for FTPS network drive or client login',
             'Description': '''Add an extra layer of security to your FTPS
 logins through a personal auth token generator on your phone or tablet.
 Works by logging in to the %s web site with 2FA enabled to start

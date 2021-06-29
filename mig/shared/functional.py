@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # functional - functionality backend helpers
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -28,6 +28,7 @@
 """This module contains general functions used by the modules in
 the functionality dir.
 """
+
 from __future__ import absolute_import
 
 import os
@@ -37,7 +38,7 @@ import time
 
 from mig.shared.accountstate import check_account_status, \
     check_update_account_expire
-from mig.shared.base import requested_page, force_utf8
+from mig.shared.base import requested_page, force_utf8, get_site_base_url
 from mig.shared.defaults import csrf_field, auth_openid_ext_db
 from mig.shared.findtype import is_user
 from mig.shared.httpsclient import extract_client_cert, extract_client_openid, \
@@ -87,8 +88,15 @@ def validate_input(
     output_objects,
     allow_rejects,
     prefilter_map=None,
+    typecheck_overrides={}
 ):
-    """A wrapper used by most back end functionality"""
+    """A wrapper used by most back end functionality.
+    The optional typecheck_overrides argument can be passed a dictionary of
+    input variable names and their validator function if needed. This is
+    particularly useful in relation to overriding the default simple path value
+    checks in cases where a path pattern with wildcards is allowed.
+    We want all such exceptions to be explicit to avoid opening up by mistake.
+    """
 
     # always allow output_format, csrf_field, stray modauthopenid nonces and
     # underscore cache-prevention dummy - we don't want redundant lines in all
@@ -104,7 +112,8 @@ def validate_input(
     if prefilter_map:
         prefilter_input(user_arguments_dict, prefilter_map)
     (accepted, rejected) = validated_input(user_arguments_dict,
-                                           defaults)
+                                           defaults,
+                                           type_override=typecheck_overrides)
     warn_on_rejects(rejected, output_objects)
     if rejected.keys() and not allow_rejects:
         output_objects.append(
@@ -129,9 +138,13 @@ def validate_input_and_cert(
     require_user=True,
     filter_values=None,
     environ=None,
+    typecheck_overrides={},
 ):
     """A wrapper used by most back end functionality - redirects to sign up
     if client_id is missing.
+    The optional typecheck_overrides dictionary is passed directly to the base
+    validate_input and can be used to loosen input validation. Please refer to
+    the validate_input doc. 
     """
 
     logger = configuration.logger
@@ -151,13 +164,19 @@ def validate_input_and_cert(
         if not account_accessible:
             creds_error = "User account is %s!" % account_status
         else:
+            # Attempt auto renew if past or close to the time account expires
             (pending_expire, account_expire, _) = check_update_account_expire(
                 configuration, client_id, environ)
             if not pending_expire:
                 creds_error = "User account expired!"
 
+    # NOTE: users with a certificate but without an account can use extcert.
+    #       Expired users can still log out or use their login to access the
+    #       (unprivileged) account request pages to renew their account with
+    #       auto-fill of fields.
     if creds_error and not os.path.basename(requested_page()) in \
-            ['logout.py', 'autologout.py']:
+            ['logout.py', 'autologout.py', 'reqoid.py', 'reqcert.py',
+             'extcert.py']:
         # Simple init to get page preamble even where initialize_main_variables
         # was called with most things disabled because no or limited direct
         # output was expected.
@@ -174,7 +193,7 @@ def validate_input_and_cert(
                                })
 
         if configuration.site_enable_gdp:
-            main_url = configuration.migserver_http_url
+            main_url = get_site_base_url(configuration)
             output_objects.append(
                 {'object_type': 'text', 'text': '''Apparently you do not
                         have access to this page, please return to:'''})
@@ -253,6 +272,8 @@ and just need to sign up for a local %s account on the''' %
         return (False, output_objects)
 
     (status, retval) = validate_input(user_arguments_dict, defaults,
-                                      output_objects, allow_rejects, filter_values)
+                                      output_objects, allow_rejects,
+                                      filter_values,
+                                      typecheck_overrides=typecheck_overrides)
 
     return (status, retval)

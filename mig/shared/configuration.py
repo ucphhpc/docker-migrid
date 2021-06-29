@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # configuration - configuration wrapper
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -26,6 +26,7 @@
 #
 
 """Configuration class"""
+
 from __future__ import print_function
 from __future__ import absolute_import
 
@@ -38,9 +39,11 @@ import sys
 import time
 from ConfigParser import ConfigParser
 
-from mig.shared.defaults import CSRF_MINIMAL, CSRF_WARN, CSRF_MEDIUM, CSRF_FULL, \
-    POLICY_NONE, POLICY_WEAK, POLICY_MEDIUM, POLICY_HIGH, POLICY_CUSTOM, \
-    freeze_flavors, duplicati_protocol_choices, default_css_filename, keyword_any
+from mig.shared.defaults import CSRF_MINIMAL, CSRF_WARN, CSRF_MEDIUM, \
+    CSRF_FULL, POLICY_NONE, POLICY_WEAK, POLICY_MEDIUM, POLICY_HIGH, \
+    POLICY_CUSTOM, freeze_flavors, duplicati_protocol_choices, \
+    default_css_filename, keyword_any, cert_valid_days, oid_valid_days, \
+    generic_valid_days
 from mig.shared.logger import Logger, SYSLOG_GDP
 from mig.shared.html import menu_items, vgrid_items
 from mig.shared.fileio import read_file, load_json
@@ -63,6 +66,7 @@ def fix_missing(config_file, verbose=True):
         'admin_email': '%s@%s' % (user, fqdn),
         'admin_list': '',
         'ca_fqdn': '',
+        'ca_smtp': '',
         'ca_user': 'mig-ca',
         'jupyter_mount_files_dir': '~/state/jupyter_mount_files',
         'mrsl_files_dir': '~/state/mrsl_files/',
@@ -102,10 +106,12 @@ def fix_missing(config_file, verbose=True):
         'sss_home': '~/state/sss_home/',
         'sandbox_home': '~/state/sandbox_home',
         'freeze_home': '~/state/freeze_home',
+        'freeze_tape': '~/state/freeze_tape',
         'sharelink_home': '~/state/sharelink_home',
         'seafile_mount': '~/state/seafile_mount',
         'openid_store': '~/state/openid_store/',
         'paraview_home': '~/state/paraview_home/',
+        'sitestats_home': '~/state/sitestats_home/',
         'public_key_file': '',
         'javabin_home': '~/mig/java-bin',
         'events_home': '~/state/events_home/',
@@ -130,6 +136,7 @@ def fix_missing(config_file, verbose=True):
         'trac_ini_path': '~/mig/server/trac.ini',
         'trac_id_field': 'email',
         'migserver_http_url': 'http://%%(server_fqdn)s',
+        'migserver_https_url': '',
         'myfiles_py_location': '',
         'mig_server_id': '%s.0' % fqdn,
         'empty_job_name': 'no_suitable_job-',
@@ -194,6 +201,9 @@ def fix_missing(config_file, verbose=True):
         'user_mig_oid_provider_alias': '',
         'user_ext_oid_provider': '',
         'user_openid_providers': [],
+        'user_mig_oidc_provider': '',
+        'user_ext_oidc_provider': '',
+        'user_openidconnect_providers': [],
         'user_mig_cert_title': '',
         'user_ext_cert_title': '',
         'user_monitor_log': 'monitor.log',
@@ -295,6 +305,7 @@ class Configuration:
     admin_email = ''
     admin_list = ''
     ca_fqdn = ''
+    ca_smtp = ''
     ca_user = 'mig-ca'
     resource_home = ''
     vgrid_home = ''
@@ -321,6 +332,7 @@ class Configuration:
     sss_home = ''
     sandbox_home = ''
     freeze_home = ''
+    freeze_tape = ''
     sharelink_home = ''
     javabin_home = ''
     events_home = ''
@@ -332,6 +344,7 @@ class Configuration:
     seafile_mount = ''
     openid_store = ''
     paraview_home = ''
+    sitestats_home = ''
     workflows_vgrid_tasks_home = ''
     workflows_vgrid_patterns_home = ''
     workflows_vgrid_recipes_home = ''
@@ -429,6 +442,9 @@ class Configuration:
     user_mig_oid_provider_alias = ''
     user_ext_oid_provider = ''
     user_openid_providers = []
+    user_mig_oidc_provider = ''
+    user_ext_oidc_provider = ''
+    user_openidconnect_providers = []
     user_mig_cert_title = ''
     user_ext_cert_title = ''
     user_monitor_log = 'monitor.log'
@@ -458,10 +474,13 @@ class Configuration:
     mig_system_run = ''
     empty_job_name = ''
     migserver_http_url = ''
+    migserver_https_url = ''
     migserver_https_mig_cert_url = ''
     migserver_https_ext_cert_url = ''
     migserver_https_mig_oid_url = ''
     migserver_https_ext_oid_url = ''
+    migserver_https_mig_oidc_url = ''
+    migserver_https_ext_oidc_url = ''
     migserver_https_sid_url = ''
     sleep_period_for_empty_jobs = ''
     min_seconds_between_live_update_requests = 0
@@ -536,6 +555,7 @@ class Configuration:
 
     auto_add_cert_user = False
     auto_add_oid_user = False
+    auto_add_oidc_user = False
     auto_add_resource = False
 
     # ARC resource configuration (list)
@@ -709,6 +729,13 @@ location.""" % self.config_file)
                 'SITE', 'user_interface').split()
         else:
             self.user_interface = ['V2']
+        # Allow gradual transition to new user interface - only new sign ups
+        if config.has_option('SITE', 'new_user_default_ui'):
+            self.new_user_default_ui = config.get(
+                'SITE', 'new_user_default_ui').strip()
+        else:
+            self.new_user_default_ui = self.user_interface[0]
+
         if config.has_option('GLOBAL', 'admin_list'):
             # Parse semi-colon separated list of admins with optional spaces
             admins = config.get('GLOBAL', 'admin_list')
@@ -729,8 +756,11 @@ location.""" % self.config_file)
 
         if config.has_option('GLOBAL', 'ca_fqdn'):
             self.ca_fqdn = config.get('GLOBAL', 'ca_fqdn')
+        if config.has_option('GLOBAL', 'ca_smtp'):
+            self.ca_smtp = config.get('GLOBAL', 'ca_smtp')
         if config.has_option('GLOBAL', 'ca_user'):
             self.ca_user = config.get('GLOBAL', 'ca_user')
+
         if config.has_option('GLOBAL', 'migserver_https_mig_cert_url'):
             self.migserver_https_mig_cert_url = config.get(
                 'GLOBAL', 'migserver_https_mig_cert_url')
@@ -743,9 +773,23 @@ location.""" % self.config_file)
         if config.has_option('GLOBAL', 'migserver_https_ext_oid_url'):
             self.migserver_https_ext_oid_url = config.get(
                 'GLOBAL', 'migserver_https_ext_oid_url')
+        if config.has_option('GLOBAL', 'migserver_https_mig_oidc_url'):
+            self.migserver_https_mig_oidc_url = config.get(
+                'GLOBAL', 'migserver_https_mig_oidc_url')
+        if config.has_option('GLOBAL', 'migserver_https_ext_oidc_url'):
+            self.migserver_https_ext_oidc_url = config.get(
+                'GLOBAL', 'migserver_https_ext_oidc_url')
         if config.has_option('GLOBAL', 'migserver_https_sid_url'):
             self.migserver_https_sid_url = config.get(
                 'GLOBAL', 'migserver_https_sid_url')
+        if config.has_option('GLOBAL', 'migserver_https_url'):
+            self.migserver_https_url = config.get(
+                'GLOBAL', 'migserver_https_url')
+        else:
+            # NOTE: fall back to SIDURL/public/ for anon https access
+            if self.migserver_https_sid_url:
+                self.migserver_https_url = os.path.join(
+                    self.migserver_https_sid_url, 'public')
 
         # More paths mainly for optional components
 
@@ -777,6 +821,8 @@ location.""" % self.config_file)
             self.vm_home = config.get('GLOBAL', 'vm_home')
         if config.has_option('GLOBAL', 'freeze_home'):
             self.freeze_home = config.get('GLOBAL', 'freeze_home')
+        if config.has_option('GLOBAL', 'freeze_tape'):
+            self.freeze_tape = config.get('GLOBAL', 'freeze_tape')
         if config.has_option('GLOBAL', 'sharelink_home'):
             self.sharelink_home = config.get('GLOBAL', 'sharelink_home')
         if config.has_option('GLOBAL', 'seafile_mount'):
@@ -785,6 +831,8 @@ location.""" % self.config_file)
             self.openid_store = config.get('GLOBAL', 'openid_store')
         if config.has_option('GLOBAL', 'paraview_home'):
             self.paraview_home = config.get('GLOBAL', 'paraview_home')
+        if config.has_option('GLOBAL', 'sitestats_home'):
+            self.sitestats_home = config.get('GLOBAL', 'sitestats_home')
         if config.has_option('GLOBAL', 'jupyter_mount_files_dir'):
             self.jupyter_mount_files_dir = config.get(
                 'GLOBAL', 'jupyter_mount_files_dir')
@@ -815,6 +863,11 @@ location.""" % self.config_file)
                 'SITE', 'enable_workflows')
         else:
             self.site_enable_workflows = False
+        if config.has_option('SITE', 'enable_workflow_history'):
+            self.site_enable_workflow_history = config.getboolean(
+                'SITE', 'enable_workflow_history')
+        else:
+            self.site_enable_workflow_history = False
         if config.has_option('SITE', 'enable_events'):
             self.site_enable_events = config.getboolean(
                 'SITE', 'enable_events')
@@ -907,6 +960,16 @@ location.""" % self.config_file)
             self.site_enable_davs = config.getboolean('SITE', 'enable_davs')
         else:
             self.site_enable_davs = False
+        if config.has_option('SITE', 'enable_davs_legacy_tls'):
+            self.site_enable_davs_legacy_tls = config.getboolean(
+                'SITE', 'enable_davs_legacy_tls')
+        else:
+            self.site_enable_davs_legacy_tls = False
+        if config.has_option('SITE', 'enable_ftps_legacy_tls'):
+            self.site_enable_ftps_legacy_tls = config.getboolean(
+                'SITE', 'enable_ftps_legacy_tls')
+        else:
+            self.site_enable_ftps_legacy_tls = False
         if config.has_option('GLOBAL', 'user_davs_address'):
             self.user_davs_address = config.get('GLOBAL',
                                                 'user_davs_address')
@@ -1159,6 +1222,20 @@ location.""" % self.config_file)
                                      self.user_mig_oid_provider_alias,
                                      self.user_ext_oid_provider] if i]
             self.user_openid_providers = providers
+        if config.has_option('GLOBAL', 'user_mig_oidc_provider'):
+            self.user_mig_oidc_provider = config.get('GLOBAL',
+                                                     'user_mig_oidc_provider')
+        if config.has_option('GLOBAL', 'user_ext_oidc_provider'):
+            self.user_ext_oidc_provider = config.get('GLOBAL',
+                                                     'user_ext_oidc_provider')
+        if config.has_option('GLOBAL', 'user_openidconnect_providers'):
+            self.user_openidconnect_providers = config.get(
+                'GLOBAL', 'user_openidconnect_providers').split()
+        else:
+            providers = [i for i in [
+                self.user_mig_oidc_provider,
+                self.user_ext_oidc_provider] if i]
+            self.user_openidconnect_providers = providers
         if config.has_option('GLOBAL', 'user_mig_cert_title'):
             self.user_mig_cert_title = config.get('GLOBAL',
                                                   'user_mig_cert_title')
@@ -1736,20 +1813,19 @@ location.""" % self.config_file)
         # Fall back to server_fqdn if not set or no valid entries
         if not self.site_transfers_from:
             self.site_transfers_from = [self.server_fqdn]
-        if config.has_option('SITE', 'quickstart_snippet_url'):
-            self.site_quickstart_snippet_url = config.get(
-                'SITE', 'quickstart_snippet_url')
+        # NOTE: single Support snippet provides the V3 Support popup content
+        if config.has_option('SITE', 'support_snippet_url'):
+            self.site_support_snippet_url = config.get(
+                'SITE', 'support_snippet_url')
         else:
-            self.site_quickstart_snippet_url = '/public/quickstart-snippet.html'
-        if config.has_option('SITE', 'faq_snippet_url'):
-            self.site_faq_snippet_url = config.get('SITE', 'faq_snippet_url')
-        else:
-            self.site_faq_snippet_url = '/public/faq-snippet.html'
+            self.site_support_snippet_url = '/public/support-snippet.html'
+        # NOTE: single About snippet provides the V3 About popup content
         if config.has_option('SITE', 'about_snippet_url'):
             self.site_about_snippet_url = config.get(
                 'SITE', 'about_snippet_url')
         else:
             self.site_about_snippet_url = '/public/about-snippet.html'
+        # NOTE: Tips page provides all the tip of the day content to pick from
         if config.has_option('SITE', 'tips_snippet_url'):
             self.site_tips_snippet_url = config.get(
                 'SITE', 'tips_snippet_url')
@@ -1891,6 +1967,8 @@ location.""" % self.config_file)
             ext_cert_url = self.migserver_https_ext_cert_url
             mig_oid_url = self.migserver_https_mig_oid_url
             ext_oid_url = self.migserver_https_ext_oid_url
+            mig_oidc_url = self.migserver_https_mig_oidc_url
+            ext_oidc_url = self.migserver_https_ext_oidc_url
             if mig_cert_url:
                 mig_cert_url = os.path.join(mig_cert_url, rel_url)
             if ext_cert_url:
@@ -1899,6 +1977,10 @@ location.""" % self.config_file)
                 mig_oid_url = os.path.join(mig_oid_url, rel_url)
             if ext_oid_url:
                 ext_oid_url = os.path.join(ext_oid_url, rel_url)
+            if mig_oidc_url:
+                mig_oidc_url = os.path.join(mig_oidc_url, rel_url)
+            if ext_oidc_url:
+                ext_oidc_url = os.path.join(ext_oidc_url, rel_url)
             locations = []
             for i in self.site_login_methods:
                 if i == 'migcert' and mig_cert_url and \
@@ -1913,6 +1995,12 @@ location.""" % self.config_file)
                 elif i == 'extoid' and ext_oid_url and \
                         not ext_oid_url in locations:
                     locations.append(ext_oid_url)
+                elif i == 'migoidc' and mig_oidc_url and \
+                        not mig_oidc_url in locations:
+                    locations.append(mig_oidc_url)
+                elif i == 'extoidc' and ext_oidc_url and \
+                        not ext_oidc_url in locations:
+                    locations.append(ext_oidc_url)
             self.myfiles_py_location = ' '.join(locations)
 
         # Force-disable all incompatible or unsafe features in GDP mode
@@ -2062,9 +2150,36 @@ location.""" % self.config_file)
         if config.has_option('GLOBAL', 'auto_add_oid_user'):
             self.auto_add_oid_user = config.getboolean('GLOBAL',
                                                        'auto_add_oid_user')
+        if config.has_option('GLOBAL', 'auto_add_oidc_user'):
+            self.auto_add_oidc_user = config.getboolean('GLOBAL',
+                                                        'auto_add_oidc_user')
+        else:
+            # Fall back to oid setup
+            self.auto_add_oidc_user = self.auto_add_oid_user
         if config.has_option('GLOBAL', 'auto_add_resource'):
             self.auto_add_resource = config.getboolean('GLOBAL',
                                                        'auto_add_resource')
+
+        # Allow override of account valid days from shared.defaults
+        if config.has_option('GLOBAL', 'cert_valid_days'):
+            self.cert_valid_days = config.getint('GLOBAL', 'cert_valid_days')
+        else:
+            self.cert_valid_days = cert_valid_days
+        if config.has_option('GLOBAL', 'oid_valid_days'):
+            # NOTE: openid 2.0 and connect share value for now
+            self.oid_valid_days = self.oidc_valid_days = \
+                config.getint('GLOBAL', 'oid_valid_days')
+        else:
+            self.oid_valid_days = self.oidc_valid_days = oid_valid_days
+        # NOTE: custom_valid_days is legacy name
+        if config.has_option('GLOBAL', 'generic_valid_days'):
+            self.generic_valid_days = config.getint('GLOBAL',
+                                                    'generic_valid_days')
+        elif config.has_option('GLOBAL', 'custom_valid_days'):
+            self.generic_valid_days = config.getint('GLOBAL',
+                                                    'custom_valid_days')
+        else:
+            self.generic_valid_days = generic_valid_days
 
         # if arc cluster URLs configured, read them in:
 

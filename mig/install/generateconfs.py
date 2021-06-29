@@ -4,7 +4,7 @@
 # --- BEGIN_HEADER ---
 #
 # generateconfs - create custom MiG server configuration files
-# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+# Copyright (C) 2003-2021  The MiG Project lead by Brian Vinter
 #
 # This file is part of MiG.
 #
@@ -32,9 +32,23 @@ from __future__ import print_function
 
 import datetime
 import getopt
+import os
 import sys
 
-from mig.shared.install import generate_confs
+# Ensure that the generateconfs.py script is able to execute from a fresh
+# checkout when the cwd is not the parent directory where it was checked out.
+# Solve this by ensuring that the chckout is part of the sys.path
+
+# NOTE: __file__ is /MIG_BASE/mig/install/generateconfs.py and we need MIG_BASE
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
+# NOTE: moved mig imports into try/except to avoid autopep8 moving to top!
+try:
+    from mig.shared.install import generate_confs
+except ImportError:
+    print("ERROR: the migrid modules must be in PYTHONPATH")
+    sys.exit(1)
 
 
 def usage(options):
@@ -56,10 +70,13 @@ if '__main__' == __name__:
         'base_fqdn',
         'public_fqdn',
         'public_alias_fqdn',
+        'public_sec_fqdn',
         'mig_cert_fqdn',
         'ext_cert_fqdn',
         'mig_oid_fqdn',
         'ext_oid_fqdn',
+        'mig_oidc_fqdn',
+        'ext_oidc_fqdn',
         'sid_fqdn',
         'io_fqdn',
         'seafile_fqdn',
@@ -84,6 +101,11 @@ if '__main__' == __name__:
         'mig_certs',
         'mig_oid_provider',
         'ext_oid_provider',
+        'mig_oidc_provider_meta_url',
+        'ext_oidc_provider_meta_url',
+        'ext_oidc_client_name',
+        'ext_oidc_client_id',
+        'ext_oidc_scope',
         'dhparams_path',
         'daemon_keycert',
         'daemon_pubkey',
@@ -115,11 +137,14 @@ if '__main__' == __name__:
         'sftp_subsys_auth_procs',
         'wsgi_procs',
         'public_port',
-        'public_alias_port',
+        'public_http_port',
+        'public_https_port',
         'mig_cert_port',
         'ext_cert_port',
         'mig_oid_port',
         'ext_oid_port',
+        'mig_oidc_port',
+        'ext_oidc_port',
         'sid_port',
         'sftp_port',
         'sftp_show_port',
@@ -172,6 +197,7 @@ if '__main__' == __name__:
         'enable_sitestatus',
         'daemon_pubkey_from_dns',
         'seafile_ro_access',
+        'public_use_https',
     ]
     names = str_names + int_names + bool_names
     settings = {}
