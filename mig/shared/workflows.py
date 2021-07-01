@@ -2493,13 +2493,54 @@ def workflow_match(configuration, workflow_object, user_query=False, **kwargs):
                 return (False, "")
         if 'persistence_id' not in kwargs:
             for _k, _v in kwargs.items():
-                if _k not in workflow_object:
-                    return (False, 'Could not find attribute %s in %s'
-                            % (_k, workflow_object))
-                if not re.match(_v, workflow_object[_k]) \
-                        and _v not in workflow_object[_k]:
-                    return (False, 'Different values for %s in %s'
-                            % (_k, workflow_object))
+                # recipes in workflow patterns need a custom matching as their
+                # format changes between the initial submission and their
+                # stored format.
+                if _k == 'recipes' \
+                        and 'object_type' in workflow_object \
+                        and workflow_object['object_type'] == WORKFLOW_PATTERN \
+                        and type(_v) == list \
+                        and 'trigger_recipes' in workflow_object:
+                    recipe_list = []
+                    for rule in workflow_object['trigger_recipes'].values():
+                        for recipe, details in rule.items():
+                            recipe_list.append((recipe, details))
+                    for recipe in recipe_list:
+                        # If recipe has not yet been registered on mig
+                        if not recipe[1]:
+                            recipe_name = recipe[0]
+                            if recipe[0] not in _v:
+                                return (False,
+                                        'Could not find unregistered recipe '
+                                        '%s in %s' % (recipe, workflow_object))
+                        # If recipe has been, format here is different
+                        else:
+                            if 'name' not in recipe[1] \
+                                    or recipe[1]['name'] not in _v:
+                                return (False,
+                                        'Could not find registered recipe '
+                                        '%s in %s' % (recipe, workflow_object))
+
+                else:
+                    if _k not in workflow_object:
+                        return (False, 'Could not find attribute %s in %s'
+                                % (_k, workflow_object))
+                    # recipe requests are sent as dicts so need to be
+                    # converted to whole notebooks.
+                    if type(_v) == nbformat.notebooknode.NotebookNode:
+                        comp = workflow_object[_k]
+                        if type(comp) == dict:
+                            comp = nbformat.notebooknode.from_dict(comp)
+                        if _v != comp:
+                            return (False, 'Different values for notebook %s '
+                                           'in %s against %s'
+                                    % (_k, workflow_object, _v))
+                    else:
+                        if _v != workflow_object[_k] \
+                                and _v not in workflow_object[_k]:
+                            return (False, 'Different values for %s in %s '
+                                           'against %s'
+                                    % (_k, workflow_object, _v))
             return (True, "")
         else:
             if kwargs['persistence_id'] == workflow_object['persistence_id']:
