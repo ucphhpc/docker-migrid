@@ -31,10 +31,24 @@ RUN yum update -y \
     ca-certificates \
     mercurial \
     openssh-server \
-    rsyslog \
     openssh-clients \
+    rsyslog \
     lsof \
-    python-pip
+    python-pip \
+    python-devel \
+    python-paramiko \
+    python-enchant \
+    python-jsonrpclib \
+    python-requests \
+    python2-psutil \
+    python-future \
+    cracklib-python \
+    cracklib-devel \
+    lftp \
+    rsync \
+    fail2ban \
+    ipset
+
 
 # Apache OpenID (provided by epel)
 RUN yum install -y mod_auth_openid
@@ -157,6 +171,14 @@ RUN pip install --user \
 RUN pip install --user \
     future
 
+# Modules required by 2FA
+RUN pip install --user \
+    pyotp==2.3.0
+
+# Support sftp cracklib check
+RUN pip install --user \
+    cracklib
+
 # Install and configure MiG
 ARG CHECKOUT=5205
 RUN svn checkout -r $CHECKOUT https://svn.code.sf.net/p/migrid/code/trunk .
@@ -169,57 +191,64 @@ RUN chown -R $USER:$USER $MIG_ROOT/mig
 USER $USER
 
 ENV PYTHONPATH=${MIG_ROOT}
+# Ensure that the $USER sets it during session start
+RUN echo "PYTHONPATH=${MIG_ROOT}" >> ~/.bash_profile \
+    && echo "export PYTHONPATH" >> ~/.bash_profile
 
 WORKDIR $MIG_ROOT/mig/install
 
-RUN ./generateconfs.py \
-    --source=. \
+RUN ./generateconfs.py --source=. \
     --destination=generated-confs \
     --destination_suffix="_svn$(svnversion -n ~/)" \
+    --base_fqdn=$DOMAIN \
+    --public_fqdn=www.$DOMAIN \
+    --mig_cert_fqdn=cert.$DOMAIN \
+    --ext_cert_fqdn= \
+    --mig_oid_fqdn=ext.$DOMAIN \
+    --ext_oid_fqdn=oid.$DOMAIN \
+    --sid_fqdn=sid.$DOMAIN \
+    --io_fqdn=io.$DOMAIN \
+    --user=mig --group=mig \
+    --apache_version=2.4 \
     --apache_etc=/etc/httpd \
     --apache_run=/var/run/httpd \
     --apache_lock=/var/lock/subsys/httpd \
     --apache_log=/var/log/httpd \
-    --distro=centos \
+    --openssh_version=7.2 \
+    --mig_code=/home/mig/mig \
     --mig_state=/home/mig/state \
-    --listen_clause=#Listen \
-    --enable_events=True \
-    --enable_crontab=True \
-    --enable_imnotify=True \
-    --enable_hsts=True \
-    --enable_jupyter=False \
-    --enable_sftp=False \
-    --enable_sftp_subsys=True \
-    --base_fqdn=$DOMAIN \
-    --public_fqdn=www.$DOMAIN \
-    --public_port=80 \
-    --mig_cert_fqdn= \
-    --ext_cert_fqdn= \
-    --mig_oid_fqdn=oid.$DOMAIN \
-    --mig_oid_port=443 \
-    --ext_oid_fqdn= \
-    --sid_fqdn=sid.$DOMAIN \
-    --sid_port=444 \
-    --io_fqdn=io.$DOMAIN \
-    --user=mig \
-    --group=mig \
-    --hg_path=/usr/bin/hg \
-    --hgweb_scripts=/usr/share/doc/mercurial-2.6.2 \
-    --trac_admin_path= \
-    --trac_ini_path= \
-    --enable_openid=True \
-    --enable_wsgi=True \
-    --serveralias_clause=#ServerAlias \
-    --mig_oid_provider=https://oid.$DOMAIN/openid/ \
-    --signup_methods="migoid" \
-    --login_methods="migoid" \
-    --alias_field='email' \
-    --daemon_show_address=io.$DOMAIN \
     --mig_certs=/etc/httpd/MiG-certificates \
+    --hg_path=/usr/bin/hg \
+    --hgweb_scripts=/usr/share/doc/mercurial-common/examples \
+    --trac_admin_path=/usr/bin/trac-admin \
+    --trac_ini_path=/home/mig/mig/server/trac.ini \
+    --public_http_port=80 --public_https_port=443 \
+    --ext_cert_port=443 --mig_oid_port=443 \
+    --ext_oid_port=443 --sid_port=443 \
+    --mig_oid_provider=https://oid.$DOMAIN/openid/ \
+    --enable_openid=True --enable_wsgi=True \
+    --enable_sftp=False --enable_sftp_subsys=True \
+    --enable_davs=True --enable_ftps=True \
+    --enable_duplicati=False --enable_seafile=True \
+    --enable_sandboxes=True --enable_vmachines=False \
+    --enable_crontab=True --enable_jobs=True \
+    --enable_resources=True --enable_notify=True \
+    --enable_events=True --enable_imnotify=True \
+    --enable_twofactor=True --enable_cracklib=True \
+    --enable_hsts=True --enable_vhost_certs=True \
+    --enable_verify_certs=True \
+    --user_clause=User --group_clause=Group \
+    --listen_clause='#Listen' \
+    --serveralias_clause='ServerAlias' --alias_field=email \
     --dhparams_path=~/certs/dhparams.pem \
     --daemon_keycert=~/certs/combined.pem \
-    --landing_page=/wsgi-bin/fileman.py \
-    --skin=idmc-basic
+    --daemon_pubkey=~/certs/combined.pub \
+    --daemon_pubkey_from_dns=True \
+    --signup_methods="extoid migoid migcert" \
+    --login_methods="extoid migoid migcert" \
+    --distro=centos \
+    --skin=erda-user-friendly --short_title=MiG \
+    --wsgi_procs=25
 
 RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/static-skin.css $MIG_ROOT/mig/images/ \
