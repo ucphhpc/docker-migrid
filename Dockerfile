@@ -100,10 +100,12 @@ RUN touch /etc/pki/CA/index.txt \
 
 # Daemon keys
 RUN cat server.{key,crt} > combined.pem \
+    && cp combined.pem server.ca.pem \
     && chown $USER:$USER combined.pem \
+    && chown $USER:$USER server.ca.pem \
     && ssh-keygen -y -f combined.pem > combined.pub \
     && chown 0:0 *.key server.crt ca.pem \
-    && chmod 400 *.key server.crt ca.pem combined.pem
+    && chmod 400 *.key server.crt ca.pem combined.pem server.ca.pem
 
 # Prepare keys for mig
 RUN mv server.crt $CERT_DIR/MiG/*.$DOMAIN/ \
@@ -111,7 +113,8 @@ RUN mv server.crt $CERT_DIR/MiG/*.$DOMAIN/ \
     && mv crl.pem $CERT_DIR/MiG/*.$DOMAIN/ \
     && mv ca.pem $CERT_DIR/MiG/*.$DOMAIN/cacert.pem \
     && mv combined.pem $CERT_DIR/MiG/*.$DOMAIN/ \
-    && mv combined.pub $CERT_DIR/MiG/*.$DOMAIN/
+    && mv combined.pub $CERT_DIR/MiG/*.$DOMAIN/ \
+    && mv server.ca.pem $CERT_DIR/MiG/*.$DOMAIN/
 
 WORKDIR $CERT_DIR
 
@@ -120,8 +123,14 @@ RUN ln -s MiG/*.$DOMAIN/server.crt server.crt \
     && ln -s MiG/*.$DOMAIN/crl.pem crl.pem \
     && ln -s MiG/*.$DOMAIN/cacert.pem cacert.pem \
     && ln -s MiG/*.$DOMAIN/combined.pem combined.pem \
+    && ln -s MiG/*.$DOMAIN/server.ca.pem server.ca.pem \
     && ln -s MiG/*.$DOMAIN/combined.pub combined.pub \
-    && ln -s MiG/*.$DOMAIN io.migrid.test
+    && ln -s MiG/*.$DOMAIN cert.$DOMAIN \
+    && ln -s MiG/*.$DOMAIN ext.$DOMAIN \
+    && ln -s MiG/*.$DOMAIN oid.$DOMAIN \
+    && ln -s MiG/*.$DOMAIN io.$DOMAIN \
+    && ln -s MiG/*.$DOMAIN www.$DOMAIN \
+    && ln -s MiG/*.$DOMAIN sid.$DOMAIN
 
 # Upgrade pip, required by cryptography
 RUN python -m pip install -U pip==20.3.4
@@ -134,6 +143,7 @@ RUN mkdir -p MiG-certificates \
     && ln -s $CERT_DIR/MiG/*.$DOMAIN/cacert.pem cacert.pem \
     && ln -s $CERT_DIR/MiG MiG \
     && ln -s $CERT_DIR/combined.pem combined.pem \
+    && ln -s $CERT_DIR/server.ca.pem server.ca.pem \
     && ln -s $CERT_DIR/combined.pub combined.pub \
     && ln -s $CERT_DIR/dhparams.pem dhparams.pem
 
@@ -222,10 +232,15 @@ RUN ./generateconfs.py --source=. \
     --hgweb_scripts=/usr/share/doc/mercurial-common/examples \
     --trac_admin_path=/usr/bin/trac-admin \
     --trac_ini_path=/home/mig/mig/server/trac.ini \
-    --public_http_port=80 --public_https_port=443 \
-    --ext_cert_port=443 --mig_oid_port=443 \
-    --ext_oid_port=443 --sid_port=443 \
-    --mig_oid_provider=https://oid.$DOMAIN/openid/ \
+    --public_http_port=80 \
+    --public_https_port=443 \
+    --mig_cert_port=444 \
+    --ext_cert_port=445 \
+    --mig_oid_port=446 \
+    --ext_oid_port=447 \
+    --sid_port=448 \
+    --mig_oid_provider=https://ext.$DOMAIN/openid/ \
+    --ext_oid_provider=https://oid.$DOMAIN/openid/ \
     --enable_openid=True --enable_wsgi=True \
     --enable_sftp=False --enable_sftp_subsys=True \
     --enable_davs=True --enable_ftps=True \
