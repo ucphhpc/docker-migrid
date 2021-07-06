@@ -24,12 +24,17 @@
 """Unittest to verify the functionality of the workflows implementation"""
 
 import os
+import shutil
+import tempfile
 import unittest
 import nbformat
 
 from mig.shared.conf import get_configuration_object
 from mig.shared.defaults import default_vgrid
-from mig.shared.fileio import makedirs_rec, remove_rec
+from mig.shared.events import get_path_expand_map
+from mig.shared.fileio import makedirs_rec, remove_rec, unpickle
+from mig.shared.job import fill_mrsl_template
+from mig.shared.mrslparser import parse
 from mig.shared.serial import load
 from mig.shared.vgrid import vgrid_set_triggers
 from mig.shared.workflows import reset_workflows, WORKFLOW_PATTERN, \
@@ -80,8 +85,14 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         (trigger_status, trigger_msg) = vgrid_set_triggers(self.configuration,
                                                            self.test_vgrid, [])
         self.assertTrue(trigger_status)
+        # Create home for test job files
+        self.mrsl_files = os.path.join(
+            self.configuration.mrsl_files_dir, self.username)
+        if not os.path.exists(self.mrsl_files):
+            os.mkdir(self.mrsl_files)
 
     def tearDown(self):
+        self.logger.info("========================= TEARING IT ALL DOWN ==========================")
         if not os.environ.get('MIG_CONF', False):
             os.environ['MIG_CONF'] = os.path.join(
                 os.sep, 'home', 'mig', 'mig', 'server', 'MiGserver.conf')
@@ -98,6 +109,9 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertEqual(
             get_workflow_trigger(configuration, test_vgrid)[0], [])
         configuration.site_enable_workflows = False
+        # Cleanup any test job files
+        if os.path.exists(self.mrsl_files):
+            shutil.rmtree(self.mrsl_files)
 
     def test_create_workflow_pattern(self):
         pattern_attributes = {'name': self.test_pattern_name,
@@ -2568,6 +2582,114 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertIn('DISK', trigger_dict)
         self.assertEqual(trigger_dict['DISK'], ['1'])
 
+        # check that the mrsl is actually valid
+        temp_dir = tempfile.mkdtemp()
+        mrsl_fd = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
+        mrsl_path = mrsl_fd.name
+
+        job_template = trigger['templates'][0]
+        rule = {
+            'vgrid_name': self.test_vgrid,
+            'run_as': self.username
+        }
+        rel_src = 'this/is/a/path'
+        state = 'dummy event'
+        expand_map = get_path_expand_map(rel_src, rule, state)
+        test_job_id = '1234567890'
+
+        status = fill_mrsl_template(
+            job_template,
+            mrsl_fd,
+            rel_src,
+            state,
+            rule,
+            expand_map,
+            self.configuration
+        )
+
+        self.assertTrue(status)
+
+        (parseresult, parsemsg) = parse(
+            mrsl_path,
+            test_job_id,
+            self.username,
+            False,
+            outfile='AUTOMATIC',
+            workflow_job=False
+        )
+
+        self.assertTrue(parseresult)
+        self.assertEqual(parsemsg, '')
+
+        mrsl_file = os.path.join(self.mrsl_files, test_job_id + '.mRSL')
+        self.assertTrue(os.path.exists(mrsl_file))
+
+        mrsl = unpickle(mrsl_file, self.logger)
+
+        self.assertIn('VGRID', mrsl)
+        self.assertEqual(mrsl['VGRID'], [self.test_vgrid])
+
+        self.assertIn('RETRIES', mrsl)
+        self.assertEqual(mrsl['RETRIES'], 0)
+
+        self.assertIn('EXECUTE', mrsl)
+        self.assertEqual(len(mrsl['EXECUTE']), 2)
+        self.assertIn(
+            '${NOTEBOOK_PARAMETERIZER} Generic/.workflow_tasks_home/%s '
+            'Generic/.workflow_tasks_home/%s.yaml -o +JOBID+_%s -e'
+            % (task_id, pattern_id, task_id), mrsl['EXECUTE'])
+        self.assertIn(
+            '${PAPERMILL} +JOBID+_%s +JOBID+_recipe_name_output.ipynb'
+            % task_id, mrsl['EXECUTE'])
+
+        self.assertIn('OUTPUTFILES', mrsl)
+        self.assertEqual(mrsl['OUTPUTFILES'],
+                         ['+JOBID+_recipe_name_output.ipynb job_output/+JOBID'
+                          '+/+JOBID+_recipe_name_output.ipynb'])
+
+        self.assertIn('RUNTIMEENVIRONMENT', mrsl)
+        self.assertEqual(len(mrsl['RUNTIMEENVIRONMENT']), 3)
+        self.assertIn('NOTEBOOK_PARAMETERIZER',
+                      mrsl['RUNTIMEENVIRONMENT'])
+        self.assertIn('PAPERMILL', mrsl['RUNTIMEENVIRONMENT'])
+        self.assertIn('SSHFS-2.X-1', mrsl['RUNTIMEENVIRONMENT'])
+
+        self.assertIn('MAXFILL', mrsl)
+        self.assertEqual(len(mrsl['MAXFILL']), 5)
+        self.assertIn('CPUCOUNT', mrsl['MAXFILL'])
+        self.assertIn('CPUTIME', mrsl['MAXFILL'])
+        self.assertIn('DISK', mrsl['MAXFILL'])
+        self.assertIn('MEMORY', mrsl['MAXFILL'])
+        self.assertIn('NODECOUNT', mrsl['MAXFILL'])
+
+        self.assertIn('MOUNT', mrsl)
+        self.assertEqual(mrsl['MOUNT'],
+                         [self.test_vgrid + ' ' + self.test_vgrid])
+
+        self.assertIn('CPUTIME', mrsl)
+        self.assertEqual(mrsl['CPUTIME'], 60)
+
+        self.assertIn('ENVIRONMENT', mrsl)
+        self.assertEqual(len(mrsl['ENVIRONMENT']), 3)
+        self.assertIn(('LC_ALL', 'en_US.utf8'), mrsl['ENVIRONMENT'])
+        self.assertIn(('PYTHONPATH', self.test_vgrid), mrsl['ENVIRONMENT'])
+        self.assertIn(('WORKFLOW_INPUT_PATH', rel_src), mrsl['ENVIRONMENT'])
+
+        self.assertIn('CPUCOUNT', mrsl)
+        self.assertEqual(mrsl['CPUCOUNT'], 1)
+
+        self.assertIn('NOTIFY', mrsl)
+        self.assertEqual(mrsl['NOTIFY'], ['email: SETTINGS'])
+
+        self.assertIn('MEMORY', mrsl)
+        self.assertEqual(mrsl['MEMORY'], 64)
+
+        self.assertIn('NODECOUNT', mrsl)
+        self.assertEqual(mrsl['NODECOUNT'], 1)
+
+        self.assertIn('DISK', mrsl)
+        self.assertEqual(mrsl['DISK'], 1)
+
     def test_workflow_altered_job_template(self):
         pattern_attributes = {
             'name': self.test_pattern_name,
@@ -2610,7 +2732,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                         'email: patch@email.com'
                     ],
                     'runtime environments': [
-                        'SSHFS-2.X-1'
+                        'VIRTUALBOX-3.1.X-1'
                     ]
                 },
                 'local': {
@@ -2697,7 +2819,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertIn('NOTEBOOK_PARAMETERIZER',
                       trigger_dict['RUNTIMEENVIRONMENT'])
         self.assertIn('PAPERMILL', trigger_dict['RUNTIMEENVIRONMENT'])
-        self.assertIn('SSHFS-2.X-1', trigger_dict['RUNTIMEENVIRONMENT'])
+        self.assertIn('VIRTUALBOX-3.1.X-1', trigger_dict['RUNTIMEENVIRONMENT'])
 
         self.assertIn('MAXFILL', trigger_dict)
         self.assertEqual(len(trigger_dict['MAXFILL']), 1)
@@ -2733,6 +2855,111 @@ class WorkflowsFunctionsTest(unittest.TestCase):
 
         self.assertIn('DISK', trigger_dict)
         self.assertEqual(trigger_dict['DISK'], ['18'])
+
+        # check that the mrsl is actually valid
+        temp_dir = tempfile.mkdtemp()
+        mrsl_fd = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
+        mrsl_path = mrsl_fd.name
+
+        job_template = trigger['templates'][0]
+        rule = {
+            'vgrid_name': self.test_vgrid,
+            'run_as': self.username
+        }
+        rel_src = 'this/is/a/path'
+        state = 'dummy event'
+        expand_map = get_path_expand_map(rel_src, rule, state)
+        test_job_id = '1234567890'
+
+        status = fill_mrsl_template(
+            job_template,
+            mrsl_fd,
+            rel_src,
+            state,
+            rule,
+            expand_map,
+            self.configuration
+        )
+
+        self.assertTrue(status)
+
+        (parseresult, parsemsg) = parse(
+            mrsl_path,
+            test_job_id,
+            self.username,
+            False,
+            outfile='AUTOMATIC',
+            workflow_job=False
+        )
+
+        self.assertTrue(parseresult)
+        self.assertEqual(parsemsg, '')
+
+        mrsl_file = os.path.join(self.mrsl_files, test_job_id + '.mRSL')
+        self.assertTrue(os.path.exists(mrsl_file))
+
+        mrsl = unpickle(mrsl_file, self.logger)
+
+        self.assertIn('VGRID', mrsl)
+        self.assertEqual(mrsl['VGRID'], [self.test_vgrid])
+
+        self.assertIn('RETRIES', mrsl)
+        self.assertEqual(mrsl['RETRIES'], 20)
+
+        self.assertIn('EXECUTE', mrsl)
+        self.assertEqual(len(mrsl['EXECUTE']), 2)
+        self.assertIn(
+            '${NOTEBOOK_PARAMETERIZER} Generic/.workflow_tasks_home/%s '
+            'Generic/.workflow_tasks_home/%s.yaml -o +JOBID+_%s -e'
+            % (task_id, pattern_id, task_id), mrsl['EXECUTE'])
+        self.assertIn(
+            '${PAPERMILL} +JOBID+_%s +JOBID+_recipe_name_output.ipynb'
+            % task_id, mrsl['EXECUTE'])
+
+        self.assertIn('OUTPUTFILES', mrsl)
+        self.assertEqual(mrsl['OUTPUTFILES'],
+                         ['+JOBID+_recipe_name_output.ipynb job_output/+'
+                          'JOBID+/+JOBID+_recipe_name_output.ipynb'])
+
+        self.assertIn('RUNTIMEENVIRONMENT', mrsl)
+        self.assertEqual(len(mrsl['RUNTIMEENVIRONMENT']), 4)
+        self.assertIn('NOTEBOOK_PARAMETERIZER', mrsl['RUNTIMEENVIRONMENT'])
+        self.assertIn('PAPERMILL', mrsl['RUNTIMEENVIRONMENT'])
+        self.assertIn('VIRTUALBOX-3.1.X-1', mrsl['RUNTIMEENVIRONMENT'])
+        self.assertIn('SSHFS-2.X-1', mrsl['RUNTIMEENVIRONMENT'])
+
+        self.assertIn('MAXFILL', mrsl)
+        self.assertEqual(len(mrsl['MAXFILL']), 1)
+        self.assertIn('DISK', mrsl['MAXFILL'])
+
+        self.assertIn('MOUNT', mrsl)
+        self.assertEqual(mrsl['MOUNT'],
+                         [self.test_vgrid + ' ' + self.test_vgrid])
+
+        self.assertIn('CPUTIME', mrsl)
+        self.assertEqual(mrsl['CPUTIME'], 14)
+
+        self.assertIn('ENVIRONMENT', mrsl)
+        self.assertEqual(len(mrsl['ENVIRONMENT']), 4)
+        self.assertIn(('LC_ALL', 'en_US.utf8'), mrsl['ENVIRONMENT'])
+        self.assertIn(('PYTHONPATH', self.test_vgrid), mrsl['ENVIRONMENT'])
+        self.assertIn(('WORKFLOW_INPUT_PATH', rel_src), mrsl['ENVIRONMENT'])
+        self.assertIn(('VAR', '42'), mrsl['ENVIRONMENT'])
+
+        self.assertIn('CPUCOUNT', mrsl)
+        self.assertEqual(mrsl['CPUCOUNT'], 12)
+
+        self.assertIn('NOTIFY', mrsl)
+        self.assertEqual(mrsl['NOTIFY'], ['email: patch@email.com'])
+
+        self.assertIn('MEMORY', mrsl)
+        self.assertEqual(mrsl['MEMORY'], 16)
+
+        self.assertIn('NODECOUNT', mrsl)
+        self.assertEqual(mrsl['NODECOUNT'], 10)
+
+        self.assertIn('DISK', mrsl)
+        self.assertEqual(mrsl['DISK'], 18)
 
     # def test_recipe_pattern_association_creation_pattern_first(self):
     #     pattern_attributes = {'name': 'association test pattern',
