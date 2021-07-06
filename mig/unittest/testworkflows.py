@@ -18,7 +18,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
+# USA.
 
 """Unittest to verify the functionality of the workflows implementation"""
 
@@ -35,6 +36,24 @@ from mig.shared.workflows import reset_workflows, WORKFLOW_PATTERN, \
     WORKFLOW_RECIPE, WORKFLOW_ANY, get_workflow_with, \
     delete_workflow, create_workflow, update_workflow, \
     get_workflow_trigger, get_task_parameter_path
+
+
+def parse_trigger_lines(trigger_lines):
+    trigger_dict = {}
+    key = ''
+    for line in trigger_lines:
+        if len(line) >= 4 and line.startswith('::') and line.endswith('::'):
+            key = line.strip(':')
+            continue
+        elif not line:
+            key = ''
+        elif key:
+            if key in trigger_dict:
+                trigger_dict[key].append(line)
+            else:
+                trigger_dict[key] = [line]
+
+    return trigger_dict
 
 
 class WorkflowsFunctionsTest(unittest.TestCase):
@@ -296,7 +315,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertEqual(len(workflow), 1)
         # Check internal attributes
         for k, v in recipe_attributes.items():
-            self.assertEqual(recipe_attributes[k], v)
+            self.assertEqual(workflow[0][k], v)
 
     def test_recipe_create_with_persistence_id(self):
         notebook = nbformat.v4.new_notebook()
@@ -349,7 +368,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertEqual(len(workflow), 1)
         # Check internal attributes
         for k, v in recipe_attributes.items():
-            self.assertEqual(recipe_attributes[k], v)
+            self.assertEqual(workflow[0][k], v)
 
     def test_create_read_delete_pattern(self):
         pattern_attributes = {'name': self.test_pattern_name,
@@ -452,7 +471,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertEqual(len(workflow), 1)
         # Check internal attributes
         for k, v in recipe_attributes.items():
-            self.assertEqual(recipe_attributes[k], v)
+            self.assertEqual(workflow[0][k], v)
 
         delete_attributes = {'vgrid': self.test_vgrid,
                              'persistence_id': recipe_id}
@@ -1470,7 +1489,7 @@ class WorkflowsFunctionsTest(unittest.TestCase):
                 'var_job': 'dir/{JOB}.hdf5',
                 'var_unspecified': 'dir/{UNSPECIFIED}.hdf5',
                 'var_lowercase': 'dir/{path}.hdf5'
-        }
+            }
         }
 
         expected_params = {
@@ -1534,7 +1553,1186 @@ class WorkflowsFunctionsTest(unittest.TestCase):
             self.assertIn(k, parameters)
             self.assertEqual(parameters[k], expected_params[k])
 
-# TODO, test that updated workflow recipes task files are updated properly
+    def test_recipe_environments(self):
+        notebook = nbformat.v4.new_notebook()
+        recipe_without_environment = {
+            'name': self.test_recipe_name,
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb'
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_without_environment)
+        self.logger.info(recipe_id)
+        self.assertTrue(created)
+
+        workflow = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_RECIPE,
+                                     **recipe_without_environment)
+        self.assertIsNot(workflow, False)
+        self.assertEqual(len(workflow), 1)
+        # Check internal attributes
+        for k, v in recipe_without_environment.items():
+            self.assertEqual(workflow[0][k], v)
+
+        delete_attributes = {'vgrid': self.test_vgrid,
+                             'persistence_id': recipe_id}
+
+        deleted, msg = delete_workflow(self.configuration,
+                                       self.username,
+                                       workflow_type=WORKFLOW_RECIPE,
+                                       **delete_attributes)
+        self.logger.info(msg)
+        self.assertTrue(deleted)
+
+        recipe_with_mig_environment = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'nodes': '1',
+                    'cpu cores': '1',
+                    'wall time': '1',
+                    'memory': '1',
+                    'disks': '1',
+                    'cpu-architecture': 'X86',
+                    'fill': [
+                        'CPUCOUNT'
+                    ],
+                    'environment variables': [
+                        'VAR=42'
+                    ],
+                    'notification': [
+                        'email: SETTINGS'
+                    ],
+                    'retries': '1',
+                    'runtime environments': [
+                        'PAPERMILL'
+                    ]
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_mig_environment)
+        self.logger.info(recipe_id)
+        self.assertTrue(created)
+
+        workflow = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_RECIPE,
+                                     **recipe_with_mig_environment)
+        self.assertIsNot(workflow, False)
+        self.assertEqual(len(workflow), 1)
+
+        # Check internal attributes
+        for k, v in recipe_with_mig_environment.items():
+            self.assertEqual(workflow[0][k], v)
+
+        delete_attributes = {'vgrid': self.test_vgrid,
+                             'persistence_id': recipe_id}
+
+        deleted, msg = delete_workflow(self.configuration,
+                                       self.username,
+                                       workflow_type=WORKFLOW_RECIPE,
+                                       **delete_attributes)
+        self.logger.info(msg)
+        self.assertTrue(deleted)
+
+        recipe_with_local_environment = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'local': {
+                    'dependencies': [
+                        'watchdog',
+                        'mig_meow'
+                    ]
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_local_environment)
+        self.logger.info(recipe_id)
+        self.assertTrue(created)
+
+        workflow = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_RECIPE,
+                                     **recipe_with_local_environment)
+        self.assertIsNot(workflow, False)
+        self.assertEqual(len(workflow), 1)
+
+        # Check internal attributes
+        for k, v in recipe_with_local_environment.items():
+            self.assertEqual(workflow[0][k], v)
+
+        delete_attributes = {'vgrid': self.test_vgrid,
+                             'persistence_id': recipe_id}
+
+        deleted, msg = delete_workflow(self.configuration,
+                                       self.username,
+                                       workflow_type=WORKFLOW_RECIPE,
+                                       **delete_attributes)
+        self.logger.info(msg)
+        self.assertTrue(deleted)
+
+        recipe_with_both_environments = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'nodes': '1',
+                    'cpu cores': '1',
+                    'wall time': '1',
+                    'memory': '1',
+                    'disks': '1',
+                    'cpu-architecture': 'X86',
+                    'fill': [
+                        'CPUCOUNT',
+                        'CPUTIME',
+                        'DISK',
+                        'MEMORY',
+                        'NODECOUNT'
+                    ],
+                    'environment variables': [
+                        'VAR=42'
+                    ],
+                    'notification': [
+                        'email: SETTINGS'
+                    ],
+                    'retries': '1',
+                    'runtime environments': [
+                        'PAPERMILL'
+                    ]
+                },
+                'local': {
+                    'dependencies': [
+                        'watchdog',
+                        'mig_meow'
+                    ]
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_both_environments)
+        self.logger.info(recipe_id)
+        self.assertTrue(created)
+
+        workflow = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_RECIPE,
+                                     **recipe_with_both_environments)
+        self.assertIsNot(workflow, False)
+        self.assertEqual(len(workflow), 1)
+
+        # Check internal attributes
+        for k, v in recipe_with_both_environments.items():
+            self.assertEqual(workflow[0][k], v)
+
+        delete_attributes = {'vgrid': self.test_vgrid,
+                             'persistence_id': recipe_id}
+
+        deleted, msg = delete_workflow(self.configuration,
+                                       self.username,
+                                       workflow_type=WORKFLOW_RECIPE,
+                                       **delete_attributes)
+        self.logger.info(msg)
+        self.assertTrue(deleted)
+
+        # Anything other than mig dependencies aren't used on the mig, so we
+        # can let them be whatever folks ask for
+        recipe_with_wonky_local = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'local': {
+                    'asdf': [
+                        'asdf',
+                        'asdf'
+                    ]
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_wonky_local)
+        self.logger.info(recipe_id)
+        self.assertTrue(created)
+
+        workflow = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_RECIPE,
+                                     **recipe_with_wonky_local)
+        self.assertIsNot(workflow, False)
+        self.assertEqual(len(workflow), 1)
+
+        # Check internal attributes
+        for k, v in recipe_with_wonky_local.items():
+            self.assertEqual(workflow[0][k], v)
+
+        delete_attributes = {'vgrid': self.test_vgrid,
+                             'persistence_id': recipe_id}
+
+        deleted, msg = delete_workflow(self.configuration,
+                                       self.username,
+                                       workflow_type=WORKFLOW_RECIPE,
+                                       **delete_attributes)
+        self.logger.info(msg)
+        self.assertTrue(deleted)
+
+    def test_recipe_environment_nodes(self):
+        notebook = nbformat.v4.new_notebook()
+        recipe_with_bad_mig_nodes_a = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'nodes': 1
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_nodes_a)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_nodes_b = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'nodes': '-1'
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_nodes_b)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_nodes_c = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'nodes': '1.0'
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_nodes_c)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+    def test_recipe_environment_cores(self):
+        notebook = nbformat.v4.new_notebook()
+
+        recipe_with_bad_mig_cores_a = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'cpu cores': 1
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_cores_a)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_cores_b = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'cpu cores': '-1'
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_cores_b)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_cores_c = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'cpu cores': '1.0'
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_cores_c)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+    def test_recipe_environment_wall(self):
+        notebook = nbformat.v4.new_notebook()
+
+        recipe_with_bad_mig_wall_a = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'wall time': 1
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_wall_a)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_wall_b = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'wall time': '-1'
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_wall_b)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_wall_c = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'wall time': '1.0'
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_wall_c)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+    def test_recipe_environment_memory(self):
+        notebook = nbformat.v4.new_notebook()
+
+        recipe_with_bad_mig_memory_a = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'memory': 1
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_memory_a)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_memory_b = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'memory': '-1'
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_memory_b)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_memory_c = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'memory': '1.0'
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_memory_c)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+    def test_recipe_environment_disks(self):
+        notebook = nbformat.v4.new_notebook()
+
+        recipe_with_bad_mig_disks_a = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'disks': 1
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_disks_a)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_disks_b = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'disks': '-1'
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_disks_b)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_disks_c = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'disks': '1.0'
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_disks_c)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+    def test_recipe_environment_cpu(self):
+        notebook = nbformat.v4.new_notebook()
+
+        recipe_with_bad_mig_cpu = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'cpu-architecture': 'X87',
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_cpu)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+    def test_recipe_environment_fill(self):
+        notebook = nbformat.v4.new_notebook()
+
+        recipe_with_bad_mig_fill_a = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'fill': 'CPUCOUNT'
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_fill_a)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_fill_b = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'fill': [
+                        'NOTHING'
+                    ]
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_fill_b)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+    def test_recipe_environment_env(self):
+        notebook = nbformat.v4.new_notebook()
+
+        recipe_with_bad_mig_env_a = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'environment variables': 'VAR=42'
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_env_a)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_env_b = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'environment variables': [
+                        'VAR:42'
+                    ]
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_env_b)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_env_c = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'environment variables': [
+                        '=VAR42'
+                    ]
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_env_c)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_env_d = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'environment variables': [
+                        'VAR42='
+                    ]
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_env_d)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+    def test_recipe_environment_notification(self):
+        notebook = nbformat.v4.new_notebook()
+
+        # Should be expanded to also support other definitions
+        recipe_with_bad_mig_notification_a = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'notification': [
+                        'email: not_an_email'
+                    ]
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(
+            self.configuration,
+            self.username,
+            workflow_type=WORKFLOW_RECIPE,
+            **recipe_with_bad_mig_notification_a
+        )
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_notification_b = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'notification': [
+                        'email=SETTINGS'
+                    ]
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(
+            self.configuration,
+            self.username,
+            workflow_type=WORKFLOW_RECIPE,
+            **recipe_with_bad_mig_notification_b)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_notification_c = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'notification': 'email: SETTINGS'
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(
+            self.configuration,
+            self.username,
+            workflow_type=WORKFLOW_RECIPE,
+            **recipe_with_bad_mig_notification_c)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+    def test_recipe_environment_retries(self):
+        notebook = nbformat.v4.new_notebook()
+
+        recipe_with_bad_mig_retries_a = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'retries': 1
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_retries_a)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_retries_b = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'retries': '-1'
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_retries_b)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_retries_c = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'retries': '1.0'
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_retries_c)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+    def test_recipe_environment_runtime(self):
+        notebook = nbformat.v4.new_notebook()
+
+        recipe_with_bad_mig_runtime_a = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'runtime environments': 'PAPERMILL'
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_runtime_a)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+        recipe_with_bad_mig_runtime_b = {
+            'name': 'with_mig',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'runtime environments': [
+                        'DOESNOTEXIST'
+                    ]
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_with_bad_mig_runtime_b)
+        self.logger.info(recipe_id)
+        self.assertFalse(created)
+
+    def test_workflow_default_job_template(self):
+        pattern_attributes = {
+            'name': self.test_pattern_name,
+            'vgrid': self.test_vgrid,
+            'input_paths': ['input_dir/*.hdf5'],
+            'input_file': 'hdf5_input',
+            'output': {'processed_data': 'pattern_0_output/{FILENAME}.hdf5'},
+            'recipes': [self.test_recipe_name],
+            'variables': {'iterations': 20}
+        }
+
+        created, pattern_id = create_workflow(self.configuration,
+                                              self.username,
+                                              workflow_type=WORKFLOW_PATTERN,
+                                              **pattern_attributes)
+        self.assertTrue(created)
+
+        notebook = nbformat.v4.new_notebook()
+        recipe_attributes = {
+            'name': self.test_recipe_name,
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb'
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_attributes)
+        self.logger.info(recipe_id)
+        self.assertTrue(created)
+
+        recipes = get_workflow_with(self.configuration,
+                                    client_id=self.username,
+                                    user_query=True,
+                                    workflow_type=WORKFLOW_RECIPE,
+                                    **recipe_attributes)
+        self.assertIsNotNone(recipes)
+        self.assertEqual(len(recipes), 1)
+
+        patterns = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_PATTERN,
+                                     **pattern_attributes)
+        self.assertIsNotNone(patterns)
+        self.assertEqual(len(patterns), 1)
+
+        # Validate that the trigger is empty since the recipe doesn't yet exist
+        # Test that the trigger is valid
+        trigger_id = next(iter(patterns[0]['trigger_recipes']))
+        self.assertEqual(len(patterns[0]['trigger_recipes'].keys()), 1)
+        # Test that the trigger is valid
+        trigger, msg = get_workflow_trigger(self.configuration,
+                                            self.test_vgrid,
+                                            trigger_id)
+        self.assertEqual(trigger['rule_id'], trigger_id)
+        self.assertEqual(trigger['path'], pattern_attributes['input_paths'][0])
+        self.assertEqual(trigger['vgrid_name'], pattern_attributes['vgrid'])
+
+        task_id = \
+            patterns[0]['trigger_recipes'][trigger_id][recipe_id]['task_file']
+
+        # Templates should contain the parsed recipe
+        self.assertEqual(len(trigger['templates']), 1)
+
+        trigger_lines = trigger['templates'][0].split('\n')
+        self.logger.info(trigger_lines)
+
+        trigger_dict = parse_trigger_lines(trigger_lines)
+        self.logger.info(trigger_dict)
+
+        self.assertEqual(len(trigger_dict.keys()), 14)
+
+        self.assertIn('VGRID', trigger_dict)
+        self.assertEqual(trigger_dict['VGRID'], ['+TRIGGERVGRIDNAME+'])
+
+        self.assertIn('RETRIES', trigger_dict)
+        self.assertEqual(trigger_dict['RETRIES'], ['0'])
+
+        self.assertIn('EXECUTE', trigger_dict)
+        self.assertEqual(len(trigger_dict['EXECUTE']), 2)
+        self.assertIn(
+            '${NOTEBOOK_PARAMETERIZER} Generic/.workflow_tasks_home/%s '
+            'Generic/.workflow_tasks_home/%s.yaml -o +JOBID+_%s -e'
+            % (task_id, pattern_id, task_id), trigger_dict['EXECUTE'])
+        self.assertIn(
+            '${PAPERMILL} +JOBID+_%s +JOBID+_recipe_name_output.ipynb'
+            % task_id, trigger_dict['EXECUTE'])
+
+        self.assertIn('OUTPUTFILES', trigger_dict)
+        self.assertEqual(trigger_dict['OUTPUTFILES'],
+                         ['+JOBID+_recipe_name_output.ipynb job_output/+JOBID'
+                          '+/+JOBID+_recipe_name_output.ipynb'])
+
+        self.assertIn('RUNTIMEENVIRONMENT', trigger_dict)
+        self.assertEqual(len(trigger_dict['RUNTIMEENVIRONMENT']), 2)
+        self.assertIn('NOTEBOOK_PARAMETERIZER',
+                      trigger_dict['RUNTIMEENVIRONMENT'])
+        self.assertIn('PAPERMILL', trigger_dict['RUNTIMEENVIRONMENT'])
+
+        self.assertIn('MAXFILL', trigger_dict)
+        self.assertEqual(len(trigger_dict['MAXFILL']), 5)
+        self.assertIn('CPUCOUNT', trigger_dict['MAXFILL'])
+        self.assertIn('CPUTIME', trigger_dict['MAXFILL'])
+        self.assertIn('DISK', trigger_dict['MAXFILL'])
+        self.assertIn('MEMORY', trigger_dict['MAXFILL'])
+        self.assertIn('NODECOUNT', trigger_dict['MAXFILL'])
+
+        self.assertIn('MOUNT', trigger_dict)
+        self.assertEqual(trigger_dict['MOUNT'],
+                         ['+TRIGGERVGRIDNAME+ +TRIGGERVGRIDNAME+'])
+
+        self.assertIn('CPUTIME', trigger_dict)
+        self.assertEqual(trigger_dict['CPUTIME'], ['60'])
+
+        self.assertIn('ENVIRONMENT', trigger_dict)
+        self.assertEqual(len(trigger_dict['ENVIRONMENT']), 3)
+        self.assertIn('LC_ALL=en_US.utf8', trigger_dict['ENVIRONMENT'])
+        self.assertIn('PYTHONPATH=+TRIGGERVGRIDNAME+',
+                      trigger_dict['ENVIRONMENT'])
+        self.assertIn('WORKFLOW_INPUT_PATH=+TRIGGERPATH+',
+                      trigger_dict['ENVIRONMENT'])
+
+        self.assertIn('CPUCOUNT', trigger_dict)
+        self.assertEqual(trigger_dict['CPUCOUNT'], ['1'])
+
+        self.assertIn('NOTIFY', trigger_dict)
+        self.assertEqual(trigger_dict['NOTIFY'], ['email: SETTINGS'])
+
+        self.assertIn('MEMORY', trigger_dict)
+        self.assertEqual(trigger_dict['MEMORY'], ['64'])
+
+        self.assertIn('NODECOUNT', trigger_dict)
+        self.assertEqual(trigger_dict['NODECOUNT'], ['1'])
+
+        self.assertIn('DISK', trigger_dict)
+        self.assertEqual(trigger_dict['DISK'], ['1'])
+
+    def test_workflow_altered_job_template(self):
+        pattern_attributes = {
+            'name': self.test_pattern_name,
+            'vgrid': self.test_vgrid,
+            'input_paths': ['input_dir/*.hdf5'],
+            'input_file': 'hdf5_input',
+            'output': {'processed_data': 'pattern_0_output/{FILENAME}.hdf5'},
+            'recipes': [self.test_recipe_name],
+            'variables': {'iterations': 20}
+        }
+
+        created, pattern_id = create_workflow(self.configuration,
+                                              self.username,
+                                              workflow_type=WORKFLOW_PATTERN,
+                                              **pattern_attributes)
+        self.assertTrue(created)
+
+        notebook = nbformat.v4.new_notebook()
+        recipe_attributes = {
+            'name': self.test_recipe_name,
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'nodes': '10',
+                    'cpu cores': '12',
+                    'wall time': '14',
+                    'memory': '16',
+                    'disks': '18',
+                    'retries': '20',
+                    'cpu-architecture': 'AMD64',
+                    'fill': [
+                        'DISK',
+                    ],
+                    'environment variables': [
+                        'VAR=42'
+                    ],
+                    'notification': [
+                        'email: patch@email.com'
+                    ],
+                    'runtime environments': [
+                        'SSHFS-2.X-1'
+                    ]
+                },
+                'local': {
+                    'dependencies': [
+                        'watchdog',
+                        'mig_meow'
+                    ]
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_attributes)
+        self.logger.info(recipe_id)
+        self.assertTrue(created)
+
+        recipes = get_workflow_with(self.configuration,
+                                    client_id=self.username,
+                                    user_query=True,
+                                    workflow_type=WORKFLOW_RECIPE,
+                                    **recipe_attributes)
+        self.assertIsNotNone(recipes)
+        self.assertEqual(len(recipes), 1)
+
+        patterns = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_PATTERN,
+                                     **pattern_attributes)
+        self.assertIsNotNone(patterns)
+        self.assertEqual(len(patterns), 1)
+
+        # Validate that the trigger is empty since the recipe doesn't yet exist
+        # Test that the trigger is valid
+        trigger_id = next(iter(patterns[0]['trigger_recipes']))
+        self.assertEqual(len(patterns[0]['trigger_recipes'].keys()), 1)
+        # Test that the trigger is valid
+        trigger, msg = get_workflow_trigger(self.configuration,
+                                            self.test_vgrid,
+                                            trigger_id)
+        self.assertEqual(trigger['rule_id'], trigger_id)
+        self.assertEqual(trigger['path'], pattern_attributes['input_paths'][0])
+        self.assertEqual(trigger['vgrid_name'], pattern_attributes['vgrid'])
+
+        task_id = patterns[0]['trigger_recipes'][trigger_id][recipe_id][
+            'task_file']
+
+        # Templates should contain the parsed recipe
+        self.assertEqual(len(trigger['templates']), 1)
+
+        trigger_lines = trigger['templates'][0].split('\n')
+        self.logger.info(trigger_lines)
+
+        trigger_dict = parse_trigger_lines(trigger_lines)
+        self.logger.info(trigger_dict)
+
+        self.assertEqual(len(trigger_dict.keys()), 14)
+
+        self.assertIn('VGRID', trigger_dict)
+        self.assertEqual(trigger_dict['VGRID'], ['+TRIGGERVGRIDNAME+'])
+
+        self.assertIn('RETRIES', trigger_dict)
+        self.assertEqual(trigger_dict['RETRIES'], ['20'])
+
+        self.assertIn('EXECUTE', trigger_dict)
+        self.assertEqual(len(trigger_dict['EXECUTE']), 2)
+        self.assertIn(
+            '${NOTEBOOK_PARAMETERIZER} Generic/.workflow_tasks_home/%s '
+            'Generic/.workflow_tasks_home/%s.yaml -o +JOBID+_%s -e'
+            % (task_id, pattern_id, task_id), trigger_dict['EXECUTE'])
+        self.assertIn(
+            '${PAPERMILL} +JOBID+_%s +JOBID+_recipe_name_output.ipynb'
+            % task_id, trigger_dict['EXECUTE'])
+
+        self.assertIn('OUTPUTFILES', trigger_dict)
+        self.assertEqual(trigger_dict['OUTPUTFILES'],
+                         ['+JOBID+_recipe_name_output.ipynb job_output/+'
+                          'JOBID+/+JOBID+_recipe_name_output.ipynb'])
+
+        self.assertIn('RUNTIMEENVIRONMENT', trigger_dict)
+        self.assertEqual(len(trigger_dict['RUNTIMEENVIRONMENT']), 3)
+        self.assertIn('NOTEBOOK_PARAMETERIZER',
+                      trigger_dict['RUNTIMEENVIRONMENT'])
+        self.assertIn('PAPERMILL', trigger_dict['RUNTIMEENVIRONMENT'])
+        self.assertIn('SSHFS-2.X-1', trigger_dict['RUNTIMEENVIRONMENT'])
+
+        self.assertIn('MAXFILL', trigger_dict)
+        self.assertEqual(len(trigger_dict['MAXFILL']), 1)
+        self.assertIn('DISK', trigger_dict['MAXFILL'])
+
+        self.assertIn('MOUNT', trigger_dict)
+        self.assertEqual(trigger_dict['MOUNT'],
+                         ['+TRIGGERVGRIDNAME+ +TRIGGERVGRIDNAME+'])
+
+        self.assertIn('CPUTIME', trigger_dict)
+        self.assertEqual(trigger_dict['CPUTIME'], ['14'])
+
+        self.assertIn('ENVIRONMENT', trigger_dict)
+        self.assertEqual(len(trigger_dict['ENVIRONMENT']), 4)
+        self.assertIn('LC_ALL=en_US.utf8', trigger_dict['ENVIRONMENT'])
+        self.assertIn('PYTHONPATH=+TRIGGERVGRIDNAME+',
+                      trigger_dict['ENVIRONMENT'])
+        self.assertIn('WORKFLOW_INPUT_PATH=+TRIGGERPATH+',
+                      trigger_dict['ENVIRONMENT'])
+        self.assertIn('VAR=42', trigger_dict['ENVIRONMENT'])
+
+        self.assertIn('CPUCOUNT', trigger_dict)
+        self.assertEqual(trigger_dict['CPUCOUNT'], ['12'])
+
+        self.assertIn('NOTIFY', trigger_dict)
+        self.assertEqual(trigger_dict['NOTIFY'], ['email: patch@email.com'])
+
+        self.assertIn('MEMORY', trigger_dict)
+        self.assertEqual(trigger_dict['MEMORY'], ['16'])
+
+        self.assertIn('NODECOUNT', trigger_dict)
+        self.assertEqual(trigger_dict['NODECOUNT'], ['10'])
+
+        self.assertIn('DISK', trigger_dict)
+        self.assertEqual(trigger_dict['DISK'], ['18'])
 
     # def test_recipe_pattern_association_creation_pattern_first(self):
     #     pattern_attributes = {'name': 'association test pattern',

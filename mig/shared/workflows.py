@@ -46,7 +46,7 @@ from mig.shared.base import force_utf8_rec
 from mig.shared.conf import get_configuration_object
 from mig.shared.defaults import src_dst_sep, workflow_id_charset, \
     workflow_id_length, session_id_length, session_id_charset, default_vgrid, \
-    workflows_db_filename, workflows_db_lockfile
+    workflows_db_filename, workflows_db_lockfile, maxfill_fields
 from mig.shared.fileio import delete_file, write_file, makedirs_rec, touch
 from mig.shared.map import load_system_map
 from mig.shared.modified import check_workflow_p_modified, \
@@ -54,6 +54,9 @@ from mig.shared.modified import check_workflow_p_modified, \
     reset_workflow_r_modified, mark_workflow_p_modified, \
     mark_workflow_r_modified
 from mig.shared.pwhash import generate_random_ascii
+from mig.shared.refunctions import is_runtime_environment
+from mig.shared.safeinput import valid_numeric, InputException, \
+    valid_email_address
 from mig.shared.serial import dump, load
 from mig.shared.validstring import possible_workflow_session_id
 from mig.shared.vgrid import vgrid_add_triggers, vgrid_remove_triggers, \
@@ -185,26 +188,55 @@ VALID_RECIPE = {
     # Task file associated with the recipe.
     'task_file': str,
     # Optional for the user to provide the source code itself.
-    'source': str
+    'source': str,
+    # Optional additional definitions to help guide job processing.
+    'environments': dict
 }
 
 # Attributes that a request must provide
-REQUIRED_RECIPE_INPUTS = {
-    'vgrid': str,
-    'name': str,
-    'recipe': dict
-}
+REQUIRED_RECIPE_CREATION_INPUTS = [
+    'vgrid',
+    'name',
+    'recipe'
+]
 
-ALL_RECIPE_INPUTS = {
-    'source': str
-}
-ALL_RECIPE_INPUTS.update(REQUIRED_RECIPE_INPUTS)
+OPTIONAL_RECIPE_CREATION_INPUTS = [
+    'source',
+    'environments'
+]
+
+FORBIDDEN_RECIPE_CREATION_INPUTS = [
+    'persistence_id'
+]
 
 # Attributes that the user can provide via an update request
-VALID_USER_UPDATE_RECIPE = {
-    'persistence_id': str,
+REQUIRED_RECIPE_UPDATE_INPUTS = [
+    'persistence_id',
+    'vgrid'
+]
+
+OPTIONAL_RECIPE_UPDATE_INPUTS = [
+    'recipe',
+    'source',
+    'environments',
+    'name'
+]
+
+FORBIDDEN_RECIPE_UPDATE_INPUTS = []
+
+VALID_ENVIRONMENT = {
+    'nodes': str,
+    'cpu cores': str,
+    'wall time': str,
+    'memory': str,
+    'disks': str,
+    'retries': str,
+    'cpu-architecture': str,
+    'fill': list,
+    'environment variables': list,
+    'notification': list,
+    'runtime environments': list
 }
-VALID_USER_UPDATE_RECIPE.update(ALL_RECIPE_INPUTS)
 
 # Attributes required by an action request
 VALID_ACTION_REQUEST = {
@@ -795,6 +827,218 @@ def __correct_user_input(configuration, input, required_input=None,
     return (True, "")
 
 
+def __check_recipe_inputs(configuration, user_inputs, types, required=None,
+                          optional=None, forbidden=None):
+    """
+    Checks that user input is valid recipe definitions. This does not check
+    internal mig definitions such as persistence id's or ownership and so
+    should not be used as a complete check. It only checks that recipe
+    parameters are correctly formatted and that definitions used in job
+    scheduling are valid.
+    :param user_inputs. (dict) The recipe input dictionary to be checked.
+    Should contain valid recipe definitions. Note that despite the naming, it
+    is possible for a user to provide inputs that are neither required,
+    optional, or forbidden. These inputs will be ignored for this check.
+    :param types. (dict). Types of each given input.
+    :param required. (list). Inputs that are always required for the user
+    input.
+    :param optional. (list). Inputs that are optionally possible for the user
+    input.
+    :param forbidden. (list) Inputs that are forbidden for the user input.
+    :return: (Tuple (boolean, string)) First value will be True if user input
+    is valid, with an empty string. If any problems are encountered first
+    value with be False with an accompanying error message explaining the
+    issue.
+    """
+    _logger = configuration.logger
+    _logger.debug("WR: __check_recipe_inputs, user_inputs: '%s'" % user_inputs)
+
+    if not isinstance(required, list):
+        required = []
+
+    if not isinstance(optional, list):
+        optional = []
+
+    if not isinstance(forbidden, list):
+        forbidden = []
+
+    if not isinstance(user_inputs, dict):
+        _logger.error(
+            "WR: __check_recipe_inputs, incorrect 'workflow_recipe' "
+            "structure '%s'" % type(user_inputs))
+        return (False, "Internal server error due to incorrect recipe "
+                       "structure.")
+
+    for key in required:
+        if key not in user_inputs:
+            msg = "Required key: '%s' is missing, required keys are: '%s'" \
+                  % (key, ', '.join(required))
+            _logger.debug(msg)
+            return (False, msg)
+    for key, value in user_inputs.items():
+        # Check key not forbidden
+        if key in forbidden:
+            msg = "Forbidden key '%s' was provided for recipe. " % key
+            _logger.debug("WR: __check_recipe_inputs, " + msg)
+            return (False, msg)
+
+        # Check key is either required or optional
+        if key not in required and key not in optional:
+            msg = "Unknown key '%s' was provided. Valid keys are %s" \
+                  % (key, ', '.join(required + optional))
+            _logger.debug("WR: __check_recipe_inputs, " + msg)
+            return (False, msg)
+
+        # Check that provided type is acceptable
+        if key not in types:
+            msg = "Expected type not provided by backend for key '%s'. " \
+                  "Please contact a MiG admin at %s." \
+                  % (key, configuration.admin_email)
+            _logger.error("WR: __check_recipe_inputs, " + msg)
+            return (False, msg)
+        if not isinstance(value, types[key]):
+            msg = "value: '%s' has an incorrect type: '%s', requires: " \
+                  "'%s'" % (value, type(value), types[key])
+            _logger.debug("WR: __check_recipe_inputs, " + msg)
+            return (False, msg)
+
+        # We must be careful to validate input that can affect the running of
+        # the MiG. We can ignore non-mig definitions
+        if key == 'environments' and 'mig' in value:
+            for env_key, env_val in value['mig'].items():
+                # General type checking
+                if env_key not in VALID_ENVIRONMENT:
+                    msg = "Unknown environment key '%s' was provided. " \
+                          "Valid keys are %s" % \
+                          (key, ', '.join(VALID_ENVIRONMENT.keys()))
+                    _logger.debug("WR: __check_recipe_inputs, " + msg)
+                    return (False, msg)
+
+                if not isinstance(env_val, VALID_ENVIRONMENT.get(env_key)):
+                    msg = "environment value: '%s' has an incorrect type: " \
+                          "'%s', requires: '%s'" \
+                          % (env_val, type(env_val),
+                             VALID_ENVIRONMENT.get(env_key))
+                    _logger.debug("WR: __check_recipe_inputs, " + msg)
+                    return (False, msg)
+
+                # Specific checking of each definition
+                if env_key == 'cpu-architecture':
+                    if env_val not in configuration.architectures:
+                        msg = "Invalid cpu architecture '%s'. Valid are %s." \
+                              % (env_val,
+                                 ', '.join(configuration.architectures))
+                        _logger.debug("WR: __check_recipe_inputs, " + msg)
+                        return (False, msg)
+
+                elif env_key == 'fill':
+                    for entry in env_val:
+                        if not isinstance(entry, str):
+                            msg = "Unexpected format for '%s' in '%s'. " \
+                                  "Expected to be a 'str' but got '%s'" \
+                                  % (env_val, env_key, type(env_val))
+                            _logger.debug("WR: __check_recipe_inputs, " + msg)
+                            return (False, msg)
+                        if entry not in maxfill_fields:
+                            msg = "Invalid fill keyword '%s'. Valid are %s." \
+                                  % (entry, ', '.join(maxfill_fields))
+                            _logger.debug("WR: __check_recipe_inputs, " + msg)
+                            return (False, msg)
+
+                elif env_key == 'environment variables':
+                    for entry in env_val:
+                        if not isinstance(entry, str):
+                            msg = "Unexpected format for '%s' in '%s'. " \
+                                  "Expected to be a 'str' but got '%s'" \
+                                  % (env_val, env_key, type(env_val))
+                            _logger.debug("WR: __check_recipe_inputs, " + msg)
+                            return (False, msg)
+                        variable = entry.split('=')
+                        if len(variable) != 2 \
+                                or not variable[0] \
+                                or not variable[1]:
+                            msg = "Incorrect formatting of variable " \
+                                  "'%s'. Must be of form 'key: value'. " \
+                                  "Multiple variables should be placed " \
+                                  "as separate entries" % entry
+                            _logger.debug("WR: __check_recipe_inputs, " + msg)
+                            return (False, msg)
+
+                elif env_key == 'notification':
+                    for entry in env_val:
+                        if not isinstance(entry, str):
+                            msg = "Unexpected format for '%s' in '%s'. " \
+                                  "Expected to be a 'str' but got '%s'" \
+                                  % (env_val, env_key, type(env_val))
+                            _logger.debug("WR: __check_recipe_inputs, " + msg)
+                            return (False, msg)
+                        notification = entry.split(':')
+                        if len(notification) != 2 \
+                                or not notification[0]\
+                                or not notification[1]:
+                            msg = "Incorrect formatting of notification " \
+                                  "'%s'. Must be of form 'key: value'. " \
+                                  "Multiple notifications should be placed " \
+                                  "as separate entries" % entry
+                            _logger.debug("WR: __check_recipe_inputs, " + msg)
+                            return (False, msg)
+                        protocols = \
+                            ['email', 'jabber', 'msn', 'icq', 'aol', 'yahoo']
+                        if notification[0] not in protocols:
+                            msg = "Unknown protocol '%s'. Valid are %s" \
+                                  % (notification[0], ', '.join(protocols))
+                            _logger.debug("WR: __check_recipe_inputs, " + msg)
+                            return (False, msg)
+                        _logger.debug("=========='%s'" % notification[1])
+                        notification[1] = notification[1].strip()
+                        if notification[1] != 'SETTINGS':
+                            try:
+                                valid_email_address(notification[1])
+                            except InputException as ie:
+                                msg = ie.value.encode('utf-8')
+                                _logger.debug("WR: __check_recipe_inputs, "
+                                              + msg)
+                                return (False, msg)
+
+                elif env_key == 'runtime environments':
+                    for entry in env_val:
+                        if not isinstance(entry, str):
+                            msg = "Unexpected format for '%s' in '%s'. " \
+                                  "Expected to be a 'str' but got '%s'" \
+                                  % (env_val, env_key, type(env_val))
+                            _logger.debug("WR: __check_recipe_inputs, " + msg)
+                            return (False, msg)
+                        if not is_runtime_environment(entry, configuration):
+                            msg = "Specified runtime environment '%s' does " \
+                                  "not currently exist on the MiG. Only " \
+                                  "pre-registered environments can be " \
+                                  "specified." % entry
+                            _logger.debug("WR: __check_recipe_inputs, " + msg)
+                            return (False, msg)
+
+                elif env_key == 'nodes' \
+                        or env_key == 'cpu cores' \
+                        or env_key == 'wall time' \
+                        or env_key == 'memory' \
+                        or env_key == 'disks' \
+                        or env_key == 'retries':
+                    try:
+                        valid_numeric(env_val)
+                    except InputException as ie:
+                        msg = ie.value.encode('utf-8')
+                        _logger.debug("WR: __check_recipe_inputs, " + msg)
+                        return (False, msg)
+
+                else:
+                    msg = "No environment check implemented for key '%s'. " \
+                          "Please contact an admin at %s. " \
+                          % (env_key, configuration.admin_email)
+                    _logger.debug("WR: __check_recipe_inputs, " + msg)
+                    return (False, msg)
+
+    return (True, "")
+
+
 def __strip_input_attributes(workflow_pattern):
     """
     Removes any additional parameters the provided pattern has, that are not
@@ -1297,14 +1541,16 @@ def __build_wr_object(configuration, user_query=False, **kwargs):
 
     wr_obj = {
         'object_type': kwargs.get('object_type', WORKFLOW_RECIPE),
-        'persistence_id': kwargs.get('persistence_id',
-                                     VALID_RECIPE['persistence_id']()),
+        'persistence_id':
+            kwargs.get('persistence_id', VALID_RECIPE['persistence_id']()),
         'owner': kwargs.get('owner', VALID_RECIPE['owner']()),
         'vgrid': kwargs.get('vgrid', VALID_RECIPE['vgrid']()),
         'name': kwargs.get('name', VALID_RECIPE['name']()),
         'recipe': kwargs.get('recipe', VALID_RECIPE['recipe']()),
         'task_file': kwargs.get('task_file', VALID_RECIPE['task_file']()),
-        'source': kwargs.get('source', VALID_RECIPE['source']())
+        'source': kwargs.get('source', VALID_RECIPE['source']()),
+        'environments':
+            kwargs.get('environments', VALID_RECIPE['environments']()),
     }
 
     if user_query:
@@ -2118,17 +2364,14 @@ def __create_workflow_recipe_entry(configuration, client_id, vgrid,
         "WR: __create_workflow_recipe_entry, client_id: %s,"
         "workflow_recipe: %s" % (client_id, workflow_recipe))
 
-    if not isinstance(workflow_recipe, dict):
-        _logger.error(
-            "WR: __create_workflow_recipe_entry, incorrect 'workflow_recipe' "
-            "structure '%s'" % type(workflow_recipe))
-        return (False, "Internal server error due to incorrect recipe "
-                       "structure")
+    correct_input, msg = __check_recipe_inputs(
+        configuration,
+        workflow_recipe,
+        VALID_RECIPE,
+        required=REQUIRED_RECIPE_CREATION_INPUTS,
+        optional=OPTIONAL_RECIPE_CREATION_INPUTS,
+        forbidden=FORBIDDEN_RECIPE_CREATION_INPUTS)
 
-    correct_input, msg = __correct_user_input(configuration,
-                                              workflow_recipe,
-                                              REQUIRED_RECIPE_INPUTS,
-                                              ALL_RECIPE_INPUTS)
     if not correct_input:
         return (False, msg)
 
@@ -2260,9 +2503,6 @@ def __update_workflow_pattern(configuration, client_id, vgrid,
     _logger.debug("WP: __update_workflow_pattern, found pattern %s to update"
                   % pattern)
 
-    _logger.debug("__update_workflow_pattern, applying variables: %s"
-                  % workflow_pattern)
-
     if 'input_paths' in workflow_pattern:
         # Remove triggers and associate the newly specified
         existing_paths = []
@@ -2386,8 +2626,7 @@ def __update_workflow_pattern(configuration, client_id, vgrid,
     return (True, "%s" % prepared_pattern['persistence_id'])
 
 
-def __update_workflow_recipe(configuration, client_id, vgrid, workflow_recipe,
-                             valid_keys=None):
+def __update_workflow_recipe(configuration, client_id, vgrid, workflow_recipe):
     """
     Updates an already registered recipe with new variables. Only the
     variables to be updated are passed to the function. Will automatically
@@ -2396,8 +2635,6 @@ def __update_workflow_recipe(configuration, client_id, vgrid, workflow_recipe,
     :param client_id: The MiG user.
     :param vgrid: A MiG VGrid.
     :param workflow_recipe:
-    :param valid_keys: [optional] any arguments possible to provide for
-    updating. By default is the VALID_USER_UPDATE_RECIPE dict.
     :return: (Tuple(boolean, string)) Returns a tuple with the first value
     being a boolean, with True showing successful recipe creation, and False
     showing that a problem has been encountered. If a problem is encountered
@@ -2409,34 +2646,15 @@ def __update_workflow_recipe(configuration, client_id, vgrid, workflow_recipe,
     _logger.debug("WR: update_workflow_recipe, client_id: %s, recipe: %s"
                   % (client_id, workflow_recipe))
 
-    if not valid_keys or not isinstance(valid_keys, dict):
-        valid_keys = VALID_USER_UPDATE_RECIPE
+    correct_input, msg = __check_recipe_inputs(
+        configuration,
+        workflow_recipe,
+        VALID_RECIPE,
+        required=REQUIRED_RECIPE_UPDATE_INPUTS,
+        optional=OPTIONAL_RECIPE_UPDATE_INPUTS,
+        forbidden=FORBIDDEN_RECIPE_UPDATE_INPUTS)
 
-    if not isinstance(workflow_recipe, dict):
-        _logger.error(
-            "WR: __update_workflow_recipe, incorrect 'workflow_recipe' "
-            "structure '%s'" % type(workflow_recipe))
-        return (False, "Internal server error due to incorrect recipe "
-                       "structure.")
-
-    for key, value in workflow_recipe.items():
-        if key not in valid_keys:
-            msg = "key: '%s' is not allowed, valid includes '%s'" % \
-                  (key, ', '.join(valid_keys.keys()))
-            _logger.error(msg)
-            return (False, msg)
-
-        if not isinstance(value, valid_keys.get(key)):
-            msg = "value: '%s' has an incorrect type: '%s', requires: '%s'" \
-                  % (value, type(value), valid_keys.get(key))
-            _logger.error(msg)
-            return (False, msg)
-
-    persistence_id = workflow_recipe.get('persistence_id', None)
-    if not persistence_id:
-        msg = "Missing 'persistence_id' must be provided to update " \
-              "a workflow object."
-        _logger.error(msg)
+    if not correct_input:
         return (False, msg)
 
     recipe = get_workflow_with(configuration,
@@ -2575,6 +2793,8 @@ def __prepare_template(configuration, template, **kwargs):
     template['sep'] = src_dst_sep
     required_keys = ['execute', 'output_files']
 
+    env_defs = template.get('environments', {})
+
     for r_key in required_keys:
         if r_key not in kwargs:
             kwargs[r_key] = ''
@@ -2582,57 +2802,100 @@ def __prepare_template(configuration, template, **kwargs):
     # Prepare job executable. Note thet CPUCOUNT, NODECOUNT and MEMORY must
     # be more than zero for the job to be considered feasible.
 
-    template_mrsl = \
-        """
+    template_mrsl = """
 ::EXECUTE::
 %(execute)s
 
 ::OUTPUTFILES::
 %(output_files)s%(sep)sjob_output/+JOBID+/%(output_files)s
 
+::MOUNT::
++TRIGGERVGRIDNAME+ +TRIGGERVGRIDNAME+
+
+::VGRID::
++TRIGGERVGRIDNAME+
+""" % template
+
+    template_mrsl += """
+::RETRIES::
+%s
+""" % env_defs.get('retries', 0)
+
+    template_mrsl += """
+::MEMORY::
+%s
+""" % env_defs.get('memory', 64)
+
+    template_mrsl += """
+::DISK::
+%s
+""" % env_defs.get('disks', 1)
+
+    template_mrsl += """
+::CPUTIME::
+%s
+""" % env_defs.get('wall time', 60)
+
+    template_mrsl += """
+::CPUCOUNT::
+%s
+""" % env_defs.get('cpu cores', 1)
+
+    template_mrsl += """
+::NODECOUNT::
+%s
+""" % env_defs.get('nodes', 1)
+
+    if 'fill' in env_defs and env_defs['fill']:
+        template_mrsl += """
+::MAXFILL::
+"""
+        for fill in env_defs['fill']:
+            template_mrsl += """%s
+""" % fill
+    else:
+        template_mrsl += """
 ::MAXFILL::
 CPUCOUNT
 CPUTIME
 DISK
 MEMORY
 NODECOUNT
+"""
 
-::RETRIES::
-0
+    template_mrsl += """
+::RUNTIMEENVIRONMENT::
+NOTEBOOK_PARAMETERIZER
+PAPERMILL
+"""
+    if 'runtime environments' in env_defs and env_defs['runtime environments']:
+        for run_env in env_defs['runtime environments']:
+            template_mrsl += """%s
+""" % run_env
 
-::MEMORY::
-64
-
-::DISK::
-1
-
-::CPUTIME::
-60
-
-::CPUCOUNT::
-1
-
-::NODECOUNT::
-1
-
-::MOUNT::
-+TRIGGERVGRIDNAME+ +TRIGGERVGRIDNAME+
-
-::VGRID::
-+TRIGGERVGRIDNAME+
-
+    template_mrsl += """
 ::ENVIRONMENT::
 LC_ALL=en_US.utf8
 PYTHONPATH=+TRIGGERVGRIDNAME+
 WORKFLOW_INPUT_PATH=+TRIGGERPATH+
+"""
+    if 'environment variables' in env_defs and env_defs['environment variables']:
+        for env_var in env_defs['environment variables']:
+            template_mrsl += """%s
+""" % env_var
 
+    if 'notification' in env_defs and env_defs['notification']:
+        template_mrsl += """
+::NOTIFY::
+"""
+        for fill in env_defs['notification']:
+            template_mrsl += """%s
+""" % fill
+    else:
+        template_mrsl += """
 ::NOTIFY::
 email: SETTINGS
-
-::RUNTIMEENVIRONMENT::
-NOTEBOOK_PARAMETERIZER
-PAPERMILL
-""" % template
+"""
     return template_mrsl
 
 
@@ -2680,6 +2943,10 @@ def __prepare_recipe_template(configuration, vgrid, recipe,
         # Associate executables as templates to triggers
         template_input = {'execute': '\n'.join(executes),
                           'output_files': task_output}
+
+        if 'environments' in recipe and 'mig' in recipe['environments']:
+            template_input['environments'] = recipe['environments']['mig']
+
         return __prepare_template(configuration,
                                   template_input)
     return False
@@ -3078,7 +3345,7 @@ def create_workflow_trigger(configuration, client_id, vgrid, path, pattern,
     problem is encountered whilst creating a trigger the first value is False,
     with an explanatory error message in the second value. Otherwise the first
     value is the dictionary expressing the state of the created trigger and
-    the sceond is an empty string.
+    the second is an empty string.
     """
     _logger = configuration.logger
     if not arguments or not isinstance(arguments, list):
