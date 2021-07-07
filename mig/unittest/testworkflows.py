@@ -2961,6 +2961,284 @@ class WorkflowsFunctionsTest(unittest.TestCase):
         self.assertIn('DISK', mrsl)
         self.assertEqual(mrsl['DISK'], 18)
 
+    def test_workflow_matching(self):
+        pattern_attributes_a = {
+            'name': 'pattern_a',
+            'vgrid': self.test_vgrid,
+            'input_paths': ['input_dir/*.hdf5'],
+            'input_file': 'hdf5_input',
+            'output': {'processed_data': 'pattern_0_output/{FILENAME}.hdf5'},
+            'recipes': [self.test_recipe_name],
+            'variables': {'iterations': 20}
+        }
+
+        created, pattern_id = create_workflow(self.configuration,
+                                              self.username,
+                                              workflow_type=WORKFLOW_PATTERN,
+                                              **pattern_attributes_a)
+        self.assertTrue(created)
+
+        pattern_attributes_b = {
+            'name': 'pattern_b',
+            'vgrid': self.test_vgrid,
+            'input_paths': ['input_dir/*.hdf5'],
+            'input_file': 'hdf5_input',
+            'output': {'processed_data': 'pattern_0_output/{FILENAME}.hdf5'},
+            'recipes': [self.test_recipe_name],
+            'variables': {
+                'iterations': 20,
+                'count': 100
+            }
+        }
+
+        created, pattern_id = create_workflow(self.configuration,
+                                              self.username,
+                                              workflow_type=WORKFLOW_PATTERN,
+                                              **pattern_attributes_b)
+        self.assertTrue(created)
+
+        pattern_attributes_c = {
+            'name': 'pattern_c',
+            'vgrid': self.test_vgrid,
+            'input_paths': ['input_dir/*.hdf5'],
+            'input_file': 'hdf5_input',
+            'output': {'processed_data': 'pattern_0_output/{FILENAME}.hdf5'},
+            'recipes': ['a_different_recipe'],
+            'variables': {'index': 0}
+        }
+
+        created, pattern_id = create_workflow(self.configuration,
+                                              self.username,
+                                              workflow_type=WORKFLOW_PATTERN,
+                                              **pattern_attributes_c)
+        self.assertTrue(created)
+
+        patterns = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_PATTERN,
+                                     **pattern_attributes_a)
+        self.assertIsNotNone(patterns)
+        self.assertEqual(len(patterns), 1)
+        self.assertEqual(pattern_attributes_a['name'], patterns[0]['name'])
+
+        patterns = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_PATTERN,
+                                     **pattern_attributes_b)
+        self.assertIsNotNone(patterns)
+        self.assertEqual(len(patterns), 1)
+        self.assertEqual(pattern_attributes_b['name'], patterns[0]['name'])
+
+        patterns = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_PATTERN,
+                                     **pattern_attributes_c)
+        self.assertIsNotNone(patterns)
+        self.assertEqual(len(patterns), 1)
+        self.assertEqual(pattern_attributes_c['name'], patterns[0]['name'])
+
+        patterns = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_PATTERN,
+                                     **{})
+        self.assertIsNotNone(patterns)
+        self.assertEqual(len(patterns), 3)
+        pattern_namelist = [p['name'] for p in patterns]
+        self.assertIn(pattern_attributes_a['name'], pattern_namelist)
+        self.assertIn(pattern_attributes_b['name'], pattern_namelist)
+        self.assertIn(pattern_attributes_c['name'], pattern_namelist)
+
+        patterns = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_PATTERN,
+                                     **{'recipes': [self.test_recipe_name]})
+        self.assertIsNotNone(patterns)
+        self.assertEqual(len(patterns), 2)
+        pattern_namelist = [p['name'] for p in patterns]
+        self.assertIn(pattern_attributes_a['name'], pattern_namelist)
+        self.assertIn(pattern_attributes_b['name'], pattern_namelist)
+
+        patterns = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_PATTERN,
+                                     **{'variables': {'index': 0}})
+        self.assertIsNotNone(patterns)
+        self.assertEqual(len(patterns), 1)
+        pattern_namelist = [p['name'] for p in patterns]
+        self.assertIn(pattern_attributes_c['name'], pattern_namelist)
+
+        patterns = get_workflow_with(self.configuration,
+                                     client_id=self.username,
+                                     user_query=True,
+                                     workflow_type=WORKFLOW_PATTERN,
+                                     **{'variables': {'iterations': 20}})
+        self.assertIsNotNone(patterns)
+        self.assertEqual(len(patterns), 2)
+        pattern_namelist = [p['name'] for p in patterns]
+        self.assertIn(pattern_attributes_a['name'], pattern_namelist)
+        self.assertIn(pattern_attributes_b['name'], pattern_namelist)
+
+        notebook = nbformat.v4.new_notebook()
+        recipe_attributes_a = {
+            'name': 'recipe_a',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'nodes': '10',
+                    'cpu cores': '12',
+                    'wall time': '14',
+                    'memory': '16',
+                    'disks': '18',
+                    'retries': '20',
+                    'cpu-architecture': 'AMD64',
+                    'fill': [
+                        'DISK',
+                    ],
+                    'environment variables': [
+                        'VAR=42'
+                    ],
+                    'notification': [
+                        'email: patch@email.com'
+                    ],
+                    'runtime environments': [
+                        'VIRTUALBOX-3.1.X-1'
+                    ]
+                },
+                'local': {
+                    'dependencies': [
+                        'watchdog',
+                        'mig_meow'
+                    ]
+                }
+            }
+        }
+
+        recipe_attributes_b = {
+            'name': 'recipe_b',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'nodes': '10',
+                    'fill': [
+                        'DISK',
+                        'MEMORY'
+                    ]
+                }
+            }
+        }
+
+        recipe_attributes_c = {
+            'name': 'recipe_c',
+            'vgrid': self.test_vgrid,
+            'recipe': notebook,
+            'source': 'notebook.ipynb',
+            'environments': {
+                'mig': {
+                    'nodes': '100',
+                    'fill': [
+                        'CPUCOUNT'
+                    ]
+                }
+            }
+        }
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_attributes_a)
+        self.logger.info(recipe_id)
+        self.assertTrue(created)
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_attributes_b)
+        self.logger.info(recipe_id)
+        self.assertTrue(created)
+
+        created, recipe_id = create_workflow(self.configuration,
+                                             self.username,
+                                             workflow_type=WORKFLOW_RECIPE,
+                                             **recipe_attributes_c)
+        self.logger.info(recipe_id)
+        self.assertTrue(created)
+
+        recipes = get_workflow_with(self.configuration,
+                                    client_id=self.username,
+                                    user_query=True,
+                                    workflow_type=WORKFLOW_RECIPE,
+                                    **recipe_attributes_a)
+        self.assertIsNotNone(recipes)
+        self.assertEqual(len(recipes), 1)
+        recipe_namelist = [p['name'] for p in recipes]
+        self.assertIn(recipe_attributes_a['name'], recipe_namelist)
+
+        recipes = get_workflow_with(self.configuration,
+                                    client_id=self.username,
+                                    user_query=True,
+                                    workflow_type=WORKFLOW_RECIPE,
+                                    **recipe_attributes_b)
+        self.assertIsNotNone(recipes)
+        self.assertEqual(len(recipes), 1)
+        recipe_namelist = [p['name'] for p in recipes]
+        self.assertIn(recipe_attributes_b['name'], recipe_namelist)
+
+        recipes = get_workflow_with(self.configuration,
+                                    client_id=self.username,
+                                    user_query=True,
+                                    workflow_type=WORKFLOW_RECIPE,
+                                    **recipe_attributes_c)
+        self.assertIsNotNone(recipes)
+        self.assertEqual(len(recipes), 1)
+        recipe_namelist = [p['name'] for p in recipes]
+        self.assertIn(recipe_attributes_c['name'], recipe_namelist)
+
+        recipes = get_workflow_with(self.configuration,
+                                    client_id=self.username,
+                                    user_query=True,
+                                    workflow_type=WORKFLOW_RECIPE,
+                                    **{})
+        self.assertIsNotNone(recipes)
+        self.assertEqual(len(recipes), 3)
+        recipe_namelist = [p['name'] for p in recipes]
+        self.assertIn(recipe_attributes_a['name'], recipe_namelist)
+        self.assertIn(recipe_attributes_b['name'], recipe_namelist)
+        self.assertIn(recipe_attributes_c['name'], recipe_namelist)
+
+        recipes = get_workflow_with(
+            self.configuration,
+            client_id=self.username,
+            user_query=True,
+            workflow_type=WORKFLOW_RECIPE,
+            **{'environments': {'mig': {'nodes': '10'}}})
+        self.assertIsNotNone(recipes)
+        self.assertEqual(len(recipes), 2)
+        recipe_namelist = [p['name'] for p in recipes]
+        self.assertIn(recipe_attributes_a['name'], recipe_namelist)
+        self.assertIn(recipe_attributes_a['name'], recipe_namelist)
+
+        recipes = get_workflow_with(
+            self.configuration,
+            client_id=self.username,
+            user_query=True,
+            workflow_type=WORKFLOW_RECIPE,
+            **{'environments': {'mig': {'fill': ['DISK']}}})
+        self.assertIsNotNone(recipes)
+        self.assertEqual(len(recipes), 2)
+        recipe_namelist = [p['name'] for p in recipes]
+        self.assertIn(recipe_attributes_a['name'], recipe_namelist)
+        self.assertIn(recipe_attributes_a['name'], recipe_namelist)
+
     # def test_recipe_pattern_association_creation_pattern_first(self):
     #     pattern_attributes = {'name': 'association test pattern',
     #                           'vgrid': self.test_vgrid,

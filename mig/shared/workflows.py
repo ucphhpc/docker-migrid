@@ -2743,22 +2743,11 @@ def workflow_match(configuration, workflow_object, user_query=False, **kwargs):
                     if _k not in workflow_object:
                         return (False, 'Could not find attribute %s in %s'
                                 % (_k, workflow_object))
-                    # recipe requests are sent as dicts so need to be
-                    # converted to whole notebooks.
-                    if type(_v) == nbformat.notebooknode.NotebookNode:
-                        comp = workflow_object[_k]
-                        if type(comp) == dict:
-                            comp = nbformat.notebooknode.from_dict(comp)
-                        if _v != comp:
-                            return (False, 'Different values for notebook %s '
-                                           'in %s against %s'
-                                    % (_k, workflow_object, _v))
-                    else:
-                        if _v != workflow_object[_k] \
-                                and _v not in workflow_object[_k]:
-                            return (False, 'Different values for %s in %s '
-                                           'against %s'
-                                    % (_k, workflow_object, _v))
+
+                    match, feedback = \
+                        __soft_match(configuration, _k, _v, workflow_object)
+                    if not match:
+                        return (False, feedback)
             return (True, "")
         else:
             if kwargs['persistence_id'] == workflow_object['persistence_id']:
@@ -2774,6 +2763,53 @@ def workflow_match(configuration, workflow_object, user_query=False, **kwargs):
             return (True, "")
     return (False, "Failed to find an exact matching between '%s' and '%s'"
             % (workflow_object, kwargs))
+
+
+def __soft_match(configuration, key, value, target):
+    # configuration.logger.debug("Soft matching '%s', '%s'(%s) and '%s'"
+    #                            % (key, value, type(value), target))
+    if key not in target:
+        msg = "Requested key '%s' not in '%s'" % (key, target.keys())
+        # configuration.logger.debug(msg)
+        return (False, msg)
+
+    # recipe requests are sent as dicts so need to be
+    # converted to whole notebooks.
+    if type(value) == nbformat.notebooknode.NotebookNode:
+        comp = target[key]
+        if type(comp) == dict:
+            comp = nbformat.notebooknode.from_dict(comp)
+        if value != comp:
+            msg = 'Different values for notebook %s in %s against %s' \
+                  % (key, target, value)
+            # configuration.logger.debug(msg)
+            return (False, msg)
+
+    elif type(value) in [list, tuple, dict]:
+        if not isinstance(target[key], type(value)):
+            msg = "Different data types detected. Request is a %s but " \
+                  "should be %s" % (type(value), type(target[key]))
+            # configuration.logger.debug(msg)
+            return (False, msg)
+        if type(value) == dict:
+            for req_k, req_v in value.items():
+                match, feedback = \
+                    __soft_match(configuration, req_k, req_v, target[key])
+                if not match:
+                    return (False, feedback)
+        else:
+            for item in value:
+                if item not in target[key]:
+                    msg = "Item '%s' missing from '%s'" % (item, target[key])
+                    # configuration.logger.debug(msg)
+                    return (False, msg)
+    else:
+        if value != target[key]:
+            msg = 'Different values for %s in %s against %s' \
+                  % (key, target, value)
+            # configuration.logger.debug(msg)
+            return (False, msg)
+    return (True, '')
 
 
 def __prepare_template(configuration, template, **kwargs):
