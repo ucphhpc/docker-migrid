@@ -5,8 +5,7 @@ services:
     image: ruudud/devdns
     container_name: devdns
     ports:
-      - "10.50.2.145:53:53/udp"
-      - "10.50.2.145:53:53/tcp"
+      - "53:53/udp"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
@@ -28,6 +27,8 @@ services:
           - ext.migrid.test
           - io.migrid.test
           - sid.migrid.test
+          - cert.migrid.test
+          - ext.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -63,6 +64,7 @@ services:
 
 volumes:
   certs:
+    driver: local
     driver_opts:
       # Volume for generated certificates (provided by migrid)
       type: none
@@ -71,6 +73,7 @@ volumes:
 
   httpd:
     # Volume used for httpd config (provided by migrid)
+    driver: local
     driver_opts:
       type: none
       device: $PWD/httpd
@@ -78,6 +81,7 @@ volumes:
 
   mig:
     # Volume used to contain the migrid configuration (provided by migrid)
+    driver: local
     driver_opts:
       type: none
       device: $PWD/mig
@@ -85,6 +89,7 @@ volumes:
 
   state:
       # Volume used to contain the migrid state (provided by migrid)
+      driver: local
       driver_opts:
         type: none
         device: $PWD/state
