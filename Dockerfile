@@ -100,6 +100,8 @@ RUN touch /etc/pki/CA/index.txt \
 
 # Daemon keys
 RUN cat server.{key,crt} > combined.pem \
+    && cat server.crt > server.ca.pem \
+    && cat ca.pem >> server.ca.pem \
     && chown $USER:$USER combined.pem \
     && ssh-keygen -y -f combined.pem > combined.pub \
     && chown 0:0 *.key server.crt ca.pem \
