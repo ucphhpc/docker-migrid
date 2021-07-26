@@ -5,7 +5,7 @@ services:
     image: ruudud/devdns
     container_name: devdns
     ports:
-      - "53:53/udp"
+        - "127.0.0.1:53:53/udp"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
@@ -23,6 +23,7 @@ services:
         aliases:
           - cert.migrid.test
           - ext.migrid.test
+          - io.migrid.test
           - oid.migrid.test
           - sid.migrid.test
           - www.migrid.test

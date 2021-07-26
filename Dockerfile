@@ -236,6 +236,7 @@ RUN ./generateconfs.py --source=. \
     --public_http_port=80 --public_https_port=443 \
     --ext_cert_port=444 --mig_oid_port=445 \
     --ext_oid_port=446 --sid_port=447 \
+    --mig_cert_port=448 \
     --mig_oid_provider=https://ext.$DOMAIN/openid/ \
     --ext_oid_provider=https://oid.$DOMAIN/openid/ \
     --enable_openid=True --enable_wsgi=True \
