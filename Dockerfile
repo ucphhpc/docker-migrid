@@ -226,8 +226,8 @@ RUN ./generateconfs.py --source=. \
     --trac_admin_path=/usr/bin/trac-admin \
     --trac_ini_path=/home/mig/mig/server/trac.ini \
     --public_http_port=80 --public_https_port=443 \
-    --ext_cert_port=443 --mig_oid_port=443 \
-    --ext_oid_port=443 --sid_port=443 \
+    --ext_cert_port=444 --mig_oid_port=445 \
+    --ext_oid_port=446 --sid_port=447 \
     --mig_oid_provider=https://oid.$DOMAIN/openid/ \
     --enable_openid=True --enable_wsgi=True \
     --enable_sftp=False --enable_sftp_subsys=True \

@@ -21,12 +21,11 @@ services:
     networks:
       default:
         aliases:
-          - migrid.test
-          - www.migrid.test
-          - oid.migrid.test
-          - sid.migrid.test
           - cert.migrid.test
           - ext.migrid.test
+          - oid.migrid.test
+          - sid.migrid.test
+          - www.migrid.test
     volumes:
       - type: volume
         source: httpd
