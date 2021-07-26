@@ -121,7 +121,8 @@ RUN ln -s MiG/*.$DOMAIN/server.crt server.crt \
     && ln -s MiG/*.$DOMAIN/cacert.pem cacert.pem \
     && ln -s MiG/*.$DOMAIN/combined.pem combined.pem \
     && ln -s MiG/*.$DOMAIN/combined.pub combined.pub \
-    && ln -s MiG/*.$DOMAIN io.migrid.test
+    && ln -s MiG/*.$DOMAIN io.migrid.test \
+    && ln -s MiG/*.$DOMAIN www.migrid.test
 
 # Upgrade pip, required by cryptography
 RUN python -m pip install -U pip==20.3.4
