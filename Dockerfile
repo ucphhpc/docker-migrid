@@ -233,13 +233,9 @@ RUN ./generateconfs.py --source=. \
     --hgweb_scripts=/usr/share/doc/mercurial-common/examples \
     --trac_admin_path=/usr/bin/trac-admin \
     --trac_ini_path=/home/mig/mig/server/trac.ini \
-    --public_http_port=80 \
-    --public_https_port=443 \
-    --mig_cert_port=444 \
-    --ext_cert_port=445 \
-    --mig_oid_port=446 \
-    --ext_oid_port=447 \
-    --sid_port=448 \
+    --public_http_port=80 --public_https_port=443 \
+    --ext_cert_port=444 --mig_oid_port=445 \
+    --ext_oid_port=446 --sid_port=447 \
     --mig_oid_provider=https://ext.$DOMAIN/openid/ \
     --ext_oid_provider=https://oid.$DOMAIN/openid/ \
     --enable_openid=True --enable_wsgi=True \
