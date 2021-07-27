@@ -113,7 +113,8 @@ RUN mv server.crt $CERT_DIR/MiG/*.$DOMAIN/ \
     && mv crl.pem $CERT_DIR/MiG/*.$DOMAIN/ \
     && mv ca.pem $CERT_DIR/MiG/*.$DOMAIN/cacert.pem \
     && mv combined.pem $CERT_DIR/MiG/*.$DOMAIN/ \
-    && mv combined.pub $CERT_DIR/MiG/*.$DOMAIN/
+    && mv combined.pub $CERT_DIR/MiG/*.$DOMAIN/ \
+    && mv server.ca.pem $CERT_DIR/MiG/*.$DOMAIN/
 
 WORKDIR $CERT_DIR
 
@@ -123,8 +124,12 @@ RUN ln -s MiG/*.$DOMAIN/server.crt server.crt \
     && ln -s MiG/*.$DOMAIN/cacert.pem cacert.pem \
     && ln -s MiG/*.$DOMAIN/combined.pem combined.pem \
     && ln -s MiG/*.$DOMAIN/combined.pub combined.pub \
-    && ln -s MiG/*.$DOMAIN io.migrid.test \
-    && ln -s MiG/*.$DOMAIN www.migrid.test
+    && ln -s MiG/*.$DOMAIN cert.$DOMAIN \
+    && ln -s MiG/*.$DOMAIN ext.$DOMAIN \
+    && ln -s MiG/*.$DOMAIN oid.$DOMAIN \
+    && ln -s MiG/*.$DOMAIN io.$DOMAIN \
+    && ln -s MiG/*.$DOMAIN www.$DOMAIN \
+    && ln -s MiG/*.$DOMAIN sid.$DOMAIN
 
 # Upgrade pip, required by cryptography
 RUN python -m pip install -U pip==20.3.4
