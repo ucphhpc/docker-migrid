@@ -62,6 +62,7 @@ services:
     - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/ext.migrid.test.key
     - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/oid.migrid.test.key
     - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/sid.migrid.test.key
+    - ./certs/MiG/*.migrid.test/dhparams.pem:/etc/nginx/dhparam/dhparams.pem
 
 volumes:
   certs:
