@@ -13,6 +13,9 @@ services:
 
   migrid:
     image: nielsbohr/migrid:$BUILD_TYPE
+    build:
+      context: ./
+      dockerfile: Dockerfile
     container_name: migrid
     environment:
       TZ: Europe/Copenhagen

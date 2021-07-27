@@ -1,7 +1,7 @@
 NAME=docker-migrid
 OWNER=nielsbohr
 IMAGE=migrid
-BUILD_TYPE=edge
+BUILD_TYPE=basic
 CHECKOUT=5205
 
 .PHONY:	all init build clean reset push

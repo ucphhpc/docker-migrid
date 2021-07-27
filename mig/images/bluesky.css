@@ -1,0 +1,843 @@
+/*
+
+#
+# --- BEGIN_HEADER ---
+#
+# bluesky - alternative style for all pages
+# Copyright (C) 2003-2014  The MiG Project lead by Brian Vinter
+#
+# This file is part of MiG.
+#
+# MiG is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# MiG is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+#
+# -- END_HEADER ---
+#
+
+*/
+
+/* bluesky alternative styles for all pages */
+
+body {
+  background: #63a4f0;
+  color: #000;
+  font-family: "Trebuchet MS", "Bitstream Vera Serif", Utopia, "Times New Roman", times, serif;
+  margin: 0%;
+  /* padding: 5px 5px; */
+  text-align: center;
+  font-weight: lighter; 
+}
+
+a {
+  color: #369;
+  text-decoration: none;
+}
+
+a:hover, a:active {
+  color: #000;
+  text-decoration: underline;
+}
+
+img {
+  border: 0px;
+}
+
+tr, td {
+  padding: 2px;
+}
+
+
+h1{
+  padding: 4px;
+  border-top: 1px solid #000;
+  border-bottom: 1px solid #000;
+  font-size: 16px;  
+  color: #000;
+  background: #acf;
+  text-align: center;
+}
+
+h2 {
+  border-bottom: 1px solid #000;
+  font-size: 14px;  
+  padding: 2px;
+}
+
+h3 {
+  border-bottom: 1px solid darkgrey;
+  font-size: 16px;  
+  padding: 3px;
+}
+
+
+div.container {
+  width: 98%;
+  margin: 1%;
+}
+
+.menublock {
+  width: 100%;
+  float: left;
+  margin: 0;
+  padding: 0;
+}
+.contentblock {
+  margin: 4px;
+  padding: 0;
+  /* No footer overlap with menu here */
+  min-height: 0px;
+}
+/* override block layout for maximized areas like wshell */
+#nomenu {
+  margin: 4px;
+}
+
+/* Horizontal Menu */
+.navmenu {
+  width: 98%;
+  font-size: 16px;
+  background: none;
+  border-radius: 5px;
+  border: 0px;
+}
+
+.navmenu ul {
+  white-space: nowrap;
+  font-weight: bold;
+}
+
+.navsubmenu ul {
+  margin: 0;
+  padding: 0;
+}
+
+.navmenu ul li, .navsubmenu ul li {
+  list-style-type: none;
+  display: inline;
+  float: center;
+}
+
+.navmenu ul li.dashboard a {
+  background-image: url('/images/icons/application.png');
+}
+.navmenu ul li.submitjob a {
+  background-image: url('/images/icons/cog_add.png');
+}
+.navmenu ul li.files a {
+  background-image: url('/images/icons/drive.png');
+}
+.navmenu ul li.jobs a {
+  background-image: url('/images/icons/cog.png');
+}
+.navmenu ul li.vgrids a {
+  background-image: url('/images/icons/chart_organisation.png');
+}
+.navmenu ul li.vmachines a {
+  background-image: url('/images/icons/computer.png');
+}
+.navmenu ul li.resources a {
+  background-image: url('/images/icons/server.png');
+}
+.navmenu ul li.downloads a {
+  background-image: url('/images/icons/download.png');
+}
+.navmenu ul li.runtimeenvs a {
+  background-image: url('/images/icons/database.png');
+}
+.navmenu ul li.archives a {
+  background-image: url('/images/icons/box.png');
+}
+.navmenu ul li.settings a {
+  background-image: url('/images/icons/wrench.png');
+}
+.navmenu ul li.shell a {
+  background-image: url('/images/icons/application_osx_terminal.png');
+}
+.navmenu ul li.people a {
+  background-image: url('/images/icons/personal.png');
+}
+
+.navmenu ul li a:hover, .navsubmenu ul li a:hover {
+  background-color: #369;
+  color: white;
+}
+
+.navmenu ul li a.selected {
+  background-color: #147;
+  color: white;
+}
+
+.navmenu ul li a, .navsubmenu ul li a {
+  border-radius: 4px;
+  display: inline;
+  
+  background-repeat: no-repeat;
+  background-position: 5px 50%;
+  
+  border: 1px solid #fff;
+  color: white;
+  font-size: 13px;
+  font-weight: bold;
+  padding: 3px 5px 3px 24px;
+  text-decoration: none;
+  background-color: #63a4f0;
+  margin-right: 10px;
+}
+
+.navsubmenu ul li a {
+  display: inline;
+  float: left;
+}
+
+.styled_button:hover {
+  background-color: #369;
+  color: white;
+}
+
+.styled_button.selected {
+  background-color: #147;
+  color: white;
+}
+
+.styled_button {
+  border-radius: 4px;
+  display: inline;
+  
+  background-repeat: no-repeat;
+  background-position: 5px 50%;
+  
+  border: 1px solid #fff;
+  color: white;
+  font-size: 13px;
+  font-weight: bold;
+  padding: 3px 5px 3px 24px;
+  text-decoration: none;
+  background-color: #63a4f0;
+  margin-right: 10px;
+}
+
+.styled_button input {
+  display: inline;
+  float: left;
+}
+
+.premenuwidgets {
+  color: black;
+}
+
+.postmenuwidgets {
+  color: black;
+}
+
+.precontentwidgets {
+  color: black;
+}
+
+.postcontentwidgets {
+  color: black;
+}
+
+.inlineeditor {
+  border: 1px inset grey;
+  padding: 3px;
+  background: white;
+}
+
+.editortoolbar {
+  border-radius: 4px;
+  padding: 6px;
+  background: #ddd;
+}
+
+
+#migheader {
+  font-size: 30px;
+  border-radius: 4px;
+  letter-spacing: 0.2em;
+  margin: 0;
+  /*padding: 20px 10px 10px 10px;*/
+  width: 96%;
+  text-align: center;
+}
+
+
+table {
+  background: #eef;
+  color: #000;
+  margin-right: auto;
+  margin-left: auto;
+  text-align: left;
+  width: 98%;
+  border: 1px solid #000;
+}
+
+table.submitstatus {}
+
+table.files {}
+table.fileupload {}
+table.stats {}
+table.wc {}
+
+table.jobs {
+  padding: 2px;
+}
+table.resubmit {}
+table.changedstatusjobs {}
+table.saveschedulejobs {}
+
+
+table.vgrids {
+  padding: 2px;
+}
+
+table.resources {
+  padding: 2px;
+  text-align: left;
+}
+table.people {
+  padding: 2px;
+  text-align: left;
+}
+table.sandboxlogintext {
+  width: 80%;
+}
+table.sandboxlogin {}
+table.sandboxinfo {}
+table.sandboxcreateimg {}
+
+
+table.downloads {
+  text-align: center;
+}
+
+table.runtimeenvs {
+  padding: 2px;
+}
+
+table.runtimeenvdetails {
+  padding: 2px;
+}
+table.runtimeenvsw {
+  border: 0px solid #000;
+}
+table.runtimeenventry {
+  border: 0px solid #000;
+}
+table.runtimeenvvars {
+  border: 0px solid #000;
+}
+table.frozenarchivedetails {
+  margin-top: 10px;
+}
+table.frozenarchivedetails td {
+  vertical-align: top;
+  padding: 4px;
+}
+table.frozenarchivedetails td.title {
+  font-weight: bold;
+}
+table.frozenarchivedetails td.border {
+  border: 1px solid #000;
+}
+
+table.monitor {
+  font-size: 10px;
+}
+table.monitorstats {}
+table.monitorjobs {
+  border: 0px solid #000;
+}
+table.monitorresreq {
+  border: 0px solid #000;
+}
+div.monitorruntimeenvdetails {
+  /* force scroll box if list is longer than bounding box */
+  height: 220px;
+  overflow: auto;
+}
+table.monitorruntimeenvdone {
+  border: 0px solid #000;
+}
+
+table.liveio table {
+  border: 0px solid #000;
+}
+
+
+/* MiG logo */
+#topspace {
+  padding: 2px;
+}
+#toplogo {
+  border: 0;
+  background: url('/images/background-top.png');
+  height: 80px;
+  border-spacing: 0;
+  border: 0px solid #000;
+  text-align: center;
+}
+#logoimage {
+  opacity: 0.7;
+  z-index: 1;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 25px 30px;
+  display: inline;
+  vertical-align: middle;
+}
+#logotitle {
+  font-size: 20px;
+  font-weight: bold;
+  color: #63a4f0;
+  padding: 20px;
+  display: inline;
+  vertical-align: middle;
+}
+
+
+/* MiG credits footer */
+#exitcode {
+  font-family: Small Fonts, VT100, Arial, Helvetica;
+  font-size: 8px;
+}
+#bottomspace {
+  padding: 2px;
+}
+#bottomlogo {
+  border: 0;
+  background: url('/images/background-bottom.png');
+  height: 80px;
+  padding: 0px;
+  border-spacing: 0;
+  border: 0px solid #000;
+  text-align: center;
+}
+#creditsimage {
+  opacity: 0.7;
+  z-index: 1;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 30px 0px 0px 0px;
+  display: inline;
+  vertical-align: middle;
+}
+#credits {
+  font-family: Small Fonts, VT100, Arial, Helvetica;
+  font-size: 10px;
+  padding: 30px 0px 0px 0px;
+  color: #63a4f0;
+  vertical-align: middle;
+}
+#credits a {
+  color: #369;
+}
+
+
+#content, .content {
+  /* background: #ccc; */
+  background: #fff;
+  border: 2px ridge #63a4f0;
+  border-radius: 4px;
+  margin: 2%;
+  padding: 5px 5px;
+  text-align: center;
+}
+.migcontent {
+  background: #fff;
+  border: 0;
+  padding: 5px;
+  width: 96%;
+  text-align: center;
+}
+
+.rawtext {
+  background: #fff;
+  border: 0;
+  padding: 5px;
+  text-align: left;
+}
+
+.smallcontent{
+  font-size: 10px;
+}
+
+.subsection{
+  background: #fff;
+  padding: 0px 0px 5px 0px;
+  border: 0px;
+  border-radius: 4px;
+  width: 98%;
+  text-align: center;
+  font-size: 17px;
+  font-weight: bold;
+}
+
+.lefttext {
+  text-align: left;
+}
+
+.centertext {
+  text-align: center;
+}
+
+.righttext {
+  text-align: right;
+}
+
+.centerall {
+  margin: 0;
+  text-align: center;
+}
+
+.title {
+  font-weight: bold;
+}
+
+.errortext {
+  color: red;
+}
+
+.warningtext {
+  color: orange;
+}
+
+.even_row {
+  background: #eef;
+}
+
+.odd_row {
+  background: #ddf;
+}
+
+.status_unavailable {
+  color: grey;
+}
+
+.status_online {
+  color: green;
+}
+
+.status_slack {
+  color: orange;
+}
+
+.status_offline {
+  color: red;
+}
+
+.optional {
+  color: black;
+}
+
+.mandatory {
+  color: blue;
+}
+
+.status_box {
+  padding: 2px;
+  margin: 2px;
+  border: 1px dashed black;
+  border-radius: 4px;
+  background-color: lightgrey;
+  background-position: 0% 50%;
+  clear: both;
+  display: block;
+}
+
+.hidden { 
+  display: none;
+}
+
+.highlight_message {
+  font-weight: bold;
+}
+
+.new_message {
+  background: url('/images/icons/new.png') left center no-repeat;
+  padding-left: 16px;
+}
+
+.warn_message {
+  background: url('/images/icons/error.png') left center no-repeat;
+  padding-left: 20px;
+  color: orange;
+}
+
+.scrollselect {
+  height: 120px;
+  width: 600px;
+  padding: 5px;
+  overflow: auto;
+  background: #fff;
+  border: 1px inset grey;
+  /* center div but not contents */
+  margin: 0 auto;
+}
+
+/* File manager */
+#fm_filemanager {
+  text-align: left;
+}
+/* Generic context menu styles */
+.contextMenu {
+  text-align: left;
+}
+/* Job manager */
+.jm {
+  margin-top: -15px; 
+}
+
+/* General helper icons */
+.spinner { 
+    background-image: url(/images/icons/spinner.gif);
+    background-repeat: no-repeat;
+    background-position: left center;
+ }
+.error { 
+    background-image: url('/images/icons/exclamation.png');
+    background-repeat: no-repeat;
+ }
+.warn { 
+    background-image: url('/images/icons/error.png');
+    background-repeat: no-repeat;
+ }
+.info { 
+    background-image: url('/images/icons/information.png');
+    background-repeat: no-repeat;
+}
+.ok { 
+    background-image: url('/images/icons/accept.png');
+    background-repeat: no-repeat;
+}
+.urllink {
+  background: url('/images/icons/html.png') no-repeat;
+  padding-left: 18px;
+}
+.infolink {
+  background: url('/images/icons/information.png') no-repeat;
+  padding-left: 18px;
+}
+.viewlink {
+  background: url('/images/icons/html.png') no-repeat;
+  padding-left: 18px;
+}
+.openlink {
+  background: url('/images/icons/txt.png') no-repeat;
+  padding-left: 18px;
+}
+.editlink {
+  background: url('/images/icons/page_edit.png') no-repeat;
+  padding-left: 18px;
+}
+.sharedfolderlink {
+  background: url('/images/icons/folder_link.png') no-repeat;
+  padding-left: 18px;
+}
+.folderlink {
+  background: url('/images/icons/folder.png') no-repeat;
+  padding-left: 18px;
+}
+.wikilink {
+  background: url('/images/icons/overlays.png') no-repeat;
+  padding-left: 18px;
+}
+.scmlink {
+  background: url('/images/icons/calendar.png') no-repeat;
+  padding-left: 18px;
+}
+.trackerlink {
+  background: url('/images/icons/table_gear.png') no-repeat;
+  padding-left: 18px;
+}
+.forumlink {
+  background: url('/images/icons/comments.png') no-repeat;
+  padding-left: 18px;
+}
+.monitorlink {
+  background: url('/images/icons/server_chart.png') no-repeat;
+  padding-left: 18px;
+}
+.adminlink {
+  background: url('/images/icons/wrench.png') no-repeat;
+  padding-left: 18px;
+}
+.computerlink {
+  background: url('/images/icons/computer.png') no-repeat;
+  padding-left: 18px;
+}
+.sandboxlink {
+  background: url('/images/icons/hourglass_go.png') no-repeat;
+  padding-left: 18px;
+}
+.danishlink {
+  background: url('/images/crystal-icons/unknown.png') no-repeat;
+  padding-left: 18px;
+}
+.englishlink {
+  background: url('/images/crystal-icons/unknown.png') no-repeat;
+  padding-left: 18px;
+}
+.backlink {
+  background: url('/images/icons/arrow_left.png') no-repeat;
+  padding-left: 18px;
+}
+.swrepolink {
+  background: url('/images/icons/table_go.png') no-repeat;
+  padding-left: 18px;
+}
+.addlink {
+  background: url('/images/icons/add.png') no-repeat;
+  padding-left: 18px;
+}
+.addadminlink {
+  background: url('/images/icons/cog_add.png') no-repeat;
+  padding-left: 18px;
+}
+.additemlink {
+  background: url('/images/icons/page_white_add.png') no-repeat;
+  padding-left: 18px;
+}
+.removelink {
+  background: url('/images/icons/delete.png') no-repeat;
+  padding-left: 18px;
+}
+.removeadminlink {
+  background: url('/images/icons/cog_delete.png') no-repeat;
+  padding-left: 18px;
+}
+.removeitemlink {
+  background: url('/images/icons/page_white_delete.png') no-repeat;
+  padding-left: 18px;
+}
+.submitfieldslink {
+  background: url('/images/icons/table.png') no-repeat;
+  padding-left: 18px;
+}
+.submittextarealink {
+  background: url('/images/icons/txt.png') no-repeat;
+  padding-left: 18px;
+}
+.submitfileslink {
+  background: url('/images/icons/page_white_get.png') no-repeat;
+  padding-left: 18px;
+}
+.generalsettingslink {
+  background: url('/images/icons/table.png') no-repeat;
+  padding-left: 18px;
+}
+.jobsettingslink {
+  background: url('/images/icons/cog.png') no-repeat;
+  padding-left: 18px;
+}
+.stylesettingslink {
+  background: url('/images/icons/psd.png') no-repeat;
+  padding-left: 18px;
+}
+.profilesettingslink {
+  background: url('/images/icons/user.png') no-repeat;
+  padding-left: 18px;
+}
+.widgetssettingslink {
+  background: url('/images/icons/application.png') no-repeat;
+  padding-left: 18px;
+}
+.sshsettingslink {
+  background: url('/images/icons/computer_link.png') no-repeat;
+  padding-left: 18px;
+}
+.davssettingslink {
+  background: url('/images/icons/computer_link.png') no-repeat;
+  padding-left: 18px;
+}
+.arcsettingslink {
+  background: url('/images/icons/ng-arc.png') no-repeat;
+  padding-left: 18px;
+}
+.newpostlink {
+  background: url('/images/icons/comment.png') no-repeat;
+  padding-left: 18px;
+}
+.replylink {
+  background: url('/images/icons/comment_add.png') no-repeat;
+  padding-left: 18px;
+}
+.searchlink {
+  background: url('/images/icons/magnifier.png') no-repeat;
+  padding-left: 18px;
+}
+.refreshlink {
+  background: url('/images/icons/arrow_refresh.png') no-repeat;
+  padding-left: 18px;
+}
+.certrenewlink {
+  background: url('/images/icons/arrow_refresh.png') no-repeat;
+  padding-left: 18px;
+}
+
+.realres {
+  background: url('/images/icons/computer.png') no-repeat;
+  padding-left: 18px;
+}
+.sandboxres {
+  background: url('/images/icons/box.png') no-repeat;
+  padding-left: 18px;
+}
+.sendemaillink {
+  background: url('/images/icons/email_protocol.png') no-repeat;
+  padding-left: 18px;
+}
+.sendjabberlink {
+  background: url('/images/icons/jabber_protocol.png') no-repeat;
+  padding-left: 18px;
+}
+.sendmsnlink {
+  background: url('/images/icons/msn_protocol.png') no-repeat;
+  padding-left: 18px;
+}
+.sendaollink {
+  background: url('/images/icons/aol_protocol.png') no-repeat;
+  padding-left: 18px;
+}
+.sendyahoolink {
+  background: url('/images/icons/yahoo_protocol.png') no-repeat;
+  padding-left: 18px;
+}
+.sendicqlink {
+  background: url('/images/icons/icq_protocol.png') no-repeat;
+  padding-left: 18px;
+}
+.public_profile{
+  float: left;
+  border: 1px inset blue;
+  padding: 20px;
+}
+.public_image{
+  float: right;
+  border: 1px inset grey;
+}
+.public_frame{
+  width: 90%;
+}
+
+/* IMPORTANT: these overrides must come after .*link settings to work */
+.owner {
+  border: 1px solid gold;
+  border-radius: 4px;
+}
+.member {
+  background-color: transparent;
+}
+.public {
+  background-color: silver;
+}

@@ -1,0 +1,68 @@
+/*
+
+#
+# --- BEGIN_HEADER ---
+#
+# ui-v2.custom - UI V2 style overrides for all pages
+# Copyright (C) 2003-2020  The MiG Project lead by Brian Vinter
+#
+# This file is part of MiG.
+#
+# MiG is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# MiG is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+#
+# -- END_HEADER ---
+#
+
+*/
+
+/* SIF UCPH Science skin style sheet for UI V2 only */
+
+/* Global Web Elements */
+.global-container {
+    /* Adjust content to fit frameless nav menu */
+    padding-top: 10px;
+}
+
+/* NOTE: prevent long systemwarn from making toplogo overflow completely */
+#toplogocenter {
+    max-width: calc(100% - 340px);
+}
+
+/* Hide touchscreen toggle now we have toolbox button on all entries */
+#fm_toggle_touchscreen, #fm_touchscreen_label {
+    display: none;
+}
+
+
+/* Home with app grid */
+.app-grid > *, .app-grid > * a  {
+    color: #46743C;
+    background-color: #FFF;
+    border-color: #46743C;
+}
+.app-grid > *:hover, .app-grid > *:hover a {
+    background-color: #46743C;
+    color: #FFF;
+}
+.app-grid .app__btn, .app-grid .add-app__btn {
+    background-color: #46743C;
+    color: #FFF;
+    border-color: #46743C;
+}
+.app-grid .app__btn:hover, .app-grid .add-app__btn:hover {
+    color: #46743C;
+    background-color: #FFF;
+    border-color: #46743C;
+}
