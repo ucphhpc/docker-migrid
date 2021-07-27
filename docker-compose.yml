@@ -12,7 +12,7 @@ services:
       TZ: Europe/Copenhagen
 
   migrid:
-    image: nielsbohr/migrid:edge
+    image: nielsbohr/migrid:$BUILD_TYPE
     container_name: migrid
     environment:
       TZ: Europe/Copenhagen
