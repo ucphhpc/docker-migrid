@@ -1,1 +1,0 @@
-stopstore.py

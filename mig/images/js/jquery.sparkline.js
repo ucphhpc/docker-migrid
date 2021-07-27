@@ -1,1 +1,0 @@
-../widget-deps/jquery.sparklines-2.1.2/jquery.sparkline.min.js

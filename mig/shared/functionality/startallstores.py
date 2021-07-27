@@ -1,1 +1,0 @@
-startstore.py

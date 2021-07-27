@@ -1,1 +1,0 @@
-jquery.tablesorter.pager-current.min.js

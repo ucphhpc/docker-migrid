@@ -1,6 +1,0 @@
-This dir contains some nice-to-have mig user configuration files:
-.zshrc
-.ssh/config
-.emacs
-.emacs.d/python-mode.el
-...

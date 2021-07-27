@@ -1,1 +1,0 @@
-../../libpam-mig/migauthhandler.c

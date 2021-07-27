@@ -1,1 +1,0 @@
-../cgi-bin/oidping.py

@@ -1,1 +1,0 @@
-jquery.validate-current.min.js
