@@ -1,7 +1,7 @@
 NAME=docker-migrid
 OWNER=nielsbohr
 IMAGE=migrid
-TAG=edge
+BUILD_TYPE=edge
 CHECKOUT=5205
 
 .PHONY:	all init build clean reset push
@@ -15,7 +15,7 @@ init:
 	mkdir -p state
 
 build:
-	docker build -t ${OWNER}/${IMAGE}:${TAG} --build-arg CHECKOUT=${CHECKOUT} ${ARGS} .
+	docker build -t ${OWNER}/${IMAGE}:${BUILD_TYPE} --build-arg CHECKOUT=${CHECKOUT} ${ARGS} .
 
 clean:
 	rm -rf ./certs
@@ -35,4 +35,4 @@ reset:
 	fi
 
 push:
-	docker push ${OWNER}/${IMAGE}:${TAG}
+	docker push ${OWNER}/${IMAGE}:${BUILD_TYPE}

@@ -12,7 +12,7 @@ services:
       TZ: Europe/Copenhagen
 
   migrid:
-    image: nielsbohr/migrid:edge
+    image: nielsbohr/migrid:$BUILD_TYPE
     container_name: migrid
     environment:
       TZ: Europe/Copenhagen
@@ -55,10 +55,15 @@ services:
     volumes:
     - /var/run/docker.sock:/tmp/docker.sock:ro
     - ./nginx-proxy.conf:/etc/nginx/conf.d/migrid.conf
+    - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/cert.migrid.test.crt
+    - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/ext.migrid.test.crt
     - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/oid.migrid.test.crt
     - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/sid.migrid.test.crt
+    - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/cert.migrid.test.key
+    - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/ext.migrid.test.key
     - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/oid.migrid.test.key
     - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/sid.migrid.test.key
+    - ./certs/MiG/*.migrid.test/dhparams.pem:/etc/nginx/dhparam/dhparams.pem
 
 volumes:
   certs:
