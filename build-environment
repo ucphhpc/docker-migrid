@@ -1,1 +1,4 @@
+# The build type specifies the version of MiGrid that should be build
+# Fow now, the following types are supported.
+# {basic,advanced}
 BUILD_TYPE=basic
