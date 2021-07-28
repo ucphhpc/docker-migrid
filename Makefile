@@ -15,7 +15,7 @@ init:
 	mkdir -p state
 
 build:
-	docker build -t ${OWNER}/${IMAGE}:${BUILD_TYPE} --build-arg CHECKOUT=${CHECKOUT} ${ARGS} .
+	docker-compose build --build-arg CHECKOUT=${CHECKOUT} ${ARGS}
 
 clean:
 	rm -rf ./certs
