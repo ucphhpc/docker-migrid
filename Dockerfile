@@ -48,6 +48,10 @@ RUN yum update -y \
     python-requests \
     python2-psutil \
     python-future \
+    python2-cffi \
+    pysendfile \
+    PyYAML \
+    pyOpenSSL \
     cracklib-python \
     cracklib-devel \
     lftp \
@@ -78,12 +82,11 @@ RUN mkdir -p $CERT_DIR/MiG/*.$DOMAIN \
     && chown $USER:$USER $CERT_DIR \
     && chmod 775 $CERT_DIR
 
-# Setup certs and keys
-# Dhparam
-
+# Certs and keys
 FROM prerequisites as setup_security
 
-RUN wget https://ssl-config.mozilla.org/ffdhe4096.txt -O $CERT_DIR/dhparams.pem
+# Dhparam - https://wiki.mozilla.org/Security/Archive/Server_Side_TLS_4.0
+RUN curl https://ssl-config.mozilla.org/ffdhe4096.txt -o $CERT_DIR/dhparams.pem
 
 # CA
 # https://gist.github.com/Soarez/9688998
@@ -134,11 +137,11 @@ RUN ln -s MiG/*.$DOMAIN/server.crt server.crt \
     && ln -s MiG/*.$DOMAIN/combined.pem combined.pem \
     && ln -s MiG/*.$DOMAIN/server.ca.pem server.ca.pem \
     && ln -s MiG/*.$DOMAIN/combined.pub combined.pub \
+    && ln -s MiG/*.$DOMAIN www.$DOMAIN \
     && ln -s MiG/*.$DOMAIN cert.$DOMAIN \
     && ln -s MiG/*.$DOMAIN ext.$DOMAIN \
     && ln -s MiG/*.$DOMAIN oid.$DOMAIN \
     && ln -s MiG/*.$DOMAIN io.$DOMAIN \
-    && ln -s MiG/*.$DOMAIN www.$DOMAIN \
     && ln -s MiG/*.$DOMAIN sid.$DOMAIN
 
 # Upgrade pip, required by cryptography
@@ -152,7 +155,6 @@ RUN mkdir -p MiG-certificates \
     && ln -s $CERT_DIR/MiG/*.$DOMAIN/cacert.pem cacert.pem \
     && ln -s $CERT_DIR/MiG MiG \
     && ln -s $CERT_DIR/combined.pem combined.pem \
-    && ln -s $CERT_DIR/server.ca.pem server.ca.pem \
     && ln -s $CERT_DIR/combined.pub combined.pub \
     && ln -s $CERT_DIR/dhparams.pem dhparams.pem
 
@@ -168,16 +170,14 @@ RUN pip install --user \
     watchdog \
     scandir
 
-# Modules required by grid_sftp.py
-RUN pip install --user \
-    paramiko
-
 # Modules required by grid_webdavs
+# TODO: upgrade wsgidav to latest once we run Python 3
+# NOTE: we require <=1.3.0 for now
 RUN pip install --user \
-    wsgidav \
-    CherryPy
+    wsgidav==1.3.0
 
 # Modules required by grid_ftps
+# NOTE: relies on pyOpenSSL and Cryptography from yum for now
 RUN pip install --user \
     pyftpdlib
 
@@ -190,16 +190,9 @@ RUN pip install --user \
 RUN pip install --user \
     pytest
 
-RUN pip install --user \
-    future
-
 # Modules required by 2FA
 RUN pip install --user \
     pyotp==2.3.0
-
-# Support sftp cracklib check
-RUN pip install --user \
-    cracklib
 
 FROM mig_dependencies as download_mig
 
@@ -231,7 +224,7 @@ RUN ./generateconfs.py --source=. \
     --mig_cert_fqdn=cert.$DOMAIN \
     --ext_cert_fqdn= \
     --mig_oid_fqdn=ext.$DOMAIN \
-    --ext_oid_fqdn=oid.$DOMAIN \
+    --ext_oid_fqdn= \
     --sid_fqdn=sid.$DOMAIN \
     --io_fqdn=io.$DOMAIN \
     --user=mig --group=mig \
@@ -249,34 +242,39 @@ RUN ./generateconfs.py --source=. \
     --trac_admin_path=/usr/bin/trac-admin \
     --trac_ini_path=/home/mig/mig/server/trac.ini \
     --public_http_port=80 --public_https_port=443 \
-    --ext_cert_port=444 --mig_oid_port=445 \
-    --ext_oid_port=446 --sid_port=447 \
-    --mig_cert_port=448 \
+    --mig_oid_port=444 --ext_oid_port=445 \
+    --mig_cert_port=446 --ext_cert_port=447 \
+    --sid_port=448 \
+    --sftp_port=2222 --sftp_subsys_port=22222 \
     --mig_oid_provider=https://ext.$DOMAIN/openid/ \
-    --ext_oid_provider=https://oid.$DOMAIN/openid/ \
+    --ext_oid_provider= \
     --enable_openid=True --enable_wsgi=True \
-    --enable_sftp=False --enable_sftp_subsys=True \
+    --enable_sftp=True --enable_sftp_subsys=True \
     --enable_davs=True --enable_ftps=True \
-    --enable_duplicati=False --enable_seafile=True \
-    --enable_sandboxes=True --enable_vmachines=False \
+    --enable_sharelinks=True --enable_transfers=True \
+    --enable_duplicati=True --enable_seafile=False \
+    --enable_sandboxes=False --enable_vmachines=False \
     --enable_crontab=True --enable_jobs=True \
-    --enable_resources=True --enable_notify=True \
-    --enable_events=True --enable_imnotify=True \
+    --enable_resources=True --enable_events=True \
+    --enable_freeze=False --enable_imnotify=False \
     --enable_twofactor=True --enable_cracklib=True \
-    --enable_hsts=True --enable_vhost_certs=True \
-    --enable_verify_certs=True \
+    --enable_notify=True --enable_preview=False \
+    --enable_workflows=False --enable_hsts=True \
+    --enable_vhost_certs=True --enable_verify_certs=True \
+    --enable_jupyter=False \
     --user_clause=User --group_clause=Group \
     --listen_clause='#Listen' \
     --serveralias_clause='ServerAlias' --alias_field=email \
     --dhparams_path=~/certs/dhparams.pem \
     --daemon_keycert=~/certs/combined.pem \
     --daemon_pubkey=~/certs/combined.pub \
-    --daemon_pubkey_from_dns=True \
+    --daemon_pubkey_from_dns=False \
+    --daemon_show_address=io.$DOMAIN \
     --signup_methods="extoid migoid migcert" \
     --login_methods="extoid migoid migcert" \
     --distro=centos \
-    --skin=erda-user-friendly --short_title=MiG \
-    --wsgi_procs=25
+    --skin=idmc-basic --short_title="MiGrid-Test" \
+    --apache_worker_procs=128 --wsgi_procs=25
 
 RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/static-skin.css $MIG_ROOT/mig/images/ \
@@ -321,8 +319,12 @@ RUN sed -i '/\/server.ca.pem/ a SSLProxyCheckPeerName off' $WEB_DIR/conf.d/MiG.c
     $WEB_DIR/conf.d/MiG.conf
 
 # Front page
-RUN ln -s $MIG_ROOT/state/wwwpublic/index-idmc.dk.html $MIG_ROOT/state/wwwpublic/index.html \
-    && chown -R $USER:$USER $MIG_ROOT/state/wwwpublic/index.html
+RUN ln -s index-idmc.dk.html $MIG_ROOT/state/wwwpublic/index.html && \
+    ln -s about-idmc.dk.html $MIG_ROOT/state/wwwpublic/about-snippet.html && \
+    ln -s support-idmc.dk.html $MIG_ROOT/state/wwwpublic/support-snippet.html && \
+    ln -s tips-idmc.dk.html $MIG_ROOT/state/wwwpublic/tips-snippet.html && \
+    ln -s terms-idmc.dk.html $MIG_ROOT/state/wwwpublic/terms-snippet.html && \
+    chown -R $USER:$USER $MIG_ROOT/state/wwwpublic/*.html
 
 # Replace index.html redirects to development domain RUN
 # Default non KU login to oid.$DOMAIN instead of ext.$DOMAIN
