@@ -1,4 +1,10 @@
-FROM centos:7
+ARG BUILD_TYPE=basic
+ARG BUILD_TARGET=development
+ARG DOMAIN=migrid.test
+
+FROM centos:7 as base
+
+WORKDIR /tmp
 
 # Centos image default yum configs prevent docs installation
 # https://superuser.com/questions/784451/centos-on-docker-how-to-install-doc-files
@@ -51,8 +57,8 @@ RUN yum update -y \
     lftp \
     rsync \
     fail2ban \
-    ipset
-
+    ipset \
+    wget
 
 # Apache OpenID (provided by epel)
 RUN yum install -y mod_auth_openid
@@ -65,7 +71,6 @@ ENV GID=1000
 RUN groupadd -g $GID $USER
 RUN useradd -u $UID -g $GID -ms /bin/bash $USER
 
-ARG DOMAIN=migrid.test
 # MiG environment
 ENV MIG_ROOT=/home/$USER
 ENV WEB_DIR=/etc/httpd
@@ -77,9 +82,10 @@ RUN mkdir -p $CERT_DIR/MiG/*.$DOMAIN \
     && chown $USER:$USER $CERT_DIR \
     && chmod 775 $CERT_DIR
 
-# Setup certs and keys
-# Dhparam - generate yourself for production or use pregenerated one for test
-#RUN openssl dhparam 4096 -out $CERT_DIR/dhparams.pem
+# Certs and keys
+FROM prerequisites as setup_security
+
+# Dhparam - https://wiki.mozilla.org/Security/Archive/Server_Side_TLS_4.0
 RUN curl https://ssl-config.mozilla.org/ffdhe4096.txt -o $CERT_DIR/dhparams.pem
 
 # CA
@@ -87,15 +93,15 @@ RUN curl https://ssl-config.mozilla.org/ffdhe4096.txt -o $CERT_DIR/dhparams.pem
 RUN openssl genrsa -des3 -passout pass:qwerty -out ca.key 2048 \
     && openssl rsa -passin pass:qwerty -in ca.key -out ca.key \
     && openssl req -x509 -new -key ca.key \
-    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=oid.${DOMAIN}" -out ca.crt \
+    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=*.${DOMAIN}" -out ca.crt \
     && openssl req -x509 -new -nodes -key ca.key -sha256 -days 1024 \
-    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=oid.${DOMAIN}" -out ca.pem
+    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=*.${DOMAIN}" -out ca.pem
 
 # Server key/ca
 # https://gist.github.com/Soarez/9688998
 RUN openssl genrsa -out server.key 2048 \
     && openssl req -new -key server.key -out server.csr \
-    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=oid.${DOMAIN}" \
+    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=*.${DOMAIN}" \
     && openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
 
 # CRL
@@ -152,6 +158,9 @@ RUN mkdir -p MiG-certificates \
     && ln -s $CERT_DIR/combined.pub combined.pub \
     && ln -s $CERT_DIR/dhparams.pem dhparams.pem
 
+
+FROM setup_security as mig_dependencies
+
 # Prepare OpenID
 ENV PATH=$PATH:/home/$USER/.local/bin
 RUN pip install --user python-openid
@@ -161,16 +170,8 @@ RUN pip install --user \
     watchdog \
     scandir
 
-# Modules required by grid_sftp.py
-# NOTE: we use yum version for now
-#RUN pip install --user \
-#    paramiko
-
 # Modules required by grid_webdavs
 # TODO: upgrade wsgidav to latest once we run Python 3
-#RUN pip install --user \
-#    wsgidav \
-#    CherryPy
 # NOTE: we require <=1.3.0 for now
 RUN pip install --user \
     wsgidav==1.3.0
@@ -189,18 +190,11 @@ RUN pip install --user \
 RUN pip install --user \
     pytest
 
-# NOTE: we use yum version for now
-#RUN pip install --user \
-#    future
-
 # Modules required by 2FA
 RUN pip install --user \
     pyotp==2.3.0
 
-# Support sftp cracklib check
-# NOTE: we use yum version for now
-#RUN pip install --user \
-#    cracklib
+FROM mig_dependencies as download_mig
 
 # Install and configure MiG
 ARG CHECKOUT=5205
@@ -212,6 +206,8 @@ USER root
 RUN chown -R $USER:$USER $MIG_ROOT/mig
 
 USER $USER
+
+FROM download_mig as install_mig
 
 ENV PYTHONPATH=${MIG_ROOT}
 # Ensure that the $USER sets it during session start
@@ -284,6 +280,9 @@ RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/static-skin.css $MIG_ROOT/mig/images/ \
     && cp generated-confs/index.html $MIG_ROOT/state/user_home/
 
+
+FROM install_mig as setup_mig_configs
+
 # Enable jupyter menu
 RUN sed -i -e 's/#user_menu =/user_menu = jupyter/g' $MIG_ROOT/mig/server/MiGserver.conf \
     && sed -i -e 's/loglevel = info/loglevel = debug/g' $MIG_ROOT/mig/server/MiGserver.conf
@@ -351,6 +350,8 @@ RUN mv $WEB_DIR/conf.d/autoindex.conf $WEB_DIR/conf.d/autoindex.conf.centos \
 RUN update-ca-trust force-enable \
     && cp $CERT_DIR/combined.pem /etc/pki/ca-trust/source/anchors/ \
     && update-ca-trust extract
+
+FROM setup_mig_configs as start_mig
 
 # Reap defuncted/orphaned processes
 ARG TINI_VERSION=v0.18.0

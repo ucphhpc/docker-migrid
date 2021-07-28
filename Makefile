@@ -3,6 +3,9 @@ OWNER=nielsbohr
 IMAGE=migrid
 BUILD_TYPE=basic
 CHECKOUT=5205
+# Enable that the builder should use buildkit
+# https://docs.docker.com/develop/develop-images/build_enhancements/
+DOCKER_BUILDKIT=1
 
 .PHONY:	all init build clean reset push
 
@@ -15,7 +18,7 @@ init:
 	mkdir -p state
 
 build:
-	docker build -t ${OWNER}/${IMAGE}:${BUILD_TYPE} --build-arg CHECKOUT=${CHECKOUT} ${ARGS} .
+	docker-compose build --build-arg CHECKOUT=${CHECKOUT} ${ARGS}
 
 clean:
 	rm -rf ./certs
