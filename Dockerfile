@@ -3,6 +3,7 @@ ARG BUILD_TARGET=development
 ARG DOMAIN=migrid.test
 
 FROM centos:7 as base
+ARG DOMAIN
 
 WORKDIR /tmp
 
@@ -84,6 +85,7 @@ RUN mkdir -p $CERT_DIR/MiG/*.$DOMAIN \
 
 # Certs and keys
 FROM base as setup_security
+ARG DOMAIN
 
 # Dhparam - https://wiki.mozilla.org/Security/Archive/Server_Side_TLS_4.0
 RUN curl https://ssl-config.mozilla.org/ffdhe4096.txt -o $CERT_DIR/dhparams.pem
@@ -160,6 +162,7 @@ RUN mkdir -p MiG-certificates \
 
 
 FROM setup_security as mig_dependencies
+ARG DOMAIN
 
 # Prepare OpenID
 ENV PATH=$PATH:/home/$USER/.local/bin
@@ -195,6 +198,7 @@ RUN pip install --user \
     pyotp==2.3.0
 
 FROM mig_dependencies as download_mig
+ARG DOMAIN
 
 # Install and configure MiG
 ARG CHECKOUT=5205
@@ -208,6 +212,7 @@ RUN chown -R $USER:$USER $MIG_ROOT/mig
 USER $USER
 
 FROM download_mig as install_mig
+ARG DOMAIN
 
 ENV PYTHONPATH=${MIG_ROOT}
 # Ensure that the $USER sets it during session start
@@ -270,8 +275,8 @@ RUN ./generateconfs.py --source=. \
     --daemon_pubkey=~/certs/combined.pub \
     --daemon_pubkey_from_dns=False \
     --daemon_show_address=io.$DOMAIN \
-    --signup_methods="extoid migoid migcert" \
-    --login_methods="extoid migoid migcert" \
+    --signup_methods="migoid migcert" \
+    --login_methods="migoid migcert" \
     --distro=centos \
     --skin=idmc-basic --short_title="MiGrid-Test" \
     --apache_worker_procs=128 --wsgi_procs=25
@@ -282,6 +287,7 @@ RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
 
 
 FROM install_mig as setup_mig_configs
+ARG DOMAIN
 
 # Enable jupyter menu
 RUN sed -i -e 's/#user_menu =/user_menu = jupyter/g' $MIG_ROOT/mig/server/MiGserver.conf \
@@ -327,9 +333,7 @@ RUN ln -s index-idmc.dk.html $MIG_ROOT/state/wwwpublic/index.html && \
     chown -R $USER:$USER $MIG_ROOT/state/wwwpublic/*.html
 
 # Replace index.html redirects to development domain RUN
-# Default non KU login to oid.$DOMAIN instead of ext.$DOMAIN
-RUN sed -i -e "s/idmc.dk/$DOMAIN/g" $MIG_ROOT/state/wwwpublic/index.html \
-    && sed -i -e "s/ext.$DOMAIN/oid.$DOMAIN/g" $MIG_ROOT/state/wwwpublic/index.html
+RUN sed -i -e "s/idmc.dk/$DOMAIN/g" $MIG_ROOT/state/wwwpublic/index.html
 
 # State clean services
 RUN chmod 755 generated-confs/{migstateclean,migerrors} \
@@ -352,6 +356,7 @@ RUN update-ca-trust force-enable \
     && update-ca-trust extract
 
 FROM setup_mig_configs as start_mig
+ARG DOMAIN
 
 # Reap defuncted/orphaned processes
 ARG TINI_VERSION=v0.18.0
