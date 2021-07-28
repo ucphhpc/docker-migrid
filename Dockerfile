@@ -83,7 +83,7 @@ RUN mkdir -p $CERT_DIR/MiG/*.$DOMAIN \
     && chmod 775 $CERT_DIR
 
 # Certs and keys
-FROM prerequisites as setup_security
+FROM base as setup_security
 
 # Dhparam - https://wiki.mozilla.org/Security/Archive/Server_Side_TLS_4.0
 RUN curl https://ssl-config.mozilla.org/ffdhe4096.txt -o $CERT_DIR/dhparams.pem
