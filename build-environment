@@ -2,4 +2,3 @@
 # Fow now, the following types are supported.
 # {basic,advanced}
 BUILD_TYPE=basic
-
