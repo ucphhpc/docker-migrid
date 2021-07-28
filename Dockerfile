@@ -246,8 +246,8 @@ RUN ./generateconfs.py --source=. \
     --hgweb_scripts=/usr/share/doc/mercurial-common/examples \
     --trac_admin_path=/usr/bin/trac-admin \
     --trac_ini_path=/home/mig/mig/server/trac.ini \
-    --public_http_port=80 --public_https_port=443 \
-    --mig_oid_port=444 --ext_oid_port=445 \
+    --public_http_port=80 --public_https_port=444 \
+    --mig_oid_port=443 --ext_oid_port=445 \
     --mig_cert_port=446 --ext_cert_port=447 \
     --sid_port=448 \
     --sftp_port=2222 --sftp_subsys_port=22222 \
