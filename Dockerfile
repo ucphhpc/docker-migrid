@@ -367,6 +367,7 @@ RUN chown $USER:$USER /app/docker-entry.sh \
 USER root
 WORKDIR /app
 
-EXPOSE 80 443
+# EXPOSE is not important but keep in sync with active ports for the record
+EXPOSE 80 443 444 445 446 447 448
 
 CMD ["bash", "/app/docker-entry.sh"]
