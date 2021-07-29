@@ -26,6 +26,9 @@ services:
     container_name: migrid
     environment:
       TZ: Europe/Copenhagen
+      # RUN_SERVICES specifies which daemons to launch
+      # TODO: split out network services into individual containers
+      RUN_SERVICES: httpd script monitor sshmux events cron transfers openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
     depends_on:
       - devdns
     networks:

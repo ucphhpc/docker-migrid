@@ -411,6 +411,6 @@ USER root
 WORKDIR /app
 
 # EXPOSE is not important but keep in sync with active ports for the record
-EXPOSE 80 443 444 445 446 447 448
+EXPOSE 80 443 444 445 446 447 448 2222 4443 8021 22222
 
 CMD ["bash", "/app/docker-entry.sh"]
