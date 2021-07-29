@@ -1,6 +1,14 @@
-ARG BUILD_TYPE=basic
-ARG BUILD_TARGET=development
-ARG DOMAIN=migrid.test
+# Default ARG values which should be overriden in build command with
+# docker build --build-arg KEY=VAL
+#  as implicitly used in make build or with
+# docker-compose build
+# with .env file in place
+ARG BUILD_TYPE
+ARG BUILD_TARGET
+ARG DOMAIN
+ARG MIG_SVN_REV
+ARG EMULATE_FLAVOR
+ARG EMULATE_FQDN
 
 FROM centos:7 as base
 ARG DOMAIN
@@ -95,15 +103,15 @@ RUN curl https://ssl-config.mozilla.org/ffdhe4096.txt -o $CERT_DIR/dhparams.pem
 RUN openssl genrsa -des3 -passout pass:qwerty -out ca.key 2048 \
     && openssl rsa -passin pass:qwerty -in ca.key -out ca.key \
     && openssl req -x509 -new -key ca.key \
-    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=*.${DOMAIN}" -out ca.crt \
+    -subj "/C=DK/ST=NA/L=NA/O=MiGrid-Test/OU=NA/CN=*.${DOMAIN}" -out ca.crt \
     && openssl req -x509 -new -nodes -key ca.key -sha256 -days 1024 \
-    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=*.${DOMAIN}" -out ca.pem
+    -subj "/C=DK/ST=NA/L=NA/O=MiGrid-Test/OU=NA/CN=*.${DOMAIN}" -out ca.pem
 
 # Server key/ca
 # https://gist.github.com/Soarez/9688998
 RUN openssl genrsa -out server.key 2048 \
     && openssl req -new -key server.key -out server.csr \
-    -subj "/C=XX/L=Default City/O=Default Company Ltd/CN=*.${DOMAIN}" \
+    -subj "/C=DK/ST=NA/L=NA/O=MiGrid-Test/OU=NA/CN=*.${DOMAIN}" \
     && openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
 
 # CRL
@@ -199,10 +207,12 @@ RUN pip install --user \
 
 FROM mig_dependencies as download_mig
 ARG DOMAIN
+ARG EMULATE_FLAVOR
+ARG EMULATE_FQDN
+ARG MIG_SVN_REV
 
 # Install and configure MiG
-ARG CHECKOUT=5205
-RUN svn checkout -r $CHECKOUT https://svn.code.sf.net/p/migrid/code/trunk .
+RUN svn checkout -r ${MIG_SVN_REV} https://svn.code.sf.net/p/migrid/code/trunk .
 
 ADD mig $MIG_ROOT/mig
 
@@ -243,9 +253,9 @@ RUN ./generateconfs.py --source=. \
     --mig_state=/home/mig/state \
     --mig_certs=/etc/httpd/MiG-certificates \
     --hg_path=/usr/bin/hg \
-    --hgweb_scripts=/usr/share/doc/mercurial-common/examples \
-    --trac_admin_path=/usr/bin/trac-admin \
-    --trac_ini_path=/home/mig/mig/server/trac.ini \
+    --hgweb_scripts=/usr/share/doc/mercurial-2.6.2 \
+    --trac_admin_path= \
+    --trac_ini_path= \
     --public_http_port=80 --public_https_port=444 \
     --mig_oid_port=443 --ext_oid_port=445 \
     --mig_cert_port=446 --ext_cert_port=447 \
@@ -266,7 +276,7 @@ RUN ./generateconfs.py --source=. \
     --enable_notify=True --enable_preview=False \
     --enable_workflows=False --enable_hsts=True \
     --enable_vhost_certs=True --enable_verify_certs=True \
-    --enable_jupyter=False \
+    --enable_jupyter=True \
     --user_clause=User --group_clause=Group \
     --listen_clause='#Listen' \
     --serveralias_clause='ServerAlias' --alias_field=email \
@@ -278,7 +288,7 @@ RUN ./generateconfs.py --source=. \
     --signup_methods="migoid migcert" \
     --login_methods="migoid migcert" \
     --distro=centos --user_interface="V3 V2" \
-    --skin=idmc-basic --short_title="MiGrid-Test" \
+    --skin=${EMULATE_FLAVOR}-basic --short_title="MiGrid-Test" \
     --vgrid_label=Workgroup \
     --apache_worker_procs=256 --wsgi_procs=25
 
@@ -289,6 +299,8 @@ RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
 
 FROM install_mig as setup_mig_configs
 ARG DOMAIN
+ARG EMULATE_FLAVOR
+ARG EMULATE_FQDN
 
 # Enable jupyter menu
 RUN sed -i -e 's/#user_menu =/user_menu = jupyter/g' $MIG_ROOT/mig/server/MiGserver.conf \
@@ -305,6 +317,11 @@ USER root
 RUN cp generated-confs/sshd_config-MiG-sftp-subsys /etc/ssh/ \
     && chown 0:0 /etc/ssh/sshd_config-MiG-sftp-subsys
 
+# TODO: pam and nss also need setup like this for sftpsubsys login to work
+#RUN cp generated-confs/libnss_mig.conf /etc/ \
+#    && cp generated-confs/pam-sshd /etc/pam.d/sshd \
+#    && cp generated-confs/nsswitch.conf /etc/
+
 RUN chmod 755 generated-confs/envvars \
     && chmod 755 generated-confs/httpd.conf
 
@@ -314,6 +331,13 @@ RUN cp generated-confs/MiG.conf $WEB_DIR/conf.d/ \
     && cp generated-confs/mimic-deb.conf $WEB_DIR/conf/httpd.conf \
     && cp generated-confs/envvars /etc/sysconfig/httpd \
     && cp generated-confs/apache2.service /lib/systemd/system/httpd.service
+
+# Automatic Jupyter inclusion confs
+RUN mkdir -p $WEB_DIR/conf.extras.d/ \
+    && cp generated-confs/MiG-jupyter-def.conf /etc/httpd/conf.extras.d \
+    && cp generated-confs/MiG-jupyter-openid.conf /etc/httpd/conf.extras.d \
+    && cp generated-confs/MiG-jupyter-proxy.conf /etc/httpd/conf.extras.d \
+    && cp generated-confs/MiG-jupyter-rewrite.conf /etc/httpd/conf.extras.d
 
 # Root confs
 RUN cp generated-confs/apache2.conf $WEB_DIR/ \
@@ -326,15 +350,15 @@ RUN sed -i '/\/server.ca.pem/ a SSLProxyCheckPeerName off' $WEB_DIR/conf.d/MiG.c
     $WEB_DIR/conf.d/MiG.conf
 
 # Front page
-RUN ln -s index-idmc.dk.html $MIG_ROOT/state/wwwpublic/index.html && \
-    ln -s about-idmc.dk.html $MIG_ROOT/state/wwwpublic/about-snippet.html && \
-    ln -s support-idmc.dk.html $MIG_ROOT/state/wwwpublic/support-snippet.html && \
-    ln -s tips-idmc.dk.html $MIG_ROOT/state/wwwpublic/tips-snippet.html && \
-    ln -s terms-idmc.dk.html $MIG_ROOT/state/wwwpublic/terms-snippet.html && \
+RUN ln -s index-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/index.html && \
+    ln -s about-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/about-snippet.html && \
+    ln -s support-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/support-snippet.html && \
+    ln -s tips-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/tips-snippet.html && \
+    ln -s terms-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/terms-snippet.html && \
     chown -R $USER:$USER $MIG_ROOT/state/wwwpublic/*.html
 
 # Replace index.html redirects to development domain RUN
-RUN sed -i -e "s/idmc.dk/$DOMAIN/g" $MIG_ROOT/state/wwwpublic/index.html
+RUN sed -i -e "s/${EMULATE_FQDN}/$DOMAIN/g" $MIG_ROOT/state/wwwpublic/index.html
 
 # State clean services
 RUN chmod 755 generated-confs/{migstateclean,migerrors} \

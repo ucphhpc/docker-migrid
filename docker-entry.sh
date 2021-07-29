@@ -38,8 +38,8 @@ if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
     su - $USER -c "$MIG_ROOT/mig/server/migrateusers.py"
     # createuser.py Usage:
     # [OPTIONS] [FULL_NAME ORGANIZATION STATE COUNTRY EMAIL COMMENT PASSWORD]
-    su - $USER -c "$MIG_ROOT/mig/server/deleteuser.py -i /C=dk/ST=dk/L=NA/O=org/OU=NA/CN=devuser/emailAddress=$USERNAME"
-    su - $USER -c "$MIG_ROOT/mig/server/createuser.py devuser org dk dk $USERNAME foo $PASSWORD"
+    su - $USER -c "$MIG_ROOT/mig/server/deleteuser.py -i /C=DK/ST=NA/L=NA/O=Test Org/OU=NA/CN=Test User/emailAddress=$USERNAME"
+    su - $USER -c "$MIG_ROOT/mig/server/createuser.py 'Test User' 'Test Org' NA DK $USERNAME foo $PASSWORD"
     echo "Ensure correct permissions for $USERNAME"
     chown $USER:$USER $MIG_ROOT/mig/server/MiG-users.db
     chmod 644 $MIG_ROOT/mig/server/MiG-users.db
