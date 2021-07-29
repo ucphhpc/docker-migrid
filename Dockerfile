@@ -238,7 +238,7 @@ RUN ./generateconfs.py --source=. \
     --apache_run=/var/run/httpd \
     --apache_lock=/var/lock/subsys/httpd \
     --apache_log=/var/log/httpd \
-    --openssh_version=7.2 \
+    --openssh_version=7.4 \
     --mig_code=/home/mig/mig \
     --mig_state=/home/mig/state \
     --mig_certs=/etc/httpd/MiG-certificates \
@@ -277,9 +277,10 @@ RUN ./generateconfs.py --source=. \
     --daemon_show_address=io.$DOMAIN \
     --signup_methods="migoid migcert" \
     --login_methods="migoid migcert" \
-    --distro=centos \
+    --distro=centos --user_interface="V3 V2" \
     --skin=idmc-basic --short_title="MiGrid-Test" \
-    --apache_worker_procs=128 --wsgi_procs=25
+    --vgrid_label=Workgroup \
+    --apache_worker_procs=256 --wsgi_procs=25
 
 RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/static-skin.css $MIG_ROOT/mig/images/ \
