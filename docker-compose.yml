@@ -16,6 +16,13 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
     container_name: migrid
     environment:
       TZ: Europe/Copenhagen

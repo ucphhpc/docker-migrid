@@ -2,11 +2,6 @@ NAME=docker-migrid
 OWNER=nielsbohr
 IMAGE=migrid
 BUILD_TYPE=basic
-BUILD_TARGET=development
-DOMAIN=migrid.test
-MIG_SVN_REV=5243
-EMULATE_FLAVOR=idmc
-EMULATE_FQDN=idmc.dk
 # Enable that the builder should use buildkit
 # https://docs.docker.com/develop/develop-images/build_enhancements/
 DOCKER_BUILDKIT=1
@@ -22,7 +17,7 @@ init:
 	mkdir -p state
 
 build:
-	docker-compose build --build-arg BUILD_TYPE=${BUILD_TYPE} --build-arg BUILD_TARGET=${BUILD_TARGET} --build-arg DOMAIN=${DOMAIN} --build-arg MIG_SVN_REV=${MIG_SVN_REV} --build-arg EMULATE_FLAVOR=${EMULATE_FLAVOR} --build-arg EMULATE_FQDN=${EMULATE_FQDN} ${ARGS}
+	docker-compose build ${ARGS}
 
 clean:
 	rm -rf ./certs

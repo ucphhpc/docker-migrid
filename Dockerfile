@@ -1,14 +1,16 @@
-# Default ARG values which should be overriden in build command with
-# docker build --build-arg KEY=VAL
-#  as implicitly used in make build or with
+# Default ARG values which may be overriden in build command with
+# docker-compose build --build-arg KEY=VAL
+#  as in 
+# make init && make build ARGS="--build-arg MIG_SVN_REV=HEAD"
+#  or using
 # docker-compose build
 # with .env file in place
-ARG BUILD_TYPE
-ARG BUILD_TARGET
-ARG DOMAIN
-ARG MIG_SVN_REV
-ARG EMULATE_FLAVOR
-ARG EMULATE_FQDN
+ARG BUILD_TYPE=basic
+ARG BUILD_TARGET=development
+ARG DOMAIN=migrid.test
+ARG MIG_SVN_REV=5245
+ARG EMULATE_FLAVOR=migrid
+ARG EMULATE_FQDN=migrid.org
 
 FROM centos:7 as base
 ARG DOMAIN
@@ -207,8 +209,6 @@ RUN pip install --user \
 
 FROM mig_dependencies as download_mig
 ARG DOMAIN
-ARG EMULATE_FLAVOR
-ARG EMULATE_FQDN
 ARG MIG_SVN_REV
 
 # Install and configure MiG
@@ -223,6 +223,8 @@ USER $USER
 
 FROM download_mig as install_mig
 ARG DOMAIN
+ARG EMULATE_FLAVOR
+ARG EMULATE_FQDN
 
 ENV PYTHONPATH=${MIG_ROOT}
 # Ensure that the $USER sets it during session start
