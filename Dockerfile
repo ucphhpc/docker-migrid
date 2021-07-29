@@ -296,7 +296,8 @@ RUN ./generateconfs.py --source=. \
 
 RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/static-skin.css $MIG_ROOT/mig/images/ \
-    && cp generated-confs/index.html $MIG_ROOT/state/user_home/
+    && cp generated-confs/index.html $MIG_ROOT/state/user_home/ \
+    && cp $MIG_ROOT/mig/images/site-conf-${EMULATE_FQDN}.js $MIG_ROOT/mig/images/site-conf.js
 
 
 FROM install_mig as setup_mig_configs
@@ -319,10 +320,17 @@ USER root
 RUN cp generated-confs/sshd_config-MiG-sftp-subsys /etc/ssh/ \
     && chown 0:0 /etc/ssh/sshd_config-MiG-sftp-subsys
 
-# TODO: pam and nss also need setup like this for sftpsubsys login to work
-#RUN cp generated-confs/libnss_mig.conf /etc/ \
-#    && cp generated-confs/pam-sshd /etc/pam.d/sshd \
-#    && cp generated-confs/nsswitch.conf /etc/
+# PAM and NSS setup for sftpsubsys login to work
+RUN cd $MIG_ROOT/mig/src/libpam-mig \
+    && make && make install
+RUN cd $MIG_ROOT/mig/src/libnss-mig \
+    && make && make install
+
+RUN cp generated-confs/libnss_mig.conf /etc/ \
+    #&& cp /etc/pam.d/sshd /etc/pam.d/sshd.backup \
+    && cp generated-confs/pam-sshd /etc/pam.d/sshd \
+    #&& cp /etc/nsswitch.conf /etc/nsswitch.conf.backup
+    && cp generated-confs/nsswitch.conf /etc/
 
 RUN chmod 755 generated-confs/envvars \
     && chmod 755 generated-confs/httpd.conf
@@ -365,6 +373,9 @@ RUN sed -i -e "s/${EMULATE_FQDN}/$DOMAIN/g" $MIG_ROOT/state/wwwpublic/index.html
 # State clean services
 RUN chmod 755 generated-confs/{migstateclean,migerrors} \
     && cp generated-confs/{migstateclean,migerrors} /etc/cron.daily/
+
+# Logrotate config
+RUN cp generated-confs/logrotate-migrid /etc/logrotate.d/migrid
 
 # Init scripts
 RUN cp generated-confs/migrid-init.d-rh /etc/init.d/migrid
