@@ -4,26 +4,6 @@
 # specified in the provided RUN_SERVICES environment.
 # Continuously checks whether the selected services are still alive.
 
-# Lookup DOMAIN dynamically from MiGserver.conf
-DOMAIN="$(egrep '^server_fqdn' $MIG_ROOT/mig/server/MiGserver.conf | cut -d ' ' -f 3)"
-
-# Map external addresses to local IPs for daemons to bind to if it isn't
-# already exposed with docker-compose network alias.
-DAEMONFQDN="io.${DOMAIN}"
-DAEMONIP=$(getent hosts ${DAEMONFQDN}|cut -d ' ' -f 1)
-FOUNDIP=0
-for LOCALIP in $(ifconfig | grep inet | grep -v '127.0.0.' | cut -d ' ' -f 10); do
-    if [ ${LOCALIP} = ${DAEMONIP} ]; then
-        echo "Found existing local IP for daemons"
-        FOUNDIP=1
-    fi
-done
-if [ ${FOUNDIP} -eq 0 ]; then
-    echo "Add local IP alias for daemons"
-    echo "${LOCALIP}	${DAEMONFQDN}" >> /etc/hosts
-fi
-echo "Binding daemons to IP: $(getent hosts ${DAEMONFQDN}|cut -d ' ' -f 1)"
-
 # Create any user requested
 while getopts u:p: option; do
     case "${option}" in
@@ -39,7 +19,7 @@ if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
     su - $USER -c "$MIG_ROOT/mig/server/migrateusers.py"
     # createuser.py Usage:
     # [OPTIONS] [FULL_NAME ORGANIZATION STATE COUNTRY EMAIL COMMENT PASSWORD]
-    su - $USER -c "$MIG_ROOT/mig/server/deleteuser.py -i /C=DK/ST=NA/L=NA/O=Test Org/OU=NA/CN=Test User/emailAddress=$USERNAME"
+    su - $USER -c "$MIG_ROOT/mig/server/deleteuser.py -f -i \"/C=DK/ST=NA/L=NA/O=Test Org/OU=NA/CN=Test User/emailAddress=$USERNAME\""
     su - $USER -c "$MIG_ROOT/mig/server/createuser.py 'Test User' 'Test Org' NA DK $USERNAME foo $PASSWORD"
     echo "Ensure correct permissions for $USERNAME"
     chown $USER:$USER $MIG_ROOT/mig/server/MiG-users.db

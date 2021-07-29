@@ -28,7 +28,8 @@ services:
       TZ: Europe/Copenhagen
       # RUN_SERVICES specifies which daemons to launch
       # TODO: split out network services into individual containers
-      RUN_SERVICES: httpd script monitor sshmux events cron transfers openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      #RUN_SERVICES: httpd script monitor sshmux events cron transfers openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy
     depends_on:
       - devdns
     networks:
@@ -39,7 +40,6 @@ services:
           - ext.migrid.test
           - oid.migrid.test
           - sid.migrid.test
-          - io.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -57,6 +57,51 @@ services:
       - migrid-httpd.env
     command: /app/docker-entry.sh -u test@migrid.test -p TestPw0rd
 
+  migrid-io:
+    image: nielsbohr/migrid:$BUILD_TYPE
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+    container_name: migrid-io
+    environment:
+      TZ: Europe/Copenhagen
+      # RUN_SERVICES specifies which daemons to launch
+      # TODO: split out network services into individual containers
+      RUN_SERVICES: openid sftp sftpsubsys webdavs ftps notify
+    depends_on:
+      - migrid
+    ports:
+      - "2222:2222"
+      - "4443:4443"
+      - "8021:8021"
+      - "8443:8443"
+      - "22222:22222"
+    networks:
+      default:
+        aliases:
+          - io.migrid.test
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+    command: /app/docker-entry.sh
+
   nginx-proxy:
     image: jwilder/nginx-proxy
     container_name: nginx-proxy
@@ -70,10 +115,6 @@ services:
     - "446:446"
     - "447:447"
     - "448:448"
-    - "2222:2222"
-    - "4443:4443"
-    - "8021:8021"
-    - "22222:22222"
     volumes:
     - /var/run/docker.sock:/tmp/docker.sock:ro
     - ./nginx-proxy.conf:/etc/nginx/conf.d/migrid.conf
