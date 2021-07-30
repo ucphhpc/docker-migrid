@@ -131,6 +131,37 @@ services:
     - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/sid.migrid.test.key
     - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
 
+  # Associate MiG Services,
+  jupyterhub:
+    image: nielsbohr/jupyterhub:latest
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    environment:
+      JUPYTERHUB_CRYPT_KEY: ${JUPYTERHUB_CRYPT_KEY}
+      CONFIGPROXY_AUTH_TOKEN: ${CONFIGPROXY_AUTH_TOKEN}
+      TZ: ${TZ}
+    configs:
+      # Mount both the config file for the jupyterhub server itself and the
+      # script that kills idle containers. Furthermore the base-notebook
+      # notebook image config must be mounted so that jupyterhub has access
+      # to it
+      - source: cull_idle_config
+        target: /srv/jupyterhub/cull_idle_servers.py
+        mode: 0440
+    volumes:
+      # The jupyterhub service needs accces to the docker daemon process
+      # to launch addtional notebook services from within the service itself
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+      # Keep the jhub states such as the db saved during restarts
+      - type: volume
+        source: jhubstate
+        target: /srv/jupyterhub
+      - type: bind
+        source: /etc/jupyterhub
+        target: /etc/jupyterhub
+    command: jupyterhub -f /etc/jupyterhub/jupyterhub_config.py
+
 volumes:
   certs:
     driver: local
