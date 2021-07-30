@@ -316,10 +316,12 @@ services:
   nginx-proxy:
     image: jwilder/nginx-proxy
     container_name: nginx-proxy
+    # TODO: can we add an httpd health check and switch to wait for condition
+    #       service_healthy to avoid the storm of initial avoid nginx errors
+    #       from racing apache during start up? Apparently that will not work
+    #       with on-going jupyter integration due to swarm mode, however.
     depends_on:
-      migrid:
-        # TODO: define httpd health check and switch to service_healthy
-        condition: service_started
+      - migrid:
     ports:
     - "80:80"
     - "443:443"
