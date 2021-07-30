@@ -11,7 +11,10 @@ services:
     environment:
       TZ: Europe/Copenhagen
 
+  # The migrid core services including httpd and tightly integrated services
+  # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
   migrid:
+    container_name: migrid
     image: nielsbohr/migrid:$BUILD_TYPE
     build:
       context: ./
@@ -23,12 +26,13 @@ services:
         MIG_SVN_REV: ${MIG_SVN_REV}
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
-    container_name: migrid
     environment:
       TZ: Europe/Copenhagen
+      # TODO: completely split out network services into individual containers
       # RUN_SERVICES specifies which daemons to launch
-      # TODO: split out network services into individual containers
-      #RUN_SERVICES: httpd script monitor sshmux events cron transfers openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy
     depends_on:
       - devdns
@@ -57,7 +61,11 @@ services:
       - migrid-httpd.env
     command: /app/docker-entry.sh -u test@migrid.test -p TestPw0rd
 
+  # A single container with all the daemons base migrid doesn't provide
   migrid-io:
+    container_name: migrid-io
+    profiles:
+      - single
     image: nielsbohr/migrid:$BUILD_TYPE
     build:
       context: ./
@@ -69,11 +77,12 @@ services:
         MIG_SVN_REV: ${MIG_SVN_REV}
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
-    container_name: migrid-io
     environment:
       TZ: Europe/Copenhagen
       # RUN_SERVICES specifies which daemons to launch
-      # TODO: split out network services into individual containers
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: openid sftp sftpsubsys webdavs ftps notify
     depends_on:
       - migrid
@@ -86,7 +95,209 @@ services:
     networks:
       default:
         aliases:
+          # TODO: adjust services to use their own FQDN for complete split
           - io.migrid.test
+          - openid.migrid.test
+          - webdavs.migrid.test
+          - ftps.migrid.test
+          - sftp.migrid.test
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+    command: /app/docker-entry.sh
+
+  # TODO: simplify migrid-X containers with extends and a migrid-shared.yml
+  # Multiple containers with individual daemons not provided by base migrid
+  migrid-openid:
+    container_name: migrid-openid
+    profiles:
+      - multi
+    image: nielsbohr/migrid:$BUILD_TYPE
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+    environment:
+      TZ: Europe/Copenhagen
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: openid
+    depends_on:
+      - migrid
+    ports:
+      - "8443:8443"
+    networks:
+      default:
+        aliases:
+          # TODO: adjust service to use own FQDN for complete split
+          - io.migrid.test
+          - openid.migrid.test
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+    command: /app/docker-entry.sh
+
+  migrid-sftp:
+    container_name: migrid-sftp
+    profiles:
+      # TMP: until daemon fqdn bind is implemented
+      #- multi
+      - container-disabled
+    image: nielsbohr/migrid:$BUILD_TYPE
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+    environment:
+      TZ: Europe/Copenhagen
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: sftp sftpsubsys
+    depends_on:
+      - migrid
+    ports:
+      - "2222:2222"
+      - "22222:22222"
+    networks:
+      default:
+        aliases:
+          # TODO: adjust service to use own FQDN for complete split
+          #- io.migrid.test
+          - sftp.migrid.test
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+    command: /app/docker-entry.sh
+
+  migrid-ftps:
+    container_name: migrid-ftps
+    profiles:
+      # TMP: until daemon fqdn bind is implemented
+      #- multi
+      - container-disabled
+    image: nielsbohr/migrid:$BUILD_TYPE
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+    environment:
+      TZ: Europe/Copenhagen
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: ftps
+    depends_on:
+      - migrid
+    ports:
+      - "8021:8021"
+    networks:
+      default:
+        aliases:
+          # TODO: adjust service to use own FQDN for complete split
+          #- io.migrid.test
+          - ftps.migrid.test
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+    command: /app/docker-entry.sh
+
+  migrid-webdavs:
+    container_name: migrid-webdavs
+    profiles:
+      # TMP: until daemon fqdn bind is implemented
+      #- multi
+      - container-disabled
+    image: nielsbohr/migrid:$BUILD_TYPE
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+    environment:
+      TZ: Europe/Copenhagen
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: webdavs
+    depends_on:
+      - migrid
+    ports:
+      - "4443:4443"
+    networks:
+      default:
+        aliases:
+          # TODO: adjust service to use own FQDN for complete split
+          #- io.migrid.test
+          - webdavs.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -106,7 +317,9 @@ services:
     image: jwilder/nginx-proxy
     container_name: nginx-proxy
     depends_on:
-      - migrid
+      migrid:
+        # TODO: define httpd health check and switch to service_healthy
+        condition: service_started
     ports:
     - "80:80"
     - "443:443"
