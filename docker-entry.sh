@@ -5,10 +5,11 @@
 # Continuously checks whether the selected services are still alive.
 
 # Create any user requested
-while getopts u:p: option; do
+while getopts u:p:s: option; do
     case "${option}" in
         u) USERNAME=${OPTARG};;
         p) PASSWORD=${OPTARG};;
+        s) SVCLOGINS=${OPTARG};;
     esac
 done
 
@@ -25,6 +26,12 @@ if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
     chown $USER:$USER $MIG_ROOT/mig/server/MiG-users.db
     chmod 644 $MIG_ROOT/mig/server/MiG-users.db
     chown -R $USER:$USER $MIG_ROOT/state
+    
+    for PROTO in ${SVCLOGINS}; do
+    echo "Add $PROTO password login for $USERNAME"
+        su - $USER -c "python $MIG_ROOT/mig/cgi-bin/fakecgi.py $MIG_ROOT/mig/cgi-bin/settingsaction.py POST \"topic=${PROTO};output_format=text;password=${PASSWORD}\" \"/C=DK/ST=NA/L=NA/O=Test Org/OU=NA/CN=Test User/emailAddress=${USERNAME}\" admin 127.0.0.1 True" | grep 'Exit code: 0 ' || \
+	    echo "Failed to set $PROTO password login"
+    done
 fi
 
 echo "Run services: ${RUN_SERVICES}"
@@ -65,6 +72,7 @@ KEEP_RUNNING=1
 EXIT_CODE=0
 # Check launched services
 while [ ${KEEP_RUNNING} -eq 1 ]; do
+    sleep 60
     for svc in ${CHK_SERVICES}; do
        if [ $svc = "sftpsubsys" ]; then
            PROCNAME="MiG-sftp-subsys"
@@ -84,7 +92,6 @@ while [ ${KEEP_RUNNING} -eq 1 ]; do
         # Throttle down 
         sleep 1
     done
-    sleep 30
 done
 
 exit $EXIT_CODE

@@ -153,8 +153,12 @@ RUN ln -s MiG/*.$DOMAIN/server.crt server.crt \
     && ln -s MiG/*.$DOMAIN cert.$DOMAIN \
     && ln -s MiG/*.$DOMAIN ext.$DOMAIN \
     && ln -s MiG/*.$DOMAIN oid.$DOMAIN \
+    && ln -s MiG/*.$DOMAIN sid.$DOMAIN \
     && ln -s MiG/*.$DOMAIN io.$DOMAIN \
-    && ln -s MiG/*.$DOMAIN sid.$DOMAIN
+    && ln -s MiG/*.$DOMAIN openid.$DOMAIN \
+    && ln -s MiG/*.$DOMAIN sftp.$DOMAIN \
+    && ln -s MiG/*.$DOMAIN ftps.$DOMAIN \
+    && ln -s MiG/*.$DOMAIN webdavs.$DOMAIN
 
 # Upgrade pip, required by cryptography
 RUN python -m pip install -U pip==20.3.4
@@ -258,6 +262,11 @@ RUN ./generateconfs.py --source=. \
     --hgweb_scripts=/usr/share/doc/mercurial-2.6.2 \
     --trac_admin_path= \
     --trac_ini_path= \
+    --openid_address=openid.$DOMAIN \
+    --sftp_address=sftp.$DOMAIN \
+    --sftp_subsys_address=sftp.$DOMAIN \
+    --ftps_address=ftps.$DOMAIN \
+    --davs_address=webdavs.$DOMAIN \
     --public_http_port=80 --public_https_port=444 \
     --mig_oid_port=443 --ext_oid_port=445 \
     --mig_cert_port=446 --ext_cert_port=447 \

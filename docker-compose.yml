@@ -28,7 +28,6 @@ services:
         EMULATE_FQDN: ${EMULATE_FQDN}
     environment:
       TZ: Europe/Copenhagen
-      # TODO: completely split out network services into individual containers
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
@@ -59,7 +58,7 @@ services:
         target: /home/mig/state
     env_file:
       - migrid-httpd.env
-    command: /app/docker-entry.sh -u test@migrid.test -p TestPw0rd
+    command: /app/docker-entry.sh -u test@migrid.test -p TestPw0rd -s "sftp ftps webdavs"
 
   # A single container with all the daemons base migrid doesn't provide
   migrid-io:
@@ -95,8 +94,6 @@ services:
     networks:
       default:
         aliases:
-          # TODO: adjust services to use their own FQDN for complete split
-          - io.migrid.test
           - openid.migrid.test
           - webdavs.migrid.test
           - ftps.migrid.test
@@ -147,8 +144,6 @@ services:
     networks:
       default:
         aliases:
-          # TODO: adjust service to use own FQDN for complete split
-          - io.migrid.test
           - openid.migrid.test
     volumes:
       - type: volume
@@ -168,9 +163,7 @@ services:
   migrid-sftp:
     container_name: migrid-sftp
     profiles:
-      # TMP: until daemon fqdn bind is implemented
-      #- multi
-      - container-disabled
+      - multi
     image: nielsbohr/migrid:$BUILD_TYPE
     build:
       context: ./
@@ -197,8 +190,6 @@ services:
     networks:
       default:
         aliases:
-          # TODO: adjust service to use own FQDN for complete split
-          #- io.migrid.test
           - sftp.migrid.test
     volumes:
       - type: volume
@@ -218,9 +209,7 @@ services:
   migrid-ftps:
     container_name: migrid-ftps
     profiles:
-      # TMP: until daemon fqdn bind is implemented
-      #- multi
-      - container-disabled
+      - multi
     image: nielsbohr/migrid:$BUILD_TYPE
     build:
       context: ./
@@ -246,8 +235,6 @@ services:
     networks:
       default:
         aliases:
-          # TODO: adjust service to use own FQDN for complete split
-          #- io.migrid.test
           - ftps.migrid.test
     volumes:
       - type: volume
@@ -267,9 +254,7 @@ services:
   migrid-webdavs:
     container_name: migrid-webdavs
     profiles:
-      # TMP: until daemon fqdn bind is implemented
-      #- multi
-      - container-disabled
+      - multi
     image: nielsbohr/migrid:$BUILD_TYPE
     build:
       context: ./
@@ -295,8 +280,6 @@ services:
     networks:
       default:
         aliases:
-          # TODO: adjust service to use own FQDN for complete split
-          #- io.migrid.test
           - webdavs.migrid.test
     volumes:
       - type: volume
