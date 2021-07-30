@@ -60,8 +60,11 @@ for svc in ${RUN_SERVICES}; do
     fi
 done
 
+# Keep monitoring any active services 
+KEEP_RUNNING=1
+EXIT_CODE=0
 # Check launched services
-while sleep 30; do
+while [ ${KEEP_RUNNING} -eq 1 ]; do
     for svc in ${CHK_SERVICES}; do
        if [ $svc = "sftpsubsys" ]; then
            PROCNAME="MiG-sftp-subsys"
@@ -74,9 +77,15 @@ while sleep 30; do
         SVC_STATUS=$?
         if [ $SVC_STATUS -ne 0 ]; then
             echo "$svc service failed."
-            exit 1
+            KEEP_RUNNING=0
+            EXIT_CODE=1
+            break
         fi
         # Throttle down 
         sleep 1
     done
+    sleep 30
 done
+
+exit $EXIT_CODE
+
