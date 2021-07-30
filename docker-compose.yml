@@ -9,7 +9,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
-      TZ: Europe/Copenhagen
+      TZ: ${TZ}
 
   # The migrid core services including httpd and tightly integrated services
   # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
@@ -27,7 +27,7 @@ services:
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
     environment:
-      TZ: Europe/Copenhagen
+      TZ: ${TZ}
       # TODO: completely split out network services into individual containers
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
@@ -78,7 +78,7 @@ services:
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
     environment:
-      TZ: Europe/Copenhagen
+      TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
@@ -134,7 +134,7 @@ services:
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
     environment:
-      TZ: Europe/Copenhagen
+      TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
@@ -183,7 +183,7 @@ services:
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
     environment:
-      TZ: Europe/Copenhagen
+      TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
@@ -233,7 +233,7 @@ services:
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
     environment:
-      TZ: Europe/Copenhagen
+      TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
@@ -282,7 +282,7 @@ services:
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
     environment:
-      TZ: Europe/Copenhagen
+      TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
@@ -317,9 +317,11 @@ services:
     image: jwilder/nginx-proxy
     container_name: nginx-proxy
     depends_on:
-      migrid:
-        # TODO: define httpd health check and switch to service_healthy
-        condition: service_started
+      - migrid
+      # Not possible to use in Swarm mode
+      # migrid:
+      #   # TODO: define httpd health check and switch to service_healthy
+      #   condition: service_started
     ports:
     - "80:80"
     - "443:443"
@@ -346,6 +348,8 @@ services:
 
   # Associate MiG Services,
   jupyterhub:
+    profiles:
+      - dag
     image: nielsbohr/jupyterhub:latest
     deploy:
       placement:
@@ -376,6 +380,8 @@ services:
     command: jupyterhub -f /etc/jupyterhub/jupyterhub_config.py
 
 volumes:
+  jhubstate:
+
   certs:
     driver: local
     driver_opts:
