@@ -321,7 +321,7 @@ services:
     #       from racing apache during start up? Apparently that will not work
     #       with on-going jupyter integration due to swarm mode, however.
     depends_on:
-      - migrid:
+      - migrid
     ports:
     - "80:80"
     - "443:443"
