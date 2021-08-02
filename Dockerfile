@@ -5,15 +5,35 @@
 #  or using
 # docker-compose build
 # with .env file in place
+#
+# IMPORTANT: all ARGS here that should allow being overriden from .env MUST be
+#            explicitly listed in docker-compose.yml *args* list, too.
+#            Furthermore they must be declared after FROM in each stage used.
+
 ARG BUILD_TYPE=basic
 ARG BUILD_TARGET=development
 ARG DOMAIN=migrid.test
 ARG MIG_SVN_REV=5245
 ARG EMULATE_FLAVOR=migrid
 ARG EMULATE_FQDN=migrid.org
+ARG WITH_PY3=no
 
 FROM centos:7 as base
+ARG BUILD_TYPE
+ARG BUILD_TARGET
 ARG DOMAIN
+ARG MIG_SVN_REV
+ARG EMULATE_FLAVOR
+ARG EMULATE_FQDN
+ARG WITH_PY3
+
+RUN echo "Build type: $BUILD_TYPE"
+RUN echo "Build target: $BUILD_TARGET"
+RUN echo "Domain: $DOMAIN"
+RUN echo "MiG svn revision: $MIG_SVN_REV"
+RUN echo "Emulate flavor: $EMULATE_FLAVOR"
+RUN echo "Emulate FQDN: $EMULATE_FQDN"
+RUN echo "Enable python3 support: $WITH_PY3"
 
 WORKDIR /tmp
 
@@ -70,6 +90,29 @@ RUN yum update -y \
     fail2ban \
     ipset \
     wget
+
+RUN if [ "${WITH_PY3}" = "yes" ]; then \
+    echo "install py3 deps" \
+    && yum update -y \
+    && yum install -y \
+    python3-pip \
+    python3-devel \
+    #python3-paramiko \
+    python36-paramiko \
+    #python3-enchant \
+    #python3-jsonrpclib \
+    #python3-requests \
+    python36-requests \
+    #python3-psutil \
+    python36-psutil \
+    python3-future \
+    #python3-cffi \
+    python36-cffi \
+    python36-pyOpenSSL \
+    python36-pyYAML; \
+    else \
+    echo "no py3 deps"; \
+    fi;
 
 # Apache OpenID (provided by epel)
 RUN yum install -y mod_auth_openid
@@ -177,39 +220,65 @@ RUN mkdir -p MiG-certificates \
 
 FROM setup_security as mig_dependencies
 ARG DOMAIN
+ARG ENABLE_DEFAULT_PY
+ARG WITH_PY3
 
 # Prepare OpenID
 ENV PATH=$PATH:/home/$USER/.local/bin
 RUN pip install --user python-openid
+RUN if [ "$WITH_PY3" = "yes" ]; then \
+    echo "install py3 openid" \
+    pip3 install --user python-openid; \
+    fi;
 
 # Modules required by grid_events.py
 RUN pip install --user \
     watchdog \
     scandir
+RUN if [ "$WITH_PY3" = "yes" ]; then \
+    pip3 install --user \
+    watchdog; \
+    fi;
 
 # Modules required by grid_webdavs
-# TODO: upgrade wsgidav to latest once we run Python 3
-# NOTE: we require <=1.3.0 for now
+# NOTE: we require <=1.3.0 for python2. CherryPy is no longer bundled lately.
 RUN pip install --user \
     wsgidav==1.3.0
+RUN if [ "$WITH_PY3" = "yes" ]; then \
+    pip3 install --user \
+    wsgidav cherrypy; \
+    fi;
 
 # Modules required by grid_ftps
 # NOTE: relies on pyOpenSSL and Cryptography from yum for now
 RUN pip install --user \
     pyftpdlib
+RUN if [ "$WITH_PY3" = "yes" ]; then \
+    pip3 install --user \
+    pyftpdlib; \
+    fi;
 
 # Modules required by jupyter
-RUN pip install --user \
-    requests
+#RUN pip install --user \
+#    requests
 
 # Module required to run pytests
 # 4.6 is the latest with python2 support
 RUN pip install --user \
     pytest
+RUN if [ "$WITH_PY3" = "yes" ]; then \
+    pip3 install --user \
+    pytest; \
+    fi;
 
 # Modules required by 2FA
+# NOTE: we require <=2.3.0 for python2.
 RUN pip install --user \
     pyotp==2.3.0
+RUN if [ "$WITH_PY3" = "yes" ]; then \
+    pip3 install --user \
+    pyotp; \
+    fi;
 
 FROM mig_dependencies as download_mig
 ARG DOMAIN

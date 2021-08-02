@@ -21,11 +21,13 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
         MIG_SVN_REV: ${MIG_SVN_REV}
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
+        WITH_PY3: ${WITH_PY3}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -71,11 +73,13 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
         MIG_SVN_REV: ${MIG_SVN_REV}
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
+        WITH_PY3: ${WITH_PY3}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -113,7 +117,8 @@ services:
         target: /home/mig/state
     command: /app/docker-entry.sh
 
-  # TODO: simplify migrid-X containers with extends and a migrid-shared.yml
+  # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
+  #
   # Multiple containers with individual daemons not provided by base migrid
   migrid-openid:
     container_name: migrid-openid
@@ -125,11 +130,13 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
         MIG_SVN_REV: ${MIG_SVN_REV}
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
+        WITH_PY3: ${WITH_PY3}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -170,11 +177,13 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
         MIG_SVN_REV: ${MIG_SVN_REV}
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
+        WITH_PY3: ${WITH_PY3}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -216,11 +225,13 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
         MIG_SVN_REV: ${MIG_SVN_REV}
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
+        WITH_PY3: ${WITH_PY3}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -261,11 +272,13 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
         MIG_SVN_REV: ${MIG_SVN_REV}
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
+        WITH_PY3: ${WITH_PY3}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
