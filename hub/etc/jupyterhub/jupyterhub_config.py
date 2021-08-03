@@ -231,8 +231,6 @@ c.JupyterHub.services = [
     {
         "name": "cull-idle",
         "admin": True,
-        "command": "python3 cull_idle_servers.py --timeout=7200 --protected_users={},{}".format(
-            dgx_db_access_path, gpu_ai_db_access_path
-        ).split(),
+        "command": "python3 cull_idle_servers.py --timeout=7200".split(),
     }
 ]
