@@ -72,7 +72,7 @@ KEEP_RUNNING=1
 EXIT_CODE=0
 # Check launched services
 while [ ${KEEP_RUNNING} -eq 1 ]; do
-    sleep 60
+    sleep 120
     for svc in ${CHK_SERVICES}; do
        if [ $svc = "sftpsubsys" ]; then
            PROCNAME="MiG-sftp-subsys"

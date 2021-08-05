@@ -18,22 +18,26 @@ ARG EMULATE_FLAVOR=migrid
 ARG EMULATE_FQDN=migrid.org
 ARG WITH_PY3=no
 
-FROM centos:7 as base
+FROM centos:7 as init
 ARG BUILD_TYPE
-ARG BUILD_TARGET
+#ARG BUILD_TARGET
 ARG DOMAIN
-ARG MIG_SVN_REV
-ARG EMULATE_FLAVOR
-ARG EMULATE_FQDN
+#ARG MIG_SVN_REV
+#ARG EMULATE_FLAVOR
+#ARG EMULATE_FQDN
 ARG WITH_PY3
 
 RUN echo "Build type: $BUILD_TYPE"
-RUN echo "Build target: $BUILD_TARGET"
+#RUN echo "Build target: $BUILD_TARGET"
 RUN echo "Domain: $DOMAIN"
-RUN echo "MiG svn revision: $MIG_SVN_REV"
-RUN echo "Emulate flavor: $EMULATE_FLAVOR"
-RUN echo "Emulate FQDN: $EMULATE_FQDN"
+#RUN echo "MiG svn revision: $MIG_SVN_REV"
+#RUN echo "Emulate flavor: $EMULATE_FLAVOR"
+#RUN echo "Emulate FQDN: $EMULATE_FQDN"
 RUN echo "Enable python3 support: $WITH_PY3"
+
+FROM init as base
+ARG DOMAIN
+ARG WITH_PY3
 
 WORKDIR /tmp
 
