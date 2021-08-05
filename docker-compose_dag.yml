@@ -45,8 +45,5 @@ services:
       target: /etc/jupyterhub
     command: jupyterhub -f /etc/jupyterhub/jupyterhub_config.py
 
-    
-
-
 volumes:
   jhubstate:
