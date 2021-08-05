@@ -28,6 +28,8 @@ services:
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
         WITH_PY3: ${WITH_PY3}
+        JUPYTER_SERVICES: ${JUPYTER_SERVICES}
+        JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -80,6 +82,8 @@ services:
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
         WITH_PY3: ${WITH_PY3}
+        JUPYTER_SERVICES: ${JUPYTER_SERVICES}
+        JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch

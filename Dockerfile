@@ -30,6 +30,7 @@ ARG DOMAIN
 #ARG EMULATE_FLAVOR
 #ARG EMULATE_FQDN
 ARG WITH_PY3
+ARG JUPYTER_SERVICES
 
 RUN echo "Build type: $BUILD_TYPE"
 #RUN echo "Build target: $BUILD_TARGET"
@@ -38,6 +39,7 @@ RUN echo "Domain: $DOMAIN"
 #RUN echo "Emulate flavor: $EMULATE_FLAVOR"
 #RUN echo "Emulate FQDN: $EMULATE_FQDN"
 RUN echo "Enable python3 support: $WITH_PY3"
+#RUN echo "Designated jupyter services: $JUPYTER_SERVICES"
 
 FROM init as base
 ARG DOMAIN
@@ -312,6 +314,9 @@ RUN echo "PYTHONPATH=${MIG_ROOT}" >> ~/.bash_profile \
 
 WORKDIR $MIG_ROOT/mig/install
 
+RUN echo "Designated jupyter services: $JUPYTER_SERVICES"
+RUN echo "Designated jupyter services descriptions: $JUPYTER_SERVICES_DESC"
+
 RUN ./generateconfs.py --source=. \
     --destination=generated-confs \
     --destination_suffix="_svn$(svnversion -n ~/)" \
@@ -364,7 +369,7 @@ RUN ./generateconfs.py --source=. \
     --enable_vhost_certs=True --enable_verify_certs=True \
     --enable_jupyter=True \
     --jupyter_services=${JUPYTER_SERVICES} \
-    --jupyter_services_desc=${JUPYTER_SERVICES_DESC} \
+    "--jupyter_services_desc=${JUPYTER_SERVICES_DESC}" \
     --user_clause=User --group_clause=Group \
     --listen_clause='#Listen' \
     --serveralias_clause='ServerAlias' --alias_field=email \
