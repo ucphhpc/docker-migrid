@@ -13,27 +13,37 @@
 ARG BUILD_TYPE=basic
 ARG BUILD_TARGET=development
 ARG DOMAIN=migrid.test
-ARG MIG_SVN_REV=5245
+ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
+ARG MIG_SVN_REV=5250
+ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
+ARG MIG_GIT_REV=047a4002d11b5743141b6cef3ec93672f9f30098
 ARG EMULATE_FLAVOR=migrid
 ARG EMULATE_FQDN=migrid.org
 ARG WITH_PY3=no
+ARG WITH_GIT=no
 
 FROM centos:7 as init
 ARG BUILD_TYPE
 #ARG BUILD_TARGET
 ARG DOMAIN
+#ARG MIG_SVN_REPO
 #ARG MIG_SVN_REV
+#ARG MIG_GIT_REPO
+#ARG MIG_GIT_REV
 #ARG EMULATE_FLAVOR
 #ARG EMULATE_FQDN
 ARG WITH_PY3
+#ARG WITH_GIT
 
 RUN echo "Build type: $BUILD_TYPE"
 #RUN echo "Build target: $BUILD_TARGET"
 RUN echo "Domain: $DOMAIN"
-#RUN echo "MiG svn revision: $MIG_SVN_REV"
+#RUN echo "MiG svn repo and revision: $MIG_SVN_REPO $MIG_SVN_REV"
+#RUN echo "MiG git repo and revision: $MIG_GIT_REPO $MIG_GIT_REV"
 #RUN echo "Emulate flavor: $EMULATE_FLAVOR"
 #RUN echo "Emulate FQDN: $EMULATE_FQDN"
 RUN echo "Enable python3 support: $WITH_PY3"
+#RUN echo "Enable git checkout: $WITH_GIT"
 
 FROM init as base
 ARG DOMAIN
@@ -66,6 +76,7 @@ RUN yum update -y \
     tzdata \
     initscripts \
     svn \
+    git \
     vim \
     net-tools \
     telnet \
@@ -286,17 +297,23 @@ RUN if [ "$WITH_PY3" = "yes" ]; then \
 
 FROM mig_dependencies as download_mig
 ARG DOMAIN
+ARG MIG_SVN_REPO
 ARG MIG_SVN_REV
+ARG WITH_GIT
+ARG MIG_GIT_REPO
+ARG MIG_GIT_REV
 
 # Install and configure MiG
-RUN svn checkout -r ${MIG_SVN_REV} https://svn.code.sf.net/p/migrid/code/trunk .
+# NOTE: git refuses to clone into non-empty dir - use tmp
+RUN if [ "$WITH_GIT" = "yes" ]; then \
+    git clone ${MIG_GIT_REPO} migrid.git ; \
+    cd migrid.git && git checkout ${MIG_GIT_REV} && cd .. ; \
+    rsync -a migrid.git/ ./ ; \
+    else \
+    svn checkout -r ${MIG_SVN_REV} ${MIG_SVN_REPO} . ; \
+    fi;
 
-ADD mig $MIG_ROOT/mig
-
-USER root
-RUN chown -R $USER:$USER $MIG_ROOT/mig
-
-USER $USER
+ADD --chown=$USER:$USER mig $MIG_ROOT/
 
 FROM download_mig as install_mig
 ARG DOMAIN
@@ -312,7 +329,7 @@ WORKDIR $MIG_ROOT/mig/install
 
 RUN ./generateconfs.py --source=. \
     --destination=generated-confs \
-    --destination_suffix="_svn$(svnversion -n ~/)" \
+#    --destination_suffix="_svn$(svnversion -n ~/)" \
     --base_fqdn=$DOMAIN \
     --public_fqdn=www.$DOMAIN \
     --mig_cert_fqdn=cert.$DOMAIN \
