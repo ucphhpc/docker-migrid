@@ -16,6 +16,7 @@ ARG DOMAIN=migrid.test
 ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
 ARG MIG_SVN_REV=5250
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
+ARG MIG_GIT_BRANCH=master
 ARG MIG_GIT_REV=047a4002d11b5743141b6cef3ec93672f9f30098
 ARG EMULATE_FLAVOR=migrid
 ARG EMULATE_FQDN=migrid.org
@@ -29,6 +30,7 @@ ARG DOMAIN
 #ARG MIG_SVN_REPO
 #ARG MIG_SVN_REV
 #ARG MIG_GIT_REPO
+#ARG MIG_GIT_BRANCH
 #ARG MIG_GIT_REV
 #ARG EMULATE_FLAVOR
 #ARG EMULATE_FQDN
@@ -39,7 +41,7 @@ RUN echo "Build type: $BUILD_TYPE"
 #RUN echo "Build target: $BUILD_TARGET"
 RUN echo "Domain: $DOMAIN"
 #RUN echo "MiG svn repo and revision: $MIG_SVN_REPO $MIG_SVN_REV"
-#RUN echo "MiG git repo and revision: $MIG_GIT_REPO $MIG_GIT_REV"
+#RUN echo "MiG git repo , branch and revision: $MIG_GIT_REPO $MIG_GIT_BRANCH $MIG_GIT_REV"
 #RUN echo "Emulate flavor: $EMULATE_FLAVOR"
 #RUN echo "Emulate FQDN: $EMULATE_FQDN"
 RUN echo "Enable python3 support: $WITH_PY3"
@@ -107,26 +109,26 @@ RUN yum update -y \
     wget
 
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
-    echo "install py3 deps" \
-    && yum update -y \
-    && yum install -y \
-    python3-pip \
-    python3-devel \
-    #python3-paramiko \
-    python36-paramiko \
-    #python3-enchant \
-    #python3-jsonrpclib \
-    #python3-requests \
-    python36-requests \
-    #python3-psutil \
-    python36-psutil \
-    python3-future \
-    #python3-cffi \
-    python36-cffi \
-    python36-pyOpenSSL \
-    python36-pyYAML; \
+      echo "install py3 deps" \
+      && yum update -y \
+      && yum install -y \
+      python3-pip \
+      python3-devel \
+      #python3-paramiko \
+      python36-paramiko \
+      #python3-enchant \
+      #python3-jsonrpclib \
+      #python3-requests \
+      python36-requests \
+      #python3-psutil \
+      python36-psutil \
+      python3-future \
+      #python3-cffi \
+      python36-cffi \
+      python36-pyOpenSSL \
+      python36-pyYAML; \
     else \
-    echo "no py3 deps"; \
+      echo "no py3 deps"; \
     fi;
 
 # Apache OpenID (provided by epel)
@@ -242,8 +244,8 @@ ARG WITH_PY3
 ENV PATH=$PATH:/home/$USER/.local/bin
 RUN pip install --user python-openid
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-    echo "install py3 openid" \
-    pip3 install --user python-openid; \
+      echo "install py3 openid" \
+      pip3 install --user python-openid; \
     fi;
 
 # Modules required by grid_events.py
@@ -251,8 +253,8 @@ RUN pip install --user \
     watchdog \
     scandir
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-    pip3 install --user \
-    watchdog; \
+      pip3 install --user \
+      watchdog; \
     fi;
 
 # Modules required by grid_webdavs
@@ -260,8 +262,8 @@ RUN if [ "$WITH_PY3" = "yes" ]; then \
 RUN pip install --user \
     wsgidav==1.3.0
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-    pip3 install --user \
-    wsgidav cherrypy; \
+      pip3 install --user \
+      wsgidav cherrypy; \
     fi;
 
 # Modules required by grid_ftps
@@ -269,8 +271,8 @@ RUN if [ "$WITH_PY3" = "yes" ]; then \
 RUN pip install --user \
     pyftpdlib
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-    pip3 install --user \
-    pyftpdlib; \
+      pip3 install --user \
+      pyftpdlib; \
     fi;
 
 # Modules required by jupyter
@@ -282,8 +284,8 @@ RUN if [ "$WITH_PY3" = "yes" ]; then \
 RUN pip install --user \
     pytest
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-    pip3 install --user \
-    pytest; \
+      pip3 install --user \
+      pytest; \
     fi;
 
 # Modules required by 2FA
@@ -291,8 +293,8 @@ RUN if [ "$WITH_PY3" = "yes" ]; then \
 RUN pip install --user \
     pyotp==2.3.0
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-    pip3 install --user \
-    pyotp; \
+      pip3 install --user \
+      pyotp; \
     fi;
 
 FROM mig_dependencies as download_mig
@@ -301,16 +303,21 @@ ARG MIG_SVN_REPO
 ARG MIG_SVN_REV
 ARG WITH_GIT
 ARG MIG_GIT_REPO
+ARG MIG_GIT_BRANCH
 ARG MIG_GIT_REV
 
 # Install and configure MiG
 # NOTE: git refuses to clone into non-empty dir - use tmp
+#     cd migrid.git && git checkout --track origin/${MIG_GIT_BRANCH} ${MIG_GIT_REV} && cd .. ; \
+
 RUN if [ "$WITH_GIT" = "yes" ]; then \
-    git clone ${MIG_GIT_REPO} migrid.git ; \
-    cd migrid.git && git checkout ${MIG_GIT_REV} && cd .. ; \
-    rsync -a migrid.git/ ./ ; \
+      git clone ${MIG_GIT_REPO} migrid.git && \
+        cd migrid.git && \
+        git checkout -B ${MIG_GIT_BRANCH} --track origin/${MIG_GIT_BRANCH} && \
+        git checkout ${MIG_GIT_REV} && cd .. && \
+        rsync -a migrid.git/ ./ ; \
     else \
-    svn checkout -r ${MIG_SVN_REV} ${MIG_SVN_REPO} . ; \
+      svn checkout -r ${MIG_SVN_REV} ${MIG_SVN_REPO} . ; \
     fi;
 
 ADD --chown=$USER:$USER mig $MIG_ROOT/
