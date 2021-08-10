@@ -315,7 +315,8 @@ RUN if [ "$WITH_GIT" = "yes" ]; then \
         cd migrid.git && \
         git checkout -B ${MIG_GIT_BRANCH} --track origin/${MIG_GIT_BRANCH} && \
         git checkout ${MIG_GIT_REV} && cd .. && \
-        rsync -a migrid.git/ ./ ; \
+        rsync -a migrid.git/ ./ && \
+        rm -rf migrid.git/ ; \
     else \
       svn checkout -r ${MIG_SVN_REV} ${MIG_SVN_REPO} . ; \
     fi;
