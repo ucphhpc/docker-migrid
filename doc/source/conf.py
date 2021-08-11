@@ -18,8 +18,8 @@
 # -- Project information -----------------------------------------------------
 
 project = 'docker-migrid'
-copyright = '2021, Rasmus Munk Jonas Bardino Martin Rehr'
-author = 'Rasmus Munk Jonas Bardino Martin Rehr'
+copyright = '2021, Jonas Bardino, Martin Rehr, and Rasmus Munk'
+author = 'Jonas Bardino, Martin Rehr, Rasmus Munk'
 
 
 # -- General configuration ---------------------------------------------------
