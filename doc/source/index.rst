@@ -11,7 +11,6 @@ Welcome to docker-migrid's documentation!
    :caption: Contents:
 
 
-
 Indices and tables
 ==================
 
