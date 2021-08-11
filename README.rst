@@ -2,6 +2,8 @@
 docker-migrid
 =============
 
+.. image:: https://readthedocs.org/projects/docker-migrid/badge/?version=latest
+
 A containerized version of the middleware `Minimum Intrusion Grid (MiG) <https://sourceforge.net/projects/migrid/>`_ system.
 
 ------------
