@@ -118,3 +118,5 @@ mig/server/server.stdin
 
 mig/
 .vscode/
+
+.DS_Store
