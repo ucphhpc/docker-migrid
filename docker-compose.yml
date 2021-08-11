@@ -24,12 +24,20 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
         MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
         WITH_PY3: ${WITH_PY3}
+<<<<<<< HEAD
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+=======
+        WITH_GIT: ${WITH_GIT}
+>>>>>>> 703c1c407a52e322cf4fba7020cc6a4cc58eb1a9
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -78,12 +86,20 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
         MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
         WITH_PY3: ${WITH_PY3}
+<<<<<<< HEAD
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+=======
+        WITH_GIT: ${WITH_GIT}
+>>>>>>> 703c1c407a52e322cf4fba7020cc6a4cc58eb1a9
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -137,10 +153,15 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
         MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
         WITH_PY3: ${WITH_PY3}
+        WITH_GIT: ${WITH_GIT}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -184,10 +205,15 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
         MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
         WITH_PY3: ${WITH_PY3}
+        WITH_GIT: ${WITH_GIT}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -232,10 +258,15 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
         MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
         WITH_PY3: ${WITH_PY3}
+        WITH_GIT: ${WITH_GIT}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -279,10 +310,15 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
         MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
         EMULATE_FLAVOR: ${EMULATE_FLAVOR}
         EMULATE_FQDN: ${EMULATE_FQDN}
         WITH_PY3: ${WITH_PY3}
+        WITH_GIT: ${WITH_GIT}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -364,7 +400,7 @@ volumes:
       o: bind
 
   mig:
-    # Volume used to contain the migrid configuration (provided by migrid)
+    # Volume used to contain the migrid code and conf (provided by migrid at svn)
     driver: local
     driver_opts:
       type: none
