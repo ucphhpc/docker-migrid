@@ -150,3 +150,13 @@ The result therefore of executing the `init` Makefile target can be seen below::
 Finally, once the repository directory has been initialize, the Docker MiGrid image is ready to be built.
 This is achived with the `build` target inside the Makefile. By executing this, the image build process will comence, an example of this can be seen below::
 
+    docker-compose build
+    WARNING: Python-dotenv could not parse statement starting at line 5
+    devdns uses an image, skipping
+    nginx-proxy uses an image, skipping
+    Building migrid
+    [+] Building 38.6s (13/75)
+    ...
+
+
+After this is complete, you should now be ready to deploy the MiGrid service with Docker.
