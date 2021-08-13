@@ -5,3 +5,5 @@ Before we can get started with Docker MiGrid, a good place to start, is to get a
 
 Docker MiGrid Structure
 -----------------------
+
+
