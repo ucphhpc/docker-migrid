@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Docker MiGrid!
-=========================
+Welcome to Docker MiGrid
+========================
 
 Docker MiGrid provides a prepackaged build of the Minimum Intrusion Grid (MiG) middleware system.
 It does this, by building and deploying the MiG across a number of Docker containers, that each is tasked with delievering a single or multiple MiG service(s).
