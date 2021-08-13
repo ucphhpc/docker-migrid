@@ -86,7 +86,7 @@ Simplified Profile Setup
 ~~~~~~~~~~~~~~~~~~~~~~~~
 The `simplified` profile setup is made up of the following services:
 
-    :ref:`migrid <migrid_desc>`, :ref:`migrid-io <migrid_io_desc>`
+    :ref:`migrid <migrid_desc>` and :ref:`migrid-io <migrid_io_desc>`
 
 Production Profile Setup
 ~~~~~~~~~~~~~~~~~~~~~~~~~

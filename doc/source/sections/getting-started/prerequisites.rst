@@ -26,8 +26,7 @@ with the `docker-compose` tool. Similarly to Docker, the installation guide for 
 With these items installed, you are now ready to build Docker MiGrid.
 
 
-CentOS installation details. epel is required!!
+Additional Notes
+----------------
 
-
-Check CentOS 7 installation poissible via GitHub.
-
+Note to self, validate that the CentOS 7 install works as expected

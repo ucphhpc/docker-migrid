@@ -8,7 +8,7 @@ The easiest way to deploy the Docker MiGrid services, is to execute the followin
     docker-compose up -d
 
 
-To down the services, execute the following command::
+To stop the services, execute the following command::
 
     docker-compose down
 
