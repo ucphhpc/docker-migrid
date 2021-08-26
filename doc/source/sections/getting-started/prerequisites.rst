@@ -26,6 +26,23 @@ with the `docker-compose` tool. Similarly to Docker, the installation guide for 
 With these items installed, you are now ready to build Docker MiGrid.
 
 
+Docker-Swarm
+------------
+
+`Docker` and `Docker-Compose` are sufficient when data processing services like DAG or MODI are not planned to be part
+of the deployed service. However, if the requirement of data processing via these services present itself, they both require that
+their container services is deployed via `Docker Swarm`.
+
+`Docker Swarm` is a multi-host orchstration framework that enables manages the health and lifetime of a particular service across a defined `Docker Swarm` cluster.
+
+In terms of installation, the `Docker Swarm` capability is included by default in the regular `Docker` install,
+so no additional steps are needed to be taken in that regard.
+
+However, what is required is that the initial Swarm cluster is setup before any service can be deployed.
+How this is achived can be seen in the <configuration/docker_swarm> section.
+
+
+
 Additional Notes
 ----------------
 
