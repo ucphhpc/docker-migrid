@@ -13,9 +13,9 @@ services:
     ports:
       - "8000:8000"
     command:
-      configurable-http-proxy --default-target=http://jupyterhub:8000 --error-target=http://jupyterhub:8000/hub/error
+      configurable-http-proxy --default-target=http://dag:8000 --error-target=http://dag:8000/hub/error
 
-  jupyterhub:
+  dag:
     image: nielsbohr/jupyterhub:latest
     deploy:
       placement:
