@@ -2,9 +2,9 @@
 docker-migrid
 =============
 
-.. image:: https://readthedocs.org/projects/docker-migrid/badge/?version=latest
+.. |docsbadge| image:: https://readthedocs.org/projects/docker-migrid/badge/?version=latest
     :target: https://docker-migrid.readthedocs.io/en/latest/?badge=latest
-    :alt: Documentation Status
+    :alt: Documentation Status 
 
 A containerized version of the middleware `Minimum Intrusion Grid (MiG) <https://sourceforge.net/projects/migrid/>`_ system.
 
@@ -12,8 +12,7 @@ A containerized version of the middleware `Minimum Intrusion Grid (MiG) <https:/
 Introduction
 ------------
 
-To start with, general documentation about the MiG
-can be found at the `Wiki <https://sourceforge.net/p/migrid/wiki/WelcomePage/>`_.
+To start with, the documentation for this project can be found by pressing the |docsbadge| badge at the top of this README.
 
 This repo provides a standard setup of this system in a containerized environment
 with the intent of making local development easier.
