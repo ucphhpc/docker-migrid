@@ -13,5 +13,5 @@ A containerized version of the middleware `Minimum Intrusion Grid (MiG) <https:/
 Documentation/Getting Started
 -----------------------------
 
-To start with, the documentation and description for this project can be found by pressing the |docsbadge| badge.
-This includes a general description for how one should get started with MiGrid and how you can deploy it locally on your system.
+To get started with `docker-migrid`, the general documentation and introduction can be found by pressing the |docsbadge| badge.
+This includes a general description for how one should get started with MiGrid and how you can deploy it locally on a system.
