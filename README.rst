@@ -14,4 +14,4 @@ Documentation/Getting Started
 -----------------------------
 
 To get started with `docker-migrid`, the general documentation and introduction can be found by pressing the |docsbadge| badge.
-This includes a general description for how one should get started with MiGrid and how you can deploy it locally on a system.
+This includes a general description for how one should get started with MiGrid and its various services, and how you can deploy it on a system.
