@@ -100,7 +100,8 @@ RUN yum update -y \
     pysendfile \
     PyYAML \
     pyOpenSSL \
-    cracklib-python \
+    # NOTE: generally install cracklib from pip as yum only has py2 version
+    #cracklib-python \
     cracklib-devel \
     lftp \
     rsync \
@@ -126,7 +127,7 @@ RUN if [ "${WITH_PY3}" = "yes" ]; then \
       #python3-cffi \
       python36-cffi \
       python36-pyOpenSSL \
-      python36-pyYAML; \
+      python36-PyYAML; \
     else \
       echo "no py3 deps"; \
     fi;
@@ -273,6 +274,14 @@ RUN pip install --user \
 RUN if [ "$WITH_PY3" = "yes" ]; then \
       pip3 install --user \
       pyftpdlib; \
+    fi;
+
+# Modules required by grid_X IO daemons (not availalble in yum for py 3)
+RUN pip install --user \
+    cracklib
+RUN if [ "$WITH_PY3" = "yes" ]; then \
+      pip3 install --user \
+      cracklib; \
     fi;
 
 # Modules required by jupyter
