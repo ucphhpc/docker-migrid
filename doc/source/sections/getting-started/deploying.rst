@@ -1,0 +1,14 @@
+Deploying
+=========
+
+To deploy the MiGrid service, the Docker MiGrid package makes use of Docker-Compose as introduced in the prerequisites section.
+
+The easiest way to deploy the Docker MiGrid services, is to execute the following command::
+
+    docker-compose up -d
+
+
+To stop the services, execute the following command::
+
+    docker-compose down
+

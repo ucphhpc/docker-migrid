@@ -23,6 +23,10 @@ ARG EMULATE_FQDN=migrid.org
 ARG WITH_PY3=no
 ARG WITH_GIT=no
 
+# Jupyter Arguments
+ARG JUPYTER_SERVICES=""
+ARG JUPYTER_SERVICES_DESC="{}"
+
 FROM centos:7 as init
 ARG BUILD_TYPE
 #ARG BUILD_TARGET
@@ -35,6 +39,7 @@ ARG DOMAIN
 #ARG EMULATE_FLAVOR
 #ARG EMULATE_FQDN
 ARG WITH_PY3
+ARG JUPYTER_SERVICES
 #ARG WITH_GIT
 
 RUN echo "Build type: $BUILD_TYPE"
@@ -45,6 +50,7 @@ RUN echo "Domain: $DOMAIN"
 #RUN echo "Emulate flavor: $EMULATE_FLAVOR"
 #RUN echo "Emulate FQDN: $EMULATE_FQDN"
 RUN echo "Enable python3 support: $WITH_PY3"
+#RUN echo "Designated jupyter services: $JUPYTER_SERVICES"
 #RUN echo "Enable git checkout: $WITH_GIT"
 
 FROM init as base
@@ -336,6 +342,8 @@ FROM download_mig as install_mig
 ARG DOMAIN
 ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
+ARG JUPYTER_SERVICES
+ARG JUPYTER_SERVICES_DESC
 
 ENV PYTHONPATH=${MIG_ROOT}
 # Ensure that the $USER sets it during session start
@@ -343,6 +351,9 @@ RUN echo "PYTHONPATH=${MIG_ROOT}" >> ~/.bash_profile \
     && echo "export PYTHONPATH" >> ~/.bash_profile
 
 WORKDIR $MIG_ROOT/mig/install
+
+RUN echo "Designated jupyter services: $JUPYTER_SERVICES"
+RUN echo "Designated jupyter services descriptions: $JUPYTER_SERVICES_DESC"
 
 RUN ./generateconfs.py --source=. \
     --destination=generated-confs \
@@ -395,6 +406,8 @@ RUN ./generateconfs.py --source=. \
     --enable_workflows=False --enable_hsts=True \
     --enable_vhost_certs=True --enable_verify_certs=True \
     --enable_jupyter=True \
+    --jupyter_services=${JUPYTER_SERVICES} \
+    "--jupyter_services_desc=${JUPYTER_SERVICES_DESC}" \
     --user_clause=User --group_clause=Group \
     --listen_clause='#Listen' \
     --serveralias_clause='ServerAlias' --alias_field=email \
