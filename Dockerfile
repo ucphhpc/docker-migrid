@@ -121,6 +121,7 @@ RUN if [ "${WITH_PY3}" = "yes" ]; then \
       && yum install -y \
       python3-pip \
       python3-devel \
+      python3-mod_wsgi \
       #python3-paramiko \
       python36-paramiko \
       #python3-enchant \
@@ -247,12 +248,12 @@ ARG DOMAIN
 ARG ENABLE_DEFAULT_PY
 ARG WITH_PY3
 
-# Prepare OpenID
+# Prepare OpenID (python-openid for py2 and python-openid2 for py3)
 ENV PATH=$PATH:/home/$USER/.local/bin
 RUN pip install --user python-openid
 RUN if [ "$WITH_PY3" = "yes" ]; then \
       echo "install py3 openid" \
-      pip3 install --user python-openid; \
+      pip3 install --user python-openid2; \
     fi;
 
 # Modules required by grid_events.py
