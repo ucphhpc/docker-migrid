@@ -23,6 +23,8 @@ clean:
 	rm -rf ./certs
 	rm -rf ./httpd
 	rm -rf ./mig
+	mkdir -p ./state
+	chmod -R u+w ./state
 	rm -rf ./state
 	if [ "$$(docker volume ls -q -f 'name=${NAME}*')" != "" ]; then\
 		docker volume rm -f $$(docker volume ls -q -f 'name=${NAME}*');\
@@ -36,6 +38,8 @@ dockerclean:
 reset:
 	rm -rf ./certs
 	rm -rf ./httpd
+	mkdir -p ./state
+	chmod -R u+w ./state
 	rm -rf ./state
 	if [ "$$(docker volume ls -q -f 'name=${NAME}*')" != "" ]; then\
 		docker volume rm -f $$(docker volume ls -q -f 'name=${NAME}*');\
