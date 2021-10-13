@@ -142,6 +142,15 @@ RUN if [ "${WITH_PY3}" = "yes" ]; then \
 # Apache OpenID (provided by epel)
 RUN yum install -y mod_auth_openid
 
+# Setup container default language to make sure UTF8 is available in wsgi app.
+# Otherwise sys.getfilesystemencoding will return ascii despite utf8 FS, and
+# thus result e.g. in broken user path and client_id for users with accented
+# chars e.g. in their name.
+# https://stackoverflow.com/a/28212946
+# TODO: do we need to generate this rather common locale? (looks like no)
+#RUN localedef -c -i en_US -f UTF-8 en_US.UTF-8
+ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
+
 # Setup user
 ENV USER=mig
 ENV UID=1000
@@ -311,6 +320,14 @@ RUN pip install --user \
 RUN if [ "$WITH_PY3" = "yes" ]; then \
       pip3 install --user \
       pyotp; \
+    fi;
+
+# Modules required for smart country selection
+RUN pip install --user \
+    iso3166
+RUN if [ "$WITH_PY3" = "yes" ]; then \
+      pip3 install --user \
+      iso3166; \
     fi;
 
 FROM mig_dependencies as download_mig
