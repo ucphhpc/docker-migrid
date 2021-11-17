@@ -22,4 +22,18 @@ After this command has been executed, a succesful launch would launch the 4 foll
 
 You now should be able to access the basic MiGrid page via the URL::
 
-    
+    https://migrid.test
+
+This should take you to the default OpenID login page. The default development credentials for this is set in the `docker-compose.yml` file
+under the `migrid` container `command` option::
+
+    command: /app/docker-entry.sh -u test@migrid.test -p TestPw0rd -s "sftp ftps webdavs"
+
+As shown here, the default user is set to `test@migrid.test` and with the password `TestPw0rd`.
+
+
+.. image:: ../../res/images/getstart-authenticate.png
+
+With these credentials, the authentication should redirect you to the Welcome page as shown below.
+
+.. image:: ../../res/images/getstart-authenticated.png
