@@ -24,6 +24,11 @@ You now should be able to access the basic MiGrid page via the URL::
 
     https://migrid.test
 
+If you are running `docker-migrid` on a remote server, this might give you a redirection error. If so try the following URL instead.
+If neither of these two URLs takes you to the decribed OpenID login page. Please get in touch with us.::
+
+    https://ext.migrid.test
+
 This should take you to the default OpenID login page. The default development credentials for this is set in the `docker-compose.yml` file
 under the `migrid` container `command` option::
 
