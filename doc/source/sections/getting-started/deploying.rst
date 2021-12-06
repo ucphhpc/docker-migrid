@@ -23,9 +23,7 @@ After this command has been executed succesfully it should have launched the 4 f
 
 Before your host will be able to discover the various migrid services on your localhost, it needs to know
 that it should ask the `devdns` container for the IP associated with those service containers.
-Therefore, you need to apply one of the options listed in the (Host Machine -> Containers) section::
-
-    https://github.com/ruudud/devdns
+Therefore, you need to apply one of the options listed in the (Host Machine -> Containers) section at `DevDNS <https://github.com/ruudud/devdns>`_.
 
 We recommend the least invasive method, namely to reconfigure the host machine's resolv.conf (in the case of a Unix-like system)
 such that it asks the localhost devdns container as the first nameserver::
