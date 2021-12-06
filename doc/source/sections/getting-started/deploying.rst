@@ -12,7 +12,7 @@ To stop the services, execute the following command::
 
     docker-compose down
 
-After this command has been executed, a succesful launch would launch the 4 following containers::
+After this command has been executed succesfully it should have launched the 4 following containers::
 
     CONTAINER ID   IMAGE                            COMMAND                  CREATED         STATUS         PORTS                                                                                                                                                                                                                                            NAMES
     419e4ede2af3   nielsbohr/migrid:basic           "/tini -- /app/docke…"   4 minutes ago   Up 4 minutes   80/tcp, 0.0.0.0:2222->2222/tcp, :::2222->2222/tcp, 0.0.0.0:4443->4443/tcp, :::4443->4443/tcp, 0.0.0.0:8021->8021/tcp, :::8021->8021/tcp, 0.0.0.0:8443->8443/tcp, :::8443->8443/tcp, 443-448/tcp, 0.0.0.0:22222->22222/tcp, :::22222->22222/tcp   migrid-io
@@ -27,7 +27,7 @@ Therefore, you need to apply one of the options listed in the (Host Machine -> C
 
     https://github.com/ruudud/devdns
 
-We recommend, that the most noninvasive method, is to reconfigure the host machine's resolv.conf (in the case of a Unix-like system)
+We recommend the least invasive method, namely to reconfigure the host machine's resolv.conf (in the case of a Unix-like system)
 such that it asks the localhost devdns container as the first nameserver::
 
     #/etc/resolv.conf
