@@ -34,7 +34,7 @@ such that it asks the localhost devdns container as the first nameserver::
     nameserver 127.0.0.1
 
 Do note, that `resolv.conf` is often reset between reboots, and therefore the `nameserver 127.0.0.1`
-resolv will likely have to be configured via your specific network manager.
+resolv will likely have to be configured via your specific network manager or added again each time.
 
 To test that this is working correctly, a simple ping test can be of great usage.
 For instance, each of the following pings, should get an "instant" response from the default
