@@ -38,14 +38,16 @@ resolv will likely have to be configured via your specific network manager.
 
 To test that this is working correctly, a simple ping test can be of great usage.
 For instance, each of the following pings, should get an "instant" response from the default
-docker network bridge (typically 172.17.0.1).
+docker network bridge (typically 172.17.0.1)::
 
     > ping migrid.test
+
     PING migrid.test (172.17.0.1) 56(84) bytes of data.
     64 bytes from hostname3056c770de6bbac891af62e0c4bb66d2.noval (172.17.0.1): icmp_seq=1 ttl=64 time=0.084 ms
     64 bytes from hostname3056c770de6bbac891af62e0c4bb66d2.noval (172.17.0.1): icmp_seq=2 ttl=64 time=0.099 ms
 
     > ping openid.migrid.test
+    
     PING openid.migrid.test (172.17.0.1) 56(84) bytes of data.
     64 bytes from hostname3056c770de6bbac891af62e0c4bb66d2.noval (172.17.0.1): icmp_seq=1 ttl=64 time=0.137 ms
     64 bytes from hostname3056c770de6bbac891af62e0c4bb66d2.noval (172.17.0.1): icmp_seq=2 ttl=64 time=0.077 ms
