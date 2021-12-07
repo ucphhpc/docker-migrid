@@ -26,10 +26,12 @@ that it should ask the `devdns` container for the IP associated with those servi
 Therefore, you need to apply one of the options listed in the (Host Machine -> Containers) section at `DevDNS <https://github.com/ruudud/devdns>`_.
 
 We recommend the least invasive method, namely to reconfigure the host machine's resolv.conf (in the case of a Unix-like system)
-such that it asks the localhost devdns container as the first nameserver::
+such that it asks the localhost devdns container as the **(IMPORTANT) first nameserver** before any other nameserver::
 
     #/etc/resolv.conf
     nameserver 127.0.0.1
+    
+    # Followed by your normal nameservers
 
 Do note, that `resolv.conf` is often reset between reboots, and therefore the `nameserver 127.0.0.1`
 resolv will likely have to be configured via your specific network manager or added again each time.
