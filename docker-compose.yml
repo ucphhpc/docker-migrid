@@ -13,6 +13,16 @@ services:
 
   # The migrid core services including httpd and tightly integrated services
   # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
+
+  # NOTE: in order to test the publishing of container services on the host
+  #       with standard ports on 1.2.3.x one can set up a local dummy device:
+  #       sudo ip link add dummylan type dummy
+  #       sudo ip addr add 1.2.3.1/24 dev dummylan
+  #       sudo ip link set dummylan up
+  #
+  #       Then use the local firewall to forward the standard low service ports
+  #       to the exposed high ones.
+
   migrid:
     container_name: migrid
     image: nielsbohr/migrid:$BUILD_TYPE
@@ -104,9 +114,11 @@ services:
     depends_on:
       - migrid
     ports:
+      # NOTE: expose the unique raw port(s) to host 
       - "2222:2222"
       - "4443:4443"
       - "8021:8021"
+      - "8100-8200:8100-8200"
       - "8443:8443"
       - "22222:22222"
     networks:
@@ -166,6 +178,7 @@ services:
     depends_on:
       - migrid
     ports:
+      # NOTE: expose the unique raw port(s) to host 
       - "8443:8443"
     networks:
       default:
@@ -218,6 +231,7 @@ services:
     depends_on:
       - migrid
     ports:
+      # NOTE: expose the unique raw port(s) to host 
       - "2222:2222"
       - "22222:22222"
     networks:
@@ -271,7 +285,9 @@ services:
     depends_on:
       - migrid
     ports:
+      # NOTE: expose the unique raw port(s) to host 
       - "8021:8021"
+      - "8100-8200:8100-8200"
     networks:
       default:
         aliases:
@@ -323,6 +339,7 @@ services:
     depends_on:
       - migrid
     ports:
+      # NOTE: expose the unique raw port(s) to host 
       - "4443:4443"
     networks:
       default:
@@ -353,28 +370,29 @@ services:
     depends_on:
       - migrid
     ports:
-    - "80:80"
-    - "443:443"
-    - "444:444"
-    - "445:445"
-    - "446:446"
-    - "447:447"
-    - "448:448"
+      # NOTE: expose the unique raw port(s) to host 
+      - "80:80"
+      - "443:443"
+      - "444:444"
+      - "445:445"
+      - "446:446"
+      - "447:447"
+      - "448:448"
     volumes:
-    - /var/run/docker.sock:/tmp/docker.sock:ro
-    - ./nginx-proxy.conf:/etc/nginx/conf.d/migrid.conf
-    - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
-    - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/www.migrid.test.crt
-    - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/cert.migrid.test.crt
-    - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/ext.migrid.test.crt
-    - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/oid.migrid.test.crt
-    - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/sid.migrid.test.crt
-    - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/www.migrid.test.key
-    - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/cert.migrid.test.key
-    - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/ext.migrid.test.key
-    - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/oid.migrid.test.key
-    - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/sid.migrid.test.key
-    - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./nginx-proxy.conf:/etc/nginx/conf.d/migrid.conf
+      - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/www.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/cert.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/ext.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/oid.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/sid.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/www.migrid.test.key
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/cert.migrid.test.key
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/ext.migrid.test.key
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/oid.migrid.test.key
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/sid.migrid.test.key
+      - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
 
 volumes:
   certs:
