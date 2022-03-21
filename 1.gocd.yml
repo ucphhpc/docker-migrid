@@ -1,0 +1,34 @@
+environments:
+  gocd_images:
+    environments:
+      GIT_USER: "{{SECRET:[github][username]}}"
+    pipelines:
+      - docker-migrid
+pipelines:
+  docker-migrid:
+    group: gocd_images
+    locking: off
+    materials:
+      gocd_server_swarm_git:  # this is the name of material
+        # says about type of material and url at once
+        name: docker-migrid
+        git: https://github.com/ucphhpc/docker-migrid.git
+        branch: main
+        destination: docker-migrid
+      publish_docker_git:  # this is the name of material
+        # says about type of material and url at once
+        name: publish-docker-scripts
+        git: https://github.com/rasmunk/publish-docker-scripts.git
+        branch: main
+        username: ${GIT_USER}
+        password: "{{SECRET:[github][access_token]}}"
+        destination: publish-docker-scripts
+    parameters:
+      IMAGE: docker-migrid
+      ARGS: ''
+      COMMIT_TAG: GO_REVISION_GOCD_SERVER_SWARM_GIT
+      DEFAULT_TAG: latest
+      SRC_DIRECTORY: docker-migrid
+      TEST_DIRECTORY: docker-migrid
+      PUSH_DIRECTORY: publish-docker-scripts
+    template: docker_image

@@ -16,7 +16,7 @@ services:
       configurable-http-proxy --default-target=http://dag:8000 --error-target=http://dag:8000/hub/error
 
   dag:
-    image: nielsbohr/jupyterhub:latest
+    image: ucphhpc/jupyterhub:latest
     deploy:
       placement:
         constraints: [node.role == manager]

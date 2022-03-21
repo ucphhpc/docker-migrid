@@ -1,5 +1,5 @@
 NAME=docker-migrid
-OWNER=nielsbohr
+OWNER=ucphhpc
 IMAGE=migrid
 BUILD_TYPE=basic
 # Enable that the builder should use buildkit
