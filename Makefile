@@ -11,6 +11,9 @@ DOCKER_BUILDKIT=1
 all: clean init build
 
 init:
+ifeq (,$(wildcard ./.env))
+	ln -s defaults.env .env
+endif
 	mkdir -p certs
 	mkdir -p httpd
 	mkdir -p mig
