@@ -1,0 +1,577 @@
+version: '3.7'
+
+services:
+# NOTE: not used in stand-alone mode
+#  devdns:
+#    image: ruudud/devdns
+#    container_name: devdns
+#    ports:
+#        - "127.0.0.1:53:53/udp"
+#    volumes:
+#      - /var/run/docker.sock:/var/run/docker.sock:ro
+#    environment:
+#      TZ: ${TZ}
+
+  # The migrid core services including httpd and tightly integrated services
+  # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
+
+  # NOTE: in order to test the publishing of container services on the host
+  #       with standard ports on 1.2.3.x one can set up a local dummy device:
+  #       sudo ip link add dummylan type dummy
+  #       sudo ip addr add 1.2.3.1/24 dev dummylan
+  #       sudo ip link set dummylan up
+  #
+  #       Then use the local firewall to forward the standard low service ports
+  #       to the exposed high ones.
+
+  migrid:
+    container_name: migrid
+    image: ucphhpc/migrid:$BUILD_TYPE
+    network_mode: "host"
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TYPE: ${BUILD_TYPE}
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
+        PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
+        MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
+        EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
+        MIGOID_DOMAIN: ${MIGOID_DOMAIN}
+        EXTOID_DOMAIN: ${EXTOID_DOMAIN}
+        EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
+        SID_DOMAIN: ${SID_DOMAIN}
+        IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
+        PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
+        PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
+        MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
+        EXTCERT_HTTPS_PORT: ${EXTCERT_HTTPS_PORT}
+        MIGOID_HTTPS_PORT: ${MIGOID_HTTPS_PORT}
+        EXTOID_HTTPS_PORT: ${EXTOID_HTTPS_PORT}
+        EXTOIDC_HTTPS_PORT: ${EXTOIDC_HTTPS_PORT}
+        SID_HTTPS_PORT: ${SID_HTTPS_PORT}
+        SFTP_PORT: ${SFTP_PORT}
+        SFTP_SUBSYS_PORT: ${SFTP_SUBSYS_PORT}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+        SKIN_SUFFIX: ${SKIN_SUFFIX}
+        WITH_PY3: ${WITH_PY3}
+        JUPYTER_SERVICES: ${JUPYTER_SERVICES}
+        JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        WITH_GIT: ${WITH_GIT}
+    environment:
+      TZ: ${TZ}
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy
+    # NOTE: devdns not used in stand-alone mode
+    #depends_on:
+    #  - devdns
+    #networks:
+    #  default:
+    #    aliases:
+    #      - dev-www.erda.dk
+    #      - dev-cert.erda.dk
+    #      - dev-ext.erda.dk
+    #      - dev-oid.erda.dk
+    #      - dev-sid.erda.dk
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+    env_file:
+      - migrid-httpd.env
+    command: /app/docker-entry.sh -u test@dev.erda.dk -p TestPw0rd -s "sftp ftps webdavs"
+
+  # A single container with all the daemons base migrid doesn't provide
+  migrid-io:
+    container_name: migrid-io
+    profiles:
+      - single
+    image: ucphhpc/migrid:$BUILD_TYPE
+    network_mode: "host"
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TYPE: ${BUILD_TYPE}
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
+        PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
+        MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
+        EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
+        MIGOID_DOMAIN: ${MIGOID_DOMAIN}
+        EXTOID_DOMAIN: ${EXTOID_DOMAIN}
+        EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
+        SID_DOMAIN: ${SID_DOMAIN}
+        IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
+        PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
+        PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
+        MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
+        EXTCERT_HTTPS_PORT: ${EXTCERT_HTTPS_PORT}
+        MIGOID_HTTPS_PORT: ${MIGOID_HTTPS_PORT}
+        EXTOID_HTTPS_PORT: ${EXTOID_HTTPS_PORT}
+        EXTOIDC_HTTPS_PORT: ${EXTOIDC_HTTPS_PORT}
+        SID_HTTPS_PORT: ${SID_HTTPS_PORT}
+        SFTP_PORT: ${SFTP_PORT}
+        SFTP_SUBSYS_PORT: ${SFTP_SUBSYS_PORT}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+        SKIN_SUFFIX: ${SKIN_SUFFIX}
+        WITH_PY3: ${WITH_PY3}
+        JUPYTER_SERVICES: ${JUPYTER_SERVICES}
+        JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        WITH_GIT: ${WITH_GIT}
+    environment:
+      TZ: ${TZ}
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: openid sftp sftpsubsys webdavs ftps notify
+    depends_on:
+      - migrid
+    #ports:
+    #  # NOTE: expose the unique raw port(s) to host 
+    #  - "2222:2222"
+    #  - "4443:4443"
+    #  - "8021:8021"
+    #  - "8100-8200:8100-8200"
+    #  - "8443:8443"
+    #  - "22222:22222"
+    #networks:
+    #  default:
+    #    aliases:
+    #      - dev-openid.erda.dk
+    #      - dev-webdavs.erda.dk
+    #      - dev-ftps.erda.dk
+    #      - dev-sftp.erda.dk
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+    command: /app/docker-entry.sh
+
+  # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
+  #
+  # Multiple containers with individual daemons not provided by base migrid
+  migrid-openid:
+    container_name: migrid-openid
+    profiles:
+      - multi
+    image: ucphhpc/migrid:$BUILD_TYPE
+    network_mode: "host"
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TYPE: ${BUILD_TYPE}
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
+        PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
+        MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
+        EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
+        MIGOID_DOMAIN: ${MIGOID_DOMAIN}
+        EXTOID_DOMAIN: ${EXTOID_DOMAIN}
+        EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
+        SID_DOMAIN: ${SID_DOMAIN}
+        IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
+        PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
+        PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
+        MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
+        EXTCERT_HTTPS_PORT: ${EXTCERT_HTTPS_PORT}
+        MIGOID_HTTPS_PORT: ${MIGOID_HTTPS_PORT}
+        EXTOID_HTTPS_PORT: ${EXTOID_HTTPS_PORT}
+        EXTOIDC_HTTPS_PORT: ${EXTOIDC_HTTPS_PORT}
+        SID_HTTPS_PORT: ${SID_HTTPS_PORT}
+        SFTP_PORT: ${SFTP_PORT}
+        SFTP_SUBSYS_PORT: ${SFTP_SUBSYS_PORT}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+        SKIN_SUFFIX: ${SKIN_SUFFIX}
+        WITH_PY3: ${WITH_PY3}
+        WITH_GIT: ${WITH_GIT}
+    environment:
+      TZ: ${TZ}
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: openid
+    depends_on:
+      - migrid
+    #ports:
+    #  # NOTE: expose the unique raw port(s) to host 
+    #  - "8443:8443"
+    #networks:
+    #  default:
+    #    aliases:
+    #      - dev-openid.erda.dk
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+    command: /app/docker-entry.sh
+
+  migrid-sftp:
+    container_name: migrid-sftp
+    profiles:
+      - multi
+    image: ucphhpc/migrid:$BUILD_TYPE
+    network_mode: "host"
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TYPE: ${BUILD_TYPE}
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
+        PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
+        MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
+        EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
+        MIGOID_DOMAIN: ${MIGOID_DOMAIN}
+        EXTOID_DOMAIN: ${EXTOID_DOMAIN}
+        EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
+        SID_DOMAIN: ${SID_DOMAIN}
+        IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
+        PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
+        PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
+        MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
+        EXTCERT_HTTPS_PORT: ${EXTCERT_HTTPS_PORT}
+        MIGOID_HTTPS_PORT: ${MIGOID_HTTPS_PORT}
+        EXTOID_HTTPS_PORT: ${EXTOID_HTTPS_PORT}
+        EXTOIDC_HTTPS_PORT: ${EXTOIDC_HTTPS_PORT}
+        SID_HTTPS_PORT: ${SID_HTTPS_PORT}
+        SFTP_PORT: ${SFTP_PORT}
+        SFTP_SUBSYS_PORT: ${SFTP_SUBSYS_PORT}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+        SKIN_SUFFIX: ${SKIN_SUFFIX}
+        WITH_PY3: ${WITH_PY3}
+        WITH_GIT: ${WITH_GIT}
+    environment:
+      TZ: ${TZ}
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: sftp sftpsubsys
+    depends_on:
+      - migrid
+    #ports:
+    #  # NOTE: expose the unique raw port(s) to host 
+    #  - "2222:2222"
+    #  - "22222:22222"
+    #networks:
+    #  default:
+    #    aliases:
+    #      - dev-sftp.erda.dk
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+    command: /app/docker-entry.sh
+
+  migrid-ftps:
+    container_name: migrid-ftps
+    profiles:
+      - multi
+    image: ucphhpc/migrid:$BUILD_TYPE
+    network_mode: "host"
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TYPE: ${BUILD_TYPE}
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
+        PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
+        MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
+        EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
+        MIGOID_DOMAIN: ${MIGOID_DOMAIN}
+        EXTOID_DOMAIN: ${EXTOID_DOMAIN}
+        EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
+        SID_DOMAIN: ${SID_DOMAIN}
+        IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
+        PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
+        PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
+        MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
+        EXTCERT_HTTPS_PORT: ${EXTCERT_HTTPS_PORT}
+        MIGOID_HTTPS_PORT: ${MIGOID_HTTPS_PORT}
+        EXTOID_HTTPS_PORT: ${EXTOID_HTTPS_PORT}
+        EXTOIDC_HTTPS_PORT: ${EXTOIDC_HTTPS_PORT}
+        SID_HTTPS_PORT: ${SID_HTTPS_PORT}
+        SFTP_PORT: ${SFTP_PORT}
+        SFTP_SUBSYS_PORT: ${SFTP_SUBSYS_PORT}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+        SKIN_SUFFIX: ${SKIN_SUFFIX}
+        WITH_PY3: ${WITH_PY3}
+        WITH_GIT: ${WITH_GIT}
+    environment:
+      TZ: ${TZ}
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: ftps
+    depends_on:
+      - migrid
+    #ports:
+    #  # NOTE: expose the unique raw port(s) to host 
+    #  - "8021:8021"
+    #  - "8100-8200:8100-8200"
+    #networks:
+    #  default:
+    #    aliases:
+    #      - dev-ftps.erda.dk
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+    command: /app/docker-entry.sh
+
+  migrid-webdavs:
+    container_name: migrid-webdavs
+    profiles:
+      - multi
+    image: ucphhpc/migrid:$BUILD_TYPE
+    network_mode: "host"
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TYPE: ${BUILD_TYPE}
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
+        PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
+        MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
+        EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
+        MIGOID_DOMAIN: ${MIGOID_DOMAIN}
+        EXTOID_DOMAIN: ${EXTOID_DOMAIN}
+        EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
+        SID_DOMAIN: ${SID_DOMAIN}
+        IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
+        PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
+        PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
+        MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
+        EXTCERT_HTTPS_PORT: ${EXTCERT_HTTPS_PORT}
+        MIGOID_HTTPS_PORT: ${MIGOID_HTTPS_PORT}
+        EXTOID_HTTPS_PORT: ${EXTOID_HTTPS_PORT}
+        EXTOIDC_HTTPS_PORT: ${EXTOIDC_HTTPS_PORT}
+        SID_HTTPS_PORT: ${SID_HTTPS_PORT}
+        SFTP_PORT: ${SFTP_PORT}
+        SFTP_SUBSYS_PORT: ${SFTP_SUBSYS_PORT}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+        SKIN_SUFFIX: ${SKIN_SUFFIX}
+        WITH_PY3: ${WITH_PY3}
+        WITH_GIT: ${WITH_GIT}
+    environment:
+      TZ: ${TZ}
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: webdavs
+    depends_on:
+      - migrid
+    #ports:
+    #  # NOTE: expose the unique raw port(s) to host 
+    #  - "4443:4443"
+    #networks:
+    #  default:
+    #    aliases:
+    #      - dev-webdavs.erda.dk
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+    command: /app/docker-entry.sh
+
+# NOTE: not used in stand-alone mode
+#  nginx-proxy:
+#    image: jwilder/nginx-proxy
+#    container_name: nginx-proxy
+#    network_mode: "host"
+#    # TODO: can we add an httpd health check and switch to wait for condition
+#    #       service_healthy to avoid the storm of initial avoid nginx errors
+#    #       from racing apache during start up? Apparently that will not work
+#    #       with on-going jupyter integration due to swarm mode, however.
+#    depends_on:
+#      - migrid
+#    #ports:
+#    #  # NOTE: expose the unique raw port(s) to host 
+#    #  - "80:80"
+#    #  - "443:443"
+#    volumes:
+#      - /var/run/docker.sock:/tmp/docker.sock:ro
+#      - ./nginx-proxy.conf:/etc/nginx/conf.d/migrid.conf
+#      - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
+#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-www.erda.dk.crt
+#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-cert.erda.dk.crt
+#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-ext.erda.dk.crt
+#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-oid.erda.dk.crt
+#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-sid.erda.dk.crt
+#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-www.erda.dk.key
+#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-cert.erda.dk.key
+#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-ext.erda.dk.key
+#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-oid.erda.dk.key
+#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-sid.erda.dk.key
+#      - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
+
+volumes:
+  certs:
+    driver: local
+    driver_opts:
+      # Volume for generated certificates (provided by migrid)
+      type: none
+      device: $PWD/certs
+      o: bind
+
+  httpd:
+    # Volume used for httpd config (provided by migrid)
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/httpd
+      o: bind
+
+  mig:
+    # Volume used to contain the migrid code and conf (provided by migrid at svn)
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/mig
+      o: bind
+
+  state:
+      # Volume used to contain the migrid state (provided by migrid)
+      driver: local
+      driver_opts:
+        type: none
+        device: $PWD/state
+        o: bind
