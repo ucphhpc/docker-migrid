@@ -594,6 +594,13 @@ RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
 
 FROM install_mig as setup_mig_configs
 ARG DOMAIN
+ARG PUBLIC_DOMAIN
+ARG MIGCERT_DOMAIN
+ARG EXTCERT_DOMAIN
+ARG MIGOID_DOMAIN
+ARG EXTOID_DOMAIN
+ARG EXTOIDC_DOMAIN
+ARG SID_DOMAIN
 ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
 
@@ -652,15 +659,18 @@ RUN sed -i '/\/server.ca.pem/ a SSLProxyCheckPeerName off' $WEB_DIR/conf.d/MiG.c
     $WEB_DIR/conf.d/MiG.conf
 
 # Front page
-RUN ln -s index-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/index.html && \
+RUN cp -a $MIG_ROOT/state/wwwpublic/index-${EMULATE_FQDN}.html \
+        $MIG_ROOT/state/wwwpublic/index-${DOMAIN}.html && \
+    ln -s index-${DOMAIN}.html $MIG_ROOT/state/wwwpublic/index.html && \
     ln -s about-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/about-snippet.html && \
     ln -s support-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/support-snippet.html && \
     ln -s tips-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/tips-snippet.html && \
     ln -s terms-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/terms-snippet.html && \
     chown -R $USER:$USER $MIG_ROOT/state/wwwpublic/*.html
 
-# Replace index.html redirects to development domain RUN
-RUN sed -i -e "s/${EMULATE_FQDN}/$DOMAIN/g" $MIG_ROOT/state/wwwpublic/index.html
+# TODO: imporve this hard-coded translation
+# Replace index.html redirects to instance domains
+RUN sed -i -e "s@https://ext\.${EMULATE_FQDN}@https://${MIGOID_DOMAIN}@g;s@https://oid\.${EMULATE_FQDN}@https://${EXTOID_DOMAIN}@g;s@https://${EMULATE_FQDN}@https://${EXTOID_DOMAIN}@g;s@https://cert\.${EMULATE_FQDN}@https://${EXTCERT_DOMAIN}@g;s@https://sid\.${EMULATE_FQDN}@https://${SID_DOMAIN}@g" $MIG_ROOT/state/wwwpublic/index-${DOMAIN}.html
 
 # State clean services
 RUN chmod 755 generated-confs/{migstateclean,migerrors} \
