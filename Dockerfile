@@ -26,7 +26,7 @@ ARG OPENID_DOMAIN=openid.migrid.test
 ARG FTPS_DOMAIN=ftps.migrid.test
 ARG SFTP_DOMAIN=sftp.migrid.test
 ARG WEBDAVS_DOMAIN=webdavs.migrid.test
-ARG EXT_OID_PROVIDER=
+ARG EXT_OID_PROVIDER=unset
 ARG PUBLIC_HTTP_PORT=80
 ARG PUBLIC_HTTPS_PORT=444
 ARG MIGCERT_HTTPS_PORT=446
@@ -45,6 +45,33 @@ ARG MIG_GIT_REV=047a4002d11b5743141b6cef3ec93672f9f30098
 ARG EMULATE_FLAVOR=migrid
 ARG EMULATE_FQDN=migrid.org
 ARG SKIN_SUFFIX=basic
+ARG ENABLE_OPENID=True
+ARG ENABLE_SFTP=True
+ARG ENABLE_SFTP_SUSBSYS=True
+ARG ENABLE_DAVS=True
+ARG ENABLE_FTPS=True
+ARG ENABLE_SHARELINKS=True
+ARG ENABLE_TRANSFERS=True
+ARG ENABLE_DUPLICATI=True
+ARG ENABLE_SEAFILE=False
+ARG ENABLE_SANDBOXES=False
+ARG ENABLE_VMACHINES=False
+ARG ENABLE_CRONTAB=True
+ARG ENABLE_JOBS=True
+ARG ENABLE_RESOURCES=True
+ARG ENABLE_EVENTS=True
+ARG ENABLE_FREEZE=False
+ARG ENABLE_IMNOTIFY=False
+ARG ENABLE_NOTIFY=True
+ARG ENABLE_PREVIEW=False
+ARG ENABLE_WORKFLOWS=False
+ARG ENABLE_VERIFY_CERTS=True
+ARG ENABLE_JUPYTER=True
+ARG ENABLE_GDP=False
+ARG PUBKEY_FROM_DNS=False
+ARG SIGNUP_METHODS=migoid
+ARG LOGIN_METHODS=migoid
+ARG USER_INTERFACES=V3
 ARG WITH_PY3=no
 ARG WITH_GIT=no
 
@@ -451,6 +478,33 @@ ARG SFTP_SUBSYS_PORT
 ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
 ARG SKIN_SUFFIX
+ARG ENABLE_OPENID
+ARG ENABLE_SFTP
+ARG ENABLE_SFTP_SUSBSYS
+ARG ENABLE_DAVS
+ARG ENABLE_FTPS
+ARG ENABLE_SHARELINKS
+ARG ENABLE_TRANSFERS
+ARG ENABLE_DUPLICATI
+ARG ENABLE_SEAFILE
+ARG ENABLE_SANDBOXES
+ARG ENABLE_VMACHINES
+ARG ENABLE_CRONTAB
+ARG ENABLE_JOBS
+ARG ENABLE_RESOURCES
+ARG ENABLE_EVENTS
+ARG ENABLE_FREEZE
+ARG ENABLE_IMNOTIFY
+ARG ENABLE_NOTIFY
+ARG ENABLE_PREVIEW
+ARG ENABLE_WORKFLOWS
+ARG ENABLE_VERIFY_CERTS
+ARG ENABLE_JUPYTER
+ARG ENABLE_GDP
+ARG PUBKEY_FROM_DNS
+ARG SIGNUP_METHODS
+ARG LOGIN_METHODS
+ARG USER_INTERFACES
 ARG JUPYTER_SERVICES
 ARG JUPYTER_SERVICES_DESC
 
@@ -501,20 +555,20 @@ RUN ./generateconfs.py --source=. \
     --sftp_port=${SFTP_PORT} --sftp_subsys_port=${SFTP_SUBSYS_PORT} \
     --mig_oid_provider=https://${OPENID_DOMAIN}/openid/ \
     --ext_oid_provider=${EXT_OID_PROVIDER} \
-    --enable_openid=True --enable_wsgi=True \
-    --enable_sftp=True --enable_sftp_subsys=True \
-    --enable_davs=True --enable_ftps=True \
-    --enable_sharelinks=True --enable_transfers=True \
-    --enable_duplicati=True --enable_seafile=False \
-    --enable_sandboxes=False --enable_vmachines=False \
-    --enable_crontab=True --enable_jobs=True \
-    --enable_resources=True --enable_events=True \
-    --enable_freeze=False --enable_imnotify=False \
+    --enable_openid=${ENABLE_OPENID} --enable_wsgi=True \
+    --enable_sftp=${ENABLE_SFTP} --enable_sftp_subsys=${ENABLE_SFTP_SUSBSYS} \
+    --enable_davs=${ENABLE_DAVS} --enable_ftps=${ENABLE_FTPS} \
+    --enable_sharelinks=${ENABLE_SHARELINKS} --enable_transfers=${ENABLE_TRANSFERS} \
+    --enable_duplicati=${ENABLE_DUPLICATI} --enable_seafile=${ENABLE_SEAFILE} \
+    --enable_sandboxes=${ENABLE_SANDBOXES} --enable_vmachines=${ENABLE_VMACHINES} \
+    --enable_crontab=${ENABLE_CRONTAB} --enable_jobs=${ENABLE_JOBS} \
+    --enable_resources=${ENABLE_RESOURCES} --enable_events=${ENABLE_EVENTS} \
+    --enable_freeze=${ENABLE_FREEZE} --enable_imnotify=${ENABLE_IMNOTIFY} \
     --enable_twofactor=True --enable_cracklib=True \
-    --enable_notify=True --enable_preview=False \
-    --enable_workflows=False --enable_hsts=True \
-    --enable_vhost_certs=True --enable_verify_certs=True \
-    --enable_jupyter=True \
+    --enable_notify=${ENABLE_NOTIFY} --enable_preview=${ENABLE_PREVIEW} \
+    --enable_workflows=${ENABLE_WORKFLOWS} --enable_hsts=True \
+    --enable_vhost_certs=True --enable_verify_certs=${ENABLE_VERIFY_CERTS} \
+    --enable_jupyter=${ENABLE_JUPYTER} --enable_gdp=${ENABLE_GDP} \
     --jupyter_services=${JUPYTER_SERVICES} \
     "--jupyter_services_desc=${JUPYTER_SERVICES_DESC}" \
     --user_clause=User --group_clause=Group \
@@ -523,11 +577,11 @@ RUN ./generateconfs.py --source=. \
     --dhparams_path=~/certs/dhparams.pem \
     --daemon_keycert=~/certs/combined.pem \
     --daemon_pubkey=~/certs/combined.pub \
-    --daemon_pubkey_from_dns=False \
+    --daemon_pubkey_from_dns=${PUBKEY_FROM_DNS} \
     --daemon_show_address=${IO_DOMAIN} \
-    --signup_methods="migoid migcert" \
-    --login_methods="migoid migcert" \
-    --distro=centos --user_interface="V3 V2" \
+    --signup_methods="${SIGNUP_METHODS}" \
+    --login_methods="${LOGIN_METHODS}" \
+    --distro=centos --user_interface="${USER_INTERFACES}" \
     --skin=${EMULATE_FLAVOR}-${SKIN_SUFFIX} --short_title="${DOMAIN}" \
     --vgrid_label=Workgroup \
     --apache_worker_procs=256 --wsgi_procs=25
