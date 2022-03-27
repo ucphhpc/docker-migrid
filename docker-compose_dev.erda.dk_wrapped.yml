@@ -34,6 +34,7 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
         MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
         EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
@@ -42,6 +43,10 @@ services:
         EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
         SID_DOMAIN: ${SID_DOMAIN}
         IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -112,6 +117,7 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
         MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
         EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
@@ -120,6 +126,10 @@ services:
         EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
         SID_DOMAIN: ${SID_DOMAIN}
         IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -159,13 +169,13 @@ services:
       - "8100-8200:8100-8200"
       - "8443:8443"
       - "22222:22222"
-    networks:
-      default:
-        aliases:
-          - dev-openid.erda.dk
-          - dev-webdavs.erda.dk
-          - dev-ftps.erda.dk
-          - dev-sftp.erda.dk
+    #networks:
+    #  default:
+    #    aliases:
+    #      - dev-openid.erda.dk
+    #      - dev-webdavs.erda.dk
+    #      - dev-ftps.erda.dk
+    #      - dev-sftp.erda.dk
     volumes:
       - type: volume
         source: httpd
@@ -197,6 +207,7 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
         MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
         EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
@@ -205,6 +216,10 @@ services:
         EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
         SID_DOMAIN: ${SID_DOMAIN}
         IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -237,10 +252,10 @@ services:
     ports:
       # NOTE: expose the unique raw port(s) to host 
       - "8443:8443"
-    networks:
-      default:
-        aliases:
-          - dev-openid.erda.dk
+    #networks:
+    #  default:
+    #    aliases:
+    #      - dev-openid.erda.dk
     volumes:
       - type: volume
         source: httpd
@@ -269,6 +284,7 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
         MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
         EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
@@ -277,6 +293,10 @@ services:
         EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
         SID_DOMAIN: ${SID_DOMAIN}
         IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -310,10 +330,10 @@ services:
       # NOTE: expose the unique raw port(s) to host 
       - "2222:2222"
       - "22222:22222"
-    networks:
-      default:
-        aliases:
-          - dev-sftp.erda.dk
+    #networks:
+    #  default:
+    #    aliases:
+    #      - dev-sftp.erda.dk
     volumes:
       - type: volume
         source: httpd
@@ -342,6 +362,7 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
         MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
         EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
@@ -350,6 +371,10 @@ services:
         EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
         SID_DOMAIN: ${SID_DOMAIN}
         IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -383,10 +408,10 @@ services:
       # NOTE: expose the unique raw port(s) to host 
       - "8021:8021"
       - "8100-8200:8100-8200"
-    networks:
-      default:
-        aliases:
-          - dev-ftps.erda.dk
+    #networks:
+    #  default:
+    #    aliases:
+    #      - dev-ftps.erda.dk
     volumes:
       - type: volume
         source: httpd
@@ -415,6 +440,7 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
         MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
         EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
@@ -423,6 +449,10 @@ services:
         EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
         SID_DOMAIN: ${SID_DOMAIN}
         IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -455,10 +485,10 @@ services:
     ports:
       # NOTE: expose the unique raw port(s) to host 
       - "4443:4443"
-    networks:
-      default:
-        aliases:
-          - dev-webdavs.erda.dk
+    #networks:
+    #  default:
+    #    aliases:
+    #      - dev-webdavs.erda.dk
     volumes:
       - type: volume
         source: httpd
@@ -489,7 +519,7 @@ services:
       - "443:443"
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ./nginx-proxy.conf:/etc/nginx/conf.d/migrid.conf
+      - ./nginx-proxy-dev.erda.dk.conf:/etc/nginx/conf.d/migrid.conf
       - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
       - ./certs/MiG/*.erda.dk/server.crt:/etc/nginx/certs/dev-www.erda.dk.crt
       - ./certs/MiG/*.erda.dk/server.crt:/etc/nginx/certs/dev-cert.erda.dk.crt

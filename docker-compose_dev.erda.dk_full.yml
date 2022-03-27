@@ -529,7 +529,7 @@ services:
 #    #  - "443:443"
 #    volumes:
 #      - /var/run/docker.sock:/tmp/docker.sock:ro
-#      - ./nginx-proxy.conf:/etc/nginx/conf.d/migrid.conf
+#      - ./nginx-proxy-dev.erda.dk.conf:/etc/nginx/conf.d/migrid.conf
 #      - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
 #      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-www.erda.dk.crt
 #      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-cert.erda.dk.crt

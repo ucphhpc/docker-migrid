@@ -13,6 +13,30 @@
 ARG BUILD_TYPE=basic
 ARG BUILD_TARGET=development
 ARG DOMAIN=migrid.test
+ARG WILDCARD_DOMAIN=*.migrid.test
+ARG PUBLIC_DOMAIN=www.migrid.test
+ARG MIGCERT_DOMAIN=cert.migrid.test
+ARG EXTCERT_DOMAIN=
+ARG MIGOID_DOMAIN=ext.migrid.test
+ARG EXTOID_DOMAIN=
+ARG EXTOIDC_DOMAIN=
+ARG SID_DOMAIN=sid.migrid.test
+ARG IO_DOMAIN=io.migrid.test
+ARG OPENID_DOMAIN=openid.migrid.test
+ARG FTPS_DOMAIN=ftps.migrid.test
+ARG SFTP_DOMAIN=sftp.migrid.test
+ARG WEBDAVS_DOMAIN=webdavs.migrid.test
+ARG EXT_OID_PROVIDER=
+ARG PUBLIC_HTTP_PORT=80
+ARG PUBLIC_HTTPS_PORT=444
+ARG MIGCERT_HTTPS_PORT=446
+ARG EXTCERT_HTTPS_PORT=447
+ARG MIGOID_HTTPS_PORT=443
+ARG EXTOID_HTTPS_PORT=445
+ARG EXTOIDC_HTTPS_PORT=449
+ARG SID_HTTPS_PORT=448
+ARG SFTP_PORT=2222
+ARG SFTP_SUBSYS_PORT=22222
 ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
 ARG MIG_SVN_REV=5250
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
@@ -20,6 +44,7 @@ ARG MIG_GIT_BRANCH=master
 ARG MIG_GIT_REV=047a4002d11b5743141b6cef3ec93672f9f30098
 ARG EMULATE_FLAVOR=migrid
 ARG EMULATE_FQDN=migrid.org
+ARG SKIN_SUFFIX=basic
 ARG WITH_PY3=no
 ARG WITH_GIT=no
 
@@ -31,6 +56,29 @@ FROM centos:7 as init
 ARG BUILD_TYPE
 #ARG BUILD_TARGET
 ARG DOMAIN
+ARG WILDCARD_DOMAIN
+ARG PUBLIC_DOMAIN
+ARG MIGCERT_DOMAIN
+ARG EXTCERT_DOMAIN
+ARG MIGOID_DOMAIN
+ARG EXTOID_DOMAIN
+ARG EXTOIDC_DOMAIN
+ARG SID_DOMAIN
+ARG IO_DOMAIN
+ARG OPENID_DOMAIN
+ARG FTPS_DOMAIN
+ARG SFTP_DOMAIN
+ARG WEBDAVS_DOMAIN
+ARG PUBLIC_HTTP_PORT
+ARG PUBLIC_HTTPS_PORT
+ARG MIGCERT_HTTPS_PORT
+ARG EXTCERT_HTTPS_PORT
+ARG MIGOID_HTTPS_PORT
+ARG EXTOID_HTTPS_PORT
+ARG EXTOIDC_HTTPS_PORT
+ARG SID_HTTPS_PORT
+ARG SFTP_PORT
+ARG SFTP_SUBSYS_PORT
 #ARG MIG_SVN_REPO
 #ARG MIG_SVN_REV
 #ARG MIG_GIT_REPO
@@ -44,7 +92,15 @@ ARG JUPYTER_SERVICES
 
 RUN echo "Build type: $BUILD_TYPE"
 #RUN echo "Build target: $BUILD_TARGET"
-RUN echo "Domain: $DOMAIN"
+RUN echo "Domains: $DOMAIN" "${PUBLIC_DOMAIN}" "${MIGCERT_DOMAIN}" \
+           "${EXTCERT_DOMAIN}" "${MIGOID_DOMAIN}" "${EXTOID_DOMAIN}" \
+           "${EXTOIDC_DOMAIN}" "${SID_DOMAIN}" "${IO_DOMAIN}" \
+           "${OPENID_DOMAIN}" "${SFTP_DOMAIN}" "${FTPS_DOMAIN}" \
+           "${WEBDAVS_DOMAIN}"
+RUN echo "Ports: " "${PUBLIC_HTTP_PORT} ${PUBLIC_HTTPS_PORT}" \
+    "${MIGOID_HTTPS_PORT} ${EXTOID_HTTPS_PORT}" \
+    "${MIGCERT_HTTPS_PORT} ${EXTCERT_HTTPS_PORT}" \
+    "${SID_HTTPS_PORT} ${SFTP_PORT} ${SFTP_SUBSYS_PORT}" \
 #RUN echo "MiG svn repo and revision: $MIG_SVN_REPO $MIG_SVN_REV"
 #RUN echo "MiG git repo , branch and revision: $MIG_GIT_REPO $MIG_GIT_BRANCH $MIG_GIT_REV"
 #RUN echo "Emulate flavor: $EMULATE_FLAVOR"
@@ -55,6 +111,7 @@ RUN echo "Enable python3 support: $WITH_PY3"
 
 FROM init as base
 ARG DOMAIN
+ARG WILDCARD_DOMAIN
 ARG WITH_PY3
 
 WORKDIR /tmp
@@ -166,13 +223,26 @@ ENV CERT_DIR=$WEB_DIR/MiG-certificates
 
 USER root
 
-RUN mkdir -p $CERT_DIR/MiG/*.$DOMAIN \
+RUN mkdir -p $CERT_DIR/MiG/${WILDCARD_DOMAIN} \
     && chown $USER:$USER $CERT_DIR \
     && chmod 775 $CERT_DIR
 
 # Certs and keys
 FROM base as setup_security
 ARG DOMAIN
+ARG WILDCARD_DOMAIN
+ARG PUBLIC_DOMAIN
+ARG MIGCERT_DOMAIN
+ARG EXTCERT_DOMAIN
+ARG MIGOID_DOMAIN
+ARG EXTOID_DOMAIN
+ARG EXTOIDC_DOMAIN
+ARG SID_DOMAIN
+ARG IO_DOMAIN
+ARG OPENID_DOMAIN
+ARG FTPS_DOMAIN
+ARG SFTP_DOMAIN
+ARG WEBDAVS_DOMAIN
 
 # Dhparam - https://wiki.mozilla.org/Security/Archive/Server_Side_TLS_4.0
 RUN curl https://ssl-config.mozilla.org/ffdhe4096.txt -o $CERT_DIR/dhparams.pem
@@ -182,15 +252,15 @@ RUN curl https://ssl-config.mozilla.org/ffdhe4096.txt -o $CERT_DIR/dhparams.pem
 RUN openssl genrsa -des3 -passout pass:qwerty -out ca.key 2048 \
     && openssl rsa -passin pass:qwerty -in ca.key -out ca.key \
     && openssl req -x509 -new -key ca.key \
-    -subj "/C=DK/ST=NA/L=NA/O=MiGrid-Test/OU=NA/CN=*.${DOMAIN}" -out ca.crt \
+    -subj "/C=DK/ST=NA/L=NA/O=MiGrid-Test/OU=NA/CN=${WILDCARD_DOMAIN}" -out ca.crt \
     && openssl req -x509 -new -nodes -key ca.key -sha256 -days 1024 \
-    -subj "/C=DK/ST=NA/L=NA/O=MiGrid-Test/OU=NA/CN=*.${DOMAIN}" -out ca.pem
+    -subj "/C=DK/ST=NA/L=NA/O=MiGrid-Test/OU=NA/CN=${WILDCARD_DOMAIN}" -out ca.pem
 
 # Server key/ca
 # https://gist.github.com/Soarez/9688998
 RUN openssl genrsa -out server.key 2048 \
     && openssl req -new -key server.key -out server.csr \
-    -subj "/C=DK/ST=NA/L=NA/O=MiGrid-Test/OU=NA/CN=*.${DOMAIN}" \
+    -subj "/C=DK/ST=NA/L=NA/O=MiGrid-Test/OU=NA/CN=${WILDCARD_DOMAIN}" \
     && openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
 
 # CRL
@@ -209,33 +279,30 @@ RUN cat server.{key,crt} > combined.pem \
     && chmod 400 *.key server.crt ca.pem combined.pem server.ca.pem
 
 # Prepare keys for mig
-RUN mv server.crt $CERT_DIR/MiG/*.$DOMAIN/ \
-    && mv server.key $CERT_DIR/MiG/*.$DOMAIN/ \
-    && mv crl.pem $CERT_DIR/MiG/*.$DOMAIN/ \
-    && mv ca.pem $CERT_DIR/MiG/*.$DOMAIN/cacert.pem \
-    && mv combined.pem $CERT_DIR/MiG/*.$DOMAIN/ \
-    && mv combined.pub $CERT_DIR/MiG/*.$DOMAIN/ \
-    && mv server.ca.pem $CERT_DIR/MiG/*.$DOMAIN/
+RUN mv server.crt $CERT_DIR/MiG/${WILDCARD_DOMAIN}/ \
+    && mv server.key $CERT_DIR/MiG/${WILDCARD_DOMAIN}/ \
+    && mv crl.pem $CERT_DIR/MiG/${WILDCARD_DOMAIN}/ \
+    && mv ca.pem $CERT_DIR/MiG/${WILDCARD_DOMAIN}/cacert.pem \
+    && mv combined.pem $CERT_DIR/MiG/${WILDCARD_DOMAIN}/ \
+    && mv combined.pub $CERT_DIR/MiG/${WILDCARD_DOMAIN}/ \
+    && mv server.ca.pem $CERT_DIR/MiG/${WILDCARD_DOMAIN}/
 
 WORKDIR $CERT_DIR
 
-RUN ln -s MiG/*.$DOMAIN/server.crt server.crt \
-    && ln -s MiG/*.$DOMAIN/server.key server.key \
-    && ln -s MiG/*.$DOMAIN/crl.pem crl.pem \
-    && ln -s MiG/*.$DOMAIN/cacert.pem cacert.pem \
-    && ln -s MiG/*.$DOMAIN/combined.pem combined.pem \
-    && ln -s MiG/*.$DOMAIN/server.ca.pem server.ca.pem \
-    && ln -s MiG/*.$DOMAIN/combined.pub combined.pub \
-    && ln -s MiG/*.$DOMAIN www.$DOMAIN \
-    && ln -s MiG/*.$DOMAIN cert.$DOMAIN \
-    && ln -s MiG/*.$DOMAIN ext.$DOMAIN \
-    && ln -s MiG/*.$DOMAIN oid.$DOMAIN \
-    && ln -s MiG/*.$DOMAIN sid.$DOMAIN \
-    && ln -s MiG/*.$DOMAIN io.$DOMAIN \
-    && ln -s MiG/*.$DOMAIN openid.$DOMAIN \
-    && ln -s MiG/*.$DOMAIN sftp.$DOMAIN \
-    && ln -s MiG/*.$DOMAIN ftps.$DOMAIN \
-    && ln -s MiG/*.$DOMAIN webdavs.$DOMAIN
+RUN ln -s MiG/${WILDCARD_DOMAIN}/server.crt server.crt \
+    && ln -s MiG/${WILDCARD_DOMAIN}/server.key server.key \
+    && ln -s MiG/${WILDCARD_DOMAIN}/crl.pem crl.pem \
+    && ln -s MiG/${WILDCARD_DOMAIN}/cacert.pem cacert.pem \
+    && ln -s MiG/${WILDCARD_DOMAIN}/combined.pem combined.pem \
+    && ln -s MiG/${WILDCARD_DOMAIN}/server.ca.pem server.ca.pem \
+    && ln -s MiG/${WILDCARD_DOMAIN}/combined.pub combined.pub \
+    && for domain in "${PUBLIC_DOMAIN}" "${MIGCERT_DOMAIN}" \
+           "${EXTCERT_DOMAIN}" "${MIGOID_DOMAIN}" "${EXTOID_DOMAIN}" \
+           "${EXTOIDC_DOMAIN}" "${SID_DOMAIN}" "${IO_DOMAIN}" \
+           "${OPENID_DOMAIN}" "${SFTP_DOMAIN}" "${FTPS_DOMAIN}" \
+               "${WEBDAVS_DOMAIN}"; do \
+               [ -L "$domain" ] || ln -s MiG/${WILDCARD_DOMAIN} $domain; \
+       done
 
 # Upgrade pip, required by cryptography
 RUN python -m pip install -U pip==20.3.4
@@ -245,7 +312,7 @@ USER $USER
 
 RUN mkdir -p MiG-certificates \
     && cd MiG-certificates \
-    && ln -s $CERT_DIR/MiG/*.$DOMAIN/cacert.pem cacert.pem \
+    && ln -s $CERT_DIR/MiG/${WILDCARD_DOMAIN}/cacert.pem cacert.pem \
     && ln -s $CERT_DIR/MiG MiG \
     && ln -s $CERT_DIR/combined.pem combined.pem \
     && ln -s $CERT_DIR/combined.pub combined.pub \
@@ -358,8 +425,32 @@ ADD --chown=$USER:$USER mig $MIG_ROOT/
 
 FROM download_mig as install_mig
 ARG DOMAIN
+ARG PUBLIC_DOMAIN
+ARG MIGCERT_DOMAIN
+ARG EXTCERT_DOMAIN
+ARG MIGOID_DOMAIN
+ARG EXTOID_DOMAIN
+ARG EXTOIDC_DOMAIN
+ARG SID_DOMAIN
+ARG IO_DOMAIN
+ARG OPENID_DOMAIN
+ARG FTPS_DOMAIN
+ARG SFTP_DOMAIN
+ARG WEBDAVS_DOMAIN
+ARG EXT_OID_PROVIDER
+ARG PUBLIC_HTTP_PORT
+ARG PUBLIC_HTTPS_PORT
+ARG MIGCERT_HTTPS_PORT
+ARG EXTCERT_HTTPS_PORT
+ARG MIGOID_HTTPS_PORT
+ARG EXTOID_HTTPS_PORT
+ARG EXTOIDC_HTTPS_PORT
+ARG SID_HTTPS_PORT
+ARG SFTP_PORT
+ARG SFTP_SUBSYS_PORT
 ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
+ARG SKIN_SUFFIX
 ARG JUPYTER_SERVICES
 ARG JUPYTER_SERVICES_DESC
 
@@ -377,13 +468,13 @@ RUN ./generateconfs.py --source=. \
     --destination=generated-confs \
 #    --destination_suffix="_svn$(svnversion -n ~/)" \
     --base_fqdn=$DOMAIN \
-    --public_fqdn=www.$DOMAIN \
-    --mig_cert_fqdn=cert.$DOMAIN \
-    --ext_cert_fqdn= \
-    --mig_oid_fqdn=ext.$DOMAIN \
-    --ext_oid_fqdn= \
-    --sid_fqdn=sid.$DOMAIN \
-    --io_fqdn=io.$DOMAIN \
+    --public_fqdn=${PUBLIC_DOMAIN} \
+    --mig_cert_fqdn=${MIGCERT_DOMAIN} \
+    --ext_cert_fqdn=${EXTCERT_DOMAIN} \
+    --mig_oid_fqdn=${MIGOID_DOMAIN} \
+    --ext_oid_fqdn=${EXTOID_DOMAIN} \
+    --sid_fqdn=${SID_DOMAIN} \
+    --io_fqdn=${IO_DOMAIN} \
     --user=mig --group=mig \
     --apache_version=2.4 \
     --apache_etc=/etc/httpd \
@@ -398,18 +489,18 @@ RUN ./generateconfs.py --source=. \
     --hgweb_scripts=/usr/share/doc/mercurial-2.6.2 \
     --trac_admin_path= \
     --trac_ini_path= \
-    --openid_address=openid.$DOMAIN \
-    --sftp_address=sftp.$DOMAIN \
-    --sftp_subsys_address=sftp.$DOMAIN \
-    --ftps_address=ftps.$DOMAIN \
-    --davs_address=webdavs.$DOMAIN \
-    --public_http_port=80 --public_https_port=444 \
-    --mig_oid_port=443 --ext_oid_port=445 \
-    --mig_cert_port=446 --ext_cert_port=447 \
-    --sid_port=448 \
-    --sftp_port=2222 --sftp_subsys_port=22222 \
-    --mig_oid_provider=https://ext.$DOMAIN/openid/ \
-    --ext_oid_provider= \
+    --openid_address=${OPENID_DOMAIN} \
+    --sftp_address=${SFTP_DOMAIN} \
+    --sftp_subsys_address=${SFTP_SUBSYS_DOMAIN} \
+    --ftps_address=${FTPS_DOMAIN} \
+    --davs_address=${WEBDAVS_DOMAIN} \
+    --public_http_port=${PUBLIC_HTTP_PORT} --public_https_port=${PUBLIC_HTTPS_PORT} \
+    --mig_oid_port=${MIGOID_HTTPS_PORT} --ext_oid_port=${EXTOID_HTTPS_PORT} \
+    --mig_cert_port=${MIGCERT_HTTPS_PORT} --ext_cert_port=${EXTCERT_HTTPS_PORT} \
+    --sid_port=${SID_HTTPS_PORT} \
+    --sftp_port=${SFTP_PORT} --sftp_subsys_port=${SFTP_SUBSYS_PORT} \
+    --mig_oid_provider=https://${OPENID_DOMAIN}/openid/ \
+    --ext_oid_provider=${EXT_OID_PROVIDER} \
     --enable_openid=True --enable_wsgi=True \
     --enable_sftp=True --enable_sftp_subsys=True \
     --enable_davs=True --enable_ftps=True \
@@ -433,11 +524,11 @@ RUN ./generateconfs.py --source=. \
     --daemon_keycert=~/certs/combined.pem \
     --daemon_pubkey=~/certs/combined.pub \
     --daemon_pubkey_from_dns=False \
-    --daemon_show_address=io.$DOMAIN \
+    --daemon_show_address=${IO_DOMAIN} \
     --signup_methods="migoid migcert" \
     --login_methods="migoid migcert" \
     --distro=centos --user_interface="V3 V2" \
-    --skin=${EMULATE_FLAVOR}-basic --short_title="MiGrid-Test" \
+    --skin=${EMULATE_FLAVOR}-${SKIN_SUFFIX} --short_title="${DOMAIN}" \
     --vgrid_label=Workgroup \
     --apache_worker_procs=256 --wsgi_procs=25
 
@@ -558,6 +649,6 @@ USER root
 WORKDIR /app
 
 # EXPOSE is not important but keep in sync with active ports for the record
-EXPOSE 80 443 444 445 446 447 448 2222 4443 8021 22222
+EXPOSE 80 443 444 445 446 447 448 449 2222 4443 8021 22222
 
 CMD ["bash", "/app/docker-entry.sh"]
