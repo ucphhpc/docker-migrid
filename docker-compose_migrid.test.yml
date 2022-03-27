@@ -34,6 +34,7 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
         MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
         EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
@@ -42,6 +43,10 @@ services:
         EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
         SID_DOMAIN: ${SID_DOMAIN}
         IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -112,6 +117,7 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
         MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
         EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
@@ -120,6 +126,10 @@ services:
         EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
         SID_DOMAIN: ${SID_DOMAIN}
         IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -162,6 +172,7 @@ services:
     networks:
       default:
         aliases:
+          - io.migrid.test
           - openid.migrid.test
           - webdavs.migrid.test
           - ftps.migrid.test
@@ -197,6 +208,7 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
         MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
         EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
@@ -205,6 +217,10 @@ services:
         EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
         SID_DOMAIN: ${SID_DOMAIN}
         IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -269,6 +285,7 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
         MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
         EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
@@ -277,6 +294,10 @@ services:
         EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
         SID_DOMAIN: ${SID_DOMAIN}
         IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -342,6 +363,7 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
         MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
         EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
@@ -350,6 +372,10 @@ services:
         EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
         SID_DOMAIN: ${SID_DOMAIN}
         IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -415,6 +441,7 @@ services:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
         MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
         EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
@@ -423,6 +450,10 @@ services:
         EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
         SID_DOMAIN: ${SID_DOMAIN}
         IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -494,7 +525,7 @@ services:
       - "448:448"
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ./nginx-proxy-migrid-test.conf:/etc/nginx/conf.d/migrid.conf
+      - ./nginx-proxy-migrid.test.conf:/etc/nginx/conf.d/migrid.conf
       - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
       - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/www.migrid.test.crt
       - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/cert.migrid.test.crt
