@@ -27,6 +27,9 @@ ARG FTPS_DOMAIN=ftps.migrid.test
 ARG SFTP_DOMAIN=sftp.migrid.test
 ARG WEBDAVS_DOMAIN=webdavs.migrid.test
 ARG EXT_OID_PROVIDER=unset
+ARG EXT_OIDC_PROVIDER_META_URL=unset
+ARG EXT_OIDC_CLIENT_NAME=unset
+ARG EXT_OIDC_CLIENT_ID=unset
 ARG PUBLIC_HTTP_PORT=80
 ARG PUBLIC_HTTPS_PORT=444
 ARG MIGCERT_HTTPS_PORT=446
@@ -69,9 +72,18 @@ ARG ENABLE_VERIFY_CERTS=True
 ARG ENABLE_JUPYTER=True
 ARG ENABLE_GDP=False
 ARG PUBKEY_FROM_DNS=False
+ARG PREFER_PYTHON3=False
 ARG SIGNUP_METHODS=migoid
 ARG LOGIN_METHODS=migoid
 ARG USER_INTERFACES=V3
+ARG AUTO_ADD_CERT_USER=False
+ARG AUTO_ADD_OID_USER=False
+ARG AUTO_ADD_OIDC_USER=False
+ARG CERT_VALID_DAYS=365
+ARG OID_VALID_DAYS=365
+ARG GENERIC_VALID_DAYS=365
+ARG DEFAULT_MENU=
+ARG USER_MENU=jupyter
 ARG WITH_PY3=no
 ARG WITH_GIT=no
 
@@ -165,6 +177,7 @@ RUN yum update -y \
     mod_wsgi \
     mod_proxy \
     mod_auth_openid \
+    mod_auth_openidc \
     tzdata \
     initscripts \
     svn \
@@ -465,6 +478,9 @@ ARG FTPS_DOMAIN
 ARG SFTP_DOMAIN
 ARG WEBDAVS_DOMAIN
 ARG EXT_OID_PROVIDER
+ARG EXT_OIDC_PROVIDER_META_URL
+ARG EXT_OIDC_CLIENT_NAME
+ARG EXT_OIDC_CLIENT_ID
 ARG PUBLIC_HTTP_PORT
 ARG PUBLIC_HTTPS_PORT
 ARG MIGCERT_HTTPS_PORT
@@ -502,9 +518,18 @@ ARG ENABLE_VERIFY_CERTS
 ARG ENABLE_JUPYTER
 ARG ENABLE_GDP
 ARG PUBKEY_FROM_DNS
+ARG PREFER_PYTHON3
 ARG SIGNUP_METHODS
 ARG LOGIN_METHODS
 ARG USER_INTERFACES
+ARG AUTO_ADD_CERT_USER
+ARG AUTO_ADD_OID_USER
+ARG AUTO_ADD_OIDC_USER
+ARG CERT_VALID_DAYS
+ARG OID_VALID_DAYS
+ARG GENERIC_VALID_DAYS
+ARG DEFAULT_MENU
+ARG USER_MENU
 ARG JUPYTER_SERVICES
 ARG JUPYTER_SERVICES_DESC
 
@@ -555,6 +580,9 @@ RUN ./generateconfs.py --source=. \
     --sftp_port=${SFTP_PORT} --sftp_subsys_port=${SFTP_SUBSYS_PORT} \
     --mig_oid_provider=https://${OPENID_DOMAIN}/openid/ \
     --ext_oid_provider=${EXT_OID_PROVIDER} \
+    --ext_oidc_provider_meta_url=${EXT_OIDC_PROVIDER_META_URL} \
+    --ext_oidc_client_name=${EXT_OIDC_CLIENT_NAME} \
+    --ext_oidc_client_id=${EXT_OIDC_CLIENT_ID} \
     --enable_openid=${ENABLE_OPENID} --enable_wsgi=True \
     --enable_sftp=${ENABLE_SFTP} --enable_sftp_subsys=${ENABLE_SFTP_SUSBSYS} \
     --enable_davs=${ENABLE_DAVS} --enable_ftps=${ENABLE_FTPS} \
@@ -571,6 +599,7 @@ RUN ./generateconfs.py --source=. \
     --enable_jupyter=${ENABLE_JUPYTER} --enable_gdp=${ENABLE_GDP} \
     --jupyter_services=${JUPYTER_SERVICES} \
     "--jupyter_services_desc=${JUPYTER_SERVICES_DESC}" \
+    --prefer_python3=${PREFER_PYTHON3} \
     --user_clause=User --group_clause=Group \
     --listen_clause='#Listen' \
     --serveralias_clause='ServerAlias' --alias_field=email \
@@ -584,6 +613,12 @@ RUN ./generateconfs.py --source=. \
     --distro=centos --user_interface="${USER_INTERFACES}" \
     --skin=${EMULATE_FLAVOR}-${SKIN_SUFFIX} --short_title="${DOMAIN}" \
     --vgrid_label=Workgroup \
+    --auto_add_cert_user=${AUTO_ADD_CERT_USER} \
+    --auto_add_oid_user=${AUTO_ADD_OID_USER} \
+    --auto_add_oidc_user=${AUTO_ADD_OIDC_USER} \
+    --cert_valid_days=${CERT_VALID_DAYS} --oid_valid_days=${OID_VALID_DAYS} \
+    --generic_valid_days=${GENERIC_VALID_DAYS} \
+    --default_menu="${DEFAULT_MENU}" --user_menu="${USER_MENU}" \
     --apache_worker_procs=256 --wsgi_procs=25
 
 RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
@@ -604,9 +639,9 @@ ARG SID_DOMAIN
 ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
 
+# TODO: expose loglevel in generateconfs and use there
 # Enable jupyter menu
-RUN sed -i -e 's/#user_menu =/user_menu = jupyter/g' $MIG_ROOT/mig/server/MiGserver.conf \
-    && sed -i -e 's/loglevel = info/loglevel = debug/g' $MIG_ROOT/mig/server/MiGserver.conf
+RUN sed -i -e 's/loglevel = info/loglevel = debug/g' $MIG_ROOT/mig/server/MiGserver.conf
 
 # Prepare oiddiscover for httpd
 RUN cd $MIG_ROOT/mig \
