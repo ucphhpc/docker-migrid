@@ -26,6 +26,7 @@ ARG OPENID_DOMAIN=openid.migrid.test
 ARG FTPS_DOMAIN=ftps.migrid.test
 ARG SFTP_DOMAIN=sftp.migrid.test
 ARG WEBDAVS_DOMAIN=webdavs.migrid.test
+ARG MIG_OID_PROVIDER=https://ext.migrid.test/openid/
 ARG EXT_OID_PROVIDER=unset
 ARG EXT_OIDC_PROVIDER_META_URL=unset
 ARG EXT_OIDC_CLIENT_NAME=unset
@@ -71,6 +72,7 @@ ARG ENABLE_WORKFLOWS=False
 ARG ENABLE_VERIFY_CERTS=True
 ARG ENABLE_JUPYTER=True
 ARG ENABLE_GDP=False
+ARG ENABLE_SELF_SIGNED_CERTS=False
 ARG PUBKEY_FROM_DNS=False
 ARG PREFER_PYTHON3=False
 ARG SIGNUP_METHODS=migoid
@@ -151,6 +153,7 @@ RUN echo "Enable python3 support: $WITH_PY3"
 FROM init as base
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
+ARG ENABLE_SELF_SIGNED_CERTS
 ARG WITH_PY3
 
 WORKDIR /tmp
@@ -239,6 +242,28 @@ RUN if [ "${WITH_PY3}" = "yes" ]; then \
 # Apache OpenID (provided by epel)
 RUN yum install -y mod_auth_openid
 
+# Disable Apache OpenID ssl-certificate verification
+# (recompile libopkele with --disable-ssl-verify-host --disable-ssl-verify-peer)
+RUN echo "ENABLE_SELF_SIGNED_CERTS: $ENABLE_SELF_SIGNED_CERTS"
+RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
+	echo "Re-installing libopkele with ssl verification disabled" \
+	&& yum install -y gcc-c++ \
+        	rpm-build \
+        	boost-devel \
+        	openssl-devel \
+        	libxslt \
+        	libcurl-devel \
+        	expat-devel \
+        	tidy-devel \
+        	sqlite-devel \
+        	libuuid-devel \
+        && rpm -e --nodeps libopkele \
+        && rpm -ivh https://download-ib01.fedoraproject.org/pub/epel/7/SRPMS/Packages/l/libopkele-2.0.4-9.el7.src.rpm \
+        && sed -i "s/^%configure$/%configure --disable-ssl-verify-host --disable-ssl-verify-peer/g" /root/rpmbuild/SPECS/libopkele.spec  \
+        && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
+        && yum localinstall -y /root/rpmbuild/RPMS/x86_64/libopkele-2.0.4-9.el7.x86_64.rpm; \
+    fi;
+        
 # Setup container default language to make sure UTF8 is available in wsgi app.
 # Otherwise sys.getfilesystemencoding will return ascii despite utf8 FS, and
 # thus result e.g. in broken user path and client_id for users with accented
@@ -477,6 +502,7 @@ ARG OPENID_DOMAIN
 ARG FTPS_DOMAIN
 ARG SFTP_DOMAIN
 ARG WEBDAVS_DOMAIN
+ARG MIG_OID_PROVIDER
 ARG EXT_OID_PROVIDER
 ARG EXT_OIDC_PROVIDER_META_URL
 ARG EXT_OIDC_CLIENT_NAME
@@ -578,7 +604,7 @@ RUN ./generateconfs.py --source=. \
     --mig_cert_port=${MIGCERT_HTTPS_PORT} --ext_cert_port=${EXTCERT_HTTPS_PORT} \
     --sid_port=${SID_HTTPS_PORT} \
     --sftp_port=${SFTP_PORT} --sftp_subsys_port=${SFTP_SUBSYS_PORT} \
-    --mig_oid_provider=https://${OPENID_DOMAIN}/openid/ \
+    --mig_oid_provider=${MIG_OID_PROVIDER} \
     --ext_oid_provider=${EXT_OID_PROVIDER} \
     --ext_oidc_provider_meta_url=${EXT_OIDC_PROVIDER_META_URL} \
     --ext_oidc_client_name=${EXT_OIDC_CLIENT_NAME} \
@@ -598,7 +624,7 @@ RUN ./generateconfs.py --source=. \
     --enable_vhost_certs=True --enable_verify_certs=${ENABLE_VERIFY_CERTS} \
     --enable_jupyter=${ENABLE_JUPYTER} --enable_gdp=${ENABLE_GDP} \
     --jupyter_services=${JUPYTER_SERVICES} \
-    "--jupyter_services_desc=${JUPYTER_SERVICES_DESC}" \
+    --jupyter_services_desc="${JUPYTER_SERVICES_DESC}" \
     --prefer_python3=${PREFER_PYTHON3} \
     --user_clause=User --group_clause=Group \
     --listen_clause='#Listen' \
