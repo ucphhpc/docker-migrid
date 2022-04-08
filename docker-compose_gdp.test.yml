@@ -1,0 +1,908 @@
+version: '3.7'
+
+services:
+  devdns:
+    image: ruudud/devdns
+    container_name: devdns
+    ports:
+        - "127.0.0.1:53:53/udp"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      TZ: ${TZ}
+
+  # The migrid core services including httpd and tightly integrated services
+  # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
+
+  # NOTE: in order to test the publishing of container services on the host
+  #       with standard ports on 1.2.3.x one can set up a local dummy device:
+  #       sudo ip link add dummylan type dummy
+  #       sudo ip addr add 1.2.3.1/24 dev dummylan
+  #       sudo ip link set dummylan up
+  #
+  #       Then use the local firewall to forward the standard low service ports
+  #       to the exposed high ones.
+
+  migrid:
+    container_name: migrid
+    image: ucphhpc/migrid:$BUILD_TYPE
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TYPE: ${BUILD_TYPE}
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
+        PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
+        MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
+        EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
+        MIGOID_DOMAIN: ${MIGOID_DOMAIN}
+        EXTOID_DOMAIN: ${EXTOID_DOMAIN}
+        EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
+        SID_DOMAIN: ${SID_DOMAIN}
+        IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
+        MIG_OID_PROVIDER: ${MIG_OID_PROVIDER}
+        EXT_OID_PROVIDER: ${EXT_OID_PROVIDER}
+        EXT_OIDC_PROVIDER_META_URL: ${EXT_OIDC_PROVIDER_META_URL}
+        EXT_OIDC_CLIENT_NAME: ${EXT_OIDC_CLIENT_NAME}
+        EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
+        PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
+        PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
+        MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
+        EXTCERT_HTTPS_PORT: ${EXTCERT_HTTPS_PORT}
+        MIGOID_HTTPS_PORT: ${MIGOID_HTTPS_PORT}
+        EXTOID_HTTPS_PORT: ${EXTOID_HTTPS_PORT}
+        EXTOIDC_HTTPS_PORT: ${EXTOIDC_HTTPS_PORT}
+        SID_HTTPS_PORT: ${SID_HTTPS_PORT}
+        SFTP_PORT: ${SFTP_PORT}
+        SFTP_SUBSYS_PORT: ${SFTP_SUBSYS_PORT}
+        SFTP_SHOW_PORT: ${SFTP_SHOW_PORT}
+        DAVS_PORT: ${DAVS_PORT}
+        DAVS_SHOW_PORT: ${DAVS_SHOW_PORT}
+        OPENID_PORT: ${OPENID_PORT}
+        OPENID_SHOW_PORT: ${OPENID_SHOW_PORT}
+        FTPS_CTRL_PORT: ${FTPS_CTRL_PORT}
+        FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+        SKIN_SUFFIX: ${SKIN_SUFFIX}
+        ENABLE_OPENID: ${ENABLE_OPENID}
+        ENABLE_SFTP: ${ENABLE_SFTP}
+        ENABLE_SFTP_SUSBSYS: ${ENABLE_SFTP_SUSBSYS}
+        ENABLE_DAVS: ${ENABLE_DAVS}
+        ENABLE_FTPS: ${ENABLE_FTPS}
+        ENABLE_SHARELINKS: ${ENABLE_SHARELINKS}
+        ENABLE_TRANSFERS: ${ENABLE_TRANSFERS}
+        ENABLE_DUPLICATI: ${ENABLE_DUPLICATI}
+        ENABLE_SEAFILE: ${ENABLE_SEAFILE}
+        ENABLE_SANDBOXES: ${ENABLE_SANDBOXES}
+        ENABLE_VMACHINES: ${ENABLE_VMACHINES}
+        ENABLE_CRONTAB: ${ENABLE_CRONTAB}
+        ENABLE_JOBS: ${ENABLE_JOBS}
+        ENABLE_RESOURCES: ${ENABLE_RESOURCES}
+        ENABLE_EVENTS: ${ENABLE_EVENTS}
+        ENABLE_FREEZE: ${ENABLE_FREEZE}
+        ENABLE_IMNOTIFY: ${ENABLE_IMNOTIFY}
+        ENABLE_NOTIFY: ${ENABLE_NOTIFY}
+        ENABLE_PREVIEW: ${ENABLE_PREVIEW}
+        ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
+        ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
+        ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_GDP: ${ENABLE_GDP}
+        ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
+        ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
+        ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
+        PREFER_PYTHON3: ${PREFER_PYTHON3}
+        SIGNUP_METHODS: ${SIGNUP_METHODS}
+        LOGIN_METHODS: ${LOGIN_METHODS}
+        USER_INTERFACES: ${USER_INTERFACES}
+        AUTO_ADD_CERT_USER: ${AUTO_ADD_CERT_USER}
+        AUTO_ADD_OID_USER: ${AUTO_ADD_OID_USER}
+        AUTO_ADD_OIDC_USER: ${AUTO_ADD_OIDC_USER}
+        CERT_VALID_DAYS: ${CERT_VALID_DAYS}
+        OID_VALID_DAYS: ${OID_VALID_DAYS}
+        GENERIC_VALID_DAYS: ${GENERIC_VALID_DAYS}
+        DEFAULT_MENU: ${DEFAULT_MENU}
+        USER_MENU: ${USER_MENU}
+        WITH_PY3: ${WITH_PY3}
+        WITH_GIT: ${WITH_GIT}
+        JUPYTER_SERVICES: ${JUPYTER_SERVICES}
+        JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        VGRID_LABEL: ${VGRID_LABEL}
+        GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+    environment:
+      TZ: ${TZ}
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy
+    depends_on:
+      - devdns
+    networks:
+      default:
+        aliases:
+          - www.gdp.test
+          - cert.gdp.test
+          - ext.gdp.test
+          - oid.gdp.test
+          - sid.gdp.test
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+      - type: bind
+        source: /run/dbus/system_bus_socket
+        target: /run/dbus/system_bus_socket
+
+    env_file:
+      - migrid-httpd.env
+    command: /app/docker-entry.sh -g -u test@gdp.test -p TestPw0rd -s "sftp webdavs" 
+    #privileged: true
+
+  # A single container with all the daemons base migrid doesn't provide
+  migrid-io:
+    container_name: migrid-io
+    profiles:
+      - single
+    image: ucphhpc/migrid:$BUILD_TYPE
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TYPE: ${BUILD_TYPE}
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
+        PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
+        MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
+        EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
+        MIGOID_DOMAIN: ${MIGOID_DOMAIN}
+        EXTOID_DOMAIN: ${EXTOID_DOMAIN}
+        EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
+        SID_DOMAIN: ${SID_DOMAIN}
+        IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
+        MIG_OID_PROVIDER: ${MIG_OID_PROVIDER}
+        EXT_OID_PROVIDER: ${EXT_OID_PROVIDER}
+        EXT_OIDC_PROVIDER_META_URL: ${EXT_OIDC_PROVIDER_META_URL}
+        EXT_OIDC_CLIENT_NAME: ${EXT_OIDC_CLIENT_NAME}
+        EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
+        PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
+        PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
+        MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
+        EXTCERT_HTTPS_PORT: ${EXTCERT_HTTPS_PORT}
+        MIGOID_HTTPS_PORT: ${MIGOID_HTTPS_PORT}
+        EXTOID_HTTPS_PORT: ${EXTOID_HTTPS_PORT}
+        EXTOIDC_HTTPS_PORT: ${EXTOIDC_HTTPS_PORT}
+        SID_HTTPS_PORT: ${SID_HTTPS_PORT}
+        SFTP_PORT: ${SFTP_PORT}
+        SFTP_SUBSYS_PORT: ${SFTP_SUBSYS_PORT}
+        SFTP_SHOW_PORT: ${SFTP_SHOW_PORT}
+        DAVS_PORT: ${DAVS_PORT}
+        DAVS_SHOW_PORT: ${DAVS_SHOW_PORT}
+        OPENID_PORT: ${OPENID_PORT}
+        OPENID_SHOW_PORT: ${OPENID_SHOW_PORT}
+        FTPS_CTRL_PORT: ${FTPS_CTRL_PORT}
+        FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+        SKIN_SUFFIX: ${SKIN_SUFFIX}
+        ENABLE_OPENID: ${ENABLE_OPENID}
+        ENABLE_SFTP: ${ENABLE_SFTP}
+        ENABLE_SFTP_SUSBSYS: ${ENABLE_SFTP_SUSBSYS}
+        ENABLE_DAVS: ${ENABLE_DAVS}
+        ENABLE_FTPS: ${ENABLE_FTPS}
+        ENABLE_SHARELINKS: ${ENABLE_SHARELINKS}
+        ENABLE_TRANSFERS: ${ENABLE_TRANSFERS}
+        ENABLE_DUPLICATI: ${ENABLE_DUPLICATI}
+        ENABLE_SEAFILE: ${ENABLE_SEAFILE}
+        ENABLE_SANDBOXES: ${ENABLE_SANDBOXES}
+        ENABLE_VMACHINES: ${ENABLE_VMACHINES}
+        ENABLE_CRONTAB: ${ENABLE_CRONTAB}
+        ENABLE_JOBS: ${ENABLE_JOBS}
+        ENABLE_RESOURCES: ${ENABLE_RESOURCES}
+        ENABLE_EVENTS: ${ENABLE_EVENTS}
+        ENABLE_FREEZE: ${ENABLE_FREEZE}
+        ENABLE_IMNOTIFY: ${ENABLE_IMNOTIFY}
+        ENABLE_NOTIFY: ${ENABLE_NOTIFY}
+        ENABLE_PREVIEW: ${ENABLE_PREVIEW}
+        ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
+        ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
+        ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_GDP: ${ENABLE_GDP}
+        ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
+        ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
+        ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
+        PREFER_PYTHON3: ${PREFER_PYTHON3}
+        SIGNUP_METHODS: ${SIGNUP_METHODS}
+        LOGIN_METHODS: ${LOGIN_METHODS}
+        USER_INTERFACES: ${USER_INTERFACES}
+        AUTO_ADD_CERT_USER: ${AUTO_ADD_CERT_USER}
+        AUTO_ADD_OID_USER: ${AUTO_ADD_OID_USER}
+        AUTO_ADD_OIDC_USER: ${AUTO_ADD_OIDC_USER}
+        CERT_VALID_DAYS: ${CERT_VALID_DAYS}
+        OID_VALID_DAYS: ${OID_VALID_DAYS}
+        GENERIC_VALID_DAYS: ${GENERIC_VALID_DAYS}
+        DEFAULT_MENU: ${DEFAULT_MENU}
+        USER_MENU: ${USER_MENU}
+        WITH_PY3: ${WITH_PY3}
+        WITH_GIT: ${WITH_GIT}
+        JUPYTER_SERVICES: ${JUPYTER_SERVICES}
+        JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        VGRID_LABEL: ${VGRID_LABEL}
+        GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+    environment:
+      TZ: ${TZ}
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: openid sftp sftpsubsys webdavs ftps notify
+    depends_on:
+      - migrid
+    ports:
+      # NOTE: expose the unique raw port(s) to host 
+      - "${SFTP_PORT}:${SFTP_PORT}"
+      - "${DAVS_PORT}:${DAVS_PORT}"
+      - "${FTPS_CTRL_PORT}:${FTPS_CTRL_PORT}"
+      - "${FTPS_PASSIVE_PORTS}:${FTPS_PASSIVE_PORTS}"
+      - "${OPENID_PORT}:${OPENID_PORT}"
+      - "${SFTP_SUBSYS_PORT}:${SFTP_SUBSYS_PORT}"
+    networks:
+      default:
+        aliases:
+          - io.gdp.test
+          - openid.gdp.test
+          - webdavs.gdp.test
+          - ftps.gdp.test
+          - sftp.gdp.test
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+    command: /app/docker-entry.sh -g
+    #privileged: true
+
+  # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
+  #
+  # Multiple containers with individual daemons not provided by base migrid
+  migrid-openid:
+    container_name: migrid-openid
+    profiles:
+      - multi
+    image: ucphhpc/migrid:$BUILD_TYPE
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TYPE: ${BUILD_TYPE}
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
+        PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
+        MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
+        EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
+        MIGOID_DOMAIN: ${MIGOID_DOMAIN}
+        EXTOID_DOMAIN: ${EXTOID_DOMAIN}
+        EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
+        SID_DOMAIN: ${SID_DOMAIN}
+        IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
+        EXT_OID_PROVIDER: ${EXT_OID_PROVIDER}
+        EXT_OIDC_PROVIDER_META_URL: ${EXT_OIDC_PROVIDER_META_URL}
+        EXT_OIDC_CLIENT_NAME: ${EXT_OIDC_CLIENT_NAME}
+        EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
+        PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
+        PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
+        MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
+        EXTCERT_HTTPS_PORT: ${EXTCERT_HTTPS_PORT}
+        MIGOID_HTTPS_PORT: ${MIGOID_HTTPS_PORT}
+        EXTOID_HTTPS_PORT: ${EXTOID_HTTPS_PORT}
+        EXTOIDC_HTTPS_PORT: ${EXTOIDC_HTTPS_PORT}
+        SID_HTTPS_PORT: ${SID_HTTPS_PORT}
+        SFTP_PORT: ${SFTP_PORT}
+        SFTP_SUBSYS_PORT: ${SFTP_SUBSYS_PORT}
+        SFTP_SHOW_PORT: ${SFTP_SHOW_PORT}
+        DAVS_PORT: ${DAVS_PORT}
+        DAVS_SHOW_PORT: ${DAVS_SHOW_PORT}
+        OPENID_PORT: ${OPENID_PORT}
+        OPENID_SHOW_PORT: ${OPENID_SHOW_PORT}
+        FTPS_CTRL_PORT: ${FTPS_CTRL_PORT}
+        FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+        SKIN_SUFFIX: ${SKIN_SUFFIX}
+        ENABLE_OPENID: ${ENABLE_OPENID}
+        ENABLE_SFTP: ${ENABLE_SFTP}
+        ENABLE_SFTP_SUSBSYS: ${ENABLE_SFTP_SUSBSYS}
+        ENABLE_DAVS: ${ENABLE_DAVS}
+        ENABLE_FTPS: ${ENABLE_FTPS}
+        ENABLE_SHARELINKS: ${ENABLE_SHARELINKS}
+        ENABLE_TRANSFERS: ${ENABLE_TRANSFERS}
+        ENABLE_DUPLICATI: ${ENABLE_DUPLICATI}
+        ENABLE_SEAFILE: ${ENABLE_SEAFILE}
+        ENABLE_SANDBOXES: ${ENABLE_SANDBOXES}
+        ENABLE_VMACHINES: ${ENABLE_VMACHINES}
+        ENABLE_CRONTAB: ${ENABLE_CRONTAB}
+        ENABLE_JOBS: ${ENABLE_JOBS}
+        ENABLE_RESOURCES: ${ENABLE_RESOURCES}
+        ENABLE_EVENTS: ${ENABLE_EVENTS}
+        ENABLE_FREEZE: ${ENABLE_FREEZE}
+        ENABLE_IMNOTIFY: ${ENABLE_IMNOTIFY}
+        ENABLE_NOTIFY: ${ENABLE_NOTIFY}
+        ENABLE_PREVIEW: ${ENABLE_PREVIEW}
+        ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
+        ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
+        ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_GDP: ${ENABLE_GDP}
+        ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
+        ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
+        ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
+        PREFER_PYTHON3: ${PREFER_PYTHON3}
+        SIGNUP_METHODS: ${SIGNUP_METHODS}
+        LOGIN_METHODS: ${LOGIN_METHODS}
+        USER_INTERFACES: ${USER_INTERFACES}
+        AUTO_ADD_CERT_USER: ${AUTO_ADD_CERT_USER}
+        AUTO_ADD_OID_USER: ${AUTO_ADD_OID_USER}
+        AUTO_ADD_OIDC_USER: ${AUTO_ADD_OIDC_USER}
+        CERT_VALID_DAYS: ${CERT_VALID_DAYS}
+        OID_VALID_DAYS: ${OID_VALID_DAYS}
+        GENERIC_VALID_DAYS: ${GENERIC_VALID_DAYS}
+        DEFAULT_MENU: ${DEFAULT_MENU}
+        USER_MENU: ${USER_MENU}
+        WITH_PY3: ${WITH_PY3}
+        WITH_GIT: ${WITH_GIT}
+        JUPYTER_SERVICES: ${JUPYTER_SERVICES}
+        JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        VGRID_LABEL: ${VGRID_LABEL}
+        GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+    environment:
+      TZ: ${TZ}
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: openid
+    depends_on:
+      - migrid
+    ports:
+      # NOTE: expose the unique raw port(s) to host 
+      - "${OPENID_PORT}:${OPENID_PORT}"
+    networks:
+      default:
+        aliases:
+          - openid.gdp.test
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+    command: /app/docker-entry.sh -g
+    #privileged: true
+
+  migrid-sftp:
+    container_name: migrid-sftp
+    profiles:
+      - multi
+    image: ucphhpc/migrid:$BUILD_TYPE
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TYPE: ${BUILD_TYPE}
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
+        PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
+        MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
+        EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
+        MIGOID_DOMAIN: ${MIGOID_DOMAIN}
+        EXTOID_DOMAIN: ${EXTOID_DOMAIN}
+        EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
+        SID_DOMAIN: ${SID_DOMAIN}
+        IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
+        MIG_OID_PROVIDER: ${MIG_OID_PROVIDER}
+        EXT_OID_PROVIDER: ${EXT_OID_PROVIDER}
+        EXT_OIDC_PROVIDER_META_URL: ${EXT_OIDC_PROVIDER_META_URL}
+        EXT_OIDC_CLIENT_NAME: ${EXT_OIDC_CLIENT_NAME}
+        EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
+        PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
+        PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
+        MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
+        EXTCERT_HTTPS_PORT: ${EXTCERT_HTTPS_PORT}
+        MIGOID_HTTPS_PORT: ${MIGOID_HTTPS_PORT}
+        EXTOID_HTTPS_PORT: ${EXTOID_HTTPS_PORT}
+        EXTOIDC_HTTPS_PORT: ${EXTOIDC_HTTPS_PORT}
+        SID_HTTPS_PORT: ${SID_HTTPS_PORT}
+        SFTP_PORT: ${SFTP_PORT}
+        SFTP_SUBSYS_PORT: ${SFTP_SUBSYS_PORT}
+        SFTP_SHOW_PORT: ${SFTP_SHOW_PORT}
+        DAVS_PORT: ${DAVS_PORT}
+        DAVS_SHOW_PORT: ${DAVS_SHOW_PORT}
+        OPENID_PORT: ${OPENID_PORT}
+        OPENID_SHOW_PORT: ${OPENID_SHOW_PORT}
+        FTPS_CTRL_PORT: ${FTPS_CTRL_PORT}
+        FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+        SKIN_SUFFIX: ${SKIN_SUFFIX}
+        ENABLE_OPENID: ${ENABLE_OPENID}
+        ENABLE_SFTP: ${ENABLE_SFTP}
+        ENABLE_SFTP_SUSBSYS: ${ENABLE_SFTP_SUSBSYS}
+        ENABLE_DAVS: ${ENABLE_DAVS}
+        ENABLE_FTPS: ${ENABLE_FTPS}
+        ENABLE_SHARELINKS: ${ENABLE_SHARELINKS}
+        ENABLE_TRANSFERS: ${ENABLE_TRANSFERS}
+        ENABLE_DUPLICATI: ${ENABLE_DUPLICATI}
+        ENABLE_SEAFILE: ${ENABLE_SEAFILE}
+        ENABLE_SANDBOXES: ${ENABLE_SANDBOXES}
+        ENABLE_VMACHINES: ${ENABLE_VMACHINES}
+        ENABLE_CRONTAB: ${ENABLE_CRONTAB}
+        ENABLE_JOBS: ${ENABLE_JOBS}
+        ENABLE_RESOURCES: ${ENABLE_RESOURCES}
+        ENABLE_EVENTS: ${ENABLE_EVENTS}
+        ENABLE_FREEZE: ${ENABLE_FREEZE}
+        ENABLE_IMNOTIFY: ${ENABLE_IMNOTIFY}
+        ENABLE_NOTIFY: ${ENABLE_NOTIFY}
+        ENABLE_PREVIEW: ${ENABLE_PREVIEW}
+        ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
+        ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
+        ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_GDP: ${ENABLE_GDP}
+        ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
+        ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
+        ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
+        PREFER_PYTHON3: ${PREFER_PYTHON3}
+        SIGNUP_METHODS: ${SIGNUP_METHODS}
+        LOGIN_METHODS: ${LOGIN_METHODS}
+        USER_INTERFACES: ${USER_INTERFACES}
+        AUTO_ADD_CERT_USER: ${AUTO_ADD_CERT_USER}
+        AUTO_ADD_OID_USER: ${AUTO_ADD_OID_USER}
+        AUTO_ADD_OIDC_USER: ${AUTO_ADD_OIDC_USER}
+        CERT_VALID_DAYS: ${CERT_VALID_DAYS}
+        OID_VALID_DAYS: ${OID_VALID_DAYS}
+        GENERIC_VALID_DAYS: ${GENERIC_VALID_DAYS}
+        DEFAULT_MENU: ${DEFAULT_MENU}
+        USER_MENU: ${USER_MENU}
+        WITH_PY3: ${WITH_PY3}
+        WITH_GIT: ${WITH_GIT}
+        JUPYTER_SERVICES: ${JUPYTER_SERVICES}
+        JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        VGRID_LABEL: ${VGRID_LABEL}
+        GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+    environment:
+      TZ: ${TZ}
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: sftp sftpsubsys
+    depends_on:
+      - migrid
+    ports:
+      # NOTE: expose the unique raw port(s) to host 
+      - "${SFTP_PORT}:${SFTP_PORT}"
+      - "${SFTP_SUBSYS_PORT}:${SFTP_SUBSYS_PORT}"
+    networks:
+      default:
+        aliases:
+          - sftp.gdp.test
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+    command: /app/docker-entry.sh -g
+    #privileged: true
+
+  migrid-ftps:
+    container_name: migrid-ftps
+    profiles:
+      - multi
+    image: ucphhpc/migrid:$BUILD_TYPE
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TYPE: ${BUILD_TYPE}
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
+        PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
+        MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
+        EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
+        MIGOID_DOMAIN: ${MIGOID_DOMAIN}
+        EXTOID_DOMAIN: ${EXTOID_DOMAIN}
+        EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
+        SID_DOMAIN: ${SID_DOMAIN}
+        IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
+        MIG_OID_PROVIDER: ${MIG_OID_PROVIDER}
+        EXT_OID_PROVIDER: ${EXT_OID_PROVIDER}
+        EXT_OIDC_PROVIDER_META_URL: ${EXT_OIDC_PROVIDER_META_URL}
+        EXT_OIDC_CLIENT_NAME: ${EXT_OIDC_CLIENT_NAME}
+        EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
+        PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
+        PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
+        MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
+        EXTCERT_HTTPS_PORT: ${EXTCERT_HTTPS_PORT}
+        MIGOID_HTTPS_PORT: ${MIGOID_HTTPS_PORT}
+        EXTOID_HTTPS_PORT: ${EXTOID_HTTPS_PORT}
+        EXTOIDC_HTTPS_PORT: ${EXTOIDC_HTTPS_PORT}
+        SID_HTTPS_PORT: ${SID_HTTPS_PORT}
+        SFTP_PORT: ${SFTP_PORT}
+        SFTP_SUBSYS_PORT: ${SFTP_SUBSYS_PORT}
+        SFTP_SHOW_PORT: ${SFTP_SHOW_PORT}
+        DAVS_PORT: ${DAVS_PORT}
+        DAVS_SHOW_PORT: ${DAVS_SHOW_PORT}
+        OPENID_PORT: ${OPENID_PORT}
+        OPENID_SHOW_PORT: ${OPENID_SHOW_PORT}
+        FTPS_CTRL_PORT: ${FTPS_CTRL_PORT}
+        FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+        SKIN_SUFFIX: ${SKIN_SUFFIX}
+        ENABLE_OPENID: ${ENABLE_OPENID}
+        ENABLE_SFTP: ${ENABLE_SFTP}
+        ENABLE_SFTP_SUSBSYS: ${ENABLE_SFTP_SUSBSYS}
+        ENABLE_DAVS: ${ENABLE_DAVS}
+        ENABLE_FTPS: ${ENABLE_FTPS}
+        ENABLE_SHARELINKS: ${ENABLE_SHARELINKS}
+        ENABLE_TRANSFERS: ${ENABLE_TRANSFERS}
+        ENABLE_DUPLICATI: ${ENABLE_DUPLICATI}
+        ENABLE_SEAFILE: ${ENABLE_SEAFILE}
+        ENABLE_SANDBOXES: ${ENABLE_SANDBOXES}
+        ENABLE_VMACHINES: ${ENABLE_VMACHINES}
+        ENABLE_CRONTAB: ${ENABLE_CRONTAB}
+        ENABLE_JOBS: ${ENABLE_JOBS}
+        ENABLE_RESOURCES: ${ENABLE_RESOURCES}
+        ENABLE_EVENTS: ${ENABLE_EVENTS}
+        ENABLE_FREEZE: ${ENABLE_FREEZE}
+        ENABLE_IMNOTIFY: ${ENABLE_IMNOTIFY}
+        ENABLE_NOTIFY: ${ENABLE_NOTIFY}
+        ENABLE_PREVIEW: ${ENABLE_PREVIEW}
+        ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
+        ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
+        ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_GDP: ${ENABLE_GDP}
+        ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
+        ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}  
+        ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
+        PREFER_PYTHON3: ${PREFER_PYTHON3}
+        SIGNUP_METHODS: ${SIGNUP_METHODS}
+        LOGIN_METHODS: ${LOGIN_METHODS}
+        USER_INTERFACES: ${USER_INTERFACES}
+        AUTO_ADD_CERT_USER: ${AUTO_ADD_CERT_USER}
+        AUTO_ADD_OID_USER: ${AUTO_ADD_OID_USER}
+        AUTO_ADD_OIDC_USER: ${AUTO_ADD_OIDC_USER}
+        CERT_VALID_DAYS: ${CERT_VALID_DAYS}
+        OID_VALID_DAYS: ${OID_VALID_DAYS}
+        GENERIC_VALID_DAYS: ${GENERIC_VALID_DAYS}
+        DEFAULT_MENU: ${DEFAULT_MENU}
+        USER_MENU: ${USER_MENU}
+        WITH_PY3: ${WITH_PY3}
+        WITH_GIT: ${WITH_GIT}
+        JUPYTER_SERVICES: ${JUPYTER_SERVICES}
+        JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        VGRID_LABEL: ${VGRID_LABEL}
+        GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+    environment:
+      TZ: ${TZ}
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: ftps
+    depends_on:
+      - migrid
+    ports:
+      # NOTE: expose the unique raw port(s) to host 
+      - "${FTPS_CTRL_PORT}:${FTPS_CTRL_PORT}"
+      - "${FTPS_PASSIVE_PORTS}:${FTPS_PASSIVE_PORTS}"
+    networks:
+      default:
+        aliases:
+          - ftps.gdp.test
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+    command: /app/docker-entry.sh -g
+    #privileged: true
+
+  migrid-webdavs:
+    container_name: migrid-webdavs
+    profiles:
+      - multi
+    image: ucphhpc/migrid:$BUILD_TYPE
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
+      args:
+        BUILD_TYPE: ${BUILD_TYPE}
+        BUILD_TARGET: ${BUILD_TARGET}
+        DOMAIN: ${DOMAIN}
+        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
+        PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
+        MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
+        EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
+        MIGOID_DOMAIN: ${MIGOID_DOMAIN}
+        EXTOID_DOMAIN: ${EXTOID_DOMAIN}
+        EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
+        SID_DOMAIN: ${SID_DOMAIN}
+        IO_DOMAIN: ${IO_DOMAIN}
+        OPENID_DOMAIN: ${OPENID_DOMAIN}
+        FTPS_DOMAIN: ${FTPS_DOMAIN}
+        SFTP_DOMAIN: ${SFTP_DOMAIN}
+        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
+        MIG_OID_PROVIDER: ${MIG_OID_PROVIDER}
+        EXT_OID_PROVIDER: ${EXT_OID_PROVIDER}
+        EXT_OIDC_PROVIDER_META_URL: ${EXT_OIDC_PROVIDER_META_URL}
+        EXT_OIDC_CLIENT_NAME: ${EXT_OIDC_CLIENT_NAME}
+        EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
+        PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
+        PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
+        MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
+        EXTCERT_HTTPS_PORT: ${EXTCERT_HTTPS_PORT}
+        MIGOID_HTTPS_PORT: ${MIGOID_HTTPS_PORT}
+        EXTOID_HTTPS_PORT: ${EXTOID_HTTPS_PORT}
+        EXTOIDC_HTTPS_PORT: ${EXTOIDC_HTTPS_PORT}
+        SID_HTTPS_PORT: ${SID_HTTPS_PORT}
+        SFTP_PORT: ${SFTP_PORT}
+        SFTP_SUBSYS_PORT: ${SFTP_SUBSYS_PORT}
+        SFTP_SHOW_PORT: ${SFTP_SHOW_PORT}
+        DAVS_PORT: ${DAVS_PORT}
+        DAVS_SHOW_PORT: ${DAVS_SHOW_PORT}
+        OPENID_PORT: ${OPENID_PORT}
+        OPENID_SHOW_PORT: ${OPENID_SHOW_PORT}
+        FTPS_CTRL_PORT: ${FTPS_CTRL_PORT}
+        FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
+        MIG_SVN_REPO: ${MIG_SVN_REPO}
+        MIG_SVN_REV: ${MIG_SVN_REV}
+        MIG_GIT_REPO: ${MIG_GIT_REPO}
+        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
+        MIG_GIT_REV: ${MIG_GIT_REV}
+        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
+        EMULATE_FQDN: ${EMULATE_FQDN}
+        SKIN_SUFFIX: ${SKIN_SUFFIX}
+        ENABLE_OPENID: ${ENABLE_OPENID}
+        ENABLE_SFTP: ${ENABLE_SFTP}
+        ENABLE_SFTP_SUSBSYS: ${ENABLE_SFTP_SUSBSYS}
+        ENABLE_DAVS: ${ENABLE_DAVS}
+        ENABLE_FTPS: ${ENABLE_FTPS}
+        ENABLE_SHARELINKS: ${ENABLE_SHARELINKS}
+        ENABLE_TRANSFERS: ${ENABLE_TRANSFERS}
+        ENABLE_DUPLICATI: ${ENABLE_DUPLICATI}
+        ENABLE_SEAFILE: ${ENABLE_SEAFILE}
+        ENABLE_SANDBOXES: ${ENABLE_SANDBOXES}
+        ENABLE_VMACHINES: ${ENABLE_VMACHINES}
+        ENABLE_CRONTAB: ${ENABLE_CRONTAB}
+        ENABLE_JOBS: ${ENABLE_JOBS}
+        ENABLE_RESOURCES: ${ENABLE_RESOURCES}
+        ENABLE_EVENTS: ${ENABLE_EVENTS}
+        ENABLE_FREEZE: ${ENABLE_FREEZE}
+        ENABLE_IMNOTIFY: ${ENABLE_IMNOTIFY}
+        ENABLE_NOTIFY: ${ENABLE_NOTIFY}
+        ENABLE_PREVIEW: ${ENABLE_PREVIEW}
+        ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
+        ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
+        ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_GDP: ${ENABLE_GDP}
+        ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
+        ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
+        ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
+        PREFER_PYTHON3: ${PREFER_PYTHON3}
+        SIGNUP_METHODS: ${SIGNUP_METHODS}
+        LOGIN_METHODS: ${LOGIN_METHODS}
+        USER_INTERFACES: ${USER_INTERFACES}
+        AUTO_ADD_CERT_USER: ${AUTO_ADD_CERT_USER}
+        AUTO_ADD_OID_USER: ${AUTO_ADD_OID_USER}
+        AUTO_ADD_OIDC_USER: ${AUTO_ADD_OIDC_USER}
+        CERT_VALID_DAYS: ${CERT_VALID_DAYS}
+        OID_VALID_DAYS: ${OID_VALID_DAYS}
+        GENERIC_VALID_DAYS: ${GENERIC_VALID_DAYS}
+        DEFAULT_MENU: ${DEFAULT_MENU}
+        USER_MENU: ${USER_MENU}
+        WITH_PY3: ${WITH_PY3}
+        WITH_GIT: ${WITH_GIT}
+        JUPYTER_SERVICES: ${JUPYTER_SERVICES}
+        JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        VGRID_LABEL: ${VGRID_LABEL}
+        GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+    environment:
+      TZ: ${TZ}
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: webdavs
+    depends_on:
+      - migrid
+    ports:
+      # NOTE: expose the unique raw port(s) to host 
+      - "${DAVS_PORT}:${DAVS_PORT}"
+    networks:
+      default:
+        aliases:
+          - webdavs.gdp.test
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd/
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: state
+        target: /home/mig/state
+    command: /app/docker-entry.sh -g
+    #privileged: true
+
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    # TODO: can we add an httpd health check and switch to wait for condition
+    #       service_healthy to avoid the storm of initial avoid nginx errors
+    #       from racing apache during start up? Apparently that will not work
+    #       with on-going jupyter integration due to swarm mode, however.
+    depends_on:
+      - migrid
+    ports:
+      # NOTE: expose the unique raw port(s) to host 
+      - "80:80"
+      - "443:443"
+      - "444:444"
+      - "445:445"
+      - "446:446"
+      - "447:447"
+      - "448:448"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./nginx-proxy-gdp.test.conf:/etc/nginx/conf.d/migrid.conf
+      - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
+      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/www.gdp.test.crt
+      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/cert.gdp.test.crt
+      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/ext.gdp.test.crt
+      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/oid.gdp.test.crt
+      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/sid.gdp.test.crt
+      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/www.gdp.test.key
+      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/cert.gdp.test.key
+      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/ext.gdp.test.key
+      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/oid.gdp.test.key
+      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/sid.gdp.test.key
+      - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
+
+volumes:
+  certs:
+    driver: local
+    driver_opts:
+      # Volume for generated certificates (provided by migrid)
+      type: none
+      device: $PWD/certs
+      o: bind
+
+  httpd:
+    # Volume used for httpd config (provided by migrid)
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/httpd
+      o: bind
+
+  mig:
+    # Volume used to contain the migrid code and conf (provided by migrid at svn)
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/mig
+      o: bind
+
+  state:
+      # Volume used to contain the migrid state (provided by migrid)
+      driver: local
+      driver_opts:
+        type: none
+        device: $PWD/state
+        o: bind
