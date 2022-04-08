@@ -5,33 +5,53 @@
 # Continuously checks whether the selected services are still alive.
 
 # Create any user requested
-while getopts u:p:s: option; do
+GDP=0
+while getopts u:p:s:g option; do
     case "${option}" in
         u) USERNAME=${OPTARG};;
         p) PASSWORD=${OPTARG};;
         s) SVCLOGINS=${OPTARG};;
+	    g) GDP=1;;
     esac
 done
 
 # Create a default account (Use service owner account)
 if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
-    echo "Creating $USERNAME"
+    echo "Ensureing user: $USERNAME"
+    echo "Using GDP mode: $GDP"
+
     # Ensure the database is present
     su - $USER -c "$MIG_ROOT/mig/server/migrateusers.py"
     # createuser.py Usage:
     # [OPTIONS] [FULL_NAME ORGANIZATION STATE COUNTRY EMAIL COMMENT PASSWORD]
-    su - $USER -c "$MIG_ROOT/mig/server/deleteuser.py -f -i \"/C=DK/ST=NA/L=NA/O=Test Org/OU=NA/CN=Test User/emailAddress=$USERNAME\""
-    su - $USER -c "$MIG_ROOT/mig/server/createuser.py -o $USERNAME 'Test User' 'Test Org' NA DK $USERNAME foo $PASSWORD"
+    # If GDP mode skip user delete as it breaks the system
+    CERT_DN="/C=DK/ST=NA/L=NA/O=Test Org/OU=NA/CN=Test User/emailAddress=$USERNAME"
+    CREATE_USER_CMD="su - $USER -c \"$MIG_ROOT/mig/server/createuser.py -o $USERNAME 'Test User' 'Test Org' NA DK $USERNAME foo $PASSWORD\""
+    if [ "$GDP" -eq 0 ]; then
+        su - $USER -c "$MIG_ROOT/mig/server/deleteuser.py -f -i \"${CERT_DN}\""
+        eval "$CREATE_USER_CMD"
+    else
+        # Try to renew user, if that fails then create
+        echo "Renewing user: \"${CERT_DN}\""
+        su - $USER -c "$MIG_ROOT/mig/server/createuser.py -r -i \"${CERT_DN}\" >/dev/null 2>&1"
+        ret=$?
+        if [ "$ret" -ne 0 ]; then
+           echo "Renew failed, try to create user: \"${CERT_DN}\""
+           eval "$CREATE_USER_CMD"
+        fi
+    fi
     echo "Ensure correct permissions for $USERNAME"
     chown $USER:$USER $MIG_ROOT/mig/server/MiG-users.db
     chmod 644 $MIG_ROOT/mig/server/MiG-users.db
     chown -R $USER:$USER $MIG_ROOT/state
-    
-    for PROTO in ${SVCLOGINS}; do
-    echo "Add $PROTO password login for $USERNAME"
-        su - $USER -c "python $MIG_ROOT/mig/cgi-bin/fakecgi.py $MIG_ROOT/mig/cgi-bin/settingsaction.py POST \"topic=${PROTO};output_format=text;password=${PASSWORD}\" \"/C=DK/ST=NA/L=NA/O=Test Org/OU=NA/CN=Test User/emailAddress=${USERNAME}\" admin 127.0.0.1 True" | grep 'Exit code: 0 ' || \
-	    echo "Failed to set $PROTO password login"
-    done
+    # If GDP mode skip SVCLOGINS as they have no effect
+    if [ "$GDP" -eq 0 ]; then 
+        for PROTO in ${SVCLOGINS}; do
+            echo "Add $PROTO password login for $USERNAME"
+            su - $USER -c "python $MIG_ROOT/mig/cgi-bin/fakecgi.py $MIG_ROOT/mig/cgi-bin/settingsaction.py POST \"topic=${PROTO};output_format=text;password=${PASSWORD}\" \"/C=DK/ST=NA/L=NA/O=Test Org/OU=NA/CN=Test User/emailAddress=${USERNAME}\" admin 127.0.0.1 True" | grep 'Exit code: 0 ' || \
+            echo "Failed to set $PROTO password login"
+        done
+    fi
 fi
 
 echo "Run services: ${RUN_SERVICES}"

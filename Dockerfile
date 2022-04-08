@@ -39,8 +39,15 @@ ARG MIGOID_HTTPS_PORT=443
 ARG EXTOID_HTTPS_PORT=445
 ARG EXTOIDC_HTTPS_PORT=449
 ARG SID_HTTPS_PORT=448
-ARG SFTP_PORT=2222
 ARG SFTP_SUBSYS_PORT=22222
+ARG SFTP_PORT=2222
+ARG SFTP_SHOW_PORT=22
+ARG DAVS_PORT=4443
+ARG DAVS_SHOW_PORT=443
+ARG FTPS_CTRL_PORT=8021
+ARG FTPS_CTRL_SHOW_PORT=21
+ARG OPENID_PORT=8443
+ARG OPENID_SHOW_PORT=443
 ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
 ARG MIG_SVN_REV=5250
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
@@ -72,6 +79,8 @@ ARG ENABLE_WORKFLOWS=False
 ARG ENABLE_VERIFY_CERTS=True
 ARG ENABLE_JUPYTER=True
 ARG ENABLE_GDP=False
+ARG ENABLE_TWOFACTOR=False
+ARG ENABLE_TWOFACTOR_STRICT_ADDRESS=False
 ARG ENABLE_SELF_SIGNED_CERTS=False
 ARG PUBKEY_FROM_DNS=False
 ARG PREFER_PYTHON3=False
@@ -88,6 +97,8 @@ ARG DEFAULT_MENU=
 ARG USER_MENU=jupyter
 ARG WITH_PY3=no
 ARG WITH_GIT=no
+ARG VGRID_LABEL=Workgroup
+ARG GDP_EMAIL_NOTIFY=True
 
 # Jupyter Arguments
 ARG JUPYTER_SERVICES=""
@@ -120,6 +131,13 @@ ARG EXTOIDC_HTTPS_PORT
 ARG SID_HTTPS_PORT
 ARG SFTP_PORT
 ARG SFTP_SUBSYS_PORT
+ARG SFTP_SHOW_PORT
+ARG DAVS_PORT
+ARG DAVS_SHOW_PORT
+ARG FTPS_CTRL_PORT
+ARG FTPS_CTRL_SHOW_PORT
+ARG OPENID_PORT
+ARG OPENID_SHOW_PORT
 #ARG MIG_SVN_REPO
 #ARG MIG_SVN_REV
 #ARG MIG_GIT_REPO
@@ -142,6 +160,7 @@ RUN echo "Ports: " "${PUBLIC_HTTP_PORT} ${PUBLIC_HTTPS_PORT}" \
     "${MIGOID_HTTPS_PORT} ${EXTOID_HTTPS_PORT}" \
     "${MIGCERT_HTTPS_PORT} ${EXTCERT_HTTPS_PORT}" \
     "${SID_HTTPS_PORT} ${SFTP_PORT} ${SFTP_SUBSYS_PORT}" \
+    "${DAVS_PORT}"
 #RUN echo "MiG svn repo and revision: $MIG_SVN_REPO $MIG_SVN_REV"
 #RUN echo "MiG git repo , branch and revision: $MIG_GIT_REPO $MIG_GIT_BRANCH $MIG_GIT_REV"
 #RUN echo "Emulate flavor: $EMULATE_FLAVOR"
@@ -153,6 +172,7 @@ RUN echo "Enable python3 support: $WITH_PY3"
 FROM init as base
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
+ARG ENABLE_GDP
 ARG ENABLE_SELF_SIGNED_CERTS
 ARG WITH_PY3
 
@@ -239,6 +259,20 @@ RUN if [ "${WITH_PY3}" = "yes" ]; then \
       echo "no py3 deps"; \
     fi;
 
+# Install GDP dependencies 
+RUN if [ "${ENABLE_GDP}" = "True" ]; then \
+      echo "install GDP deps" \
+      && yum update -y \
+      && yum install -y \
+	postfix \
+	python-xvfbwrapper \
+	wkhtmltopdf \
+	xorg-x11-server-Xvfb \
+      && pip install git+https://github.com/Martin-Rehr/python-pdfkit.git; \
+    else \
+      echo "no GDP deps"; \
+    fi;
+
 # Apache OpenID (provided by epel)
 RUN yum install -y mod_auth_openid
 
@@ -247,6 +281,7 @@ RUN yum install -y mod_auth_openid
 RUN echo "ENABLE_SELF_SIGNED_CERTS: $ENABLE_SELF_SIGNED_CERTS"
 RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
 	echo "Re-installing libopkele with ssl verification disabled" \
+	&& yum update -y \
 	&& yum install -y gcc-c++ \
         	rpm-build \
         	boost-devel \
@@ -517,6 +552,13 @@ ARG EXTOIDC_HTTPS_PORT
 ARG SID_HTTPS_PORT
 ARG SFTP_PORT
 ARG SFTP_SUBSYS_PORT
+ARG SFTP_SHOW_PORT
+ARG DAVS_PORT
+ARG DAVS_SHOW_PORT
+ARG FTPS_CTRL_PORT
+ARG FTPS_CTRL_SHOW_PORT
+ARG OPENID_PORT
+ARG OPENID_SHOW_PORT
 ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
 ARG SKIN_SUFFIX
@@ -543,6 +585,8 @@ ARG ENABLE_WORKFLOWS
 ARG ENABLE_VERIFY_CERTS
 ARG ENABLE_JUPYTER
 ARG ENABLE_GDP
+ARG ENABLE_TWOFACTOR
+ARG ENABLE_TWOFACTOR_STRICT_ADDRESS
 ARG PUBKEY_FROM_DNS
 ARG PREFER_PYTHON3
 ARG SIGNUP_METHODS
@@ -558,6 +602,8 @@ ARG DEFAULT_MENU
 ARG USER_MENU
 ARG JUPYTER_SERVICES
 ARG JUPYTER_SERVICES_DESC
+ARG VGRID_LABEL
+ARG GDP_EMAIL_NOTIFY
 
 ENV PYTHONPATH=${MIG_ROOT}
 # Ensure that the $USER sets it during session start
@@ -603,7 +649,9 @@ RUN ./generateconfs.py --source=. \
     --mig_oid_port=${MIGOID_HTTPS_PORT} --ext_oid_port=${EXTOID_HTTPS_PORT} \
     --mig_cert_port=${MIGCERT_HTTPS_PORT} --ext_cert_port=${EXTCERT_HTTPS_PORT} \
     --sid_port=${SID_HTTPS_PORT} \
-    --sftp_port=${SFTP_PORT} --sftp_subsys_port=${SFTP_SUBSYS_PORT} \
+    --sftp_port=${SFTP_PORT} --sftp_subsys_port=${SFTP_SUBSYS_PORT} --sftp_show_port=${SFTP_SHOW_PORT} \
+    --davs_port=${DAVS_PORT} --davs_show_port=${DAVS_SHOW_PORT} \
+    --ftps_ctrl_port=${FTPS_CTRL_PORT} --ftps_ctrl_show_port=${FTPS_CTRL_SHOW_PORT} \
     --mig_oid_provider=${MIG_OID_PROVIDER} \
     --ext_oid_provider=${EXT_OID_PROVIDER} \
     --ext_oidc_provider_meta_url=${EXT_OIDC_PROVIDER_META_URL} \
@@ -618,11 +666,13 @@ RUN ./generateconfs.py --source=. \
     --enable_crontab=${ENABLE_CRONTAB} --enable_jobs=${ENABLE_JOBS} \
     --enable_resources=${ENABLE_RESOURCES} --enable_events=${ENABLE_EVENTS} \
     --enable_freeze=${ENABLE_FREEZE} --enable_imnotify=${ENABLE_IMNOTIFY} \
-    --enable_twofactor=True --enable_cracklib=True \
-    --enable_notify=${ENABLE_NOTIFY} --enable_preview=${ENABLE_PREVIEW} \
+    --enable_twofactor=${ENABLE_TWOFACTOR} \
+    --enable_twofactor_strict_address=${ENABLE_TWOFACTOR_STRICT_ADDRESS} \
+    --enable_cracklib=True --enable_notify=${ENABLE_NOTIFY} --enable_preview=${ENABLE_PREVIEW} \
     --enable_workflows=${ENABLE_WORKFLOWS} --enable_hsts=True \
     --enable_vhost_certs=True --enable_verify_certs=${ENABLE_VERIFY_CERTS} \
     --enable_jupyter=${ENABLE_JUPYTER} --enable_gdp=${ENABLE_GDP} \
+    --gdp_email_notify=${GDP_EMAIL_NOTIFY} \
     --jupyter_services=${JUPYTER_SERVICES} \
     --jupyter_services_desc="${JUPYTER_SERVICES_DESC}" \
     --prefer_python3=${PREFER_PYTHON3} \
@@ -638,14 +688,14 @@ RUN ./generateconfs.py --source=. \
     --login_methods="${LOGIN_METHODS}" \
     --distro=centos --user_interface="${USER_INTERFACES}" \
     --skin=${EMULATE_FLAVOR}-${SKIN_SUFFIX} --short_title="${DOMAIN}" \
-    --vgrid_label=Workgroup \
+    --vgrid_label="${VGRID_LABEL}" \
     --auto_add_cert_user=${AUTO_ADD_CERT_USER} \
     --auto_add_oid_user=${AUTO_ADD_OID_USER} \
     --auto_add_oidc_user=${AUTO_ADD_OIDC_USER} \
     --cert_valid_days=${CERT_VALID_DAYS} --oid_valid_days=${OID_VALID_DAYS} \
     --generic_valid_days=${GENERIC_VALID_DAYS} \
     --default_menu="${DEFAULT_MENU}" --user_menu="${USER_MENU}" \
-    --apache_worker_procs=256 --wsgi_procs=25
+    --apache_worker_procs=256 --wsgi_procs=25; 
 
 RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/static-skin.css $MIG_ROOT/mig/images/ \
