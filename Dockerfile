@@ -49,10 +49,17 @@ ARG FTPS_CTRL_SHOW_PORT=21
 ARG OPENID_PORT=8443
 ARG OPENID_SHOW_PORT=443
 ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
-ARG MIG_SVN_REV=5401
+ARG MIG_SVN_REV=5407
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
 ARG MIG_GIT_BRANCH=edge
-ARG MIG_GIT_REV=de8841118100253da582ea5a745a1bfd3daae9ff
+ARG MIG_GIT_REV=32e5384ef1ebb55b5ec1a1d0edc6b01108115acf
+ARG ADMIN_EMAIL=mig
+ARG ADMIN_LIST=
+ARG LOG_LEVEL=info
+ARG TITLE="Minimum intrusion Grid"
+ARG SHORT_TITLE=MiG
+ARG MIG_OID_TITLE=MiG
+ARG EXT_OID_TITLE=External
 ARG EMULATE_FLAVOR=migrid
 ARG EMULATE_FQDN=migrid.org
 ARG SKIN_SUFFIX=basic
@@ -541,11 +548,6 @@ ARG OPENID_DOMAIN
 ARG FTPS_DOMAIN
 ARG SFTP_DOMAIN
 ARG WEBDAVS_DOMAIN
-ARG MIG_OID_PROVIDER
-ARG EXT_OID_PROVIDER
-ARG EXT_OIDC_PROVIDER_META_URL
-ARG EXT_OIDC_CLIENT_NAME
-ARG EXT_OIDC_CLIENT_ID
 ARG PUBLIC_HTTP_PORT
 ARG PUBLIC_HTTPS_PORT
 ARG MIGCERT_HTTPS_PORT
@@ -563,6 +565,19 @@ ARG FTPS_CTRL_PORT
 ARG FTPS_CTRL_SHOW_PORT
 ARG OPENID_PORT
 ARG OPENID_SHOW_PORT
+ARG ADMIN_EMAIL
+ARG ADMIN_LIST
+ARG LOG_LEVEL
+ARG TITLE
+ARG SHORT_TITLE
+ARG MIG_OID_TITLE
+ARG EXT_OID_TITLE
+ARG MIG_OID_PROVIDER
+ARG EXT_OID_PROVIDER
+ARG EXT_OIDC_PROVIDER_META_URL
+ARG EXT_OIDC_CLIENT_NAME
+ARG EXT_OIDC_CLIENT_ID
+ARG EXT_OIDC_SCOPE
 ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
 ARG SKIN_SUFFIX
@@ -631,7 +646,8 @@ RUN ./generateconfs.py --source=. \
     --ext_oidc_fqdn=${EXTOIDC_DOMAIN} \
     --sid_fqdn=${SID_DOMAIN} \
     --io_fqdn=${IO_DOMAIN} \
-    --user=mig --group=mig \
+    --user=mig --group=mig --log_level=${LOG_LEVEL} \
+    --admin_email="${ADMIN_EMAIL}" --admin_list="${ADMIN_LIST}" \
     --apache_version=2.4 \
     --apache_etc=/etc/httpd \
     --apache_run=/var/run/httpd \
@@ -658,11 +674,12 @@ RUN ./generateconfs.py --source=. \
     --sftp_show_port=${SFTP_SHOW_PORT} \
     --davs_port=${DAVS_PORT} --davs_show_port=${DAVS_SHOW_PORT} \
     --ftps_ctrl_port=${FTPS_CTRL_PORT} --ftps_ctrl_show_port=${FTPS_CTRL_SHOW_PORT} \
+    --mig_oid_title="${MIG_OID_TITLE}" --ext_oid_title="${EXT_OID_TITLE}" \
     --mig_oid_provider=${MIG_OID_PROVIDER} \
     --ext_oid_provider=${EXT_OID_PROVIDER} \
     --ext_oidc_provider_meta_url=${EXT_OIDC_PROVIDER_META_URL} \
-    --ext_oidc_client_name=${EXT_OIDC_CLIENT_NAME} \
-    --ext_oidc_client_id=${EXT_OIDC_CLIENT_ID} \
+    --ext_oidc_client_name="${EXT_OIDC_CLIENT_NAME}" \
+    --ext_oidc_client_id="${EXT_OIDC_CLIENT_ID}" \
     --enable_openid=${ENABLE_OPENID} --enable_wsgi=True \
     --enable_sftp=${ENABLE_SFTP} --enable_sftp_subsys=${ENABLE_SFTP_SUSBSYS} \
     --enable_davs=${ENABLE_DAVS} --enable_ftps=${ENABLE_FTPS} \
@@ -693,7 +710,8 @@ RUN ./generateconfs.py --source=. \
     --signup_methods="${SIGNUP_METHODS}" \
     --login_methods="${LOGIN_METHODS}" \
     --distro=centos --user_interface="${USER_INTERFACES}" \
-    --skin=${EMULATE_FLAVOR}-${SKIN_SUFFIX} --short_title="${DOMAIN}" \
+    --skin="${EMULATE_FLAVOR}-${SKIN_SUFFIX}" \
+    --title="${TITLE}" --short_title="${SHORT_TITLE}" \
     --vgrid_label="${VGRID_LABEL}" \
     --auto_add_cert_user=${AUTO_ADD_CERT_USER} \
     --auto_add_oid_user=${AUTO_ADD_OID_USER} \
@@ -720,10 +738,7 @@ ARG EXTOIDC_DOMAIN
 ARG SID_DOMAIN
 ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
-
-# TODO: expose loglevel in generateconfs and use there
-# Enable jupyter menu
-RUN sed -i -e 's/loglevel = info/loglevel = debug/g' $MIG_ROOT/mig/server/MiGserver.conf
+ARG ENABLE_SELF_SIGNED_CERTS
 
 # Prepare oiddiscover for httpd
 RUN cd $MIG_ROOT/mig \
@@ -770,10 +785,12 @@ RUN cp generated-confs/apache2.conf $WEB_DIR/ \
     && cp generated-confs/ports.conf $WEB_DIR/ \
     && cp generated-confs/envvars $WEB_DIR/
 
-# Disable certificate check for OID
-RUN sed -i '/\/server.ca.pem/ a SSLProxyCheckPeerName off' $WEB_DIR/conf.d/MiG.conf \
-    && sed -i '/SSLProxyCheckPeerName off/ a SSLProxyCheckPeerCN off' \
-    $WEB_DIR/conf.d/MiG.conf
+# Disable certificate check for OID if self-signed certs
+RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
+        sed -i '/\/server.ca.pem/ a SSLProxyCheckPeerName off' $WEB_DIR/conf.d/MiG.conf \
+        && sed -i '/SSLProxyCheckPeerName off/ a SSLProxyCheckPeerCN off' \
+        $WEB_DIR/conf.d/MiG.conf; \
+    fi
 
 # Front page
 RUN cp -a $MIG_ROOT/state/wwwpublic/index-${EMULATE_FQDN}.html \
@@ -785,7 +802,7 @@ RUN cp -a $MIG_ROOT/state/wwwpublic/index-${EMULATE_FQDN}.html \
     ln -s terms-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/terms-snippet.html && \
     chown -R $USER:$USER $MIG_ROOT/state/wwwpublic/*.html
 
-# TODO: imporve this hard-coded translation
+# TODO: improve this hard-coded translation
 # Replace index.html redirects to instance domains
 RUN sed -i -e "s@https://ext\.${EMULATE_FQDN}@https://${MIGOID_DOMAIN}@g;s@https://oid\.${EMULATE_FQDN}@https://${EXTOID_DOMAIN}@g;s@https://${EMULATE_FQDN}@https://${EXTOID_DOMAIN}@g;s@https://cert\.${EMULATE_FQDN}@https://${EXTCERT_DOMAIN}@g;s@https://sid\.${EMULATE_FQDN}@https://${SID_DOMAIN}@g" $MIG_ROOT/state/wwwpublic/index-${DOMAIN}.html
 
