@@ -11,13 +11,13 @@ while getopts u:p:s:g option; do
         u) USERNAME=${OPTARG};;
         p) PASSWORD=${OPTARG};;
         s) SVCLOGINS=${OPTARG};;
-	    g) GDP=1;;
+        g) GDP=1;;
     esac
 done
 
 # Create a default account (Use service owner account)
 if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
-    echo "Ensureing user: $USERNAME"
+    echo "Ensuring user: $USERNAME"
     echo "Using GDP mode: $GDP"
 
     # Ensure the database is present
