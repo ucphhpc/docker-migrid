@@ -49,10 +49,10 @@ ARG FTPS_CTRL_SHOW_PORT=21
 ARG OPENID_PORT=8443
 ARG OPENID_SHOW_PORT=443
 ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
-ARG MIG_SVN_REV=5250
+ARG MIG_SVN_REV=5401
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
-ARG MIG_GIT_BRANCH=master
-ARG MIG_GIT_REV=047a4002d11b5743141b6cef3ec93672f9f30098
+ARG MIG_GIT_BRANCH=edge
+ARG MIG_GIT_REV=de8841118100253da582ea5a745a1bfd3daae9ff
 ARG EMULATE_FLAVOR=migrid
 ARG EMULATE_FQDN=migrid.org
 ARG SKIN_SUFFIX=basic
@@ -79,7 +79,7 @@ ARG ENABLE_WORKFLOWS=False
 ARG ENABLE_VERIFY_CERTS=True
 ARG ENABLE_JUPYTER=True
 ARG ENABLE_GDP=False
-ARG ENABLE_TWOFACTOR=False
+ARG ENABLE_TWOFACTOR=True
 ARG ENABLE_TWOFACTOR_STRICT_ADDRESS=False
 ARG ENABLE_SELF_SIGNED_CERTS=False
 ARG PUBKEY_FROM_DNS=False
@@ -97,7 +97,7 @@ ARG DEFAULT_MENU=
 ARG USER_MENU=jupyter
 ARG WITH_PY3=no
 ARG WITH_GIT=no
-ARG VGRID_LABEL=Workgroup
+ARG VGRID_LABEL=VGrid
 ARG GDP_EMAIL_NOTIFY=True
 
 # Jupyter Arguments
@@ -157,10 +157,10 @@ RUN echo "Domains: $DOMAIN" "${PUBLIC_DOMAIN}" "${MIGCERT_DOMAIN}" \
            "${OPENID_DOMAIN}" "${SFTP_DOMAIN}" "${FTPS_DOMAIN}" \
            "${WEBDAVS_DOMAIN}"
 RUN echo "Ports: " "${PUBLIC_HTTP_PORT} ${PUBLIC_HTTPS_PORT}" \
-    "${MIGOID_HTTPS_PORT} ${EXTOID_HTTPS_PORT}" \
+    "${MIGOID_HTTPS_PORT} ${EXTOID_HTTPS_PORT} ${EXTOIDC_HTTPS_PORT}" \
     "${MIGCERT_HTTPS_PORT} ${EXTCERT_HTTPS_PORT}" \
     "${SID_HTTPS_PORT} ${SFTP_PORT} ${SFTP_SUBSYS_PORT}" \
-    "${DAVS_PORT}"
+    "${FTPS_CTRL_PORT} ${DAVS_PORT} ${OPENID_PORT}"
 #RUN echo "MiG svn repo and revision: $MIG_SVN_REPO $MIG_SVN_REV"
 #RUN echo "MiG git repo , branch and revision: $MIG_GIT_REPO $MIG_GIT_BRANCH $MIG_GIT_REV"
 #RUN echo "Emulate flavor: $EMULATE_FLAVOR"
@@ -259,16 +259,17 @@ RUN if [ "${WITH_PY3}" = "yes" ]; then \
       echo "no py3 deps"; \
     fi;
 
-# Install GDP dependencies 
+# Install GDP dependencies
+# TODO: does postfix "just work" and should it perhaps always be installed?
 RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       echo "install GDP deps" \
       && yum update -y \
       && yum install -y \
-	postfix \
-	python-xvfbwrapper \
-	wkhtmltopdf \
-	xorg-x11-server-Xvfb \
-      && pip install git+https://github.com/Martin-Rehr/python-pdfkit.git; \
+      postfix \
+      python-xvfbwrapper \
+      wkhtmltopdf \
+      xorg-x11-server-Xvfb \
+      && pip install git+https://github.com/Martin-Rehr/python-pdfkit.git ; \
     else \
       echo "no GDP deps"; \
     fi;
@@ -278,6 +279,9 @@ RUN yum install -y mod_auth_openid
 
 # Disable Apache OpenID ssl-certificate verification
 # (recompile libopkele with --disable-ssl-verify-host --disable-ssl-verify-peer)
+# TODO: do we REALLY want this security crippling to avoid self-signed cert noise?
+# TODO: consider e.g. a MiG CA signed dummy cert instead and explicit cacert import
+# TODO: this hard-coded version sucks, at least use e.g. yumdownloader from yum-utils
 RUN echo "ENABLE_SELF_SIGNED_CERTS: $ENABLE_SELF_SIGNED_CERTS"
 RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
 	echo "Re-installing libopkele with ssl verification disabled" \
@@ -624,6 +628,7 @@ RUN ./generateconfs.py --source=. \
     --ext_cert_fqdn=${EXTCERT_DOMAIN} \
     --mig_oid_fqdn=${MIGOID_DOMAIN} \
     --ext_oid_fqdn=${EXTOID_DOMAIN} \
+    --ext_oidc_fqdn=${EXTOIDC_DOMAIN} \
     --sid_fqdn=${SID_DOMAIN} \
     --io_fqdn=${IO_DOMAIN} \
     --user=mig --group=mig \
@@ -647,9 +652,10 @@ RUN ./generateconfs.py --source=. \
     --davs_address=${WEBDAVS_DOMAIN} \
     --public_http_port=${PUBLIC_HTTP_PORT} --public_https_port=${PUBLIC_HTTPS_PORT} \
     --mig_oid_port=${MIGOID_HTTPS_PORT} --ext_oid_port=${EXTOID_HTTPS_PORT} \
-    --mig_cert_port=${MIGCERT_HTTPS_PORT} --ext_cert_port=${EXTCERT_HTTPS_PORT} \
-    --sid_port=${SID_HTTPS_PORT} \
-    --sftp_port=${SFTP_PORT} --sftp_subsys_port=${SFTP_SUBSYS_PORT} --sftp_show_port=${SFTP_SHOW_PORT} \
+    --ext_oidc_port=${EXTOIDC_HTTPS_PORT} --mig_cert_port=${MIGCERT_HTTPS_PORT} \
+    --ext_cert_port=${EXTCERT_HTTPS_PORT} --sid_port=${SID_HTTPS_PORT} \
+    --sftp_port=${SFTP_PORT} --sftp_subsys_port=${SFTP_SUBSYS_PORT} \
+    --sftp_show_port=${SFTP_SHOW_PORT} \
     --davs_port=${DAVS_PORT} --davs_show_port=${DAVS_SHOW_PORT} \
     --ftps_ctrl_port=${FTPS_CTRL_PORT} --ftps_ctrl_show_port=${FTPS_CTRL_SHOW_PORT} \
     --mig_oid_provider=${MIG_OID_PROVIDER} \
@@ -666,9 +672,9 @@ RUN ./generateconfs.py --source=. \
     --enable_crontab=${ENABLE_CRONTAB} --enable_jobs=${ENABLE_JOBS} \
     --enable_resources=${ENABLE_RESOURCES} --enable_events=${ENABLE_EVENTS} \
     --enable_freeze=${ENABLE_FREEZE} --enable_imnotify=${ENABLE_IMNOTIFY} \
-    --enable_twofactor=${ENABLE_TWOFACTOR} \
+    --enable_cracklib=True --enable_twofactor=${ENABLE_TWOFACTOR} \
     --enable_twofactor_strict_address=${ENABLE_TWOFACTOR_STRICT_ADDRESS} \
-    --enable_cracklib=True --enable_notify=${ENABLE_NOTIFY} --enable_preview=${ENABLE_PREVIEW} \
+    --enable_notify=${ENABLE_NOTIFY} --enable_preview=${ENABLE_PREVIEW} \
     --enable_workflows=${ENABLE_WORKFLOWS} --enable_hsts=True \
     --enable_vhost_certs=True --enable_verify_certs=${ENABLE_VERIFY_CERTS} \
     --enable_jupyter=${ENABLE_JUPYTER} --enable_gdp=${ENABLE_GDP} \
@@ -695,7 +701,7 @@ RUN ./generateconfs.py --source=. \
     --cert_valid_days=${CERT_VALID_DAYS} --oid_valid_days=${OID_VALID_DAYS} \
     --generic_valid_days=${GENERIC_VALID_DAYS} \
     --default_menu="${DEFAULT_MENU}" --user_menu="${USER_MENU}" \
-    --apache_worker_procs=256 --wsgi_procs=25; 
+    --apache_worker_procs=256 --wsgi_procs=25
 
 RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/static-skin.css $MIG_ROOT/mig/images/ \
