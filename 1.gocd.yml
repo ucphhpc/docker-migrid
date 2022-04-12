@@ -1,12 +1,12 @@
 environments:
-  gocd_images:
+  docker_image:
     environments:
       GIT_USER: "{{SECRET:[github][username]}}"
     pipelines:
       - docker-migrid
 pipelines:
   docker-migrid:
-    group: gocd_images
+    group: docker_image
     locking: off
     materials:
       docker-migrid_git:  # this is the name of material
