@@ -49,10 +49,10 @@ ARG FTPS_CTRL_SHOW_PORT=21
 ARG OPENID_PORT=8443
 ARG OPENID_SHOW_PORT=443
 ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
-ARG MIG_SVN_REV=5407
+ARG MIG_SVN_REV=5408
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
 ARG MIG_GIT_BRANCH=edge
-ARG MIG_GIT_REV=32e5384ef1ebb55b5ec1a1d0edc6b01108115acf
+ARG MIG_GIT_REV=3c72ff684e6c1161e577cfc1c74caa000553ad05
 ARG ADMIN_EMAIL=mig
 ARG ADMIN_LIST=
 ARG LOG_LEVEL=info
@@ -60,6 +60,9 @@ ARG TITLE="Minimum intrusion Grid"
 ARG SHORT_TITLE=MiG
 ARG MIG_OID_TITLE=MiG
 ARG EXT_OID_TITLE=External
+ARG PEERS_PERMIT="distinguished_name:.*"
+ARG VGRID_CREATORS="distinguished_name:.*"
+ARG VGRID_MANAGERS="distinguished_name:.*"
 ARG EMULATE_FLAVOR=migrid
 ARG EMULATE_FQDN=migrid.org
 ARG SKIN_SUFFIX=basic
@@ -570,6 +573,9 @@ ARG ADMIN_LIST
 ARG LOG_LEVEL
 ARG TITLE
 ARG SHORT_TITLE
+ARG PEERS_PERMIT
+ARG VGRID_CREATORS
+ARG VGRID_MANAGERS
 ARG MIG_OID_TITLE
 ARG EXT_OID_TITLE
 ARG MIG_OID_PROVIDER
@@ -712,7 +718,8 @@ RUN ./generateconfs.py --source=. \
     --distro=centos --user_interface="${USER_INTERFACES}" \
     --skin="${EMULATE_FLAVOR}-${SKIN_SUFFIX}" \
     --title="${TITLE}" --short_title="${SHORT_TITLE}" \
-    --vgrid_label="${VGRID_LABEL}" \
+    --vgrid_label="${VGRID_LABEL}" --peers_permit=${PEERS_PERMIT} \
+    --vgrid_creators=${VGRID_CREATORS} --vgrid_managers=${VGRID_MANAGERS} \
     --auto_add_cert_user=${AUTO_ADD_CERT_USER} \
     --auto_add_oid_user=${AUTO_ADD_OID_USER} \
     --auto_add_oidc_user=${AUTO_ADD_OIDC_USER} \
