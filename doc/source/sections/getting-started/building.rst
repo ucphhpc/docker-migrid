@@ -11,16 +11,13 @@ This choice will lead you to select or configure an environment file that suit y
 An overview of the different prebuilt environments and the options within can be seen in <>
 
 After choosing an environment and adapting it to your needs, you can enable it by creating an .env symlink that points to your particular environment configuration.
-For instance, if you want to build the MiGrid image with the default environment settings, this is achived by creating a symlink .env that points to the defaults.env file::
+For instance, if you want to build the MiGrid image with the default environment settings, this is achived by the Makefile init target will automatically create a symlink that links the defaults.env to the expected .env file. If this behaviour is not wanted, a symlink has to be created before make is called that links the designated environment file, to the .env file. For instance:
 
-    ln -s defaults.env .env
+    ln -s my-custom-environment.env .env
 
 
 Quick Start
 -----------
-
-
-    ln -s defaults.env .env
 
 If you are not interested in learning what goes into building the image, the easiest way to get started, is to simply run `make` inside the `docker-migrid` directory::
 
