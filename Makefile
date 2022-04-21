@@ -1,48 +1,54 @@
-NAME=docker-migrid
+PACKAGE_NAME=docker-migrid
+PACKAGE_NAME_FORMATTED=$(subst -,_,$(PACKAGE_NAME))
 OWNER=ucphhpc
-IMAGE=migrid
-BUILD_TYPE=basic
+IMAGE=$(PACKAGE_NAME)
 # Enable that the builder should use buildkit
 # https://docs.docker.com/develop/develop-images/build_enhancements/
 DOCKER_BUILDKIT=1
+BUILD_TYPE=basic
 
-.PHONY:	all init build clean reset push
+.PHONY: all init dockerbuild dockerclean dockerpush clean dist distclean
+.PHONY: install uninstall installcheck check
 
-all: init build
+all: init dockerbuild
 
 init:
-ifeq (,$(wildcard ./.env))
-	ln -s defaults.env .env
+ifeq ($(shell test -e defaults.env && echo yes), yes)
+ifneq ($(shell test -e .env && echo yes), yes)
+		ln -s defaults.env .env
+endif
 endif
 ifeq (,$(wildcard ./docker-compose.yml))
-	echo
-	echo "*** No docker-compose.yml selected - defaulting to migrid.test ***"
-	echo
+	@echo
+	@echo "*** No docker-compose.yml selected - defaulting to migrid.test ***"
+	@echo
 	ln -s docker-compose_migrid.test.yml docker-compose.yml
-	sleep 5
+	@sleep 5
 endif
 	mkdir -p certs
 	mkdir -p httpd
 	mkdir -p mig
 	mkdir -p state
 
-build:
-	docker-compose build ${ARGS}
-
-clean:
-	rm -rf ./httpd
-	rm -rf ./mig
-	if [ "$$(docker volume ls -q -f 'name=${NAME}*')" != "" ]; then\
-		docker volume rm -f $$(docker volume ls -q -f 'name=${NAME}*');\
-	fi
+dockerbuild:
+	docker-compose build $(ARGS) 
 
 dockerclean:
-	docker image prune -f
-	docker container prune -f
-	docker volume prune -f
+	docker rmi -f $(OWNER)/$(IMAGE):$(BUILD_TYPE)
 
-distclean: dockerclean clean
+dockerpush:
+	docker push $(OWNER)/$(IMAGE):$(BUILD_TYPE)
+
+clean:
+	$(MAKE) dockerclean
+	$(MAKE) distclean
+	rm -fr ./mig
+
+distclean:
 	rm -rf ./certs
+	mkdir -p ./httpd
+	chmod -R u+w ./httpd
+	rm -fr ./httpd
 	mkdir -p ./state
 	chmod -R u+w ./state
 	rm -rf ./state
@@ -51,8 +57,11 @@ distclean: dockerclean clean
 	fi
 	rm -f .env docker-compose.yml
 
-reset: distclean
+uninstallcheck:
+### PLACEHOLDER (it's purpose is to uninstall depedencies for check) ###
 
+installcheck:
+### PLACEHOLDER (this will install the dependencies for check) ###
 
-push:
-	docker push ${OWNER}/${IMAGE}:${BUILD_TYPE}
+check:
+### PLACEHOLDER (this will run the repo's self-tests) ###
