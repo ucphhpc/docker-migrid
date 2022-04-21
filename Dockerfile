@@ -34,6 +34,8 @@ ARG EXT_OID_PROVIDER=unset
 ARG EXT_OIDC_PROVIDER_META_URL=unset
 ARG EXT_OIDC_CLIENT_NAME=unset
 ARG EXT_OIDC_CLIENT_ID=unset
+ARG EXT_OIDC_SCOPE=unset
+ARG EXT_OIDC_REMOTE_USER_CLAIM=unset
 ARG PUBLIC_HTTP_PORT=80
 ARG PUBLIC_HTTPS_PORT=444
 ARG MIGCERT_HTTPS_PORT=446
@@ -52,10 +54,10 @@ ARG FTPS_CTRL_SHOW_PORT=21
 ARG OPENID_PORT=8443
 ARG OPENID_SHOW_PORT=443
 ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
-ARG MIG_SVN_REV=5408
+ARG MIG_SVN_REV=5420
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
 ARG MIG_GIT_BRANCH=edge
-ARG MIG_GIT_REV=3c72ff684e6c1161e577cfc1c74caa000553ad05
+ARG MIG_GIT_REV=b5b44fb4252e62107feb9451d62d261cafc7a79f
 ARG ADMIN_EMAIL=mig
 ARG ADMIN_LIST=
 ARG LOG_LEVEL=info
@@ -91,6 +93,7 @@ ARG ENABLE_PREVIEW=False
 ARG ENABLE_WORKFLOWS=False
 ARG ENABLE_VERIFY_CERTS=True
 ARG ENABLE_JUPYTER=True
+ARG ENABLE_MIGADMIN=False
 ARG ENABLE_GDP=False
 ARG ENABLE_TWOFACTOR=True
 ARG ENABLE_TWOFACTOR_STRICT_ADDRESS=False
@@ -592,6 +595,7 @@ ARG EXT_OIDC_PROVIDER_META_URL
 ARG EXT_OIDC_CLIENT_NAME
 ARG EXT_OIDC_CLIENT_ID
 ARG EXT_OIDC_SCOPE
+ARG EXT_OIDC_REMOTE_USER_CLAIM
 ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
 ARG SKIN_SUFFIX
@@ -617,6 +621,7 @@ ARG ENABLE_PREVIEW
 ARG ENABLE_WORKFLOWS
 ARG ENABLE_VERIFY_CERTS
 ARG ENABLE_JUPYTER
+ARG ENABLE_MIGADMIN
 ARG ENABLE_GDP
 ARG ENABLE_TWOFACTOR
 ARG ENABLE_TWOFACTOR_STRICT_ADDRESS
@@ -694,6 +699,8 @@ RUN ./generateconfs.py --source=. \
     --ext_oidc_provider_meta_url=${EXT_OIDC_PROVIDER_META_URL} \
     --ext_oidc_client_name="${EXT_OIDC_CLIENT_NAME}" \
     --ext_oidc_client_id="${EXT_OIDC_CLIENT_ID}" \
+    --ext_oidc_scope="${EXT_OIDC_SCOPE}" \
+    --ext_oidc_remote_user_claim="${EXT_OIDC_REMOTE_USER_CLAIM}" \
     --enable_openid=${ENABLE_OPENID} --enable_wsgi=True \
     --enable_sftp=${ENABLE_SFTP} --enable_sftp_subsys=${ENABLE_SFTP_SUSBSYS} \
     --enable_davs=${ENABLE_DAVS} --enable_ftps=${ENABLE_FTPS} \
@@ -708,8 +715,8 @@ RUN ./generateconfs.py --source=. \
     --enable_notify=${ENABLE_NOTIFY} --enable_preview=${ENABLE_PREVIEW} \
     --enable_workflows=${ENABLE_WORKFLOWS} --enable_hsts=True \
     --enable_vhost_certs=True --enable_verify_certs=${ENABLE_VERIFY_CERTS} \
-    --enable_jupyter=${ENABLE_JUPYTER} --enable_gdp=${ENABLE_GDP} \
-    --gdp_email_notify=${GDP_EMAIL_NOTIFY} \
+    --enable_jupyter=${ENABLE_JUPYTER} --enable_migadmin=${ENABLE_MIGADMIN} \
+    --enable_gdp=${ENABLE_GDP} --gdp_email_notify=${GDP_EMAIL_NOTIFY} \
     --jupyter_services=${JUPYTER_SERVICES} \
     --jupyter_services_desc="${JUPYTER_SERVICES_DESC}" \
     --prefer_python3=${PREFER_PYTHON3} \
