@@ -1,8 +1,7 @@
 PACKAGE_NAME=docker-migrid
 PACKAGE_NAME_FORMATTED=$(subst -,_,$(PACKAGE_NAME))
 OWNER=ucphhpc
-IAGE=$(PACKAGE_NAME)
-IMAGE=migrid
+IMAGE=$(PACKAGE_NAME)
 BUILD_TYPE=basic
 # Enable that the builder should use buildkit
 # https://docs.docker.com/develop/develop-images/build_enhancements/
