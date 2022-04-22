@@ -33,6 +33,9 @@ services:
       args:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
+        UID: ${UID}
+        GID: ${GID}
+        USER: ${USER}
         DOMAIN: ${DOMAIN}
         WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
@@ -181,6 +184,9 @@ services:
       args:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
+        UID: ${UID}
+        GID: ${GID}
+        USER: ${USER}
         DOMAIN: ${DOMAIN}
         WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
@@ -336,6 +342,9 @@ services:
       args:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
+        UID: ${UID}
+        GID: ${GID}
+        USER: ${USER}
         DOMAIN: ${DOMAIN}
         WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
@@ -480,6 +489,9 @@ services:
       args:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
+        UID: ${UID}
+        GID: ${GID}
+        USER: ${USER}
         DOMAIN: ${DOMAIN}
         WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
@@ -625,6 +637,9 @@ services:
       args:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
+        UID: ${UID}
+        GID: ${GID}
+        USER: ${USER}
         DOMAIN: ${DOMAIN}
         WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
@@ -770,6 +785,9 @@ services:
       args:
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
+        UID: ${UID}
+        GID: ${GID}
+        USER: ${USER}
         DOMAIN: ${DOMAIN}
         WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}

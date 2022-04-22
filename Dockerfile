@@ -12,6 +12,9 @@
 
 ARG BUILD_TYPE=basic
 ARG BUILD_TARGET=development
+ARG UID=1000
+ARG GID=1000
+ARG USER=mig
 ARG DOMAIN=migrid.test
 ARG WILDCARD_DOMAIN=*.migrid.test
 ARG PUBLIC_DOMAIN=www.migrid.test
@@ -183,6 +186,9 @@ RUN echo "Enable python3 support: $WITH_PY3"
 #RUN echo "Enable git checkout: $WITH_GIT"
 
 FROM init as base
+ARG UID
+ARG GID
+ARG USER
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG ENABLE_GDP
@@ -325,11 +331,7 @@ RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
 #RUN localedef -c -i en_US -f UTF-8 en_US.UTF-8
 ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 
-# Setup user
-ENV USER=mig
-ENV UID=1000
-ENV GID=1000
-
+# Setup the user
 RUN groupadd -g $GID $USER
 RUN useradd -u $UID -g $GID -ms /bin/bash $USER
 
@@ -341,11 +343,12 @@ ENV CERT_DIR=$WEB_DIR/MiG-certificates
 USER root
 
 RUN mkdir -p $CERT_DIR/MiG/${WILDCARD_DOMAIN} \
-    && chown $USER:$USER $CERT_DIR \
+    && chown -R $USER:$USER $CERT_DIR \
     && chmod 775 $CERT_DIR
 
 # Certs and keys
 FROM base as setup_security
+ARG USER
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG PUBLIC_DOMAIN
@@ -541,6 +544,9 @@ RUN if [ "$WITH_GIT" = "yes" ]; then \
 ADD --chown=$USER:$USER mig $MIG_ROOT/
 
 FROM download_mig as install_mig
+ARG UID
+ARG GID
+ARG USER
 ARG DOMAIN
 ARG PUBLIC_DOMAIN
 ARG MIGCERT_DOMAIN
@@ -657,7 +663,7 @@ RUN ./generateconfs.py --source=. \
     --ext_oidc_fqdn=${EXTOIDC_DOMAIN} \
     --sid_fqdn=${SID_DOMAIN} \
     --io_fqdn=${IO_DOMAIN} \
-    --user=mig --group=mig --log_level=${LOG_LEVEL} \
+    --user=${USER} --group=${USER} --log_level=${LOG_LEVEL} \
     --admin_email="${ADMIN_EMAIL}" --admin_list="${ADMIN_LIST}" \
     --apache_version=2.4 \
     --apache_etc=/etc/httpd \
@@ -742,6 +748,7 @@ RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
 
 
 FROM install_mig as setup_mig_configs
+ARG USER
 ARG DOMAIN
 ARG PUBLIC_DOMAIN
 ARG MIGCERT_DOMAIN
