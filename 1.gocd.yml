@@ -11,10 +11,10 @@ pipelines:
     materials:
       docker-migrid_custom_user_git:  # this is the name of material
         # says about type of material and url at once
-        name: docker-migrid
+        name: docker-migrid_custom_user
         git: https://github.com/ucphhpc/docker-migrid.git
         branch: custom_user
-        destination: docker-migrid
+        destination: docker-migrid_custom_user
       publish_docker_git:  # this is the name of material
         # says about type of material and url at once
         name: publish-docker-scripts
@@ -28,7 +28,7 @@ pipelines:
       ARGS: ''
       COMMIT_TAG: GO_REVISION_DOCKER_MIGRID_GIT
       DEFAULT_TAG: latest
-      SRC_DIRECTORY: docker-migrid
-      TEST_DIRECTORY: docker-migrid
+      SRC_DIRECTORY: docker-migrid_custom_user
+      TEST_DIRECTORY: docker-migrid_custom_user
       PUSH_DIRECTORY: publish-docker-scripts
     template: docker_image
