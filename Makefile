@@ -40,21 +40,28 @@ dockerpush:
 	docker push $(OWNER)/$(IMAGE):$(BUILD_TYPE)
 
 clean:
-	$(MAKE) dockerclean
-	$(MAKE) distclean
 	rm -fr ./mig
-
-distclean:
-	rm -rf ./certs
-	mkdir -p ./httpd
-	chmod -R u+w ./httpd
 	rm -fr ./httpd
+
+# IMPORTANT: this target is meant to reset the dir to a pristine checkout
+#            and thus runs full clean up of even the state dir with user data
+#            Be careful NOT to use it on production systems!
+distclean: dockerclean clean
+	@echo
+	@echo "*** WARNING ***"
+	@echo "*** Deleting ALL local state data in 10 seconds ***"
+	@echo "*** Hit Ctrl-C to abort to preserve any local user and cert data ***"
+	@echo
+	@sleep 10
+	rm -rf ./certs
 	mkdir -p ./state
 	chmod -R u+w ./state
 	rm -rf ./state
-	if [ "$$(docker volume ls -q -f 'name=${NAME}*')" != "" ]; then\
-		docker volume rm -f $$(docker volume ls -q -f 'name=${NAME}*');\
-	fi
+        # TODO: is something like this still needed to clean up completely?
+        # It needs to NOT greedily remove ALL local volumes if so!
+	#if [ "$$(docker volume ls -q -f 'name=${NAME}*')" != "" ]; then\
+	#	docker volume rm -f $$(docker volume ls -q -f 'name=${PACKAGE_NAME}*');\
+	#fi
 	rm -f .env docker-compose.yml
 
 uninstallcheck:
