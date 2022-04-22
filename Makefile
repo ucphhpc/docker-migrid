@@ -1,28 +1,27 @@
 PACKAGE_NAME=docker-migrid
 PACKAGE_NAME_FORMATTED=$(subst -,_,$(PACKAGE_NAME))
 OWNER=ucphhpc
-IMAGE=$(PACKAGE_NAME)
+IAGE=$(PACKAGE_NAME)
+IMAGE=migrid
+BUILD_TYPE=basic
 # Enable that the builder should use buildkit
 # https://docs.docker.com/develop/develop-images/build_enhancements/
 DOCKER_BUILDKIT=1
-BUILD_TYPE=basic
 
-.PHONY: all init dockerbuild dockerclean dockerpush clean dist distclean
+.PHONY:	all init dockerbuild dockerclean dockerpush clean dist distclean
 .PHONY: install uninstall installcheck check
 
 all: init dockerbuild
 
 init:
-ifeq ($(shell test -e defaults.env && echo yes), yes)
-ifneq ($(shell test -e .env && echo yes), yes)
-		ln -s defaults.env .env
-endif
+ifeq (,$(wildcard ./.env))
+	ln -s defaults.env .env
 endif
 ifeq (,$(wildcard ./docker-compose.yml))
 	@echo
 	@echo "*** No docker-compose.yml selected - defaulting to migrid.test ***"
 	@echo
-	ln -s docker-compose_migrid.test.yml docker-compose.yml
+	@ln -s docker-compose_migrid.test.yml docker-compose.yml
 	@sleep 5
 endif
 	mkdir -p certs
@@ -64,11 +63,5 @@ distclean: dockerclean clean
 	#fi
 	rm -f .env docker-compose.yml
 
-uninstallcheck:
-### PLACEHOLDER (it's purpose is to uninstall depedencies for check) ###
-
-installcheck:
-### PLACEHOLDER (this will install the dependencies for check) ###
-
-check:
-### PLACEHOLDER (this will run the repo's self-tests) ###
+push:
+	docker push ${OWNER}/${IMAGE}:${BUILD_TYPE}

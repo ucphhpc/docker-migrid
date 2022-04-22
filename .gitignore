@@ -120,3 +120,7 @@ mig/
 .vscode/
 
 .DS_Store
+
+# By default this is expected to be a symlink that
+# points to the active configuration
+docker-compose.yml

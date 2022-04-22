@@ -10,9 +10,6 @@
 #            explicitly listed in docker-compose.yml *args* list, too.
 #            Furthermore they must be declared after FROM in each stage used.
 
-ARG UID=1000
-ARG GID=1000
-ARG USER=mig
 ARG BUILD_TYPE=basic
 ARG BUILD_TARGET=development
 ARG DOMAIN=migrid.test
@@ -186,9 +183,6 @@ RUN echo "Enable python3 support: $WITH_PY3"
 #RUN echo "Enable git checkout: $WITH_GIT"
 
 FROM init as base
-ARG UID
-ARG GID
-ARG USER
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG ENABLE_GDP
@@ -332,6 +326,10 @@ RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
 ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 
 # Setup user
+ENV USER=mig
+ENV UID=1000
+ENV GID=1000
+
 RUN groupadd -g $GID $USER
 RUN useradd -u $UID -g $GID -ms /bin/bash $USER
 
@@ -343,15 +341,11 @@ ENV CERT_DIR=$WEB_DIR/MiG-certificates
 USER root
 
 RUN mkdir -p $CERT_DIR/MiG/${WILDCARD_DOMAIN} \
-    && chown -R $USER:$USER $CERT_DIR \
+    && chown $USER:$USER $CERT_DIR \
     && chmod 775 $CERT_DIR
-
-RUN chown $USER:$USER $WEB_DIR \
-    && chmod 755 $WEB_DIR
 
 # Certs and keys
 FROM base as setup_security
-ARG USER
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG PUBLIC_DOMAIN
@@ -521,7 +515,6 @@ RUN if [ "$WITH_PY3" = "yes" ]; then \
     fi;
 
 FROM mig_dependencies as download_mig
-ARG USER
 ARG DOMAIN
 ARG MIG_SVN_REPO
 ARG MIG_SVN_REV
@@ -548,7 +541,6 @@ RUN if [ "$WITH_GIT" = "yes" ]; then \
 ADD --chown=$USER:$USER mig $MIG_ROOT/
 
 FROM download_mig as install_mig
-ARG USER
 ARG DOMAIN
 ARG PUBLIC_DOMAIN
 ARG MIGCERT_DOMAIN
@@ -665,7 +657,7 @@ RUN ./generateconfs.py --source=. \
     --ext_oidc_fqdn=${EXTOIDC_DOMAIN} \
     --sid_fqdn=${SID_DOMAIN} \
     --io_fqdn=${IO_DOMAIN} \
-    --user="${USER}" --group="${USER}" --log_level=${LOG_LEVEL} \
+    --user=mig --group=mig --log_level=${LOG_LEVEL} \
     --admin_email="${ADMIN_EMAIL}" --admin_list="${ADMIN_LIST}" \
     --apache_version=2.4 \
     --apache_etc=/etc/httpd \
@@ -750,7 +742,6 @@ RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
 
 
 FROM install_mig as setup_mig_configs
-ARG USER
 ARG DOMAIN
 ARG PUBLIC_DOMAIN
 ARG MIGCERT_DOMAIN
@@ -865,9 +856,6 @@ ADD docker-entry.sh /app/docker-entry.sh
 ADD migrid-httpd.env /app/migrid-httpd.env
 RUN chown $USER:$USER /app/docker-entry.sh \
     && chmod +x /app/docker-entry.sh
-
-# Ensure the USER environment variable is set
-ENV USER=$USER
 
 USER root
 WORKDIR /app
