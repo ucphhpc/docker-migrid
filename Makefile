@@ -62,3 +62,12 @@ distclean: dockerclean clean
 	#	docker volume rm -f $$(docker volume ls -q -f 'name=${PACKAGE_NAME}*');\
 	#fi
 	rm -f .env docker-compose.yml
+
+uninstallcheck:
+### PLACEHOLDER (it's purpose is to uninstall depedencies for check) ###
+
+installcheck:
+### PLACEHOLDER (this will install the dependencies for check) ###
+
+check:
+### PLACEHOLDER (this will run the repo's self-tests) ###
