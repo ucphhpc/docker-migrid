@@ -23,11 +23,13 @@ First we set up the basic system to fit our needs with hardening and
 dependency installations.
 
 First upgrade all system packages and prevent SELinux interference::
+
     sudo dnf upgrade
     sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
     sudo reboot
 
 Then install additional helpers::
+  
     sudo dnf install util-linux-user zsh screen nano emacs-nox vim-enhanced \
         net-tools rsyslog stow htop lsof rsync fail2ban ipset wget git make
 
@@ -39,6 +41,7 @@ still use the system with manual user sign up and semi-automatic
 operator user account acceptance.
 
 Prepare PodMan version of Docker and Docker Compose::
+  
     sudo dnf erase docker docker-compose
     sudo dnf install podman podman-docker podman-compose
 
@@ -51,11 +54,13 @@ Ciphers, KexAlgorithms and MACs rather than the usual
 /etc/sshd/sshd_config. You can remove those and check that the sshd
 processs does not run with them hard-coded on the command line based
 on the output of::
+  
     ps ax|grep sshd
 
 TODO: Install logcheck or similar
 
 Prepare LetsEncrypt certificates with the getssl tool::
+  
     VERSION=git-$(date +'%Y%m%d-%H%M%S')
     sudo mkdir -p /usr/local/packages/getssl-$VERSION/sbin
     sudo chown -R $(id -nu) /usr/local/packages/getssl-$VERSION
@@ -67,6 +72,7 @@ Prepare LetsEncrypt certificates with the getssl tool::
     sudo stow -v --override='sbin/getssl' getssl-$VERSION
 
 Setup root account for LetsEncrypt use::
+  
     wget https://raw.githubusercontent.com/ucphhpc/migrid-sync/edge/mig/install/mig-user/.vimrc
     getssl -c bench.erda.dk
     mkdir -p /etc/httpd/MiG-certificates/letsencrypt
@@ -88,6 +94,7 @@ Set up DNS for the 4 or more IPs needed for the virtual hosts
 (130.225.104.110-117 used here) and configure the VM network to listen
 on those IPs e.g. on the second physical network interface (e.g. eth1
 as here)::
+  
     {
     echo 'TYPE="Ethernet"'
     echo 'GATEWAY="130.225.104.1"'
@@ -129,6 +136,7 @@ as here)::
     ifup eth1
 
 Make sure the local firewall allows http and https access::
+  
     pgrep firewalld > /dev/null && {
         sudo firewall-cmd --permanent --zone=public --add-service=ssh
         sudo firewall-cmd --permanent --zone=public --add-service=http
@@ -137,6 +145,7 @@ Make sure the local firewall allows http and https access::
     }
 
 Generate initial server certificates with a simple python web server::
+  
     mkdir -p /home/mig/state/wwwpublic/letsencrypt/.well-known/acme-challenge
     screen -S simple-httpd -xRD
     cd /home/mig/state/wwwpublic/letsencrypt/
@@ -168,6 +177,7 @@ Prepare an unprivileged `mig` account for running docker-migrid using
 the podman docker wrappers. In that relation we need to disable
 Jupyter to avoid a problem with support for the complex
 JUPYTER_SERVICE_DESC env argument::
+  
     sudo adduser mig
     chsh mig -s /usr/bin/zsh
     su - mig
