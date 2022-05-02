@@ -136,7 +136,7 @@ as here)::
     ifup eth1
 
 Make sure the local firewall allows http and https access::
-  
+
     pgrep firewalld > /dev/null && {
         sudo firewall-cmd --permanent --zone=public --add-service=ssh
         sudo firewall-cmd --permanent --zone=public --add-service=http
@@ -202,5 +202,4 @@ JUPYTER_SERVICE_DESC env argument::
     ln -s advanced_bench.erda.dk_full.env .env
     make
     podman-compose -t hostnet up
-
 
