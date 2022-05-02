@@ -13,6 +13,9 @@ DOCKER_BUILDKIT=1
 all: init dockerbuild
 
 init:
+ifeq (,$(wildcard ./Dockerfile))
+	ln -s Dockerfile.centos Dockerfile
+endif
 ifeq (,$(wildcard ./.env))
 	ln -s defaults.env .env
 endif
