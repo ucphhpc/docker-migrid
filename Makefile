@@ -14,7 +14,7 @@ all: init dockerbuild
 
 init:
 ifeq (,$(wildcard ./Dockerfile))
-	ln -s Dockerfile.centos Dockerfile
+	ln -s Dockerfile.centos7 Dockerfile
 endif
 ifeq (,$(wildcard ./.env))
 	ln -s defaults.env .env
