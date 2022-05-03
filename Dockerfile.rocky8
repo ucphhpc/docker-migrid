@@ -117,7 +117,6 @@ ARG GDP_EMAIL_NOTIFY=True
 ARG JUPYTER_SERVICES=""
 ARG JUPYTER_SERVICES_DESC="{}"
 
-#FROM centos:7 as init
 FROM rockylinux:8 as init
 ARG BUILD_TYPE
 #ARG BUILD_TARGET
@@ -189,21 +188,27 @@ ARG WILDCARD_DOMAIN
 ARG ENABLE_GDP
 ARG ENABLE_SELF_SIGNED_CERTS
 ARG WITH_PY3
+ARG PREFER_PYTHON3
 
 WORKDIR /tmp
 
+# TODO: is this also a problem with rocky8?
 # Centos image default yum configs prevent docs installation
 # https://superuser.com/questions/784451/centos-on-docker-how-to-install-doc-files
 RUN sed -i '/nodocs/d' /etc/yum.conf
 
-RUN yum update -y \
-    && yum install -y epel-release \
-    && yum clean all \
-    && rm -fr /var/cache/yum
+RUN dnf update -y \
+    && dnf install -y epel-release \
+    && dnf clean all \
+    && rm -fr /var/cache/dnf
 
-RUN yum update -y \
-    && yum install -y \
+RUN dnf update -y \
+    && dnf module enable -y mod_auth_openidc \
+    && dnf install -y \
     gcc \
+    make \
+    # NOTE: to avoid locale errors (does it work?)
+    glibc-langpack-en \
     pam-devel \
     httpd \
     htop \
@@ -211,10 +216,13 @@ RUN yum update -y \
     crontabs \
     nano \
     mod_ssl \
-    mod_wsgi \
-    mod_proxy \
-    mod_auth_openid \
-    mod_auth_openidc \
+    # NOTE: python2 wsgi is no longer available here
+    #mod_wsgi \
+    # NOTE: mod_proxy is included in base httpd now
+    #mod_proxy \
+    # NOTE OpenID and Connect need special care here
+    #mod_auth_openid \
+    #mod_auth_openidc \
     tzdata \
     initscripts \
     svn \
@@ -228,68 +236,93 @@ RUN yum update -y \
     openssh-clients \
     rsyslog \
     lsof \
-    python-pip \
-    python-devel \
-    python-paramiko \
-    python-enchant \
-    python-jsonrpclib \
-    python-requests \
+    python2-pip \
+    python2-devel \
+    # NOTE: several packages are only available through pip
+    #python2-paramiko \
+    #python2-enchant \
+    #python2-jsonrpclib \
+    python2-requests \
     python2-psutil \
-    python-future \
-    python2-cffi \
-    pysendfile \
-    PyYAML \
-    pyOpenSSL \
-    # NOTE: generally install cracklib from pip as yum only has py2 version
-    #cracklib-python \
-    cracklib-devel \
+    #python2-future \
+    #python2-cffi \
+    #pysendfile \
+    python2-pyyaml \
+    #pyOpenSSL \
     lftp \
     rsync \
     fail2ban \
     ipset \
-    wget
+    wget && \
+    # NOTE: generally install cracklib from pip as dnf only has py2 version
+    dnf --enablerepo=powertools install -y \
+    #cracklib-python \
+    cracklib-devel \
+    && dnf clean all \
+    && rm -fr /var/cache/dnf
+
 
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
       echo "install py3 deps" \
-      && yum update -y \
-      && yum install -y \
+      && dnf update -y \
+      && dnf install -y \
       python3-pip \
       python3-devel \
       python3-mod_wsgi \
-      #python3-paramiko \
-      python36-paramiko \
-      #python3-enchant \
+      python3-paramiko \
+      python3-enchant \
       #python3-jsonrpclib \
-      #python3-requests \
-      python36-requests \
-      #python3-psutil \
-      python36-psutil \
+      python3-requests \
+      python3-psutil \
       python3-future \
-      #python3-cffi \
-      python36-cffi \
-      python36-pyOpenSSL \
-      python36-PyYAML; \
+      python3-cffi \
+      python3-pyOpenSSL \
+      python3-pycurl \
+      python3-PyYAML \
+      && dnf clean all \
+      && rm -fr /var/cache/dnf; \
     else \
       echo "no py3 deps"; \
     fi;
+
+RUN if [ "${PREFER_PY3}" = "yes" ]; then \
+      echo "set up py3 as default python" \
+      update-alternatives --set python /usr/bin/python3; \
+    else \
+      echo "set up py2 as default python" \
+      update-alternatives --set python /usr/bin/python2; \
+    fi;
+
 
 # Install GDP dependencies
 # TODO: does postfix "just work" and should it perhaps always be installed?
 RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       echo "install GDP deps" \
-      && yum update -y \
-      && yum install -y \
+      && dnf update -y \
+      && dnf install -y \
       postfix \
       python-xvfbwrapper \
       wkhtmltopdf \
       xorg-x11-server-Xvfb \
-      && pip install git+https://github.com/Martin-Rehr/python-pdfkit.git ; \
+      && dnf clean all \
+      && rm -fr /var/cache/dnf \
+      && pip2 install git+https://github.com/Martin-Rehr/python-pdfkit.git ; \
+      if [ "${WITH_PY3}" = "yes" ]; then \
+         echo "install py3 deps" && \
+	 dnf update -y && \
+	 dnf install -y python3-xvfbwrapper \
+         && dnf clean all \
+         && rm -fr /var/cache/dnf \
+	 && pip3 install git+https://github.com/Martin-Rehr/python-pdfkit.git ; \
+      fi; \
     else \
       echo "no GDP deps"; \
     fi;
 
 # Apache OpenID (provided by epel)
-RUN yum install -y mod_auth_openid
+# TODO: unavailable here! build from centos source?
+#RUN dnf update -y  && dnf install -y mod_auth_openid && dnf clean all && rm -fr /var/cache/dnf
+
 
 # Disable Apache OpenID ssl-certificate verification
 # (recompile libopkele with --disable-ssl-verify-host --disable-ssl-verify-peer)
@@ -299,8 +332,8 @@ RUN yum install -y mod_auth_openid
 RUN echo "ENABLE_SELF_SIGNED_CERTS: $ENABLE_SELF_SIGNED_CERTS"
 RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
 	echo "Re-installing libopkele with ssl verification disabled" \
-	&& yum update -y \
-	&& yum install -y gcc-c++ \
+	&& dnf update -y \
+	&& dnf install -y gcc-c++ \
         	rpm-build \
         	boost-devel \
         	openssl-devel \
@@ -310,11 +343,13 @@ RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
         	tidy-devel \
         	sqlite-devel \
         	libuuid-devel \
+                && dnf clean all \
+                && rm -fr /var/cache/dnf \
         && rpm -e --nodeps libopkele \
         && rpm -ivh https://download-ib01.fedoraproject.org/pub/epel/7/SRPMS/Packages/l/libopkele-2.0.4-9.el7.src.rpm \
         && sed -i "s/^%configure$/%configure --disable-ssl-verify-host --disable-ssl-verify-peer/g" /root/rpmbuild/SPECS/libopkele.spec  \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
-        && yum localinstall -y /root/rpmbuild/RPMS/x86_64/libopkele-2.0.4-9.el7.x86_64.rpm; \
+        && dnf localinstall -y /root/rpmbuild/RPMS/x86_64/libopkele-2.0.4-9.el7.x86_64.rpm; \
     fi;
         
 # Setup container default language to make sure UTF8 is available in wsgi app.
@@ -322,7 +357,7 @@ RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
 # thus result e.g. in broken user path and client_id for users with accented
 # chars e.g. in their name.
 # https://stackoverflow.com/a/28212946
-# TODO: do we need to generate this rather common locale? (looks like no)
+# NOTE: it looks like we don't need to generate this rather common locale here
 #RUN localedef -c -i en_US -f UTF-8 en_US.UTF-8
 ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 
@@ -334,7 +369,7 @@ ENV GID=1000
 RUN groupadd -g $GID $USER
 RUN useradd -u $UID -g $GID -ms /bin/bash $USER
 
-# MiG environment
+# MiG environment
 ENV MIG_ROOT=/home/$USER
 ENV WEB_DIR=/etc/httpd
 ENV CERT_DIR=$WEB_DIR/MiG-certificates
@@ -345,7 +380,7 @@ RUN mkdir -p $CERT_DIR/MiG/${WILDCARD_DOMAIN} \
     && chown $USER:$USER $CERT_DIR \
     && chmod 775 $CERT_DIR
 
-# Certs and keys
+# Certs and keys
 FROM base as setup_security
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
@@ -381,8 +416,9 @@ RUN openssl genrsa -out server.key 2048 \
     -subj "/C=DK/ST=NA/L=NA/O=MiGrid-Test/OU=NA/CN=${WILDCARD_DOMAIN}" \
     && openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
 
-# CRL
-RUN touch /etc/pki/CA/index.txt \
+# Certificate Revocation List (CRL)
+RUN mkdir -p /etc/pki/CA \
+    && touch /etc/pki/CA/index.txt \
     && echo '00' > /etc/pki/CA/crlnumber \
     && openssl ca -gencrl -keyfile ca.key -cert ca.pem -out crl.pem
 
@@ -423,7 +459,14 @@ RUN ln -s MiG/${WILDCARD_DOMAIN}/server.crt server.crt \
        done
 
 # Upgrade pip, required by cryptography
-RUN python -m pip install -U pip==20.3.4
+RUN python2 -m pip install -U pip==20.3.4
+
+# Prepare mod WSGI for py2 (no longer in dnf here)
+# See standalone notes on https://pypi.org/project/mod-wsgi/
+# TODO: build is broken - fix!
+#RUN dnf install -y apr-devel && dnf clean all && rm -fr /var/cache/dnf
+#RUN pip2 install mod_wsgi-standalone
+
 
 WORKDIR $MIG_ROOT
 USER $USER
@@ -442,77 +485,66 @@ ARG DOMAIN
 ARG ENABLE_DEFAULT_PY
 ARG WITH_PY3
 
+# Prepare py2 dependencies no longer in dnf
+RUN pip2 install --user jsonrpclib future cffi pysendfile pyOpenSSL paramiko
+
 # Prepare OpenID (python-openid for py2 and python-openid2 for py3)
-ENV PATH=$PATH:/home/$USER/.local/bin
-RUN pip install --user python-openid
+RUN pip2 install --user python-openid
 RUN if [ "$WITH_PY3" = "yes" ]; then \
       echo "install py3 openid" \
       pip3 install --user python-openid2; \
     fi;
 
 # Modules required by grid_events.py
-RUN pip install --user \
-    watchdog \
-    scandir
+RUN pip2 install --user watchdog scandir
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user \
-      watchdog; \
+      pip3 install --user watchdog scandir; \
     fi;
 
 # Modules required by grid_webdavs
 # NOTE: we require <=1.3.0 for python2. CherryPy is no longer bundled lately.
-RUN pip install --user \
-    wsgidav==1.3.0
+RUN pip install --user wsgidav==1.3.0
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user \
-      wsgidav cherrypy; \
+      pip3 install --user wsgidav cherrypy; \
     fi;
 
 # Modules required by grid_ftps
-# NOTE: relies on pyOpenSSL and Cryptography from yum for now
-RUN pip install --user \
-    pyftpdlib
+# NOTE: relies on pyOpenSSL and Cryptography from dnf for now
+RUN pip install --user pyftpdlib
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user \
-      pyftpdlib; \
+      pip3 install --user pyftpdlib; \
     fi;
 
-# Modules required by grid_X IO daemons (not availalble in yum for py 3)
-RUN pip install --user \
-    cracklib
+# Modules required by grid_X IO daemons (not availalble in dnf for py 3)
+RUN pip install --user cracklib
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user \
-      cracklib; \
+      pip3 install --user cracklib; \
     fi;
-
-# Modules required by jupyter
-#RUN pip install --user \
-#    requests
 
 # Module required to run pytests
 # 4.6 is the latest with python2 support
-RUN pip install --user \
-    pytest
+RUN pip install --user pytest
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user \
-      pytest; \
+      pip3 install --user pytest; \
     fi;
 
 # Modules required by 2FA
 # NOTE: we require <=2.3.0 for python2.
-RUN pip install --user \
-    pyotp==2.3.0
+RUN pip install --user pyotp==2.3.0
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user \
-      pyotp; \
+      pip3 install --user pyotp; \
     fi;
 
 # Modules required for smart country selection
-RUN pip install --user \
-    iso3166
+RUN pip install --user iso3166
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user \
-      iso3166; \
+      pip3 install --user iso3166; \
+    fi;
+
+# Modules required for workflows
+RUN pip install --user nbformat nbconvert papermill
+RUN if [ "$WITH_PY3" = "yes" ]; then \
+      pip3 install --user nbformat nbconvert papermill; \
     fi;
 
 FROM mig_dependencies as download_mig
@@ -637,18 +669,29 @@ ARG VGRID_LABEL
 ARG GDP_EMAIL_NOTIFY
 
 ENV PYTHONPATH=${MIG_ROOT}
+ENV PATH=$PATH:/home/$USER/.local/bin
 # Ensure that the $USER sets it during session start
 RUN echo "PYTHONPATH=${MIG_ROOT}" >> ~/.bash_profile \
     && echo "export PYTHONPATH" >> ~/.bash_profile
+RUN echo "PATH=${PATH}:$HOME/.local/bin" >> ~/.bash_profile \
+    && echo "export PATH" >> ~/.bash_profile
 
 WORKDIR $MIG_ROOT/mig/install
 
-RUN echo "Designated jupyter services: $JUPYTER_SERVICES"
-RUN echo "Designated jupyter services descriptions: $JUPYTER_SERVICES_DESC"
+RUN echo "Designated jupyter services: ${JUPYTER_SERVICES}"
+RUN echo "Designated jupyter services descriptions: ${JUPYTER_SERVICES_DESC}"
 
-RUN ./generateconfs.py --source=. \
+RUN mkdir -p ${MIG_ROOT}/.local/bin; \
+    if [ "${PREFER_PY3}" = "yes" ]; then \
+      echo "setup py3 as default python in ${MIG_ROOT}"; \
+      ln -s /usr/bin/python3 ${MIG_ROOT}/.local/bin/python; \
+    else \
+      echo "setup py2 as default python in $MIG_ROOT"; \
+      ln -s /usr/bin/python2 ${MIG_ROOT}/.local/bin/python; \
+    fi;
+
+RUN python ./generateconfs.py --source=. \
     --destination=generated-confs \
-#    --destination_suffix="_svn$(svnversion -n ~/)" \
     --base_fqdn=$DOMAIN \
     --public_fqdn=${PUBLIC_DOMAIN} \
     --mig_cert_fqdn=${MIGCERT_DOMAIN} \
@@ -755,10 +798,11 @@ ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
 ARG ENABLE_SELF_SIGNED_CERTS
 
-# Prepare oiddiscover for httpd
-RUN cd $MIG_ROOT/mig \
-    && python shared/httpsclient.py | grep -A 80 "xml version" \
-    > $MIG_ROOT/state/wwwpublic/oiddiscover.xml
+# Prepare oiddiscover for httpd
+#ENV PATH=$PATH:/home/$USER/.local/bin
+RUN cd $MIG_ROOT/mig && \
+    python shared/httpsclient.py | \
+    grep -A 80 "xml version" > $MIG_ROOT/state/wwwpublic/oiddiscover.xml
 
 USER root
 
