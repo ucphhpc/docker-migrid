@@ -30,6 +30,12 @@ endif
 	mkdir -p httpd
 	mkdir -p mig
 	mkdir -p state
+	mkdir -p log/migrid
+	mkdir -p log/migrid-io
+	mkdir -p log/migrid-openid
+	mkdir -p log/migrid-sftp
+	mkdir -p log/migrid-webdavs
+	mkdir -p log/migrid-ftps
 
 dockerbuild:
 	docker-compose build $(ARGS) 

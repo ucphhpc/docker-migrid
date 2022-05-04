@@ -128,7 +128,7 @@ services:
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy
+      RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy rsyslogd
     depends_on:
       - devdns
     networks:
@@ -152,6 +152,9 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migrid-syslog
+        target: /var/log
       - type: bind
         source: /run/dbus/system_bus_socket
         target: /run/dbus/system_bus_socket
@@ -269,7 +272,7 @@ services:
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: openid sftp sftpsubsys webdavs ftps notify
+      RUN_SERVICES: openid sftp sftpsubsys webdavs ftps notify rsyslogd
     depends_on:
       - migrid
     ports:
@@ -301,6 +304,9 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migrid-io-syslog
+        target: /var/log
     command: /app/docker-entry.sh
     #privileged: true
 
@@ -413,7 +419,7 @@ services:
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: openid
+      RUN_SERVICES: openid rsyslogd
     depends_on:
       - migrid
     ports:
@@ -436,6 +442,9 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migrid-openid-syslog
+        target: /var/log
     command: /app/docker-entry.sh
     #privileged: true
 
@@ -570,6 +579,9 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migrid-sftp-syslog
+        target: /var/log
     command: /app/docker-entry.sh
     #privileged: true
 
@@ -704,6 +716,9 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migrid-ftps-syslog
+        target: /var/log
     command: /app/docker-entry.sh
     #privileged: true
 
@@ -837,6 +852,9 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migrid-webdavs-syslog
+        target: /var/log
     command: /app/docker-entry.sh
     #privileged: true
 
@@ -900,9 +918,57 @@ volumes:
       o: bind
 
   state:
-      # Volume used to contain the migrid state (provided by migrid)
-      driver: local
-      driver_opts:
-        type: none
-        device: $PWD/state
-        o: bind
+    # Volume used to contain the migrid state (provided by migrid)
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/state
+      o: bind
+  
+  migrid-syslog:
+    # Volume used for exposing migrid system log
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/log/migrid
+      o: bind
+
+  migrid-io-syslog:
+    # Volume used for exposing migrid system log
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/log/migrid-io
+      o: bind
+
+  migrid-openid-syslog:
+    # Volume used for exposing migrid system log
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/log/migrid-openid
+      o: bind
+
+  migrid-sftp-syslog:
+    # Volume used for exposing migrid system log
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/log/migrid-sftp
+      o: bind
+
+  migrid-webdavs-syslog:
+    # Volume used for exposing migrid system log
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/log/migrid-webdavs
+      o: bind
+
+  migrid-ftps-syslog:
+    # Volume used for exposing migrid system log
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/log/migrid-ftps
+      o: bind

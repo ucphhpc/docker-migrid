@@ -840,6 +840,27 @@ RUN update-ca-trust force-enable \
     && cp $CERT_DIR/combined.pem /etc/pki/ca-trust/source/anchors/ \
     && update-ca-trust extract
 
+# rsyslog: Disable systemd and enable /dev/log
+# https://projectatomic.io/blog/2014/09/running-syslog-within-a-docker-container/
+RUN sed -i "s/^\$ModLoad imjournal/#\$ModLoad imjournal/g" /etc/rsyslog.conf; \
+    sed -i "s/^\$OmitLocalLogging on/\$OmitLocalLogging off/g" /etc/rsyslog.conf; \
+    sed -i "s/^\$IMJournalStateFile/#\$IMJournalStateFile/g" /etc/rsyslog.conf; \
+    sed -i "s/^\$SystemLogSocketName/#\$SystemLogSocketName/g" /etc/rsyslog.d/listen.conf;
+
+# Create mig syslog dir
+RUN mkdir -p /var/log/mig \
+  && chmod 700 /var/log/mig;
+
+# Enable GDP log 
+RUN if [ "${ENABLE_GDP}" = "True" ]; then \
+      [ ! -f "/var/log/mig/gdp.log" ] \
+        && touch /var/log/mig/gdp.log \
+        && chmod 600 /var/log/mig/gdp.log; \
+      cat /etc/rsyslog.conf | grep -q "# Save MiG GDP messages" \
+        || echo "# Save MiG GDP messages" >> /etc/rsyslog.conf \
+        && echo "local0.*   /var/log/mig/gdp.log" >> /etc/rsyslog.conf; \
+    fi;
+
 FROM setup_mig_configs as start_mig
 ARG DOMAIN
 
