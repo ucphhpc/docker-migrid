@@ -57,7 +57,7 @@ on the output of::
   
     ps ax|grep sshd
 
-TODO: Install logcheck or similar
+TODO: Install logcheck or similar and postfix with authenticity adjustments
 
 Prepare LetsEncrypt certificates with the getssl tool::
   
@@ -195,5 +195,34 @@ JUPYTER_SERVICE_DESC env argument::
         advanced_bench.erda.dk_full.env
     ln -s advanced_bench.erda.dk_full.env .env
     make
-    podman-compose -t hostnet up
+    podman-compose up
 
+
+Lustre
+------
+
+Install the Lustre client build dependencies::
+
+  sudo dnf config-manager --set-enabled powertools
+  sudo dnf -y groupinstall "Development Tools"
+  sudo dnf -y install net-snmp-devel libyaml-devel libselinux-devel libtool
+  sudo dnf -y install kernel-devel-$(uname -r) kernel-rpm-macros kernel-abi-whitelists
+
+Build and install the Lustre client::
+
+  VERSION=2.12.8
+  git clone git://git.whamcloud.com/fs/lustre-release.git
+  cd lustre-release
+  git checkout ${VERSION}
+  sh ./autogen.sh
+  ./configure --disable-server --enable-quota --enable-utils --enable-gss
+  make rpms
+
+  sudo yum remove lustre-client.x86_64 kmod-lustre-client.x86_64
+  sudo yum localinstall -y ./kmod-lustre-client-${VERSION}-1.el8.x86_64.rpm
+  sudo yum localinstall -y ./lustre-client-${VERSION}-1.el8.x86_64.rpm
+  sudo mv /etc/lnet.conf.rpmsave /etc/lnet.conf
+  sudo service lnet stop
+  sudo lustre_rmmod
+  sudo service lnet start
+  sudo systemctl enable lnet
