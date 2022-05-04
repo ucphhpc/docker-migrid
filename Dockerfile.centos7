@@ -282,7 +282,15 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       python-xvfbwrapper \
       wkhtmltopdf \
       xorg-x11-server-Xvfb \
-      && pip install pdfkit; \
+      && pip2 install pdfkit; \
+      if [ "${WITH_PY3}" = "yes" ]; then \
+         echo "install py3 GDP deps" && \
+         # NOTE: not available in yum here - use pip
+	 #yum update -y && \
+	 #yum install -y python3-xvfbwrapper \
+	 pip3 install xvfbwrapper \
+	 && pip3 install pdfkit; \
+      fi; \
     else \
       echo "no GDP deps"; \
     fi;
@@ -321,7 +329,9 @@ RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
 # thus result e.g. in broken user path and client_id for users with accented
 # chars e.g. in their name.
 # https://stackoverflow.com/a/28212946
-# TODO: do we need to generate this rather common locale? (looks like no)
+# NOTE: it looks like we don't need to generate this rather common locale here
+#       but on some platforms it's needed to install an English language pack
+#       to avoid various LC_X locale warnings and errors.
 #RUN localedef -c -i en_US -f UTF-8 en_US.UTF-8
 ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 
@@ -333,7 +343,7 @@ ENV GID=1000
 RUN groupadd -g $GID $USER
 RUN useradd -u $UID -g $GID -ms /bin/bash $USER
 
-# MiG environment
+# MiG environment
 ENV MIG_ROOT=/home/$USER
 ENV WEB_DIR=/etc/httpd
 ENV CERT_DIR=$WEB_DIR/MiG-certificates
@@ -344,7 +354,7 @@ RUN mkdir -p $CERT_DIR/MiG/${WILDCARD_DOMAIN} \
     && chown $USER:$USER $CERT_DIR \
     && chmod 775 $CERT_DIR
 
-# Certs and keys
+# Certs and keys
 FROM base as setup_security
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
@@ -380,8 +390,9 @@ RUN openssl genrsa -out server.key 2048 \
     -subj "/C=DK/ST=NA/L=NA/O=MiGrid-Test/OU=NA/CN=${WILDCARD_DOMAIN}" \
     && openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
 
-# CRL
-RUN touch /etc/pki/CA/index.txt \
+# Certificate Revocation List (CRL)
+RUN mkdir -p /etc/pki/CA \
+    && touch /etc/pki/CA/index.txt \
     && echo '00' > /etc/pki/CA/crlnumber \
     && openssl ca -gencrl -keyfile ca.key -cert ca.pem -out crl.pem
 
@@ -422,7 +433,7 @@ RUN ln -s MiG/${WILDCARD_DOMAIN}/server.crt server.crt \
        done
 
 # Upgrade pip, required by cryptography
-RUN python -m pip install -U pip==20.3.4
+RUN python2 -m pip install -U pip==20.3.4
 
 WORKDIR $MIG_ROOT
 USER $USER
@@ -443,75 +454,62 @@ ARG WITH_PY3
 
 # Prepare OpenID (python-openid for py2 and python-openid2 for py3)
 ENV PATH=$PATH:/home/$USER/.local/bin
-RUN pip install --user python-openid
+RUN pip2 install --user python-openid
 RUN if [ "$WITH_PY3" = "yes" ]; then \
       echo "install py3 openid" \
       pip3 install --user python-openid2; \
     fi;
 
 # Modules required by grid_events.py
-RUN pip install --user \
-    watchdog \
-    scandir
+RUN pip2 install --user watchdog scandir
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user \
-      watchdog; \
+      pip3 install --user watchdog scandir; \
     fi;
 
 # Modules required by grid_webdavs
 # NOTE: we require <=1.3.0 for python2. CherryPy is no longer bundled lately.
-RUN pip install --user \
-    wsgidav==1.3.0
+RUN pip2 install --user wsgidav==1.3.0
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user \
-      wsgidav cherrypy; \
+      pip3 install --user wsgidav cherrypy; \
     fi;
 
 # Modules required by grid_ftps
 # NOTE: relies on pyOpenSSL and Cryptography from yum for now
-RUN pip install --user \
-    pyftpdlib
+RUN pip2 install --user pyftpdlib
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user \
-      pyftpdlib; \
+      pip3 install --user pyftpdlib; \
     fi;
 
-# Modules required by grid_X IO daemons (not availalble in yum for py 3)
-RUN pip install --user \
-    cracklib
+# Modules required by grid_X IO daemons (not available in yum for py 3)
+RUN pip2 install --user cracklib
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user \
-      cracklib; \
+      pip3 install --user cracklib; \
     fi;
-
-# Modules required by jupyter
-#RUN pip install --user \
-#    requests
 
 # Module required to run pytests
 # 4.6 is the latest with python2 support
-RUN pip install --user \
-    pytest
+RUN pip2 install --user pytest
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user \
-      pytest; \
+      pip3 install --user pytest; \
     fi;
 
 # Modules required by 2FA
 # NOTE: we require <=2.3.0 for python2.
-RUN pip install --user \
-    pyotp==2.3.0
+RUN pip2 install --user pyotp==2.3.0
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user \
-      pyotp; \
+      pip3 install --user pyotp; \
     fi;
 
 # Modules required for smart country selection
-RUN pip install --user \
-    iso3166
+RUN pip2 install --user iso3166
 RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user \
-      iso3166; \
+      pip3 install --user iso3166; \
+    fi;
+
+# Modules required for workflows
+RUN pip2 install --user nbformat nbconvert papermill
+RUN if [ "$WITH_PY3" = "yes" ]; then \
+      pip3 install --user nbformat nbconvert papermill; \
     fi;
 
 FROM mig_dependencies as download_mig
@@ -642,12 +640,11 @@ RUN echo "PYTHONPATH=${MIG_ROOT}" >> ~/.bash_profile \
 
 WORKDIR $MIG_ROOT/mig/install
 
-RUN echo "Designated jupyter services: $JUPYTER_SERVICES"
-RUN echo "Designated jupyter services descriptions: $JUPYTER_SERVICES_DESC"
+RUN echo "Designated jupyter services: ${JUPYTER_SERVICES}"
+RUN echo "Designated jupyter services descriptions: ${JUPYTER_SERVICES_DESC}"
 
-RUN ./generateconfs.py --source=. \
+RUN python2 ./generateconfs.py --source=. \
     --destination=generated-confs \
-#    --destination_suffix="_svn$(svnversion -n ~/)" \
     --base_fqdn=$DOMAIN \
     --public_fqdn=${PUBLIC_DOMAIN} \
     --mig_cert_fqdn=${MIGCERT_DOMAIN} \
@@ -754,9 +751,9 @@ ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
 ARG ENABLE_SELF_SIGNED_CERTS
 
-# Prepare oiddiscover for httpd
+# Prepare oiddiscover for httpd
 RUN cd $MIG_ROOT/mig \
-    && python shared/httpsclient.py | grep -A 80 "xml version" \
+    && python2 shared/httpsclient.py | grep -A 80 "xml version" \
     > $MIG_ROOT/state/wwwpublic/oiddiscover.xml
 
 USER root
