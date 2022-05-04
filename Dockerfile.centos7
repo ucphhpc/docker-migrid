@@ -282,7 +282,7 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       python-xvfbwrapper \
       wkhtmltopdf \
       xorg-x11-server-Xvfb \
-      && pip install git+https://github.com/Martin-Rehr/python-pdfkit.git ; \
+      && pip install pdfkit; \
     else \
       echo "no GDP deps"; \
     fi;
