@@ -158,7 +158,7 @@ services:
 
     env_file:
       - migrid-httpd.env
-    command: /app/docker-entry.sh -g -u test@gdp.test -p TestPw0rd -s "sftp webdavs" 
+    command: /app/docker-entry.sh -u test@gdp.test -p TestPw0rd -s "sftp webdavs"
     #privileged: true
 
   # A single container with all the daemons base migrid doesn't provide
@@ -301,7 +301,7 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-    command: /app/docker-entry.sh -g
+    command: /app/docker-entry.sh
     #privileged: true
 
   # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
@@ -436,7 +436,7 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-    command: /app/docker-entry.sh -g
+    command: /app/docker-entry.sh
     #privileged: true
 
   migrid-sftp:
@@ -570,7 +570,7 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-    command: /app/docker-entry.sh -g
+    command: /app/docker-entry.sh
     #privileged: true
 
   migrid-ftps:
@@ -704,7 +704,7 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-    command: /app/docker-entry.sh -g
+    command: /app/docker-entry.sh
     #privileged: true
 
   migrid-webdavs:
@@ -837,7 +837,7 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-    command: /app/docker-entry.sh -g
+    command: /app/docker-entry.sh
     #privileged: true
 
   nginx-proxy:
