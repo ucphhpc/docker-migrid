@@ -94,6 +94,9 @@ while [ ${KEEP_RUNNING} -eq 1 ]; do
        if [ "$svc" = "sftpsubsys" ]; then
            PROCNAME="MiG-sftp-subsys"
            PROCUSER="root"
+       elif [ "$svc" = "rsyslogd" ]; then
+           PROCNAME="$svc"
+           PROCUSER="root"
        else
            PROCNAME="$svc"
            PROCUSER=$USER

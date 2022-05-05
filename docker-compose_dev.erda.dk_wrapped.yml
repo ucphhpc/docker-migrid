@@ -111,6 +111,7 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
@@ -140,7 +141,7 @@ services:
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy
+      RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy rsyslogd
     depends_on:
       - devdns
     networks:
@@ -164,9 +165,12 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migrid-syslog
+        target: /var/log
     env_file:
       - migrid-httpd.env
-    command: /app/docker-entry.sh -u test@dev.erda.dk -p TestPw0rd -s "sftp ftps webdavs"
+    command: /app/docker-entry.sh -u test@dev.erda.dk -p TestPw0rd -s "sftp ftps webdavs" -k
 
   # A single container with all the daemons base migrid doesn't provide
   migrid-io:
@@ -259,6 +263,7 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
@@ -288,7 +293,7 @@ services:
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: openid sftp sftpsubsys webdavs ftps notify
+      RUN_SERVICES: openid sftp sftpsubsys webdavs ftps notify rsyslogd
     depends_on:
       - migrid
     ports:
@@ -319,7 +324,10 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-    command: /app/docker-entry.sh
+      - type: volume
+        source: migrid-io-syslog
+        target: /var/log
+    command: /app/docker-entry.sh -k
 
   # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
   #
@@ -414,6 +422,7 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
@@ -443,7 +452,7 @@ services:
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: openid
+      RUN_SERVICES: openid rsyslogd
     depends_on:
       - migrid
     ports:
@@ -466,7 +475,10 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-    command: /app/docker-entry.sh
+      - type: volume
+        source: migrid-openid-syslog
+        target: /var/log
+    command: /app/docker-entry.sh -k
 
   migrid-sftp:
     container_name: migrid-sftp
@@ -558,6 +570,7 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
@@ -587,7 +600,7 @@ services:
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: sftp sftpsubsys
+      RUN_SERVICES: sftp sftpsubsys rsyslogd
     depends_on:
       - migrid
     ports:
@@ -611,7 +624,10 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-    command: /app/docker-entry.sh
+      - type: volume
+        source: migrid-sftp-syslog
+        target: /var/log
+    command: /app/docker-entry.sh -k
 
   migrid-ftps:
     container_name: migrid-ftps
@@ -703,6 +719,7 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}  
@@ -732,7 +749,7 @@ services:
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: ftps
+      RUN_SERVICES: ftps rsyslogd
     depends_on:
       - migrid
     ports:
@@ -756,7 +773,10 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-    command: /app/docker-entry.sh
+      - type: volume
+        source: migrid-ftps-syslog
+        target: /var/log
+    command: /app/docker-entry.sh -k
 
   migrid-webdavs:
     container_name: migrid-webdavs
@@ -848,6 +868,7 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
@@ -877,7 +898,7 @@ services:
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: webdavs
+      RUN_SERVICES: webdavs rsyslogd
     depends_on:
       - migrid
     ports:
@@ -900,7 +921,10 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-    command: /app/docker-entry.sh
+      - type: volume
+        source: migrid-webdavs-syslog
+        target: /var/log
+    command: /app/docker-entry.sh -k
 
   nginx-proxy:
     image: jwilder/nginx-proxy
@@ -957,9 +981,57 @@ volumes:
       o: bind
 
   state:
-      # Volume used to contain the migrid state (provided by migrid)
-      driver: local
-      driver_opts:
-        type: none
-        device: $PWD/state
-        o: bind
+    # Volume used to contain the migrid state (provided by migrid)
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/state
+      o: bind
+  
+  migrid-syslog:
+    # Volume used for exposing migrid system log
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/log/migrid
+      o: bind
+
+  migrid-io-syslog:
+    # Volume used for exposing migrid system log
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/log/migrid-io
+      o: bind
+
+  migrid-openid-syslog:
+    # Volume used for exposing migrid system log
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/log/migrid-openid
+      o: bind
+
+  migrid-sftp-syslog:
+    # Volume used for exposing migrid system log
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/log/migrid-sftp
+      o: bind
+
+  migrid-webdavs-syslog:
+    # Volume used for exposing migrid system log
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/log/migrid-webdavs
+      o: bind
+
+  migrid-ftps-syslog:
+    # Volume used for exposing migrid system log
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/log/migrid-ftps
+      o: bind

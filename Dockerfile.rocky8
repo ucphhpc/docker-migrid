@@ -253,7 +253,7 @@ RUN dnf update -y \
     #pysendfile \
     python2-pyyaml \
     #pyOpenSSL \
-    # NOTE: generally install cracklib from pip as dnf only has py2 version
+    # NOTE: generally install cracklib from pip as yum/dnf only has py2 version
     #cracklib-python \
     cracklib-devel \
     lftp \
@@ -324,7 +324,9 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
 
 # Apache OpenID (provided by epel)
 # TODO: unavailable here! build from centos source?
-#RUN dnf update -y  && dnf install -y mod_auth_openid && dnf clean all && rm -fr /var/cache/dnf
+#RUN dnf update -y  && dnf install -y mod_auth_openid \
+#        && dnf clean all \
+#        && rm -fr /var/cache/dnf
 
 
 # Disable Apache OpenID ssl-certificate verification
@@ -540,7 +542,6 @@ RUN pip2 install jsonrpclib future cffi pysendfile pyOpenSSL paramiko
 # Prepare OpenID (python-openid for py2 and python-openid2 for py3)
 RUN pip2 install python-openid
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
-      echo "install py3 openid" && \
       pip3 install python-openid2; \
     fi;
 
@@ -558,13 +559,13 @@ RUN if [ "${WITH_PY3}" = "yes" ]; then \
     fi;
 
 # Modules required by grid_ftps
-# NOTE: relies on pyOpenSSL and Cryptography from dnf for now
+# NOTE: relies on pyOpenSSL and Cryptography from yum/dnf for now
 RUN pip2 install pyftpdlib
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
       pip3 install pyftpdlib; \
     fi;
 
-# Modules required by grid_X IO daemons (not available in dnf for py 3)
+# Modules required by grid_X IO daemons (not available in yum/dnf for py 3)
 RUN pip2 install cracklib
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
       pip3 install cracklib; \
@@ -947,6 +948,27 @@ RUN mv $WEB_DIR/conf.d/autoindex.conf $WEB_DIR/conf.d/autoindex.conf.centos \
 RUN update-ca-trust force-enable \
     && cp $CERT_DIR/combined.pem /etc/pki/ca-trust/source/anchors/ \
     && update-ca-trust extract
+
+# rsyslog: Disable systemd and enable /dev/log
+# https://projectatomic.io/blog/2014/09/running-syslog-within-a-docker-container/
+RUN sed -i "s/^\$ModLoad imjournal/#\$ModLoad imjournal/g" /etc/rsyslog.conf; \
+    sed -i "s/^\$OmitLocalLogging on/\$OmitLocalLogging off/g" /etc/rsyslog.conf; \
+    sed -i "s/^\$IMJournalStateFile/#\$IMJournalStateFile/g" /etc/rsyslog.conf; \
+    sed -i "s/^\$SystemLogSocketName/#\$SystemLogSocketName/g" /etc/rsyslog.d/listen.conf;
+
+# Create mig syslog dir
+RUN mkdir -p /var/log/mig \
+  && chmod 700 /var/log/mig;
+
+# Enable GDP log 
+RUN if [ "${ENABLE_GDP}" = "True" ]; then \
+      [ ! -f "/var/log/mig/gdp.log" ] \
+        && touch /var/log/mig/gdp.log \
+        && chmod 600 /var/log/mig/gdp.log; \
+      cat /etc/rsyslog.conf | grep -q "# Save MiG GDP messages" \
+        || echo "# Save MiG GDP messages" >> /etc/rsyslog.conf \
+        && echo "local0.*   /var/log/mig/gdp.log" >> /etc/rsyslog.conf; \
+    fi;
 
 FROM setup_mig_configs as start_mig
 ARG DOMAIN
