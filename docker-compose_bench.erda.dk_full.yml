@@ -118,6 +118,7 @@ services:
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -170,7 +171,7 @@ services:
         target: /home/mig/state
     env_file:
       - migrid-httpd.env
-    command: /app/docker-entry.sh -u test@bench.erda.dk -p TestPw0rd -s "sftp ftps webdavs"
+    command: /app/docker-entry.sh -u test@bench.erda.dk -p TestPw0rd -s "sftp ftps webdavs" -k
 
   # A single container with all the daemons base migrid doesn't provide
   migrid-io:
@@ -269,6 +270,7 @@ services:
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -325,7 +327,7 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-    command: /app/docker-entry.sh
+    command: /app/docker-entry.sh -k
 
   # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
   #
@@ -426,6 +428,7 @@ services:
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -474,7 +477,7 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-    command: /app/docker-entry.sh
+    command: /app/docker-entry.sh -k
 
   migrid-sftp:
     container_name: migrid-sftp
@@ -572,6 +575,7 @@ services:
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -621,7 +625,7 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-    command: /app/docker-entry.sh
+    command: /app/docker-entry.sh -k
 
   migrid-ftps:
     container_name: migrid-ftps
@@ -719,6 +723,7 @@ services:
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}  
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -768,7 +773,7 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-    command: /app/docker-entry.sh
+    command: /app/docker-entry.sh -k
 
   migrid-webdavs:
     container_name: migrid-webdavs
@@ -866,6 +871,7 @@ services:
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -914,7 +920,7 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-    command: /app/docker-entry.sh
+    command: /app/docker-entry.sh -k
 
 # NOTE: not used in stand-alone mode
 #  nginx-proxy:

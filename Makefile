@@ -6,6 +6,9 @@ BUILD_TYPE=basic
 # Enable that the builder should use buildkit
 # https://docs.docker.com/develop/develop-images/build_enhancements/
 DOCKER_BUILDKIT=1
+# NOTE: dynamic lookup with docker as default and fallback to podman
+DOCKER = $(shell which docker || which podman)
+DOCKER_COMPOSE = $(shell which docker-compose || which podman-compose)
 
 .PHONY:	all init dockerbuild dockerclean dockerpush clean dist distclean
 .PHONY: install uninstall installcheck check
@@ -30,15 +33,16 @@ endif
 	mkdir -p httpd
 	mkdir -p mig
 	mkdir -p state
+	sed 's@#unset @unset @g;s@#export @export @g' migrid-httpd.env > migrid-httpd-init.sh
 
 dockerbuild:
-	docker-compose build $(ARGS) 
+	${DOCKER_COMPOSE} build $(ARGS)
 
 dockerclean:
-	docker rmi -f $(OWNER)/$(IMAGE):$(BUILD_TYPE)
+	${DOCKER} rmi -f $(OWNER)/$(IMAGE):$(BUILD_TYPE)
 
 dockerpush:
-	docker push $(OWNER)/$(IMAGE):$(BUILD_TYPE)
+	${DOCKER} push $(OWNER)/$(IMAGE):$(BUILD_TYPE)
 
 clean:
 	rm -fr ./mig
@@ -60,8 +64,8 @@ distclean: dockerclean clean
 	rm -rf ./state
         # TODO: is something like this still needed to clean up completely?
         # It needs to NOT greedily remove ALL local volumes if so!
-	#if [ "$$(docker volume ls -q -f 'name=${NAME}*')" != "" ]; then\
-	#	docker volume rm -f $$(docker volume ls -q -f 'name=${PACKAGE_NAME}*');\
+	#if [ "$$(${DOCKER} volume ls -q -f 'name=${NAME}*')" != "" ]; then\
+	#	${DOCKER} volume rm -f $$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*');\
 	#fi
 	rm -f .env docker-compose.yml
 

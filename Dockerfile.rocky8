@@ -95,6 +95,7 @@ ARG ENABLE_GDP=False
 ARG ENABLE_TWOFACTOR=True
 ARG ENABLE_TWOFACTOR_STRICT_ADDRESS=False
 ARG ENABLE_SELF_SIGNED_CERTS=False
+ARG BUILD_MOD_AUTH_OPENID=False
 ARG PUBKEY_FROM_DNS=False
 ARG PREFER_PYTHON3=False
 ARG SIGNUP_METHODS=migoid
@@ -187,6 +188,7 @@ ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG ENABLE_GDP
 ARG ENABLE_SELF_SIGNED_CERTS
+ARG BUILD_MOD_AUTH_OPENID
 ARG WITH_PY3
 ARG PREFER_PYTHON3
 
@@ -197,8 +199,10 @@ WORKDIR /tmp
 # https://superuser.com/questions/784451/centos-on-docker-how-to-install-doc-files
 RUN sed -i '/nodocs/d' /etc/yum.conf
 
+# NOTE: Enable powertools repo by default on Rocky for cracklib-devel, sshfs, ...
 RUN dnf update -y \
-    && dnf install -y epel-release \
+    && dnf install -y epel-release dnf-plugins-core \
+    && dnf config-manager --set-enabled powertools \
     && dnf clean all \
     && rm -fr /var/cache/dnf
 
@@ -209,6 +213,7 @@ RUN dnf update -y \
     make \
     glibc-langpack-en \
     pam-devel \
+    nss-devel \
     httpd \
     htop \
     openssh \
@@ -219,9 +224,9 @@ RUN dnf update -y \
     #mod_wsgi \
     # NOTE: mod_proxy is included in base httpd now
     #mod_proxy \
-    # NOTE OpenID and Connect need special care here
+    # NOTE: OpenID 2.0 needs special care here
     #mod_auth_openid \
-    #mod_auth_openidc \
+    mod_auth_openidc \
     tzdata \
     initscripts \
     svn \
@@ -248,15 +253,14 @@ RUN dnf update -y \
     #pysendfile \
     python2-pyyaml \
     #pyOpenSSL \
+    # NOTE: generally install cracklib from pip as dnf only has py2 version
+    #cracklib-python \
+    cracklib-devel \
     lftp \
     rsync \
     fail2ban \
     ipset \
-    wget && \
-    # NOTE: generally install cracklib from pip as dnf only has py2 version
-    dnf --enablerepo=powertools install -y \
-    #cracklib-python \
-    cracklib-devel \
+    wget \
     && dnf clean all \
     && rm -fr /var/cache/dnf
 
@@ -284,11 +288,11 @@ RUN if [ "${WITH_PY3}" = "yes" ]; then \
       echo "no py3 deps"; \
     fi;
 
-RUN if [ "${PREFER_PY3}" = "yes" ]; then \
-      echo "set up py3 as default python" \
+RUN if [ "${PREFER_PYTHON3}" = "True" ]; then \
+      echo "set up py3 as default python" && \
       update-alternatives --set python /usr/bin/python3; \
     else \
-      echo "set up py2 as default python" \
+      echo "set up py2 as default python" && \
       update-alternatives --set python /usr/bin/python2; \
     fi;
 
@@ -350,7 +354,47 @@ RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
         && dnf localinstall -y /root/rpmbuild/RPMS/x86_64/libopkele-2.0.4-9.el7.x86_64.rpm; \
     fi;
-        
+
+# Build mod_auth_openid from source on rocky
+RUN echo "BUILD_MOD_AUTH_OPENID: $BUILD_MOD_AUTH_OPENID"
+RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" ]; then \
+	echo "building mod_auth_openid from centos7 source rpm" \
+	&& dnf update -y \
+	&& dnf install -y gcc-c++ \
+		rpm-build \
+		mock \
+		make \
+		autoconf \
+		automake \
+		httpd-devel \
+		libcurl-devel \
+		libtidy-devel \
+		pcre-devel \
+		openssl-devel \
+		libtool \
+		sqlite-devel \
+		boost-devel \
+		libxslt \
+		expat-devel \
+		tidy-devel \
+		libuuid-devel \
+                && dnf clean all \
+                && rm -fr /var/cache/dnf \
+        #&& rpm -e --nodeps libopkele \
+	&& echo "install libopkele centos7 source rpm" \
+        && rpm -ivh https://download-ib01.fedoraproject.org/pub/epel/7/SRPMS/Packages/l/libopkele-2.0.4-9.el7.src.rpm \
+        && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
+        && dnf localinstall -y /root/rpmbuild/RPMS/x86_64/libopkele-2.0.4-9.el7.x86_64.rpm \
+	&& echo "install mod_auth_openid centos7 source rpm" \
+        #&& rpm -e --nodeps mod_auth_openid \
+        && rpm -ivh https://download-ib01.fedoraproject.org/pub/epel/7/SRPMS/Packages/m/mod_auth_openid-0.8-2.el7.src.rpm \
+	&& echo "build mod_auth_openid centos7 source rpm" \
+        && rpmbuild -v -ba /root/rpmbuild/SPECS/mod_auth_openid.spec \
+	&& echo "install mod_auth_openid centos7 source rpm" \
+        && dnf localinstall -y /root/rpmbuild/RPMS/x86_64/mod_auth_openid-0.8-2.el7.x86_64.rpm; \
+    fi;
+
+
 # Setup container default language to make sure UTF8 is available in wsgi app.
 # Otherwise sys.getfilesystemencoding will return ascii despite utf8 FS, and
 # thus result e.g. in broken user path and client_id for users with accented
@@ -364,6 +408,7 @@ ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 
 # Setup user
 ENV USER=mig
+ENV GROUP=mig
 ENV UID=1000
 ENV GID=1000
 
@@ -378,7 +423,7 @@ ENV CERT_DIR=$WEB_DIR/MiG-certificates
 USER root
 
 RUN mkdir -p $CERT_DIR/MiG/${WILDCARD_DOMAIN} \
-    && chown $USER:$USER $CERT_DIR \
+    && chown $USER:$GROUP $CERT_DIR \
     && chmod 775 $CERT_DIR
 
 # Certs and keys
@@ -401,7 +446,7 @@ ARG WEBDAVS_DOMAIN
 # Dhparam - https://wiki.mozilla.org/Security/Archive/Server_Side_TLS_4.0
 RUN curl https://ssl-config.mozilla.org/ffdhe4096.txt -o $CERT_DIR/dhparams.pem
 
-# CA
+# CA
 # https://gist.github.com/Soarez/9688998
 RUN openssl genrsa -des3 -passout pass:qwerty -out ca.key 2048 \
     && openssl rsa -passin pass:qwerty -in ca.key -out ca.key \
@@ -427,8 +472,8 @@ RUN mkdir -p /etc/pki/CA \
 RUN cat server.{key,crt} > combined.pem \
     && cat server.crt > server.ca.pem \
     && cat ca.pem >> server.ca.pem \
-    && chown $USER:$USER combined.pem \
-    && chown $USER:$USER server.ca.pem \
+    && chown $USER:$GROUP combined.pem \
+    && chown $USER:$GROUP server.ca.pem \
     && ssh-keygen -y -f combined.pem > combined.pub \
     && chown 0:0 *.key server.crt ca.pem \
     && chmod 400 *.key server.crt ca.pem combined.pem server.ca.pem
@@ -462,15 +507,16 @@ RUN ln -s MiG/${WILDCARD_DOMAIN}/server.crt server.crt \
 # Upgrade pip, required by cryptography
 RUN python2 -m pip install -U pip==20.3.4
 
+# NOTE: make certs as mig user
+WORKDIR $MIG_ROOT
+USER $USER
+
 # Prepare mod WSGI for py2 (no longer in dnf here)
 # See standalone notes on https://pypi.org/project/mod-wsgi/
 # TODO: build is broken - fix!
 #RUN dnf install -y apr-devel && dnf clean all && rm -fr /var/cache/dnf
 #RUN pip2 install mod_wsgi-standalone
 
-
-WORKDIR $MIG_ROOT
-USER $USER
 
 RUN mkdir -p MiG-certificates \
     && cd MiG-certificates \
@@ -483,69 +529,71 @@ RUN mkdir -p MiG-certificates \
 
 FROM setup_security as mig_dependencies
 ARG DOMAIN
-ARG ENABLE_DEFAULT_PY
 ARG WITH_PY3
 
+# NOTE: Switch back to root for system-wide pip install here
+USER root
+
 # Prepare py2 dependencies no longer in dnf
-RUN pip2 install --user jsonrpclib future cffi pysendfile pyOpenSSL paramiko
+RUN pip2 install jsonrpclib future cffi pysendfile pyOpenSSL paramiko
 
 # Prepare OpenID (python-openid for py2 and python-openid2 for py3)
-RUN pip2 install --user python-openid
-RUN if [ "$WITH_PY3" = "yes" ]; then \
-      echo "install py3 openid" \
-      pip3 install --user python-openid2; \
+RUN pip2 install python-openid
+RUN if [ "${WITH_PY3}" = "yes" ]; then \
+      echo "install py3 openid" && \
+      pip3 install python-openid2; \
     fi;
 
 # Modules required by grid_events.py
-RUN pip2 install --user watchdog scandir
-RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user watchdog scandir; \
+RUN pip2 install watchdog scandir
+RUN if [ "${WITH_PY3}" = "yes" ]; then \
+      pip3 install watchdog scandir; \
     fi;
 
 # Modules required by grid_webdavs
 # NOTE: we require <=1.3.0 for python2. CherryPy is no longer bundled lately.
-RUN pip2 install --user wsgidav==1.3.0
-RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user wsgidav cherrypy; \
+RUN pip2 install wsgidav==1.3.0
+RUN if [ "${WITH_PY3}" = "yes" ]; then \
+      pip3 install wsgidav cherrypy; \
     fi;
 
 # Modules required by grid_ftps
 # NOTE: relies on pyOpenSSL and Cryptography from dnf for now
-RUN pip2 install --user pyftpdlib
-RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user pyftpdlib; \
+RUN pip2 install pyftpdlib
+RUN if [ "${WITH_PY3}" = "yes" ]; then \
+      pip3 install pyftpdlib; \
     fi;
 
 # Modules required by grid_X IO daemons (not available in dnf for py 3)
-RUN pip2 install --user cracklib
-RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user cracklib; \
+RUN pip2 install cracklib
+RUN if [ "${WITH_PY3}" = "yes" ]; then \
+      pip3 install cracklib; \
     fi;
 
 # Module required to run pytests
 # 4.6 is the latest with python2 support
-RUN pip2 install --user pytest
-RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user pytest; \
+RUN pip2 install pytest
+RUN if [ "${WITH_PY3}" = "yes" ]; then \
+      pip3 install pytest; \
     fi;
 
 # Modules required by 2FA
 # NOTE: we require <=2.3.0 for python2.
-RUN pip2 install --user pyotp==2.3.0
-RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user pyotp; \
+RUN pip2 install pyotp==2.3.0
+RUN if [ "${WITH_PY3}" = "yes" ]; then \
+      pip3 install pyotp; \
     fi;
 
 # Modules required for smart country selection
-RUN pip2 install --user iso3166
-RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user iso3166; \
+RUN pip2 install iso3166
+RUN if [ "${WITH_PY3}" = "yes" ]; then \
+      pip3 install iso3166; \
     fi;
 
 # Modules required for workflows
-RUN pip2 install --user nbformat nbconvert papermill
-RUN if [ "$WITH_PY3" = "yes" ]; then \
-      pip3 install --user nbformat nbconvert papermill; \
+RUN pip2 install nbformat nbconvert papermill
+RUN if [ "${WITH_PY3}" = "yes" ]; then \
+      pip3 install nbformat nbconvert papermill; \
     fi;
 
 FROM mig_dependencies as download_mig
@@ -556,6 +604,9 @@ ARG WITH_GIT
 ARG MIG_GIT_REPO
 ARG MIG_GIT_BRANCH
 ARG MIG_GIT_REV
+
+WORKDIR $MIG_ROOT
+USER $USER
 
 # Install and configure MiG
 # NOTE: git refuses to clone into non-empty dir - use tmp
@@ -572,7 +623,7 @@ RUN if [ "$WITH_GIT" = "yes" ]; then \
       svn checkout -r ${MIG_SVN_REV} ${MIG_SVN_REPO} . ; \
     fi;
 
-ADD --chown=$USER:$USER mig $MIG_ROOT/
+ADD --chown=$USER:$GROUP mig $MIG_ROOT/
 
 FROM download_mig as install_mig
 ARG DOMAIN
@@ -669,12 +720,13 @@ ARG JUPYTER_SERVICES_DESC
 ARG VGRID_LABEL
 ARG GDP_EMAIL_NOTIFY
 
+# TODO: do we still need the ~/.local/ wrapper now that update-alternatives run?
 ENV PYTHONPATH=${MIG_ROOT}
-ENV PATH=$PATH:/home/$USER/.local/bin
+ENV PATH=/home/$USER/.local/bin:$PATH
 # Ensure that the $USER sets it during session start
 RUN echo "PYTHONPATH=${MIG_ROOT}" >> ~/.bash_profile \
     && echo "export PYTHONPATH" >> ~/.bash_profile
-RUN echo "PATH=${PATH}:$HOME/.local/bin" >> ~/.bash_profile \
+RUN echo "PATH=$HOME/.local/bin:${PATH}" >> ~/.bash_profile \
     && echo "export PATH" >> ~/.bash_profile
 
 WORKDIR $MIG_ROOT/mig/install
@@ -683,15 +735,15 @@ RUN echo "Designated jupyter services: ${JUPYTER_SERVICES}"
 RUN echo "Designated jupyter services descriptions: ${JUPYTER_SERVICES_DESC}"
 
 RUN mkdir -p ${MIG_ROOT}/.local/bin; \
-    if [ "${PREFER_PY3}" = "yes" ]; then \
-      echo "setup py3 as default python in ${MIG_ROOT}"; \
+    if [ "${PREFER_PYTHON3}" = "True" ]; then \
+      echo "setup py3 as default python in ${MIG_ROOT}" && \
       ln -s /usr/bin/python3 ${MIG_ROOT}/.local/bin/python; \
     else \
-      echo "setup py2 as default python in $MIG_ROOT"; \
+      echo "setup py2 as default python in $MIG_ROOT" && \
       ln -s /usr/bin/python2 ${MIG_ROOT}/.local/bin/python; \
     fi;
 
-RUN python ./generateconfs.py --source=. \
+RUN ./generateconfs.py --source=. \
     --destination=generated-confs \
     --base_fqdn=$DOMAIN \
     --public_fqdn=${PUBLIC_DOMAIN} \
@@ -702,17 +754,17 @@ RUN python ./generateconfs.py --source=. \
     --ext_oidc_fqdn=${EXTOIDC_DOMAIN} \
     --sid_fqdn=${SID_DOMAIN} \
     --io_fqdn=${IO_DOMAIN} \
-    --user=mig --group=mig --log_level=${LOG_LEVEL} \
+    --user=$USER --group=$GROUP --log_level=${LOG_LEVEL} \
     --admin_email="${ADMIN_EMAIL}" --admin_list="${ADMIN_LIST}" \
     --apache_version=2.4 \
-    --apache_etc=/etc/httpd \
+    --apache_etc=$WEB_DIR \
     --apache_run=/var/run/httpd \
     --apache_lock=/var/lock/subsys/httpd \
     --apache_log=/var/log/httpd \
     --openssh_version=7.4 \
-    --mig_code=/home/mig/mig \
-    --mig_state=/home/mig/state \
-    --mig_certs=/etc/httpd/MiG-certificates \
+    --mig_code=$MIG_ROOT/mig \
+    --mig_state=$MIG_ROOT/state \
+    --mig_certs=$CERT_DIR \
     --hg_path=/usr/bin/hg \
     --hgweb_scripts=/usr/share/doc/mercurial-2.6.2 \
     --trac_admin_path= \
@@ -760,9 +812,9 @@ RUN python ./generateconfs.py --source=. \
     --user_clause=User --group_clause=Group \
     --listen_clause='#Listen' \
     --serveralias_clause='ServerAlias' --alias_field=email \
-    --dhparams_path=~/certs/dhparams.pem \
-    --daemon_keycert=~/certs/combined.pem \
-    --daemon_pubkey=~/certs/combined.pub \
+    --dhparams_path=$CERT_DIR/dhparams.pem \
+    --daemon_keycert=$CERT_DIR/combined.pem \
+    --daemon_pubkey=$CERT_DIR/combined.pub \
     --daemon_pubkey_from_dns=${PUBKEY_FROM_DNS} \
     --daemon_show_address=${IO_DOMAIN} \
     --signup_methods="${SIGNUP_METHODS}" \
@@ -825,19 +877,27 @@ RUN cp generated-confs/libnss_mig.conf /etc/ \
 RUN chmod 755 generated-confs/envvars \
     && chmod 755 generated-confs/httpd.conf
 
-# Automatic inclusion confs
+# Apache base confs - the systemd one and maybe sysconfig is not really used
 RUN cp generated-confs/MiG.conf $WEB_DIR/conf.d/ \
     && cp generated-confs/httpd.conf $WEB_DIR/ \
     && cp generated-confs/mimic-deb.conf $WEB_DIR/conf/httpd.conf \
     && cp generated-confs/envvars /etc/sysconfig/httpd \
     && cp generated-confs/apache2.service /lib/systemd/system/httpd.service
 
-# Automatic Jupyter inclusion confs
+# Disable missing mod auth openid in this case
+RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" ]; then \
+        echo "Keep mod_auth_openid in apache"; \
+    else \
+        echo "Disable missing mod_auth_openid in apache" && \
+	sed -i 's@LoadModule authopenid_mod@#LoadModule authopenid_mod@g' $WEB_DIR/conf/httpd.conf; \
+    fi
+
+# Apache Jupyter inclusion confs
 RUN mkdir -p $WEB_DIR/conf.extras.d/ \
-    && cp generated-confs/MiG-jupyter-def.conf /etc/httpd/conf.extras.d \
-    && cp generated-confs/MiG-jupyter-openid.conf /etc/httpd/conf.extras.d \
-    && cp generated-confs/MiG-jupyter-proxy.conf /etc/httpd/conf.extras.d \
-    && cp generated-confs/MiG-jupyter-rewrite.conf /etc/httpd/conf.extras.d
+    && cp generated-confs/MiG-jupyter-def.conf $WEB_DIR/conf.extras.d \
+    && cp generated-confs/MiG-jupyter-openid.conf $WEB_DIR/conf.extras.d \
+    && cp generated-confs/MiG-jupyter-proxy.conf $WEB_DIR/conf.extras.d \
+    && cp generated-confs/MiG-jupyter-rewrite.conf $WEB_DIR/conf.extras.d
 
 # Root confs
 RUN cp generated-confs/apache2.conf $WEB_DIR/ \
@@ -859,7 +919,7 @@ RUN cp -a $MIG_ROOT/state/wwwpublic/index-${EMULATE_FQDN}.html \
     ln -s support-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/support-snippet.html && \
     ln -s tips-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/tips-snippet.html && \
     ln -s terms-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/terms-snippet.html && \
-    chown -R $USER:$USER $MIG_ROOT/state/wwwpublic/*.html
+    chown -R $USER:$GROUP $MIG_ROOT/state/wwwpublic/*.html
 
 # TODO: improve this hard-coded translation
 # Replace index.html redirects to instance domains
@@ -877,7 +937,7 @@ RUN cp generated-confs/migrid-init.d-rh /etc/init.d/migrid
 
 WORKDIR $MIG_ROOT
 
-# Prepare default conf.d
+# Prepare default conf.d
 RUN mv $WEB_DIR/conf.d/autoindex.conf $WEB_DIR/conf.d/autoindex.conf.centos \
     && mv $WEB_DIR/conf.d/ssl.conf $WEB_DIR/conf.d/ssl.conf.centos \
     && mv $WEB_DIR/conf.d/userdir.conf $WEB_DIR/conf.d/userdir.conf.centos \
@@ -899,7 +959,8 @@ ENTRYPOINT ["/tini", "--"]
 
 ADD docker-entry.sh /app/docker-entry.sh
 ADD migrid-httpd.env /app/migrid-httpd.env
-RUN chown $USER:$USER /app/docker-entry.sh \
+ADD migrid-httpd-init.sh /app/migrid-httpd-init.sh
+RUN chown $USER:$GROUP /app/docker-entry.sh \
     && chmod +x /app/docker-entry.sh
 
 USER root

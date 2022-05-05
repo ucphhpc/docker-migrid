@@ -188,6 +188,7 @@ ARG WILDCARD_DOMAIN
 ARG ENABLE_GDP
 ARG ENABLE_SELF_SIGNED_CERTS
 ARG WITH_PY3
+ARG PREFER_PYTHON3
 
 WORKDIR /tmp
 
@@ -323,7 +324,7 @@ RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
         && yum localinstall -y /root/rpmbuild/RPMS/x86_64/libopkele-2.0.4-9.el7.x86_64.rpm; \
     fi;
-        
+
 # Setup container default language to make sure UTF8 is available in wsgi app.
 # Otherwise sys.getfilesystemencoding will return ascii despite utf8 FS, and
 # thus result e.g. in broken user path and client_id for users with accented
@@ -337,6 +338,7 @@ ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 
 # Setup user
 ENV USER=mig
+ENV GROUP=mig
 ENV UID=1000
 ENV GID=1000
 
@@ -351,7 +353,7 @@ ENV CERT_DIR=$WEB_DIR/MiG-certificates
 USER root
 
 RUN mkdir -p $CERT_DIR/MiG/${WILDCARD_DOMAIN} \
-    && chown $USER:$USER $CERT_DIR \
+    && chown $USER:$GROUP $CERT_DIR \
     && chmod 775 $CERT_DIR
 
 # Certs and keys
@@ -374,7 +376,7 @@ ARG WEBDAVS_DOMAIN
 # Dhparam - https://wiki.mozilla.org/Security/Archive/Server_Side_TLS_4.0
 RUN curl https://ssl-config.mozilla.org/ffdhe4096.txt -o $CERT_DIR/dhparams.pem
 
-# CA
+# CA
 # https://gist.github.com/Soarez/9688998
 RUN openssl genrsa -des3 -passout pass:qwerty -out ca.key 2048 \
     && openssl rsa -passin pass:qwerty -in ca.key -out ca.key \
@@ -400,8 +402,8 @@ RUN mkdir -p /etc/pki/CA \
 RUN cat server.{key,crt} > combined.pem \
     && cat server.crt > server.ca.pem \
     && cat ca.pem >> server.ca.pem \
-    && chown $USER:$USER combined.pem \
-    && chown $USER:$USER server.ca.pem \
+    && chown $USER:$GROUP combined.pem \
+    && chown $USER:$GROUP server.ca.pem \
     && ssh-keygen -y -f combined.pem > combined.pub \
     && chown 0:0 *.key server.crt ca.pem \
     && chmod 400 *.key server.crt ca.pem combined.pem server.ca.pem
@@ -449,7 +451,6 @@ RUN mkdir -p MiG-certificates \
 
 FROM setup_security as mig_dependencies
 ARG DOMAIN
-ARG ENABLE_DEFAULT_PY
 ARG WITH_PY3
 
 # Prepare OpenID (python-openid for py2 and python-openid2 for py3)
@@ -536,7 +537,7 @@ RUN if [ "$WITH_GIT" = "yes" ]; then \
       svn checkout -r ${MIG_SVN_REV} ${MIG_SVN_REPO} . ; \
     fi;
 
-ADD --chown=$USER:$USER mig $MIG_ROOT/
+ADD --chown=$USER:$GROUP mig $MIG_ROOT/
 
 FROM download_mig as install_mig
 ARG DOMAIN
@@ -654,17 +655,17 @@ RUN python2 ./generateconfs.py --source=. \
     --ext_oidc_fqdn=${EXTOIDC_DOMAIN} \
     --sid_fqdn=${SID_DOMAIN} \
     --io_fqdn=${IO_DOMAIN} \
-    --user=mig --group=mig --log_level=${LOG_LEVEL} \
+    --user=$USER --group=$GROUP --log_level=${LOG_LEVEL} \
     --admin_email="${ADMIN_EMAIL}" --admin_list="${ADMIN_LIST}" \
     --apache_version=2.4 \
-    --apache_etc=/etc/httpd \
+    --apache_etc=$WEB_DIR \
     --apache_run=/var/run/httpd \
     --apache_lock=/var/lock/subsys/httpd \
     --apache_log=/var/log/httpd \
     --openssh_version=7.4 \
-    --mig_code=/home/mig/mig \
-    --mig_state=/home/mig/state \
-    --mig_certs=/etc/httpd/MiG-certificates \
+    --mig_code=$MIG_ROOT/mig \
+    --mig_state=$MIG_ROOT/state \
+    --mig_certs=$CERT_DIR \
     --hg_path=/usr/bin/hg \
     --hgweb_scripts=/usr/share/doc/mercurial-2.6.2 \
     --trac_admin_path= \
@@ -712,9 +713,9 @@ RUN python2 ./generateconfs.py --source=. \
     --user_clause=User --group_clause=Group \
     --listen_clause='#Listen' \
     --serveralias_clause='ServerAlias' --alias_field=email \
-    --dhparams_path=~/certs/dhparams.pem \
-    --daemon_keycert=~/certs/combined.pem \
-    --daemon_pubkey=~/certs/combined.pub \
+    --dhparams_path=$CERT_DIR/dhparams.pem \
+    --daemon_keycert=$CERT_DIR/combined.pem \
+    --daemon_pubkey=$CERT_DIR/combined.pub \
     --daemon_pubkey_from_dns=${PUBKEY_FROM_DNS} \
     --daemon_show_address=${IO_DOMAIN} \
     --signup_methods="${SIGNUP_METHODS}" \
@@ -777,19 +778,19 @@ RUN cp generated-confs/libnss_mig.conf /etc/ \
 RUN chmod 755 generated-confs/envvars \
     && chmod 755 generated-confs/httpd.conf
 
-# Automatic inclusion confs
+# Apache base confs - the systemd one and maybe sysconfig is not really used
 RUN cp generated-confs/MiG.conf $WEB_DIR/conf.d/ \
     && cp generated-confs/httpd.conf $WEB_DIR/ \
     && cp generated-confs/mimic-deb.conf $WEB_DIR/conf/httpd.conf \
     && cp generated-confs/envvars /etc/sysconfig/httpd \
     && cp generated-confs/apache2.service /lib/systemd/system/httpd.service
 
-# Automatic Jupyter inclusion confs
+# Apache Jupyter inclusion confs
 RUN mkdir -p $WEB_DIR/conf.extras.d/ \
-    && cp generated-confs/MiG-jupyter-def.conf /etc/httpd/conf.extras.d \
-    && cp generated-confs/MiG-jupyter-openid.conf /etc/httpd/conf.extras.d \
-    && cp generated-confs/MiG-jupyter-proxy.conf /etc/httpd/conf.extras.d \
-    && cp generated-confs/MiG-jupyter-rewrite.conf /etc/httpd/conf.extras.d
+    && cp generated-confs/MiG-jupyter-def.conf $WEB_DIR/conf.extras.d \
+    && cp generated-confs/MiG-jupyter-openid.conf $WEB_DIR/conf.extras.d \
+    && cp generated-confs/MiG-jupyter-proxy.conf $WEB_DIR/conf.extras.d \
+    && cp generated-confs/MiG-jupyter-rewrite.conf $WEB_DIR/conf.extras.d
 
 # Root confs
 RUN cp generated-confs/apache2.conf $WEB_DIR/ \
@@ -811,7 +812,7 @@ RUN cp -a $MIG_ROOT/state/wwwpublic/index-${EMULATE_FQDN}.html \
     ln -s support-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/support-snippet.html && \
     ln -s tips-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/tips-snippet.html && \
     ln -s terms-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/terms-snippet.html && \
-    chown -R $USER:$USER $MIG_ROOT/state/wwwpublic/*.html
+    chown -R $USER:$GROUP $MIG_ROOT/state/wwwpublic/*.html
 
 # TODO: improve this hard-coded translation
 # Replace index.html redirects to instance domains
@@ -829,7 +830,7 @@ RUN cp generated-confs/migrid-init.d-rh /etc/init.d/migrid
 
 WORKDIR $MIG_ROOT
 
-# Prepare default conf.d
+# Prepare default conf.d
 RUN mv $WEB_DIR/conf.d/autoindex.conf $WEB_DIR/conf.d/autoindex.conf.centos \
     && mv $WEB_DIR/conf.d/ssl.conf $WEB_DIR/conf.d/ssl.conf.centos \
     && mv $WEB_DIR/conf.d/userdir.conf $WEB_DIR/conf.d/userdir.conf.centos \
@@ -851,7 +852,8 @@ ENTRYPOINT ["/tini", "--"]
 
 ADD docker-entry.sh /app/docker-entry.sh
 ADD migrid-httpd.env /app/migrid-httpd.env
-RUN chown $USER:$USER /app/docker-entry.sh \
+ADD migrid-httpd-init.sh /app/migrid-httpd-init.sh
+RUN chown $USER:$GROUP /app/docker-entry.sh \
     && chmod +x /app/docker-entry.sh
 
 USER root

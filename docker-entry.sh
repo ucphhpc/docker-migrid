@@ -5,8 +5,9 @@
 # Continuously checks whether the selected services are still alive.
 
 # Create any user requested
-while getopts u:p:s: option; do
+while getopts ku:p:s: option; do
     case "${option}" in
+        k) KEEPALIVE=1;;
         u) USERNAME=${OPTARG};;
         p) PASSWORD=${OPTARG};;
         s) SVCLOGINS=${OPTARG};;
@@ -33,7 +34,7 @@ if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
     if [ "$GDP" -ne 0 ]; then 
         for PROTO in ${SVCLOGINS}; do
             echo "Add $PROTO password login for $USERNAME"
-            su - $USER -c "python ${MIG_ROOT}/mig/cgi-bin/fakecgi.py ${MIG_ROOT}/mig/cgi-bin/settingsaction.py POST \"topic=${PROTO};output_format=text;password=${PASSWORD}\" \"/C=DK/ST=NA/L=NA/O=Test Org/OU=NA/CN=Test User/emailAddress=${USERNAME}\" admin 127.0.0.1 True" | grep 'Exit code: 0 ' || \
+            su - $USER -c "python ${MIG_ROOT}/mig/cgi-bin/fakecgi.py ${MIG_ROOT}/mig/cgi-bin/settingsaction.py POST \"topic=${PROTO}&output_format=text&password=${PASSWORD}\" \"/C=DK/ST=NA/L=NA/O=Test Org/OU=NA/CN=Test User/emailAddress=${USERNAME}\" admin 127.0.0.1 True" | grep 'Exit code: 0 ' || \
             echo "Failed to set $PROTO password login"
         done
     fi
@@ -44,7 +45,7 @@ CHK_SERVICES=""
 for svc in ${RUN_SERVICES}; do
     if [ $svc = "httpd" ]; then
         # Load required httpd environment vars
-        source migrid-httpd.env
+        source migrid-httpd-init.sh
 
         # TODO: can we switch to proper service start?
         #service httpd start
@@ -90,9 +91,14 @@ while [ ${KEEP_RUNNING} -eq 1 ]; do
         SVC_STATUS=$?
         if [ $SVC_STATUS -ne 0 ]; then
             echo "$svc service failed."
-            KEEP_RUNNING=0
-            EXIT_CODE=1
-            break
+            if [ $KEEPALIVE -eq 0 ]; then
+		KEEP_RUNNING=0
+		EXIT_CODE=1
+		break
+	    else
+		echo "keepalive despite $svc service failed."
+		sleep 900
+	    fi
         fi
         # Throttle down 
         sleep 1

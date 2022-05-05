@@ -106,21 +106,28 @@ venv.bak/
 .idea/
 
 # Migrid mount volume directories
-certs/
 httpd/
 state/
 
-# Dont store current config and db
+# Do not store current config and db
 mig/server/MiG-users.db
+mig/server/MiGserver.conf
 
-# Dont store job queue
+# Do not store named pipe helpers
 mig/server/server.stdin
+mig/server/notify.stdin
 
 mig/
 .vscode/
 
 .DS_Store
 
-# By default this is expected to be a symlink that
-# points to the active configuration
+# By default these are expected to be symlinks that point to the
+# active set up and are created in make init if not there.
 docker-compose.yml
+Dockerfile
+
+# Generated helpers to skip
+migrid-httpd-init.sh
+MiG-certificates
+certs
