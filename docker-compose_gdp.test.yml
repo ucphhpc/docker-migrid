@@ -555,7 +555,7 @@ services:
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: sftp sftpsubsys
+      RUN_SERVICES: sftp sftpsubsys rsyslogd
     depends_on:
       - migrid
     ports:
@@ -692,7 +692,7 @@ services:
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: ftps
+      RUN_SERVICES: ftps rsyslogd
     depends_on:
       - migrid
     ports:
@@ -829,7 +829,7 @@ services:
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: webdavs
+      RUN_SERVICES: webdavs rsyslogd
     depends_on:
       - migrid
     ports:
