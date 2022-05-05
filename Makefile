@@ -33,6 +33,12 @@ endif
 	mkdir -p httpd
 	mkdir -p mig
 	mkdir -p state
+	mkdir -p log/migrid
+	mkdir -p log/migrid-io
+	mkdir -p log/migrid-openid
+	mkdir -p log/migrid-sftp
+	mkdir -p log/migrid-webdavs
+	mkdir -p log/migrid-ftps
 	sed 's@#unset @unset @g;s@#export @export @g' migrid-httpd.env > migrid-httpd-init.sh
 
 dockerbuild:
@@ -62,11 +68,12 @@ distclean: dockerclean clean
 	mkdir -p ./state
 	chmod -R u+w ./state
 	rm -rf ./state
+	rm -rf ./log
         # TODO: is something like this still needed to clean up completely?
         # It needs to NOT greedily remove ALL local volumes if so!
-	#if [ "$$(${DOCKER} volume ls -q -f 'name=${NAME}*')" != "" ]; then\
-	#	${DOCKER} volume rm -f $$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*');\
-	#fi
+        #if [ "$$(${DOCKER} volume ls -q -f 'name=${NAME}*')" != "" ]; then\
+        #	${DOCKER} volume rm -f $$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*');\
+        #fi
 	rm -f .env docker-compose.yml
 
 uninstallcheck:

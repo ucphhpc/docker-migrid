@@ -43,7 +43,7 @@ fi
 echo "Run services: ${RUN_SERVICES}"
 CHK_SERVICES=""
 for svc in ${RUN_SERVICES}; do
-    if [ $svc = "httpd" ]; then
+    if [ "$svc" = "httpd" ]; then
         # Load required httpd environment vars
         source migrid-httpd-init.sh
 
@@ -52,7 +52,18 @@ for svc in ${RUN_SERVICES}; do
         /usr/sbin/httpd -k start
         status=$?
         if [ $status -ne 0 ]; then
-            echo "Failed to start httpd: $status"
+            echo "Failed to start $svc: $status"
+            exit $status
+        else
+            CHK_SERVICES="${CHK_SERVICES} $svc"
+        fi
+    elif [ "$svc" = "rsyslogd" ]; then
+        # TODO: can we switch to proper service start?
+        #service rsyslog start
+        /usr/sbin/rsyslogd
+        status=$?
+        if [ $status -ne 0 ]; then
+            echo "Failed to start $svc: $status"
             exit $status
         else
             CHK_SERVICES="${CHK_SERVICES} $svc"
@@ -62,9 +73,9 @@ for svc in ${RUN_SERVICES}; do
         service migrid startdaemon $svc
         status=$?
         # Returns 42 on disabled
-        if [ $status -eq 42 ]; then
+        if [ "$status" -eq 42 ]; then
             echo "Skip disabled $svc service"
-        elif [ $status -ne 0 ]; then
+        elif [ "$status" -ne 0 ]; then
             echo "Failed to start migrid $svc service: $status"
             exit $status
         else
@@ -80,7 +91,7 @@ EXIT_CODE=0
 while [ ${KEEP_RUNNING} -eq 1 ]; do
     sleep 120
     for svc in ${CHK_SERVICES}; do
-       if [ $svc = "sftpsubsys" ]; then
+       if [ "$svc" = "sftpsubsys" ]; then
            PROCNAME="MiG-sftp-subsys"
            PROCUSER="root"
        else
@@ -89,7 +100,7 @@ while [ ${KEEP_RUNNING} -eq 1 ]; do
        fi
         pgrep -U $PROCUSER -f "$PROCNAME" > /dev/null
         SVC_STATUS=$?
-        if [ $SVC_STATUS -ne 0 ]; then
+        if [ "$SVC_STATUS" -ne 0 ]; then
             echo "$svc service failed."
             if [ $KEEPALIVE -eq 0 ]; then
 		KEEP_RUNNING=0
