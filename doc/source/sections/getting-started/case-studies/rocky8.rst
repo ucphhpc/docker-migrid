@@ -195,7 +195,7 @@ JUPYTER_SERVICE_DESC env argument::
         advanced_bench.erda.dk_full.env
     ln -s advanced_bench.erda.dk_full.env .env
     make
-    podman-compose up
+    podman-compose -t hostnet up
 
 
 Lustre
