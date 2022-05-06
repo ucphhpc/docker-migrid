@@ -500,9 +500,12 @@ RUN if [ "${WITH_PY3}" = "yes" ]; then \
     fi;
 
 # Modules required by grid_X IO daemons (not available in yum/dnf for py 3)
-RUN pip2 install cracklib
+# IMPORTANT: install in main python site-packages to work with 'python -s'
+#            Otherwise sftpsubsys will fail to import it because the /usr/local
+#            dir used as prefix by default in pip is outside sys.path
+RUN pip2 install --prefix=$(python2-config --prefix) cracklib
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
-      pip3 install cracklib; \
+      pip3 install --prefix=$(python3-config --prefix) cracklib; \
     fi;
 
 # Module required to run pytests
