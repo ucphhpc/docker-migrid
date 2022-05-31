@@ -71,7 +71,7 @@ distclean: dockerclean clean
 	rm -rf ./log
         # TODO: is something like this still needed to clean up completely?
         # It needs to NOT greedily remove ALL local volumes if so!
-        #if [ "$$(${DOCKER} volume ls -q -f 'name=${NAME}*')" != "" ]; then\
+        #if [ "$$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*')" != "" ]; then\
         #	${DOCKER} volume rm -f $$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*');\
         #fi
 	rm -f .env docker-compose.yml
