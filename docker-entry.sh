@@ -25,8 +25,12 @@ if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
     echo "Creating or renewing user: $USERNAME"
     su - $USER -c "${MIG_ROOT}/mig/server/createuser.py -r 'Test User' 'Test Org' NA DK $USERNAME 'Created upon docker entry' $PASSWORD"
     echo "Ensure correct permissions for $USERNAME"
-    chown $USER:$USER ${MIG_ROOT}/mig/server/MiG-users.db
-    chmod 644 ${MIG_ROOT}/mig/server/MiG-users.db
+    # NOTE: user database moved to state since June 13th 2022
+    LEGACY_DB_PATH="${MIG_ROOT}/mig/server/MiG-users.db"
+    if [ -e "${LEGACY_DB_PATH}" ]; then
+        chown $USER:$USER ${LEGACY_DB_PATH}
+        chmod 644 ${LEGACY_DB_PATH}
+    fi
     chown -R $USER:$USER ${MIG_ROOT}/state
     # If GDP mode skip SVCLOGINS as they have no effect (chkenabled returns 0 if enabled)
     su - $USER -c "PYTHONPATH=${MIG_ROOT} ${MIG_ROOT}/mig/server/chkenabled.py gdp" > /dev/null
