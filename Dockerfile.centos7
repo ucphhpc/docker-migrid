@@ -95,6 +95,7 @@ ARG ENABLE_GDP=False
 ARG ENABLE_TWOFACTOR=True
 ARG ENABLE_TWOFACTOR_STRICT_ADDRESS=False
 ARG ENABLE_SELF_SIGNED_CERTS=False
+ARG UPGRADE_MOD_AUTH_OPENIDC=False
 ARG PUBKEY_FROM_DNS=False
 ARG PREFER_PYTHON3=False
 ARG SIGNUP_METHODS=migoid
@@ -187,6 +188,7 @@ ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG ENABLE_GDP
 ARG ENABLE_SELF_SIGNED_CERTS
+ARG UPGRADE_MOD_AUTH_OPENIDC
 ARG WITH_PY3
 ARG PREFER_PYTHON3
 
@@ -338,6 +340,19 @@ RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
         && sed -i "s/^%configure$/%configure --disable-ssl-verify-host --disable-ssl-verify-peer/g" /root/rpmbuild/SPECS/libopkele.spec  \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
         && yum localinstall -y /root/rpmbuild/RPMS/x86_64/libopkele-2.0.4-9.el7.x86_64.rpm; \
+    fi;
+
+# Upgrade mod_auth_openidc from upstream github packages on centos7
+# https://stackoverflow.com/questions/68742362/how-to-install-mod-auth-openidc-on-rhel-7
+RUN echo "UPGRADE_MOD_AUTH_OPENIDC: $UPGRADE_MOD_AUTH_OPENIDC"
+RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
+	echo "upgrading mod_auth_openidc from upstream centos7 rpm" \
+	&& yum update -y \
+	&& yum install -y jansson-devel \
+		https://mod-auth-openidc.org/download/cjose-0.5.1-1.el7.x86_64.rpm \
+		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.11.2/mod_auth_openidc-2.4.11.2-1.el7.x86_64.rpm \
+                && yum clean all \
+                && rm -fr /var/cache/yum; \
     fi;
 
 
