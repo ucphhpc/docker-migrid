@@ -51,10 +51,10 @@ ARG FTPS_CTRL_SHOW_PORT=21
 ARG OPENID_PORT=8443
 ARG OPENID_SHOW_PORT=443
 ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
-ARG MIG_SVN_REV=5463
+ARG MIG_SVN_REV=5498
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
 ARG MIG_GIT_BRANCH=edge
-ARG MIG_GIT_REV=bea4936cb52784eea42859735c328742742ae8fd
+ARG MIG_GIT_REV=5850b40a7889e21d76cc204f6347de04431aadf9
 ARG ADMIN_EMAIL=mig
 ARG ADMIN_LIST=
 ARG LOG_LEVEL=info
@@ -94,6 +94,10 @@ ARG ENABLE_MIGADMIN=False
 ARG ENABLE_GDP=False
 ARG ENABLE_TWOFACTOR=True
 ARG ENABLE_TWOFACTOR_STRICT_ADDRESS=False
+ARG ENABLE_PEERS=True
+ARG PEERS_MANDATORY=False
+ARG PEERS_EXPLICIT_FIELDS=""
+ARG PEERS_CONTACT_HINT="authorized to invite you as peer"
 ARG ENABLE_SELF_SIGNED_CERTS=False
 ARG BUILD_MOD_AUTH_OPENID=False
 ARG PUBKEY_FROM_DNS=False
@@ -248,6 +252,7 @@ RUN dnf update -y \
     #python2-jsonrpclib \
     python2-requests \
     python2-psutil \
+    #python2-email-validator \
     #python2-future \
     #python2-cffi \
     #pysendfile \
@@ -277,6 +282,7 @@ RUN if [ "${WITH_PY3}" = "yes" ]; then \
       #python3-jsonrpclib \
       python3-requests \
       python3-psutil \
+      python3-email-validator \
       python3-future \
       python3-cffi \
       python3-pyOpenSSL \
@@ -594,6 +600,12 @@ RUN if [ "${WITH_PY3}" = "yes" ]; then \
       pip3 install iso3166; \
     fi;
 
+# Modules required for email validation (not available in yum/dnf for py 2)
+RUN pip2 install email-validator
+#RUN if [ "${WITH_PY3}" = "yes" ]; then \
+#      pip3 install email-validator; \
+#    fi;
+
 # Modules required for workflows
 RUN pip2 install nbformat nbconvert papermill
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
@@ -706,6 +718,10 @@ ARG ENABLE_MIGADMIN
 ARG ENABLE_GDP
 ARG ENABLE_TWOFACTOR
 ARG ENABLE_TWOFACTOR_STRICT_ADDRESS
+ARG ENABLE_PEERS
+ARG PEERS_MANDATORY
+ARG PEERS_EXPLICIT_FIELDS
+ARG PEERS_CONTACT_HINT
 ARG PUBKEY_FROM_DNS
 ARG PREFER_PYTHON3
 ARG SIGNUP_METHODS
@@ -805,6 +821,9 @@ RUN ./generateconfs.py --source=. \
     --enable_freeze=${ENABLE_FREEZE} --enable_imnotify=${ENABLE_IMNOTIFY} \
     --enable_cracklib=True --enable_twofactor=${ENABLE_TWOFACTOR} \
     --enable_twofactor_strict_address=${ENABLE_TWOFACTOR_STRICT_ADDRESS} \
+    --enable_peers=${ENABLE_PEERS} --peers_mandatory=${PEERS_MANDATORY} \
+    --peers_explicit_fields="${PEERS_EXPLICIT_FIELDS}" \
+    --peers_contact_hint="${PEERS_CONTACT_HINT}" \
     --enable_notify=${ENABLE_NOTIFY} --enable_preview=${ENABLE_PREVIEW} \
     --enable_workflows=${ENABLE_WORKFLOWS} --enable_hsts=True \
     --enable_vhost_certs=True --enable_verify_certs=${ENABLE_VERIFY_CERTS} \
