@@ -142,6 +142,7 @@ services:
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
         VGRID_LABEL: ${VGRID_LABEL}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -301,6 +302,7 @@ services:
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
         VGRID_LABEL: ${VGRID_LABEL}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -466,6 +468,7 @@ services:
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
         VGRID_LABEL: ${VGRID_LABEL}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -620,6 +623,7 @@ services:
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
         VGRID_LABEL: ${VGRID_LABEL}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -775,6 +779,7 @@ services:
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
         VGRID_LABEL: ${VGRID_LABEL}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -930,6 +935,7 @@ services:
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
         VGRID_LABEL: ${VGRID_LABEL}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch

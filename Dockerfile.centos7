@@ -51,10 +51,10 @@ ARG FTPS_CTRL_SHOW_PORT=21
 ARG OPENID_PORT=8443
 ARG OPENID_SHOW_PORT=443
 ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
-ARG MIG_SVN_REV=5498
+ARG MIG_SVN_REV=5508
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
 ARG MIG_GIT_BRANCH=edge
-ARG MIG_GIT_REV=5850b40a7889e21d76cc204f6347de04431aadf9
+ARG MIG_GIT_REV=c4309281bda469a192e19d464d0e1236d4460e33
 ARG ADMIN_EMAIL=mig
 ARG ADMIN_LIST=
 ARG LOG_LEVEL=info
@@ -114,6 +114,8 @@ ARG GENERIC_VALID_DAYS=365
 ARG DEFAULT_MENU=
 ARG USER_MENU=jupyter
 ARG WITH_PY3=no
+# NOTE: on centos we stick with tried and tested wsgidav 1.3
+ARG MODERN_WSGIDAV=no
 ARG WITH_GIT=no
 ARG VGRID_LABEL=VGrid
 ARG GDP_EMAIL_NOTIFY=True
@@ -490,12 +492,15 @@ RUN mkdir -p MiG-certificates \
 FROM setup_security as mig_dependencies
 ARG DOMAIN
 ARG WITH_PY3
+ARG MODERN_WSGIDAV
 
 # NOTE: Switch back to root for system-wide pip install here
 USER root
 
 # Prepare OpenID (python-openid for py2 and python-openid2 for py3)
+# TODO: switch to install from github or use python-openid2 for python2 here?
 RUN pip2 install python-openid
+#RUN pip2 install https://github.com/openid/python-openid/archive/master.zip
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
       pip3 install python-openid2; \
     fi;
@@ -507,10 +512,16 @@ RUN if [ "${WITH_PY3}" = "yes" ]; then \
     fi;
 
 # Modules required by grid_webdavs
-# NOTE: we require <=1.3.0 for python2. CherryPy is no longer bundled lately.
-RUN pip2 install wsgidav==1.3.0
+# NOTE: on python 2 we require either wsgidav 1.3 bundled with cherrypy or 
+#       wsgidav 3.x using standalone cheroot
+RUN if [ "${MODERN_WSGIDAV}" = "no" ]; then \
+      pip2 install 'wsgidav<2'; \
+    else \
+      pip2 install 'more-itertools<6' 'jaraco.functools<3' 'jinja2<3' \
+               'markupsafe<2' 'pyyaml<6' cheroot 'wsgidav<4'; \
+    fi;
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
-      pip3 install wsgidav cherrypy; \
+      pip3 install cheroot 'wsgidav>=3.1.1'; \
     fi;
 
 # Modules required by grid_ftps
@@ -688,11 +699,27 @@ ARG JUPYTER_SERVICES
 ARG JUPYTER_SERVICES_DESC
 ARG VGRID_LABEL
 ARG GDP_EMAIL_NOTIFY
+ARG MODERN_WSGIDAV
 
 ENV PYTHONPATH=${MIG_ROOT}
 # Ensure that the $USER sets it during session start
 RUN echo "PYTHONPATH=${MIG_ROOT}" >> ~/.bash_profile \
     && echo "export PYTHONPATH" >> ~/.bash_profile
+#RUN echo "PATH=$HOME/.local/bin:${PATH}" >> ~/.bash_profile \
+#    && echo "export PATH" >> ~/.bash_profile
+
+# NOTE: we manually need to enable modern grid_webdavs.py here for now
+#       move any existing grid_webdavs.py to versioned script and replace any
+#       existing symlink with the 3.x script.
+WORKDIR $MIG_ROOT
+RUN if [ "${MODERN_WSGIDAV}" = "yes" ]; then \
+      if [ -f "${MIG_ROOT}/mig/server/grid_webdavs.py" ]; then \
+        mv ${MIG_ROOT}/mig/server/grid_webdavs{,-1.x}.py ; \
+      elif [ -e "${MIG_ROOT}/mig/server/grid_webdavs.py" ]; then \
+        mv ${MIG_ROOT}/mig/server/grid_webdavs.py{,.orig} ; \
+      fi; \ 
+      ln -s grid_webdavs-3.x.py ${MIG_ROOT}/mig/server/grid_webdavs.py; \
+    fi;
 
 WORKDIR $MIG_ROOT/mig/install
 
