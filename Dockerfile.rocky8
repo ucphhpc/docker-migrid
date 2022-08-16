@@ -547,7 +547,8 @@ ARG MODERN_WSGIDAV
 USER root
 
 # Prepare py2 dependencies no longer in dnf
-RUN pip2 install jsonrpclib future cffi pysendfile pyOpenSSL paramiko
+# NOTE: pyOpenSSL-22.0 and jsonrpclib-0.2 dropped python2 support
+RUN pip2 install 'jsonrpclib<0.2' future cffi pysendfile 'pyOpenSSL<22' paramiko
 
 # Prepare OpenID (python-openid for py2 and python-openid2 for py3)
 #RUN pip2 install python-openid
@@ -557,7 +558,8 @@ RUN if [ "${WITH_PY3}" = "yes" ]; then \
     fi;
 
 # Modules required by grid_events.py
-RUN pip2 install watchdog scandir
+# NOTE: watchdog-1.0 dropped python2 support
+RUN pip2 install 'watchdog<1.0' scandir
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
       pip3 install watchdog scandir; \
     fi;
@@ -592,21 +594,22 @@ RUN if [ "${WITH_PY3}" = "yes" ]; then \
     fi;
 
 # Module required to run pytests
-# 4.6 is the latest with python2 support
-RUN pip2 install pytest
+# NOTE: pytest-5.0 dropped python2 support
+RUN pip2 install 'pytest<5.0'
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
       pip3 install pytest; \
     fi;
 
 # Modules required by 2FA
-# NOTE: we require <=2.3.0 for python2.
-RUN pip2 install pyotp==2.3.0
+# NOTE: pyotp-2.4 dropped python2 support
+RUN pip2 install 'pyotp<2.4'
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
       pip3 install pyotp; \
     fi;
 
 # Modules required for smart country selection
-RUN pip2 install iso3166
+# NOTE: iso3361-2.0 dropped python2 support
+RUN pip2 install 'iso3166<2.0'
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
       pip3 install iso3166; \
     fi;
@@ -618,7 +621,8 @@ RUN pip2 install email-validator
 #    fi;
 
 # Modules required for workflows
-RUN pip2 install nbformat nbconvert papermill
+# NOTE: nbformat-5.0, nbconvert-6.0 and papermill-2.0 dropped python2 support
+RUN pip2 install 'nbformat<5.0' 'nbconvert<6.0' 'papermill<2.0'
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
       pip3 install nbformat nbconvert papermill; \
     fi;
