@@ -51,10 +51,10 @@ ARG FTPS_CTRL_SHOW_PORT=21
 ARG OPENID_PORT=8443
 ARG OPENID_SHOW_PORT=443
 ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
-ARG MIG_SVN_REV=5508
+ARG MIG_SVN_REV=5512
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
 ARG MIG_GIT_BRANCH=edge
-ARG MIG_GIT_REV=c4309281bda469a192e19d464d0e1236d4460e33
+ARG MIG_GIT_REV=a43c357264fecfac7b04050feffcb6336062fbea
 ARG ADMIN_EMAIL=mig
 ARG ADMIN_LIST=
 ARG LOG_LEVEL=info
@@ -630,6 +630,7 @@ ARG WITH_GIT
 ARG MIG_GIT_REPO
 ARG MIG_GIT_BRANCH
 ARG MIG_GIT_REV
+ARG MODERN_WSGIDAV
 
 WORKDIR $MIG_ROOT
 USER $USER
@@ -650,6 +651,14 @@ RUN if [ "$WITH_GIT" = "yes" ]; then \
     fi;
 
 ADD --chown=$USER:$GROUP mig $MIG_ROOT/
+
+# NOTE: we manually need to enable modern grid_webdavs.py here for now.
+#       Replace any existing symlink with one to the 3.x script.
+RUN if [ "${MODERN_WSGIDAV}" = "yes" ]; then \
+      rm -f ${MIG_ROOT}/mig/server/grid_webdavs.py ; \
+      ln -s grid_webdavs-3.x.py ${MIG_ROOT}/mig/server/grid_webdavs.py; \
+    fi;
+
 
 FROM download_mig as install_mig
 ARG DOMAIN
@@ -749,7 +758,6 @@ ARG JUPYTER_SERVICES
 ARG JUPYTER_SERVICES_DESC
 ARG VGRID_LABEL
 ARG GDP_EMAIL_NOTIFY
-ARG MODERN_WSGIDAV
 
 # TODO: do we still need the ~/.local/ wrapper now that update-alternatives run?
 ENV PYTHONPATH=${MIG_ROOT}
@@ -759,19 +767,6 @@ RUN echo "PYTHONPATH=${MIG_ROOT}" >> ~/.bash_profile \
     && echo "export PYTHONPATH" >> ~/.bash_profile
 RUN echo "PATH=$HOME/.local/bin:${PATH}" >> ~/.bash_profile \
     && echo "export PATH" >> ~/.bash_profile
-
-# NOTE: we manually need to enable modern grid_webdavs.py here for now
-#       move any existing grid_webdavs.py to versioned script and replace any
-#       existing symlink with the 3.x script.
-WORKDIR $MIG_ROOT
-RUN if [ "${MODERN_WSGIDAV}" = "yes" ]; then \
-      if [ -f "${MIG_ROOT}/mig/server/grid_webdavs.py" ]; then \
-        mv ${MIG_ROOT}/mig/server/grid_webdavs{,-1.x}.py ; \
-      elif [ -e "${MIG_ROOT}/mig/server/grid_webdavs.py" ]; then \
-        mv ${MIG_ROOT}/mig/server/grid_webdavs.py{,.orig} ; \
-      fi; \ 
-      ln -s grid_webdavs-3.x.py ${MIG_ROOT}/mig/server/grid_webdavs.py; \
-    fi;
 
 WORKDIR $MIG_ROOT/mig/install
 
@@ -914,6 +909,13 @@ RUN cd $MIG_ROOT/mig/src/libpam-mig \
     && make && make install
 RUN cd $MIG_ROOT/mig/src/libnss-mig \
     && make && make install
+# Python sslsession C-extension to avoid repeat SSL/TLS negotiation in WebDAVS
+RUN cd $MIG_ROOT/mig/src/sslsession \
+    && pip install .
+RUN if [ "${WITH_PY3}" = "yes" ]; then \
+      cd $MIG_ROOT/mig/src/sslsession \
+      && pip3 install . ; \
+    fi;
 
 RUN cp generated-confs/libnss_mig.conf /etc/ \
     #&& cp /etc/pam.d/sshd /etc/pam.d/sshd.backup \
