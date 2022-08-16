@@ -215,6 +215,7 @@ RUN yum update -y \
     make \
     pam-devel \
     nss-devel \
+    openssl-devel \
     httpd \
     htop \
     openssh \
@@ -849,6 +850,7 @@ RUN cd $MIG_ROOT/mig/src/libpam-mig \
 RUN cd $MIG_ROOT/mig/src/libnss-mig \
     && make && make install
 # Python sslsession C-extension to avoid repeat SSL/TLS negotiation in WebDAVS
+# NOTE: requires openssl-devel to build
 RUN cd $MIG_ROOT/mig/src/sslsession \
     && pip install .
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
