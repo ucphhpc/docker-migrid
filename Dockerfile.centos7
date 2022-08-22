@@ -862,7 +862,7 @@ RUN cd $MIG_ROOT/mig/src/libnss-mig \
 # on python 2.7.9+ and 3. The sslsession module generally builds but fails at
 # runtime when used with OpenSSL-1.1+, however.
 RUN cd $MIG_ROOT/mig/src/sslsession \
-    && pip2 install . 
+    && pip2 install . ;
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
       cd $MIG_ROOT/mig/src/sslsession \
       && pip3 install . ; \
