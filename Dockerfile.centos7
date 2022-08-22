@@ -524,6 +524,12 @@ RUN if [ "${MODERN_WSGIDAV}" = "no" ]; then \
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
       pip3 install cheroot 'wsgidav>=3.1.1'; \
     fi;
+# Prefer sslkeylog as session tracking helper in webdavs daemon if available.
+# Automatic fallback  to our _sslsession C-extension when not.
+RUN python2 -V 2>&1 | egrep -q 'Python 2\.7\.[0-8]$' || pip2 install sslkeylog
+RUN if [ "${WITH_PY3}" = "yes" ]; then \
+      pip3 install sslkeylog ; \
+    fi;
 
 # Modules required by grid_ftps
 # NOTE: relies on pyOpenSSL and Cryptography from yum/dnf for now
@@ -832,6 +838,7 @@ ARG SID_DOMAIN
 ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
 ARG ENABLE_SELF_SIGNED_CERTS
+ARG WITH_PY3
 
 # Prepare oiddiscover for httpd
 RUN cd $MIG_ROOT/mig \
@@ -849,10 +856,13 @@ RUN cd $MIG_ROOT/mig/src/libpam-mig \
     && make && make install
 RUN cd $MIG_ROOT/mig/src/libnss-mig \
     && make && make install
-# Python sslsession C-extension to avoid repeat SSL/TLS negotiation in WebDAVS
-# NOTE: requires openssl-devel to build
+# Python sslsession C-extension or sslkeylog is needed to avoid repeat SSL/TLS
+# negotiation in WebDAVS
+# NOTE: both require openssl-devel to build and sslkeylog is only supported
+# on python 2.7.9+ and 3. The sslsession module generally builds but fails at
+# runtime when used with OpenSSL-1.1+, however.
 RUN cd $MIG_ROOT/mig/src/sslsession \
-    && pip install .
+    && pip2 install . 
 RUN if [ "${WITH_PY3}" = "yes" ]; then \
       cd $MIG_ROOT/mig/src/sslsession \
       && pip3 install . ; \
