@@ -162,7 +162,7 @@ services:
 
     env_file:
       - migrid-httpd.env
-    command: /app/docker-entry.sh -u test@gdp.test -p TestPw0rd -s "sftp webdavs"
+    command: /app/docker-entry.sh -u test@gdp.testing -p TestPw0rd -s "sftp webdavs"
     #privileged: true
 
   # A single container with all the daemons base migrid doesn't provide

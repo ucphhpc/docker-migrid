@@ -175,7 +175,7 @@ services:
         target: /var/log
     env_file:
       - migrid-httpd.env
-    command: /app/docker-entry.sh -u test@migrid.home -p TestPw0rd -s "sftp ftps webdavs"
+    command: /app/docker-entry.sh -u test@migrid.testing -p TestPw0rd -s "sftp ftps webdavs"
 
   # A single container with all the daemons base migrid doesn't provide
   migrid-io:
