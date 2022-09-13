@@ -52,6 +52,8 @@ services:
         EXT_OIDC_PROVIDER_META_URL: ${EXT_OIDC_PROVIDER_META_URL}
         EXT_OIDC_CLIENT_NAME: ${EXT_OIDC_CLIENT_NAME}
         EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
+        EXT_OIDC_SCOPE: ${EXT_OIDC_SCOPE}
+        EXT_OIDC_REMOTE_USER_CLAIM: ${EXT_OIDC_REMOTE_USER_CLAIM}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -69,6 +71,16 @@ services:
         OPENID_SHOW_PORT: ${OPENID_SHOW_PORT}
         FTPS_CTRL_PORT: ${FTPS_CTRL_PORT}
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
+        ADMIN_EMAIL: ${ADMIN_EMAIL}
+        ADMIN_LIST: ${ADMIN_LIST}
+        LOG_LEVEL: ${LOG_LEVEL}
+        TITLE: ${TITLE}
+        SHORT_TITLE: ${SHORT_TITLE}
+        MIG_OID_TITLE: ${MIG_OID_TITLE}
+        EXT_OID_TITLE: ${EXT_OID_TITLE}
+        PEERS_PERMIT: ${PEERS_PERMIT}
+        VGRID_CREATORS: ${VGRID_CREATORS}
+        VGRID_MANAGERS: ${VGRID_MANAGERS}
         MIG_SVN_REPO: ${MIG_SVN_REPO}
         MIG_SVN_REV: ${MIG_SVN_REV}
         MIG_GIT_REPO: ${MIG_GIT_REPO}
@@ -100,6 +112,7 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
@@ -135,11 +148,11 @@ services:
     networks:
       default:
         aliases:
-          - www.gdp.test
-          - cert.gdp.test
-          - ext.gdp.test
-          - oid.gdp.test
-          - sid.gdp.test
+          - www.migrid.test
+          - cert.migrid.test
+          - ext.migrid.test
+          - oid.migrid.test
+          - sid.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -156,14 +169,9 @@ services:
       - type: volume
         source: migrid-syslog
         target: /var/log
-      - type: bind
-        source: /run/dbus/system_bus_socket
-        target: /run/dbus/system_bus_socket
-
     env_file:
       - migrid-httpd.env
-    command: /app/docker-entry.sh -u test@gdp.testing -p TestPw0rd -s "sftp webdavs"
-    #privileged: true
+    command: /app/docker-entry.sh -u test@migrid.test -p TestPw0rd -s "sftp ftps webdavs"
 
   # A single container with all the daemons base migrid doesn't provide
   migrid-io:
@@ -197,6 +205,8 @@ services:
         EXT_OIDC_PROVIDER_META_URL: ${EXT_OIDC_PROVIDER_META_URL}
         EXT_OIDC_CLIENT_NAME: ${EXT_OIDC_CLIENT_NAME}
         EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
+        EXT_OIDC_SCOPE: ${EXT_OIDC_SCOPE}
+        EXT_OIDC_REMOTE_USER_CLAIM: ${EXT_OIDC_REMOTE_USER_CLAIM}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -214,6 +224,16 @@ services:
         OPENID_SHOW_PORT: ${OPENID_SHOW_PORT}
         FTPS_CTRL_PORT: ${FTPS_CTRL_PORT}
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
+        ADMIN_EMAIL: ${ADMIN_EMAIL}
+        ADMIN_LIST: ${ADMIN_LIST}
+        LOG_LEVEL: ${LOG_LEVEL}
+        TITLE: ${TITLE}
+        SHORT_TITLE: ${SHORT_TITLE}
+        MIG_OID_TITLE: ${MIG_OID_TITLE}
+        EXT_OID_TITLE: ${EXT_OID_TITLE}
+        PEERS_PERMIT: ${PEERS_PERMIT}
+        VGRID_CREATORS: ${VGRID_CREATORS}
+        VGRID_MANAGERS: ${VGRID_MANAGERS}
         MIG_SVN_REPO: ${MIG_SVN_REPO}
         MIG_SVN_REV: ${MIG_SVN_REV}
         MIG_GIT_REPO: ${MIG_GIT_REPO}
@@ -245,6 +265,7 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
@@ -279,20 +300,20 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "${SFTP_PORT}:${SFTP_PORT}"
-      - "${DAVS_PORT}:${DAVS_PORT}"
-      - "${FTPS_CTRL_PORT}:${FTPS_CTRL_PORT}"
-      - "${FTPS_PASSIVE_PORTS}:${FTPS_PASSIVE_PORTS}"
-      - "${OPENID_PORT}:${OPENID_PORT}"
-      - "${SFTP_SUBSYS_PORT}:${SFTP_SUBSYS_PORT}"
+      - "2222:2222"
+      - "4443:4443"
+      - "8021:8021"
+      - "8100-8200:8100-8200"
+      - "8443:8443"
+      - "22222:22222"
     networks:
       default:
         aliases:
-          - io.gdp.test
-          - openid.gdp.test
-          - webdavs.gdp.test
-          - ftps.gdp.test
-          - sftp.gdp.test
+          - io.migrid.test
+          - openid.migrid.test
+          - webdavs.migrid.test
+          - ftps.migrid.test
+          - sftp.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -310,7 +331,6 @@ services:
         source: migrid-io-syslog
         target: /var/log
     command: /app/docker-entry.sh
-    #privileged: true
 
   # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
   #
@@ -341,10 +361,13 @@ services:
         FTPS_DOMAIN: ${FTPS_DOMAIN}
         SFTP_DOMAIN: ${SFTP_DOMAIN}
         WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
+        MIG_OID_PROVIDER: ${MIG_OID_PROVIDER}
         EXT_OID_PROVIDER: ${EXT_OID_PROVIDER}
         EXT_OIDC_PROVIDER_META_URL: ${EXT_OIDC_PROVIDER_META_URL}
         EXT_OIDC_CLIENT_NAME: ${EXT_OIDC_CLIENT_NAME}
         EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
+        EXT_OIDC_SCOPE: ${EXT_OIDC_SCOPE}
+        EXT_OIDC_REMOTE_USER_CLAIM: ${EXT_OIDC_REMOTE_USER_CLAIM}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -362,6 +385,16 @@ services:
         OPENID_SHOW_PORT: ${OPENID_SHOW_PORT}
         FTPS_CTRL_PORT: ${FTPS_CTRL_PORT}
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
+        ADMIN_EMAIL: ${ADMIN_EMAIL}
+        ADMIN_LIST: ${ADMIN_LIST}
+        LOG_LEVEL: ${LOG_LEVEL}
+        TITLE: ${TITLE}
+        SHORT_TITLE: ${SHORT_TITLE}
+        MIG_OID_TITLE: ${MIG_OID_TITLE}
+        EXT_OID_TITLE: ${EXT_OID_TITLE}
+        PEERS_PERMIT: ${PEERS_PERMIT}
+        VGRID_CREATORS: ${VGRID_CREATORS}
+        VGRID_MANAGERS: ${VGRID_MANAGERS}
         MIG_SVN_REPO: ${MIG_SVN_REPO}
         MIG_SVN_REV: ${MIG_SVN_REV}
         MIG_GIT_REPO: ${MIG_GIT_REPO}
@@ -393,6 +426,7 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
@@ -427,11 +461,11 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "${OPENID_PORT}:${OPENID_PORT}"
+      - "8443:8443"
     networks:
       default:
         aliases:
-          - openid.gdp.test
+          - openid.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -449,7 +483,6 @@ services:
         source: migrid-openid-syslog
         target: /var/log
     command: /app/docker-entry.sh
-    #privileged: true
 
   migrid-sftp:
     container_name: migrid-sftp
@@ -482,6 +515,8 @@ services:
         EXT_OIDC_PROVIDER_META_URL: ${EXT_OIDC_PROVIDER_META_URL}
         EXT_OIDC_CLIENT_NAME: ${EXT_OIDC_CLIENT_NAME}
         EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
+        EXT_OIDC_SCOPE: ${EXT_OIDC_SCOPE}
+        EXT_OIDC_REMOTE_USER_CLAIM: ${EXT_OIDC_REMOTE_USER_CLAIM}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -499,6 +534,16 @@ services:
         OPENID_SHOW_PORT: ${OPENID_SHOW_PORT}
         FTPS_CTRL_PORT: ${FTPS_CTRL_PORT}
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
+        ADMIN_EMAIL: ${ADMIN_EMAIL}
+        ADMIN_LIST: ${ADMIN_LIST}
+        LOG_LEVEL: ${LOG_LEVEL}
+        TITLE: ${TITLE}
+        SHORT_TITLE: ${SHORT_TITLE}
+        MIG_OID_TITLE: ${MIG_OID_TITLE}
+        EXT_OID_TITLE: ${EXT_OID_TITLE}
+        PEERS_PERMIT: ${PEERS_PERMIT}
+        VGRID_CREATORS: ${VGRID_CREATORS}
+        VGRID_MANAGERS: ${VGRID_MANAGERS}
         MIG_SVN_REPO: ${MIG_SVN_REPO}
         MIG_SVN_REV: ${MIG_SVN_REV}
         MIG_GIT_REPO: ${MIG_GIT_REPO}
@@ -530,6 +575,7 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
@@ -564,12 +610,12 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "${SFTP_PORT}:${SFTP_PORT}"
-      - "${SFTP_SUBSYS_PORT}:${SFTP_SUBSYS_PORT}"
+      - "2222:2222"
+      - "22222:22222"
     networks:
       default:
         aliases:
-          - sftp.gdp.test
+          - sftp.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -587,7 +633,6 @@ services:
         source: migrid-sftp-syslog
         target: /var/log
     command: /app/docker-entry.sh
-    #privileged: true
 
   migrid-ftps:
     container_name: migrid-ftps
@@ -620,6 +665,8 @@ services:
         EXT_OIDC_PROVIDER_META_URL: ${EXT_OIDC_PROVIDER_META_URL}
         EXT_OIDC_CLIENT_NAME: ${EXT_OIDC_CLIENT_NAME}
         EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
+        EXT_OIDC_SCOPE: ${EXT_OIDC_SCOPE}
+        EXT_OIDC_REMOTE_USER_CLAIM: ${EXT_OIDC_REMOTE_USER_CLAIM}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -637,6 +684,16 @@ services:
         OPENID_SHOW_PORT: ${OPENID_SHOW_PORT}
         FTPS_CTRL_PORT: ${FTPS_CTRL_PORT}
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
+        ADMIN_EMAIL: ${ADMIN_EMAIL}
+        ADMIN_LIST: ${ADMIN_LIST}
+        LOG_LEVEL: ${LOG_LEVEL}
+        TITLE: ${TITLE}
+        SHORT_TITLE: ${SHORT_TITLE}
+        MIG_OID_TITLE: ${MIG_OID_TITLE}
+        EXT_OID_TITLE: ${EXT_OID_TITLE}
+        PEERS_PERMIT: ${PEERS_PERMIT}
+        VGRID_CREATORS: ${VGRID_CREATORS}
+        VGRID_MANAGERS: ${VGRID_MANAGERS}
         MIG_SVN_REPO: ${MIG_SVN_REPO}
         MIG_SVN_REV: ${MIG_SVN_REV}
         MIG_GIT_REPO: ${MIG_GIT_REPO}
@@ -668,6 +725,7 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}  
@@ -702,12 +760,12 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "${FTPS_CTRL_PORT}:${FTPS_CTRL_PORT}"
-      - "${FTPS_PASSIVE_PORTS}:${FTPS_PASSIVE_PORTS}"
+      - "8021:8021"
+      - "8100-8200:8100-8200"
     networks:
       default:
         aliases:
-          - ftps.gdp.test
+          - ftps.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -725,7 +783,6 @@ services:
         source: migrid-ftps-syslog
         target: /var/log
     command: /app/docker-entry.sh
-    #privileged: true
 
   migrid-webdavs:
     container_name: migrid-webdavs
@@ -758,6 +815,8 @@ services:
         EXT_OIDC_PROVIDER_META_URL: ${EXT_OIDC_PROVIDER_META_URL}
         EXT_OIDC_CLIENT_NAME: ${EXT_OIDC_CLIENT_NAME}
         EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
+        EXT_OIDC_SCOPE: ${EXT_OIDC_SCOPE}
+        EXT_OIDC_REMOTE_USER_CLAIM: ${EXT_OIDC_REMOTE_USER_CLAIM}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -775,6 +834,16 @@ services:
         OPENID_SHOW_PORT: ${OPENID_SHOW_PORT}
         FTPS_CTRL_PORT: ${FTPS_CTRL_PORT}
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
+        ADMIN_EMAIL: ${ADMIN_EMAIL}
+        ADMIN_LIST: ${ADMIN_LIST}
+        LOG_LEVEL: ${LOG_LEVEL}
+        TITLE: ${TITLE}
+        SHORT_TITLE: ${SHORT_TITLE}
+        MIG_OID_TITLE: ${MIG_OID_TITLE}
+        EXT_OID_TITLE: ${EXT_OID_TITLE}
+        PEERS_PERMIT: ${PEERS_PERMIT}
+        VGRID_CREATORS: ${VGRID_CREATORS}
+        VGRID_MANAGERS: ${VGRID_MANAGERS}
         MIG_SVN_REPO: ${MIG_SVN_REPO}
         MIG_SVN_REV: ${MIG_SVN_REV}
         MIG_GIT_REPO: ${MIG_GIT_REPO}
@@ -806,6 +875,7 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
+        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
@@ -840,11 +910,11 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "${DAVS_PORT}:${DAVS_PORT}"
+      - "4443:4443"
     networks:
       default:
         aliases:
-          - webdavs.gdp.test
+          - webdavs.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -862,7 +932,6 @@ services:
         source: migrid-webdavs-syslog
         target: /var/log
     command: /app/docker-entry.sh
-    #privileged: true
 
   nginx-proxy:
     image: jwilder/nginx-proxy
@@ -884,18 +953,18 @@ services:
       - "448:448"
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ./nginx-proxy-gdp.test.conf:/etc/nginx/conf.d/migrid.conf
+      - ./nginx-proxy-migrid.test.conf:/etc/nginx/conf.d/migrid.conf
       - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
-      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/www.gdp.test.crt
-      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/cert.gdp.test.crt
-      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/ext.gdp.test.crt
-      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/oid.gdp.test.crt
-      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/sid.gdp.test.crt
-      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/www.gdp.test.key
-      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/cert.gdp.test.key
-      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/ext.gdp.test.key
-      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/oid.gdp.test.key
-      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/sid.gdp.test.key
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/www.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/cert.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/ext.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/oid.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/sid.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/www.migrid.test.key
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/cert.migrid.test.key
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/ext.migrid.test.key
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/oid.migrid.test.key
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/sid.migrid.test.key
       - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
 
 volumes:

@@ -95,28 +95,30 @@ EXIT_CODE=0
 while [ ${KEEP_RUNNING} -eq 1 ]; do
     sleep 120
     for svc in ${CHK_SERVICES}; do
-       if [ "$svc" = "sftpsubsys" ]; then
-           PROCNAME="MiG-sftp-subsys"
-           PROCUSER="root"
-       elif [ "$svc" = "rsyslogd" ]; then
-           PROCNAME="$svc"
-           PROCUSER="root"
-       else
-           PROCNAME="$svc"
-           PROCUSER=$USER
-       fi
+        if [ "$svc" = "sftpsubsys" ]; then
+            PROCNAME="MiG-sftp-subsys"
+            PROCUSER="root"
+        elif [ "$svc" = "rsyslogd" ]; then
+            PROCNAME="$svc"
+            PROCUSER="root"
+        else
+            PROCNAME="$svc"
+            PROCUSER=$USER
+        fi
         pgrep -U $PROCUSER -f "$PROCNAME" > /dev/null
         SVC_STATUS=$?
         if [ "$SVC_STATUS" -ne 0 ]; then
             echo "$svc service failed."
-            if [ $KEEPALIVE -eq 0 ]; then
-		KEEP_RUNNING=0
-		EXIT_CODE=1
-		break
-	    else
-		echo "keepalive despite $svc service failed."
-		sleep 900
-	    fi
+            # https://stackoverflow.com/questions/3601515/how-to-check-if-a-variable-is-set-in-bash
+            # Ensure that the KEEPALIVE variable is set before checking it
+            if [ -z ${KEEPALIVE+x} && $KEEPALIVE -eq 0 ]; then
+                KEEP_RUNNING=0
+                EXIT_CODE=1
+                break
+            else
+                echo "keepalive despite $svc service failed."
+                sleep 900
+            fi
         fi
         # Throttle down 
         sleep 1
@@ -124,4 +126,3 @@ while [ ${KEEP_RUNNING} -eq 1 ]; do
 done
 
 exit $EXIT_CODE
-

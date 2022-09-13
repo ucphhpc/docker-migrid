@@ -84,6 +84,7 @@ ARG ENABLE_JOBS=True
 ARG ENABLE_RESOURCES=True
 ARG ENABLE_EVENTS=True
 ARG ENABLE_FREEZE=False
+ARG ENABLE_CRACKLIB=True
 ARG ENABLE_IMNOTIFY=False
 ARG ENABLE_NOTIFY=True
 ARG ENABLE_PREVIEW=False
@@ -686,6 +687,7 @@ ARG ENABLE_JOBS
 ARG ENABLE_RESOURCES
 ARG ENABLE_EVENTS
 ARG ENABLE_FREEZE
+ARG ENABLE_CRACKLIB
 ARG ENABLE_IMNOTIFY
 ARG ENABLE_NOTIFY
 ARG ENABLE_PREVIEW
@@ -788,7 +790,7 @@ RUN python2 ./generateconfs.py --source=. \
     --enable_crontab=${ENABLE_CRONTAB} --enable_jobs=${ENABLE_JOBS} \
     --enable_resources=${ENABLE_RESOURCES} --enable_events=${ENABLE_EVENTS} \
     --enable_freeze=${ENABLE_FREEZE} --enable_imnotify=${ENABLE_IMNOTIFY} \
-    --enable_cracklib=True --enable_twofactor=${ENABLE_TWOFACTOR} \
+    --enable_cracklib=${ENABLE_CRACKLIB} --enable_twofactor=${ENABLE_TWOFACTOR} \
     --enable_twofactor_strict_address=${ENABLE_TWOFACTOR_STRICT_ADDRESS} \
     --enable_peers=${ENABLE_PEERS} --peers_mandatory=${PEERS_MANDATORY} \
     --peers_explicit_fields="${PEERS_EXPLICIT_FIELDS}" \

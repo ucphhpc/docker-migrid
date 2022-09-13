@@ -105,6 +105,7 @@ services:
         ENABLE_RESOURCES: ${ENABLE_RESOURCES}
         ENABLE_EVENTS: ${ENABLE_EVENTS}
         ENABLE_FREEZE: ${ENABLE_FREEZE}
+        ENABLE_CRACKLIB: ${ENABLE_CRACKLIB}
         ENABLE_IMNOTIFY: ${ENABLE_IMNOTIFY}
         ENABLE_NOTIFY: ${ENABLE_NOTIFY}
         ENABLE_PREVIEW: ${ENABLE_PREVIEW}
@@ -177,7 +178,7 @@ services:
         target: /var/log
     env_file:
       - migrid-httpd.env
-    command: /app/docker-entry.sh -u test@migrid.test -p TestPw0rd -s "sftp ftps webdavs"
+    command: /app/docker-entry.sh -u test@migrid.testing -p TestPw0rd -s "sftp ftps webdavs"
 
   # A single container with all the daemons base migrid doesn't provide
   migrid-io:
@@ -264,6 +265,7 @@ services:
         ENABLE_RESOURCES: ${ENABLE_RESOURCES}
         ENABLE_EVENTS: ${ENABLE_EVENTS}
         ENABLE_FREEZE: ${ENABLE_FREEZE}
+        ENABLE_CRACKLIB: ${ENABLE_CRACKLIB}
         ENABLE_IMNOTIFY: ${ENABLE_IMNOTIFY}
         ENABLE_NOTIFY: ${ENABLE_NOTIFY}
         ENABLE_PREVIEW: ${ENABLE_PREVIEW}
@@ -431,6 +433,7 @@ services:
         ENABLE_RESOURCES: ${ENABLE_RESOURCES}
         ENABLE_EVENTS: ${ENABLE_EVENTS}
         ENABLE_FREEZE: ${ENABLE_FREEZE}
+        ENABLE_CRACKLIB: ${ENABLE_CRACKLIB}
         ENABLE_IMNOTIFY: ${ENABLE_IMNOTIFY}
         ENABLE_NOTIFY: ${ENABLE_NOTIFY}
         ENABLE_PREVIEW: ${ENABLE_PREVIEW}
@@ -586,6 +589,7 @@ services:
         ENABLE_RESOURCES: ${ENABLE_RESOURCES}
         ENABLE_EVENTS: ${ENABLE_EVENTS}
         ENABLE_FREEZE: ${ENABLE_FREEZE}
+        ENABLE_CRACKLIB: ${ENABLE_CRACKLIB}
         ENABLE_IMNOTIFY: ${ENABLE_IMNOTIFY}
         ENABLE_NOTIFY: ${ENABLE_NOTIFY}
         ENABLE_PREVIEW: ${ENABLE_PREVIEW}
@@ -742,6 +746,7 @@ services:
         ENABLE_RESOURCES: ${ENABLE_RESOURCES}
         ENABLE_EVENTS: ${ENABLE_EVENTS}
         ENABLE_FREEZE: ${ENABLE_FREEZE}
+        ENABLE_CRACKLIB: ${ENABLE_CRACKLIB}
         ENABLE_IMNOTIFY: ${ENABLE_IMNOTIFY}
         ENABLE_NOTIFY: ${ENABLE_NOTIFY}
         ENABLE_PREVIEW: ${ENABLE_PREVIEW}
@@ -898,6 +903,7 @@ services:
         ENABLE_RESOURCES: ${ENABLE_RESOURCES}
         ENABLE_EVENTS: ${ENABLE_EVENTS}
         ENABLE_FREEZE: ${ENABLE_FREEZE}
+        ENABLE_CRACKLIB: ${ENABLE_CRACKLIB}
         ENABLE_IMNOTIFY: ${ENABLE_IMNOTIFY}
         ENABLE_NOTIFY: ${ENABLE_NOTIFY}
         ENABLE_PREVIEW: ${ENABLE_PREVIEW}
