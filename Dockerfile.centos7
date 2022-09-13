@@ -51,10 +51,10 @@ ARG FTPS_CTRL_SHOW_PORT=21
 ARG OPENID_PORT=8443
 ARG OPENID_SHOW_PORT=443
 ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
-ARG MIG_SVN_REV=5512
+ARG MIG_SVN_REV=5537
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
 ARG MIG_GIT_BRANCH=edge
-ARG MIG_GIT_REV=a43c357264fecfac7b04050feffcb6336062fbea
+ARG MIG_GIT_REV=e190effa9fed69a6ce665f2bda70b7c689b2d16e
 ARG ADMIN_EMAIL=mig
 ARG ADMIN_LIST=
 ARG LOG_LEVEL=info
@@ -118,6 +118,8 @@ ARG WITH_PY3=no
 ARG MODERN_WSGIDAV=no
 ARG WITH_GIT=no
 ARG VGRID_LABEL=VGrid
+ARG EXTRA_USERPAGE_SCRIPTS=""
+ARG EXTRA_USERPAGE_STYLES=""
 ARG GDP_EMAIL_NOTIFY=True
 
 # Jupyter Arguments
@@ -714,6 +716,8 @@ ARG USER_MENU
 ARG JUPYTER_SERVICES
 ARG JUPYTER_SERVICES_DESC
 ARG VGRID_LABEL
+ARG EXTRA_USERPAGE_SCRIPTS
+ARG EXTRA_USERPAGE_STYLES
 ARG GDP_EMAIL_NOTIFY
 
 ENV PYTHONPATH=${MIG_ROOT}
@@ -818,6 +822,8 @@ RUN python2 ./generateconfs.py --source=. \
     --cert_valid_days=${CERT_VALID_DAYS} --oid_valid_days=${OID_VALID_DAYS} \
     --generic_valid_days=${GENERIC_VALID_DAYS} \
     --default_menu="${DEFAULT_MENU}" --user_menu="${USER_MENU}" \
+    --extra_userpage_scripts="${EXTRA_USERPAGE_SCRIPTS}" \
+    --extra_userpage_styles="${EXTRA_USERPAGE_STYLES}" \
     --apache_worker_procs=256 --wsgi_procs=25
 
 RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
