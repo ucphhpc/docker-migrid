@@ -4,6 +4,8 @@
 # specified in the provided RUN_SERVICES environment.
 # Continuously checks whether the selected services are still alive.
 
+KEEPALIVE=0
+
 # Create any user requested
 while getopts ku:p:s: option; do
     case "${option}" in
@@ -109,9 +111,7 @@ while [ ${KEEP_RUNNING} -eq 1 ]; do
         SVC_STATUS=$?
         if [ "$SVC_STATUS" -ne 0 ]; then
             echo "$svc service failed."
-            # https://stackoverflow.com/questions/3601515/how-to-check-if-a-variable-is-set-in-bash
-            # Ensure that the KEEPALIVE variable is set before checking it
-            if [ -z ${KEEPALIVE+x} && $KEEPALIVE -eq 0 ]; then
+            if [ $KEEPALIVE -eq 0 ]; then
                 KEEP_RUNNING=0
                 EXIT_CODE=1
                 break
