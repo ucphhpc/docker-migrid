@@ -114,10 +114,10 @@ ARG OID_VALID_DAYS=365
 ARG GENERIC_VALID_DAYS=365
 ARG DEFAULT_MENU=
 ARG USER_MENU=jupyter
-ARG WITH_PY3=no
+ARG WITH_PY3=False
 # NOTE: on centos we stick with tried and tested wsgidav 1.3
-ARG MODERN_WSGIDAV=no
-ARG WITH_GIT=no
+ARG MODERN_WSGIDAV=False
+ARG WITH_GIT=False
 ARG VGRID_LABEL=VGrid
 ARG EXTRA_USERPAGE_SCRIPTS=""
 ARG EXTRA_USERPAGE_STYLES=""
@@ -267,7 +267,7 @@ RUN yum update -y \
     && rm -fr /var/cache/yum
 
 
-RUN if [ "${WITH_PY3}" = "yes" ]; then \
+RUN if [ "${WITH_PY3}" = True ]; then \
       echo "install py3 deps" \
       && yum update -y \
       && yum install -y \
@@ -307,7 +307,7 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       && yum clean all \
       && rm -fr /var/cache/yum \
       && pip2 install pdfkit; \
-      if [ "${WITH_PY3}" = "yes" ]; then \
+      if [ "${WITH_PY3}" = True ]; then \
          echo "install py3 GDP deps" && \
          # NOTE: not available in yum here - use pip
 	 #yum update -y && \
@@ -505,39 +505,39 @@ USER root
 # TODO: switch to install from github or use python-openid2 for python2 here?
 RUN pip2 install python-openid
 #RUN pip2 install https://github.com/openid/python-openid/archive/master.zip
-RUN if [ "${WITH_PY3}" = "yes" ]; then \
+RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install python-openid2; \
     fi;
 
 # Modules required by grid_events.py
 RUN pip2 install watchdog scandir
-RUN if [ "${WITH_PY3}" = "yes" ]; then \
+RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install watchdog scandir; \
     fi;
 
 # Modules required by grid_webdavs
 # NOTE: on python 2 we require either wsgidav 1.3 bundled with cherrypy or 
 #       wsgidav 3.x using standalone cheroot
-RUN if [ "${MODERN_WSGIDAV}" = "no" ]; then \
+RUN if [ "${MODERN_WSGIDAV}" = "False" ]; then \
       pip2 install 'wsgidav<2'; \
     else \
       pip2 install 'more-itertools<6' 'jaraco.functools<3' 'jinja2<3' \
                'markupsafe<2' 'pyyaml<6' cheroot 'wsgidav<4'; \
     fi;
-RUN if [ "${WITH_PY3}" = "yes" ]; then \
+RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install cheroot 'wsgidav>=3.1.1'; \
     fi;
 # Prefer sslkeylog as session tracking helper in webdavs daemon if available.
 # Automatic fallback  to our _sslsession C-extension when not.
 RUN python2 -V 2>&1 | egrep -q 'Python 2\.7\.[0-8]$' || pip2 install sslkeylog
-RUN if [ "${WITH_PY3}" = "yes" ]; then \
+RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install sslkeylog ; \
     fi;
 
 # Modules required by grid_ftps
 # NOTE: relies on pyOpenSSL and Cryptography from yum/dnf for now
 RUN pip2 install pyftpdlib
-RUN if [ "${WITH_PY3}" = "yes" ]; then \
+RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install pyftpdlib; \
     fi;
 
@@ -546,39 +546,39 @@ RUN if [ "${WITH_PY3}" = "yes" ]; then \
 #            Otherwise sftpsubsys will fail to import it because the /usr/local
 #            dir used as prefix by default in pip is outside sys.path
 RUN pip2 install --prefix=$(python2-config --prefix) cracklib
-RUN if [ "${WITH_PY3}" = "yes" ]; then \
+RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install --prefix=$(python3-config --prefix) cracklib; \
     fi;
 
 # Module required to run pytests
 # 4.6 is the latest with python2 support
 RUN pip2 install pytest
-RUN if [ "${WITH_PY3}" = "yes" ]; then \
+RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install pytest; \
     fi;
 
 # Modules required by 2FA
 # NOTE: we require <=2.3.0 for python2.
 RUN pip2 install pyotp==2.3.0
-RUN if [ "${WITH_PY3}" = "yes" ]; then \
+RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install pyotp; \
     fi;
 
 # Modules required for smart country selection
 RUN pip2 install iso3166
-RUN if [ "${WITH_PY3}" = "yes" ]; then \
+RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install iso3166; \
     fi;
 
 # Modules required for email validation (not available in yum/dnf for py 2+3)
 RUN pip2 install email-validator
-RUN if [ "${WITH_PY3}" = "yes" ]; then \
+RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install email-validator; \
     fi;
 
 # Modules required for workflows
 RUN pip2 install nbformat nbconvert papermill
-RUN if [ "${WITH_PY3}" = "yes" ]; then \
+RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install nbformat nbconvert papermill; \
     fi;
 
@@ -599,7 +599,7 @@ USER $USER
 # NOTE: git refuses to clone into non-empty dir - use tmp
 #     cd migrid.git && git checkout --track origin/${MIG_GIT_BRANCH} ${MIG_GIT_REV} && cd .. ; \
 
-RUN if [ "$WITH_GIT" = "yes" ]; then \
+RUN if [ "$WITH_GIT" = "True" ]; then \
       git clone ${MIG_GIT_REPO} migrid.git && \
         cd migrid.git && \
         git checkout -B ${MIG_GIT_BRANCH} --track origin/${MIG_GIT_BRANCH} && \
@@ -614,7 +614,7 @@ ADD --chown=$USER:$GROUP mig $MIG_ROOT/
 
 # NOTE: we manually need to enable modern grid_webdavs.py here for now.
 #       Replace any existing symlink with one to the 3.x script.
-RUN if [ "${MODERN_WSGIDAV}" = "yes" ]; then \
+RUN if [ "${MODERN_WSGIDAV}" = "True" ]; then \
       rm -f ${MIG_ROOT}/mig/server/grid_webdavs.py ; \
       ln -s grid_webdavs-3.x.py ${MIG_ROOT}/mig/server/grid_webdavs.py; \
     fi;
@@ -871,7 +871,7 @@ RUN cd $MIG_ROOT/mig/src/libnss-mig \
 # runtime when used with OpenSSL-1.1+, however.
 RUN cd $MIG_ROOT/mig/src/sslsession \
     && pip2 install . ;
-RUN if [ "${WITH_PY3}" = "yes" ]; then \
+RUN if [ "${WITH_PY3}" = "True" ]; then \
       cd $MIG_ROOT/mig/src/sslsession \
       && pip3 install . ; \
     fi;
