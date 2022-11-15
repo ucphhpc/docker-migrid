@@ -127,6 +127,10 @@ mig/
 docker-compose.yml
 Dockerfile
 
+# Also include docker-compose.override.yml, to be able to follow
+# upstream compose, but have local overrides untracked by git
+docker-compose.override.yml
+
 # Generated helpers to skip
 migrid-httpd-init.sh
 MiG-certificates
