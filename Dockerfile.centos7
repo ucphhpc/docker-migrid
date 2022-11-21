@@ -356,13 +356,14 @@ RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
 
 # Upgrade mod_auth_openidc from upstream github packages on centos7
 # https://stackoverflow.com/questions/68742362/how-to-install-mod-auth-openidc-on-rhel-7
+# Version 2.4.12.1+ is needed to support the OIDCPassClaimsAs encoding setting in apache conf
 RUN echo "UPGRADE_MOD_AUTH_OPENIDC: $UPGRADE_MOD_AUTH_OPENIDC"
 RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
 	echo "upgrading mod_auth_openidc from upstream centos7 rpm" \
 	&& yum update -y \
 	&& yum install -y jansson-devel \
 		https://mod-auth-openidc.org/download/cjose-0.5.1-1.el7.x86_64.rpm \
-		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.11.2/mod_auth_openidc-2.4.11.2-1.el7.x86_64.rpm \
+		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.12.1/mod_auth_openidc-2.4.12.1-1.el7.x86_64.rpm \
                 && yum clean all \
                 && rm -fr /var/cache/yum; \
     fi;
