@@ -103,6 +103,7 @@ ARG PEERS_EXPLICIT_FIELDS=""
 ARG PEERS_CONTACT_HINT="authorized to invite you as peer"
 ARG ENABLE_SELF_SIGNED_CERTS=False
 ARG BUILD_MOD_AUTH_OPENID=False
+ARG UPGRADE_MOD_AUTH_OPENIDC=False
 ARG PUBKEY_FROM_DNS=False
 ARG PREFER_PYTHON3=False
 ARG SIGNUP_METHODS=migoid
@@ -130,6 +131,8 @@ ARG JUPYTER_SERVICES=""
 ARG JUPYTER_SERVICES_DESC="{}"
 
 FROM rockylinux:8 as init
+ARG UID
+ARG GID
 ARG BUILD_TYPE
 #ARG BUILD_TARGET
 ARG DOMAIN
@@ -174,6 +177,7 @@ ARG WITH_PY3
 ARG JUPYTER_SERVICES
 #ARG WITH_GIT
 
+RUN echo "UID and GID: $UID $GID"
 RUN echo "Build type: $BUILD_TYPE"
 #RUN echo "Build target: $BUILD_TARGET"
 RUN echo "Domains: $DOMAIN" "${PUBLIC_DOMAIN}" "${MIGCERT_DOMAIN}" \
@@ -200,6 +204,7 @@ ARG WILDCARD_DOMAIN
 ARG ENABLE_GDP
 ARG ENABLE_SELF_SIGNED_CERTS
 ARG BUILD_MOD_AUTH_OPENID
+ARG UPGRADE_MOD_AUTH_OPENIDC
 ARG WITH_PY3
 ARG PREFER_PYTHON3
 ARG UID
@@ -373,7 +378,7 @@ RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
         && dnf localinstall -y /root/rpmbuild/RPMS/x86_64/libopkele-2.0.4-9.el7.x86_64.rpm; \
     fi;
 
-# Build mod_auth_openid from source on rocky
+# Build mod_auth_openid from source if requested - mainly for rocky8
 RUN echo "BUILD_MOD_AUTH_OPENID: $BUILD_MOD_AUTH_OPENID"
 RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" ]; then \
 	echo "building mod_auth_openid from centos7 source rpm" \
@@ -410,6 +415,23 @@ RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" ]; then \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/mod_auth_openid.spec \
 	&& echo "install mod_auth_openid centos7 source rpm" \
         && dnf localinstall -y /root/rpmbuild/RPMS/x86_64/mod_auth_openid-0.8-2.el7.x86_64.rpm; \
+    fi;
+
+
+# Upgrade mod_auth_openidc from upstream github packages if requested - mainly needed for rhel/centos7
+# https://stackoverflow.com/questions/68742362/how-to-install-mod-auth-openidc-on-rhel-7
+# The module requires a recent cjose library version. Packaged versions are
+# also available on the upstream releases page under the 2.4.0 release Assets.
+# Version 2.4.12.1+ is needed to support the OIDCPassClaimsAs encoding setting in apache conf
+RUN echo "UPGRADE_MOD_AUTH_OPENIDC: $UPGRADE_MOD_AUTH_OPENIDC"
+RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
+	echo "upgrading mod_auth_openidc from upstream centos7 rpm" \
+	&& yum update -y \
+	&& yum install -y jansson-devel \
+		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.0/cjose-0.6.1.5-2.el8.x86_64.rpm  \
+		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.12.1/mod_auth_openidc-2.4.12.1-1.el8.x86_64.rpm \
+                && yum clean all \
+                && rm -fr /var/cache/yum; \
     fi;
 
 

@@ -31,8 +31,8 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        UID: ${UID}
-        GID: ${GID}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
@@ -123,6 +123,8 @@ services:
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
+        UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -193,8 +195,8 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        UID: ${UID}
-        GID: ${GID}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
@@ -285,6 +287,8 @@ services:
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
+        UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -363,8 +367,8 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        UID: ${UID}
-        GID: ${GID}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
@@ -455,6 +459,8 @@ services:
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
+        UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -521,8 +527,8 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        UID: ${UID}
-        GID: ${GID}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
@@ -613,6 +619,8 @@ services:
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
+        UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -680,8 +688,8 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        UID: ${UID}
-        GID: ${GID}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
@@ -772,6 +780,8 @@ services:
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
+        UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -839,8 +849,8 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        UID: ${UID}
-        GID: ${GID}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
@@ -931,6 +941,8 @@ services:
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
+        UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}

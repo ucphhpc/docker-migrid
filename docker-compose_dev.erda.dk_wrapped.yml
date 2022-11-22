@@ -31,8 +31,8 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        UID: ${UID}
-        GID: ${GID}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
@@ -123,6 +123,8 @@ services:
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
+        UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -141,7 +143,10 @@ services:
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
         VGRID_LABEL: ${VGRID_LABEL}
+        EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
+        EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -190,8 +195,8 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        UID: ${UID}
-        GID: ${GID}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
@@ -282,6 +287,8 @@ services:
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
+        UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -300,7 +307,10 @@ services:
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
         VGRID_LABEL: ${VGRID_LABEL}
+        EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
+        EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -356,8 +366,8 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        UID: ${UID}
-        GID: ${GID}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
@@ -448,6 +458,8 @@ services:
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
+        UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -466,7 +478,10 @@ services:
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
         VGRID_LABEL: ${VGRID_LABEL}
+        EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
+        EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -511,8 +526,8 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        UID: ${UID}
-        GID: ${GID}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
@@ -603,6 +618,8 @@ services:
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
+        UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -621,7 +638,10 @@ services:
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
         VGRID_LABEL: ${VGRID_LABEL}
+        EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
+        EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -667,8 +687,8 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        UID: ${UID}
-        GID: ${GID}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
@@ -759,6 +779,8 @@ services:
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
+        UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -777,7 +799,10 @@ services:
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
         VGRID_LABEL: ${VGRID_LABEL}
+        EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
+        EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -823,8 +848,8 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        UID: ${UID}
-        GID: ${GID}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
         BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
@@ -915,6 +940,8 @@ services:
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID}
+        UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -933,7 +960,10 @@ services:
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
         VGRID_LABEL: ${VGRID_LABEL}
+        EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
+        EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
+        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
