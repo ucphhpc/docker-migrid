@@ -1,0 +1,15 @@
+--- libopkele-2.0.4.orig/include/opkele/iterator.h.bak	2009-08-31 11:57:35.000000000 +0000
++++ libopkele-2.0.4.orig/include/opkele/iterator.h	2014-06-02 01:01:58.221848431 +0000
+@@ -159,10 +159,10 @@
+ 			if(!found) empty=true;
+ 			return *this;
+ 		    }
+-		    basic_filterator<IT> operator++(int) {
++		    basic_filterator<IT>& operator++(int) {
+ 			basic_filterator<IT> rv(*this);
+ 			++(*this);
+-			return rv;
++			return *this;
+ 		    }
+ 
+ 		    void prepare() {
