@@ -10,6 +10,8 @@
 #            explicitly listed in docker-compose.yml *args* list, too.
 #            Furthermore they must be declared after FROM in each stage used.
 
+ARG UID=1000
+ARG GID=1000
 ARG BUILD_TYPE=basic
 ARG BUILD_TARGET=development
 ARG DOMAIN=migrid.test
@@ -200,6 +202,8 @@ ARG ENABLE_SELF_SIGNED_CERTS
 ARG BUILD_MOD_AUTH_OPENID
 ARG WITH_PY3
 ARG PREFER_PYTHON3
+ARG UID
+ARG GID
 
 WORKDIR /tmp
 
@@ -423,8 +427,6 @@ ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 # Setup user
 ENV USER=mig
 ENV GROUP=mig
-ENV UID=1000
-ENV GID=1000
 
 RUN groupadd -g $GID $USER
 RUN useradd -u $UID -g $GID -ms /bin/bash $USER
