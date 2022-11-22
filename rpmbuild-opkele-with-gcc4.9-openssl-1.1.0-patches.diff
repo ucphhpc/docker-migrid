@@ -1,0 +1,21 @@
+--- rpmbuild/SPECS/libopkele.spec       2022-11-22 17:02:01.012415586 +0100
++++ rpmbuild/SPECS/libopkele.spec.fixed 2022-11-22 16:48:20.154743381 +0100
+@@ -8,6 +8,9 @@
+ Source0:        http://kin.klever.net/dist/%{name}-%{version}.tar.bz2
+ # Patch from debian bug http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=667253
+ Patch0:         fix-ftbfs-gcc4.7.diff
++Patch1:         fix-ftbfs-gcc4.9.diff
++# Patch from debian bug https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=828403
++Patch2:         fix-openssl-1.1.0.diff
+ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+ 
+ BuildRequires:  boost-devel, openssl-devel, libxslt, libcurl-devel, expat-devel
+@@ -32,6 +35,8 @@
+ %prep
+ %setup -q
+ %patch0 -p1
++%patch1 -p1
++%patch2 -p1
+ 
+ %build
+ %configure
