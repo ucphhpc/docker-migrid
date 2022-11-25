@@ -350,39 +350,10 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
 #        && dnf clean all \
 #        && rm -fr /var/cache/dnf
 
-
-# Disable Apache OpenID ssl-certificate verification
-# (recompile libopkele with --disable-ssl-verify-host --disable-ssl-verify-peer)
-# TODO: do we REALLY want this security crippling to avoid self-signed cert noise?
-# TODO: consider e.g. a MiG CA signed dummy cert instead and explicit cacert import
-# TODO: this hard-coded version sucks, at least use e.g. yumdownloader from yum-utils
-# TODO: merge this special case into BUILD_MOD_AUTH_OPENID below!
-RUN echo "ENABLE_SELF_SIGNED_CERTS: $ENABLE_SELF_SIGNED_CERTS"
-RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
-	echo "Re-installing libopkele with ssl verification disabled" \
-	&& dnf update -y \
-	&& dnf install -y gcc-c++ \
-        	rpm-build \
-        	boost-devel \
-        	openssl-devel \
-        	libxslt \
-        	libcurl-devel \
-        	expat-devel \
-        	tidy-devel \
-        	sqlite-devel \
-        	libuuid-devel \
-                && dnf clean all \
-                && rm -fr /var/cache/dnf \
-        && rpm -e --nodeps libopkele \
-        && rpm -ivh https://download-ib01.fedoraproject.org/pub/epel/7/SRPMS/Packages/l/libopkele-2.0.4-9.el7.src.rpm \
-        && sed -i "s/^%configure$/%configure --disable-ssl-verify-host --disable-ssl-verify-peer/g" /root/rpmbuild/SPECS/libopkele.spec  \
-        && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
-        && dnf localinstall -y /root/rpmbuild/RPMS/x86_64/libopkele-2.0.4-9.el7.x86_64.rpm; \
-    fi;
-
-# Build mod_auth_openid from source if requested - mainly for rocky8
+# Build mod_auth_openid from source if requested - mainly for rocky8 or self-signed hack
 RUN echo "BUILD_MOD_AUTH_OPENID: $BUILD_MOD_AUTH_OPENID"
-RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" ]; then \
+RUN echo "ENABLE_SELF_SIGNED_CERTS: $ENABLE_SELF_SIGNED_CERTS"
+RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" -o "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
 	echo "building mod_auth_openid from centos7 source rpm" \
 	&& dnf update -y \
 	&& dnf install -y gcc-c++ \
@@ -406,7 +377,8 @@ RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" ]; then \
 		&& dnf clean all \
 		&& rm -fr /var/cache/dnf \
         #&& rpm -e --nodeps libopkele \
-	&& echo "install libopkele centos7 source rpm" \
+	&& echo "build libopkele from centos7 source rpm" \
+        # TODO: this hard-coded version sucks, at least use e.g. yumdownloader from yum-utils
         && rpm -ivh https://download-ib01.fedoraproject.org/pub/epel/7/SRPMS/Packages/l/libopkele-2.0.4-9.el7.src.rpm \
         # Optionally pull more recent gcc4.9 patch from Debian on rocky8 (local copy in patches)
         && wget -O /root/rpmbuild/SOURCES/fix-ftbfs-gcc4.9.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-ftbfs-gcc4.9.diff \
@@ -415,17 +387,25 @@ RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" ]; then \
         # Pull patch from own repo to rpmbuild with Debian patches on rocky8 (local copy in patches)
         && wget -O /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff https://github.com/ucphhpc/docker-migrid/raw/master/patches/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff \
         && cd /root && patch -p 0 < /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff && cd - \
+        # TODO: is this security crippling needed or a matter of proper apache proxying?
+        # Disable Apache OpenID ssl-certificate verification if self-signed
+        # (recompile libopkele with --disable-ssl-verify-host --disable-ssl-verify-peer)
+        && if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
+	      echo "Re-building libopkele with ssl verification disabled"; \
+              sed -i 's/^%configure$/%configure --disable-ssl-verify-host --disable-ssl-verify-peer/g' /root/rpmbuild/SPECS/libopkele.spec; fi \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
         && dnf localinstall -y /root/rpmbuild/RPMS/x86_64/libopkele-2.0.4-9.el8.x86_64.rpm \
         && dnf localinstall -y /root/rpmbuild/RPMS/x86_64/libopkele-devel-2.0.4-9.el8.x86_64.rpm \
 	&& echo "install mod_auth_openid centos7 source rpm" \
         #&& rpm -e --nodeps mod_auth_openid \
+        # TODO: this hard-coded version sucks, at least use e.g. yumdownloader from yum-utils
         && rpm -ivh https://download-ib01.fedoraproject.org/pub/epel/7/SRPMS/Packages/m/mod_auth_openid-0.8-2.el7.src.rpm \
 	&& echo "build mod_auth_openid centos7 source rpm" \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/mod_auth_openid.spec \
 	&& echo "install the rebuilt mod_auth_openid rpm" \
         && dnf localinstall -y /root/rpmbuild/RPMS/x86_64/mod_auth_openid-0.8-2.el8.x86_64.rpm \
 	&& echo "cleaning up after rebuilding and installing mod_auth_openid rpm" \
+        && rm -rf /root/rpmbuild \
         && dnf clean all \
         && rm -fr /var/cache/dnf; \
     fi;
@@ -441,7 +421,7 @@ RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
 	echo "upgrading mod_auth_openidc from upstream centos7 rpm" \
 	&& yum update -y \
 	&& yum install -y jansson-devel \
-		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.0/cjose-0.6.1.5-2.el8.x86_64.rpm  \
+		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.0/cjose-0.6.1.5-2.el8.x86_64.rpm \
 		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.12.1/mod_auth_openidc-2.4.12.1-1.el8.x86_64.rpm \
                 && yum clean all \
                 && rm -fr /var/cache/yum; \
