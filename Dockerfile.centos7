@@ -381,8 +381,9 @@ RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" -o "$ENABLE_SELF_SIGNED_CERTS" = "Tru
 	      echo "Re-building libopkele with ssl verification disabled"; \
               sed -i 's/^%configure$/%configure --disable-ssl-verify-host --disable-ssl-verify-peer/g' /root/rpmbuild/SPECS/libopkele.spec; fi \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
+        && rm -f /root/rpmbuild/RPMS/*/libopkele-*debug*.rpm \
         && yum erase -y 'libopkele-*' \
-        && yum install -y -x '*debuginfo*' /root/rpmbuild/RPMS/*/libopkele-*.rpm \
+        && yum install -y /root/rpmbuild/RPMS/*/libopkele-*.rpm \
 	&& echo "install mod_auth_openid centos7 source rpm" \
         #&& rpm -e --nodeps mod_auth_openid \
         # NOTE: avoid hard-coded version using yumdownloader from yum-utils
@@ -390,9 +391,10 @@ RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" -o "$ENABLE_SELF_SIGNED_CERTS" = "Tru
         && rpm -ivh /root/rpmbuild/SRPMS/mod_auth_openid-*.src.rpm \
 	&& echo "build mod_auth_openid centos7 source rpm" \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/mod_auth_openid.spec \
+        && rm -f /root/rpmbuild/RPMS/*/mod_auth_openid-*debug*.rpm \
 	&& echo "install the rebuilt mod_auth_openid rpm" \
         && yum erase -y 'mod_auth_openid-*' \
-        && yum install -y -x '*debuginfo*' /root/rpmbuild/RPMS/*/mod_auth_openid-*.rpm \
+        && yum install -y /root/rpmbuild/RPMS/*/mod_auth_openid-*.rpm \
 	&& echo "cleaning up after rebuilding and installing mod_auth_openid rpm" \
         && rm -rf /root/rpmbuild \
         && yum clean all \
