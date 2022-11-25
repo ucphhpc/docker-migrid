@@ -533,6 +533,9 @@ services:
     profiles:
       - multi
     image: ucphhpc/migrid:$BUILD_TYPE
+    # NOTE: sshd requires capability to write audit log on login attempts
+    cap_add:
+      - AUDIT_WRITE
     network_mode: "host"
     build:
       context: ./
