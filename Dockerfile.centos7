@@ -364,8 +364,9 @@ RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" -o "$ENABLE_SELF_SIGNED_CERTS" = "Tru
                 && rm -fr /var/cache/yum \
         #&& rpm -e --nodeps libopkele \
 	&& echo "build libopkele from centos7 source rpm" \
-        # TODO: this hard-coded version sucks, at least use e.g. yumdownloader from yum-utils
-        && rpm -ivh https://download-ib01.fedoraproject.org/pub/epel/7/SRPMS/Packages/l/libopkele-2.0.4-9.el7.src.rpm \
+        # NOTE: avoid hard-coded version using yumdownloader from yum-utils
+        && yumdownloader -y --source --resolve --destdir /root/rpmbuild/SRPMS libopkele \
+        && rpm -ivh /root/rpmbuild/SRPMS/libopkele-*.src.rpm \
         ## Optionally pull more recent gcc4.9 patch from Debian on rocky8 (local copy in patches)
         #&& wget -O /root/rpmbuild/SOURCES/fix-ftbfs-gcc4.9.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-ftbfs-gcc4.9.diff \
         ## Pull the more recent required OpenSSL-1.1 patch from Debian on rocky8 (local copy in patches)
@@ -380,16 +381,18 @@ RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" -o "$ENABLE_SELF_SIGNED_CERTS" = "Tru
 	      echo "Re-building libopkele with ssl verification disabled"; \
               sed -i 's/^%configure$/%configure --disable-ssl-verify-host --disable-ssl-verify-peer/g' /root/rpmbuild/SPECS/libopkele.spec; fi \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
-        && yum localinstall -y /root/rpmbuild/RPMS/x86_64/libopkele-2.0.4-9.el7.x86_64.rpm \
-        && yum localinstall -y /root/rpmbuild/RPMS/x86_64/libopkele-devel-2.0.4-9.el7.x86_64.rpm \
+        && yum erase -y 'libopkele-*' \
+        && yum install -y -x '*debuginfo*' /root/rpmbuild/RPMS/*/libopkele-*.rpm \
 	&& echo "install mod_auth_openid centos7 source rpm" \
         #&& rpm -e --nodeps mod_auth_openid \
-        # TODO: this hard-coded version sucks, at least use e.g. yumdownloader from yum-utils
-        && rpm -ivh https://download-ib01.fedoraproject.org/pub/epel/7/SRPMS/Packages/m/mod_auth_openid-0.8-2.el7.src.rpm \
+        # NOTE: avoid hard-coded version using yumdownloader from yum-utils
+        && yumdownloader -y --source --resolve --destdir /root/rpmbuild/SRPMS mod_auth_openid \
+        && rpm -ivh /root/rpmbuild/SRPMS/mod_auth_openid-*.src.rpm \
 	&& echo "build mod_auth_openid centos7 source rpm" \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/mod_auth_openid.spec \
 	&& echo "install the rebuilt mod_auth_openid rpm" \
-        && yum localinstall -y /root/rpmbuild/RPMS/x86_64/mod_auth_openid-0.8-2.el7.x86_64.rpm \
+        && yum erase -y 'mod_auth_openid-*' \
+        && yum install -y -x '*debuginfo*' /root/rpmbuild/RPMS/*/mod_auth_openid-*.rpm \
 	&& echo "cleaning up after rebuilding and installing mod_auth_openid rpm" \
         && rm -rf /root/rpmbuild \
         && yum clean all \
