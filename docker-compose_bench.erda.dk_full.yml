@@ -323,7 +323,11 @@ services:
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: openid sftp sftpsubsys webdavs ftps notify rsyslogd
+      # TODO: re-enable all services once podman honors profiles!
+      #       Currently it simply starts single containers in multi as well,
+      #       which causes daemons to fight for port during network listen.
+      #RUN_SERVICES: openid sftp sftpsubsys webdavs ftps notify rsyslogd
+      RUN_SERVICES: notify
     depends_on:
       - migrid
     #ports:
