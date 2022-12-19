@@ -1,0 +1,75 @@
+Index: libopkele/lib/basic_op.cc
+===================================================================
+--- libopkele.orig/lib/basic_op.cc
++++ libopkele/lib/basic_op.cc
+@@ -64,6 +64,8 @@ namespace opkele {
+ 	    const basic_openid_message& inm) try {
+ 	assert(inm.get_field("mode")=="associate");
+ 	util::dh_t dh;
++	BIGNUM *p, *g;
++	const BIGNUM *pub_key;
+ 	util::bignum_t c_pub;
+ 	unsigned char key_digest[SHA256_DIGEST_LENGTH];
+ 	size_t d_len = 0;
+@@ -73,14 +75,16 @@ namespace opkele {
+ 	    if(!(dh = DH_new()))
+ 		throw exception_openssl(OPKELE_CP_ "failed to DH_new()");
+ 	    c_pub = util::base64_to_bignum(inm.get_field("dh_consumer_public"));
+-	    try { dh->p = util::base64_to_bignum(inm.get_field("dh_modulus"));
++	    try { p = util::base64_to_bignum(inm.get_field("dh_modulus"));
+ 	    }catch(failed_lookup&) {
+-		dh->p = util::dec_to_bignum(data::_default_p); }
+-	    try { dh->g = util::base64_to_bignum(inm.get_field("dh_gen"));
++		p = util::dec_to_bignum(data::_default_p); }
++	    try { g = util::base64_to_bignum(inm.get_field("dh_gen"));
+ 	    }catch(failed_lookup&) {
+-		dh->g = util::dec_to_bignum(data::_default_g); }
++		g = util::dec_to_bignum(data::_default_g); }
++	    DH_set0_pqg(dh, p, NULL, g);
+ 	    if(!DH_generate_key(dh))
+ 		throw exception_openssl(OPKELE_CP_ "failed to DH_generate_key()");
++	    DH_get0_key(dh, &pub_key, NULL);
+ 	    vector<unsigned char> ck(DH_size(dh)+1);
+ 	    unsigned char *ckptr = &(ck.front())+1;
+ 	    int cklen = DH_compute_key(ckptr,c_pub,dh);
+@@ -113,7 +117,7 @@ namespace opkele {
+ 	    if(d_len != secret.size())
+ 		throw bad_input(OPKELE_CP_ "Association secret and session MAC are not of the same size");
+ 	    oum.set_field("session_type",sts);
+-	    oum.set_field("dh_server_public",util::bignum_to_base64(dh->pub_key));
++	    oum.set_field("dh_server_public",util::bignum_to_base64(pub_key));
+ 	    string b64; secret.enxor_to_base64(key_digest,b64);
+ 	    oum.set_field("enc_mac_key",b64);
+ 	}else /* TODO: support cleartext over encrypted connection */
+Index: libopkele/lib/basic_rp.cc
+===================================================================
+--- libopkele.orig/lib/basic_rp.cc
++++ libopkele/lib/basic_rp.cc
+@@ -78,18 +78,22 @@ namespace opkele {
+ 
+     assoc_t basic_RP::associate(const string& OP) {
+ 	util::dh_t dh = DH_new();
++	BIGNUM *p, *g;
++	const BIGNUM *pub_key;
+ 	if(!dh)
+ 	    throw exception_openssl(OPKELE_CP_ "failed to DH_new()");
+-	dh->p = util::dec_to_bignum(data::_default_p);
+-	dh->g = util::dec_to_bignum(data::_default_g);
++	p = util::dec_to_bignum(data::_default_p);
++	g = util::dec_to_bignum(data::_default_g);
++	DH_set0_pqg(dh, p, NULL, g);
+ 	if(!DH_generate_key(dh))
+ 	    throw exception_openssl(OPKELE_CP_ "failed to DH_generate_key()");
++	DH_get0_key(dh, &pub_key, NULL);
+ 	openid_message_t req;
+ 	req.set_field("ns",OIURI_OPENID20);
+ 	req.set_field("mode","associate");
+-	req.set_field("dh_modulus",util::bignum_to_base64(dh->p));
+-	req.set_field("dh_gen",util::bignum_to_base64(dh->g));
+-	req.set_field("dh_consumer_public",util::bignum_to_base64(dh->pub_key));
++	req.set_field("dh_modulus",util::bignum_to_base64(p));
++	req.set_field("dh_gen",util::bignum_to_base64(g));
++	req.set_field("dh_consumer_public",util::bignum_to_base64(pub_key));
+ 	openid_message_t res;
+ 	req.set_field("assoc_type","HMAC-SHA256");
+ 	req.set_field("session_type","DH-SHA256");

@@ -43,7 +43,8 @@ operator user account acceptance.
 Prepare PodMan version of Docker and Docker Compose::
   
     sudo dnf erase docker docker-compose
-    sudo dnf install podman podman-docker podman-compose
+    sudo dnf install podman podman-docker podman-compose 
+    sudo dnf install fuse-overlayfs
 
 Harden sshd to use strong crypto in line with Mozilla recommendations
 and limit remote log in to keys. If possible it's also recommended to

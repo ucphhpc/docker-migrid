@@ -10,6 +10,8 @@
 #            explicitly listed in docker-compose.yml *args* list, too.
 #            Furthermore they must be declared after FROM in each stage used.
 
+ARG UID=1000
+ARG GID=1000
 ARG BUILD_TYPE=basic
 ARG BUILD_TARGET=development
 ARG DOMAIN=migrid.test
@@ -33,6 +35,7 @@ ARG EXT_OIDC_CLIENT_NAME=unset
 ARG EXT_OIDC_CLIENT_ID=unset
 ARG EXT_OIDC_SCOPE=unset
 ARG EXT_OIDC_REMOTE_USER_CLAIM=unset
+ARG EXT_OIDC_PASS_CLAIM_AS=unset
 ARG PUBLIC_HTTP_PORT=80
 ARG PUBLIC_HTTPS_PORT=444
 ARG MIGCERT_HTTPS_PORT=446
@@ -51,10 +54,10 @@ ARG FTPS_CTRL_SHOW_PORT=21
 ARG OPENID_PORT=8443
 ARG OPENID_SHOW_PORT=443
 ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
-ARG MIG_SVN_REV=5567
+ARG MIG_SVN_REV=5577
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
 ARG MIG_GIT_BRANCH=edge
-ARG MIG_GIT_REV=b1cf3f8a17dbfa10610fbf8059a391474be27543
+ARG MIG_GIT_REV=3fc4e14b69adb949b9eb7117567e79f0f435d878
 ARG ADMIN_EMAIL=mig
 ARG ADMIN_LIST=
 ARG LOG_LEVEL=info
@@ -101,6 +104,7 @@ ARG PEERS_EXPLICIT_FIELDS=""
 ARG PEERS_CONTACT_HINT="authorized to invite you as peer"
 ARG ENABLE_SELF_SIGNED_CERTS=False
 ARG BUILD_MOD_AUTH_OPENID=False
+ARG UPGRADE_MOD_AUTH_OPENIDC=False
 ARG PUBKEY_FROM_DNS=False
 ARG PREFER_PYTHON3=False
 ARG SIGNUP_METHODS=migoid
@@ -128,6 +132,8 @@ ARG JUPYTER_SERVICES=""
 ARG JUPYTER_SERVICES_DESC="{}"
 
 FROM rockylinux:8 as init
+ARG UID
+ARG GID
 ARG BUILD_TYPE
 #ARG BUILD_TARGET
 ARG DOMAIN
@@ -172,6 +178,7 @@ ARG WITH_PY3
 ARG JUPYTER_SERVICES
 #ARG WITH_GIT
 
+RUN echo "UID and GID: $UID $GID"
 RUN echo "Build type: $BUILD_TYPE"
 #RUN echo "Build target: $BUILD_TARGET"
 RUN echo "Domains: $DOMAIN" "${PUBLIC_DOMAIN}" "${MIGCERT_DOMAIN}" \
@@ -198,8 +205,11 @@ ARG WILDCARD_DOMAIN
 ARG ENABLE_GDP
 ARG ENABLE_SELF_SIGNED_CERTS
 ARG BUILD_MOD_AUTH_OPENID
+ARG UPGRADE_MOD_AUTH_OPENIDC
 ARG WITH_PY3
 ARG PREFER_PYTHON3
+ARG UID
+ARG GID
 
 WORKDIR /tmp
 
@@ -340,38 +350,10 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
 #        && dnf clean all \
 #        && rm -fr /var/cache/dnf
 
-
-# Disable Apache OpenID ssl-certificate verification
-# (recompile libopkele with --disable-ssl-verify-host --disable-ssl-verify-peer)
-# TODO: do we REALLY want this security crippling to avoid self-signed cert noise?
-# TODO: consider e.g. a MiG CA signed dummy cert instead and explicit cacert import
-# TODO: this hard-coded version sucks, at least use e.g. yumdownloader from yum-utils
-RUN echo "ENABLE_SELF_SIGNED_CERTS: $ENABLE_SELF_SIGNED_CERTS"
-RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
-	echo "Re-installing libopkele with ssl verification disabled" \
-	&& dnf update -y \
-	&& dnf install -y gcc-c++ \
-        	rpm-build \
-        	boost-devel \
-        	openssl-devel \
-        	libxslt \
-        	libcurl-devel \
-        	expat-devel \
-        	tidy-devel \
-        	sqlite-devel \
-        	libuuid-devel \
-                && dnf clean all \
-                && rm -fr /var/cache/dnf \
-        && rpm -e --nodeps libopkele \
-        && rpm -ivh https://download-ib01.fedoraproject.org/pub/epel/7/SRPMS/Packages/l/libopkele-2.0.4-9.el7.src.rpm \
-        && sed -i "s/^%configure$/%configure --disable-ssl-verify-host --disable-ssl-verify-peer/g" /root/rpmbuild/SPECS/libopkele.spec  \
-        && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
-        && dnf localinstall -y /root/rpmbuild/RPMS/x86_64/libopkele-2.0.4-9.el7.x86_64.rpm; \
-    fi;
-
-# Build mod_auth_openid from source on rocky
+# Build mod_auth_openid from source if requested - mainly for rocky8 or self-signed hack
 RUN echo "BUILD_MOD_AUTH_OPENID: $BUILD_MOD_AUTH_OPENID"
-RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" ]; then \
+RUN echo "ENABLE_SELF_SIGNED_CERTS: $ENABLE_SELF_SIGNED_CERTS"
+RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" -o "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
 	echo "building mod_auth_openid from centos7 source rpm" \
 	&& dnf update -y \
 	&& dnf install -y gcc-c++ \
@@ -392,20 +374,66 @@ RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" ]; then \
 		expat-devel \
 		tidy-devel \
 		libuuid-devel \
-                && dnf clean all \
-                && rm -fr /var/cache/dnf \
+		&& dnf clean all \
+		&& rm -fr /var/cache/dnf \
         #&& rpm -e --nodeps libopkele \
-	&& echo "install libopkele centos7 source rpm" \
-        && rpm -ivh https://download-ib01.fedoraproject.org/pub/epel/7/SRPMS/Packages/l/libopkele-2.0.4-9.el7.src.rpm \
+        # NOTE: add EPEL CentOS 7 repos here but completely disabled
+	&& cat /etc/yum.repos.d/epel.repo | \
+		sed 's/\[epel/\[epel7/g;s/8/7/g;s/enabled=1/enabled=0/g' \
+		> /etc/yum.repos.d/epel7.repo \
+	&& echo "build libopkele from centos7 source rpm" \
+        # NOTE: avoid hard-coded version using yumdownloader from yum-utils
+        && yumdownloader -y --enablerepo=epel7-source --source --resolve --destdir /root/rpmbuild/SRPMS libopkele \
+        && rpm -ivh /root/rpmbuild/SRPMS/libopkele-*.src.rpm \
+        # Optionally pull more recent gcc4.9 patch from Debian on rocky8 (local copy in patches)
+        && wget -O /root/rpmbuild/SOURCES/fix-ftbfs-gcc4.9.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-ftbfs-gcc4.9.diff \
+        # Pull the more recent required OpenSSL-1.1 patch from Debian on rocky8 (local copy in patches)
+        && wget -O /root/rpmbuild/SOURCES/fix-openssl-1.1.0.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-openssl-1.1.0.diff \
+        # Pull patch from own repo to rpmbuild with Debian patches on rocky8 (local copy in patches)
+        && wget -O /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff https://github.com/ucphhpc/docker-migrid/raw/master/patches/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff \
+        && cd /root && patch -p 0 < /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff && cd - \
+        # TODO: is this security crippling needed or a matter of proper apache proxying?
+        # Disable Apache OpenID ssl-certificate verification if self-signed
+        # (recompile libopkele with --disable-ssl-verify-host --disable-ssl-verify-peer)
+        && if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
+	      echo "Re-building libopkele with ssl verification disabled"; \
+              sed -i 's/^%configure$/%configure --disable-ssl-verify-host --disable-ssl-verify-peer/g' /root/rpmbuild/SPECS/libopkele.spec; fi \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
-        && dnf localinstall -y /root/rpmbuild/RPMS/x86_64/libopkele-2.0.4-9.el7.x86_64.rpm \
+        && rm -f /root/rpmbuild/RPMS/*/libopkele-*debug*.rpm \
+        #&& dnf erase -y 'libopkele-*' \
+        && dnf install -y /root/rpmbuild/RPMS/*/libopkele-*.rpm \
 	&& echo "install mod_auth_openid centos7 source rpm" \
         #&& rpm -e --nodeps mod_auth_openid \
-        && rpm -ivh https://download-ib01.fedoraproject.org/pub/epel/7/SRPMS/Packages/m/mod_auth_openid-0.8-2.el7.src.rpm \
+        # NOTE: avoid hard-coded version using yumdownloader from yum-utils
+        && yumdownloader -y --enablerepo=epel7-source --source --resolve --destdir /root/rpmbuild/SRPMS mod_auth_openid \
+        && rpm -ivh /root/rpmbuild/SRPMS/mod_auth_openid-*.src.rpm \
 	&& echo "build mod_auth_openid centos7 source rpm" \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/mod_auth_openid.spec \
-	&& echo "install mod_auth_openid centos7 source rpm" \
-        && dnf localinstall -y /root/rpmbuild/RPMS/x86_64/mod_auth_openid-0.8-2.el7.x86_64.rpm; \
+        && rm -f /root/rpmbuild/RPMS/*/mod_auth_openid-*debug*.rpm \
+	&& echo "install the rebuilt mod_auth_openid rpm" \
+        #&& dnf erase -y 'mod_auth_openid-*' \
+        && dnf install -y /root/rpmbuild/RPMS/*/mod_auth_openid-*.rpm \
+	&& echo "cleaning up after rebuilding and installing mod_auth_openid rpm" \
+        && rm -rf /root/rpmbuild \
+        && dnf clean all \
+        && rm -fr /var/cache/dnf; \
+    fi;
+
+
+# Upgrade mod_auth_openidc from upstream github packages if requested - mainly needed for rhel/centos7
+# https://stackoverflow.com/questions/68742362/how-to-install-mod-auth-openidc-on-rhel-7
+# The module requires a recent cjose library version. Packaged versions are
+# also available on the upstream releases page under the 2.4.0 release Assets.
+# Version 2.4.12.1+ is needed to support the OIDCPassClaimsAs encoding setting in apache conf
+RUN echo "UPGRADE_MOD_AUTH_OPENIDC: $UPGRADE_MOD_AUTH_OPENIDC"
+RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
+	echo "upgrading mod_auth_openidc from upstream centos7 rpm" \
+	&& yum update -y \
+	&& yum install -y jansson-devel \
+		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.0/cjose-0.6.1.5-2.el8.x86_64.rpm \
+		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.12.1/mod_auth_openidc-2.4.12.1-1.el8.x86_64.rpm \
+                && yum clean all \
+                && rm -fr /var/cache/yum; \
     fi;
 
 
@@ -423,8 +451,6 @@ ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 # Setup user
 ENV USER=mig
 ENV GROUP=mig
-ENV UID=1000
-ENV GID=1000
 
 RUN groupadd -g $GID $USER
 RUN useradd -u $UID -g $GID -ms /bin/bash $USER
@@ -659,9 +685,11 @@ RUN if [ "$WITH_GIT" = "True" ]; then \
         git checkout -B ${MIG_GIT_BRANCH} --track origin/${MIG_GIT_BRANCH} && \
         git checkout ${MIG_GIT_REV} && cd .. && \
         rsync -a migrid.git/ ./ && \
-        rm -rf migrid.git/ ; \
+        rm -rf migrid.git/ && \
+	echo "migrid version: ${MIG_GIT_REPO} ${MIG_GIT_BRANCH} ${MIG_GIT_REV}" > ./active-migrid-version.txt; \
     else \
-      svn checkout -r ${MIG_SVN_REV} ${MIG_SVN_REPO} . ; \
+      svn checkout -r ${MIG_SVN_REV} ${MIG_SVN_REPO} . && \
+	echo "migrid version: ${MIG_SVN_REPO} trunk ${MIG_SVN_REV}" > ./active-migrid-version.txt; \
     fi;
 
 ADD --chown=$USER:$GROUP mig $MIG_ROOT/
@@ -722,6 +750,7 @@ ARG EXT_OIDC_CLIENT_NAME
 ARG EXT_OIDC_CLIENT_ID
 ARG EXT_OIDC_SCOPE
 ARG EXT_OIDC_REMOTE_USER_CLAIM
+ARG EXT_OIDC_PASS_CLAIM_AS
 ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
 ARG SKIN_SUFFIX
@@ -846,6 +875,7 @@ RUN ./generateconfs.py --source=. \
     --ext_oidc_client_id="${EXT_OIDC_CLIENT_ID}" \
     --ext_oidc_scope="${EXT_OIDC_SCOPE}" \
     --ext_oidc_remote_user_claim="${EXT_OIDC_REMOTE_USER_CLAIM}" \
+    --ext_oidc_pass_claim_as="${EXT_OIDC_PASS_CLAIM_AS}" \
     --enable_openid=${ENABLE_OPENID} --enable_wsgi=True \
     --enable_sftp=${ENABLE_SFTP} --enable_sftp_subsys=${ENABLE_SFTP_SUSBSYS} \
     --enable_davs=${ENABLE_DAVS} --enable_ftps=${ENABLE_FTPS} \
@@ -911,6 +941,7 @@ ARG SID_DOMAIN
 ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
 ARG ENABLE_SELF_SIGNED_CERTS
+ARG BUILD_MOD_AUTH_OPENID
 ARG WITH_PY3
 
 # Prepare oiddiscover for httpd
