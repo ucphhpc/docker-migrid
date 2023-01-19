@@ -54,10 +54,10 @@ ARG FTPS_CTRL_SHOW_PORT=21
 ARG OPENID_PORT=8443
 ARG OPENID_SHOW_PORT=443
 ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
-ARG MIG_SVN_REV=5577
+ARG MIG_SVN_REV=5616
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
 ARG MIG_GIT_BRANCH=edge
-ARG MIG_GIT_REV=3fc4e14b69adb949b9eb7117567e79f0f435d878
+ARG MIG_GIT_REV=4b16f846aa36ebf3e5e2d60352a7d40a82bbc409
 ARG ADMIN_EMAIL=mig
 ARG ADMIN_LIST=
 ARG LOG_LEVEL=info
@@ -431,7 +431,7 @@ RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
 	&& yum update -y \
 	&& yum install -y jansson-devel \
 		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.0/cjose-0.6.1.5-2.el8.x86_64.rpm \
-		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.12.1/mod_auth_openidc-2.4.12.1-1.el8.x86_64.rpm \
+		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.12.2/mod_auth_openidc-2.4.12.2-1.el8.x86_64.rpm \
                 && yum clean all \
                 && rm -fr /var/cache/yum; \
     fi;
