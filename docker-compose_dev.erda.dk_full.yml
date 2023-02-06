@@ -1049,7 +1049,7 @@ volumes:
     driver_opts:
       # Volume for generated certificates (provided by migrid)
       type: none
-      device: $PWD/certs
+      device: ${MIGRID_ROOT_DIR}/certs
       o: bind
 
   httpd:
@@ -1057,7 +1057,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/httpd
+      device: ${MIGRID_ROOT_DIR}/httpd
       o: bind
 
   mig:
@@ -1065,7 +1065,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/mig
+      device: ${MIGRID_ROOT_DIR}/mig
       o: bind
 
   state:
@@ -1073,7 +1073,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/state
+      device: ${MIGRID_ROOT_DIR}/state
       o: bind
   
   migrid-syslog:
@@ -1081,7 +1081,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid
+      device: ${MIGRID_ROOT_DIR}/log/migrid
       o: bind
 
   migrid-io-syslog:
@@ -1089,7 +1089,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid-io
+      device: ${MIGRID_ROOT_DIR}/log/migrid-io
       o: bind
 
   migrid-openid-syslog:
@@ -1097,7 +1097,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid-openid
+      device: ${MIGRID_ROOT_DIR}/log/migrid-openid
       o: bind
 
   migrid-sftp-syslog:
@@ -1105,7 +1105,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid-sftp
+      device: ${MIGRID_ROOT_DIR}/log/migrid-sftp
       o: bind
 
   migrid-webdavs-syslog:
@@ -1113,7 +1113,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid-webdavs
+      device: ${MIGRID_ROOT_DIR}/log/migrid-webdavs
       o: bind
 
   migrid-ftps-syslog:
@@ -1121,5 +1121,5 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid-ftps
+      device: ${MIGRID_ROOT_DIR}/log/migrid-ftps
       o: bind
