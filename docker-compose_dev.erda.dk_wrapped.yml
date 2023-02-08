@@ -1035,15 +1035,15 @@ services:
 
 volumes:
   certs:
+    # Volume for generated certificates (provided by migrid)
     driver: local
     driver_opts:
-      # Volume for generated certificates (provided by migrid)
       type: none
       device: $PWD/certs
       o: bind
 
   httpd:
-    # Volume used for httpd config (provided by migrid)
+    # Volume used for httpd config (provided by migrid)
     driver: local
     driver_opts:
       type: none
@@ -1051,7 +1051,7 @@ volumes:
       o: bind
 
   mig:
-    # Volume used to contain the migrid code and conf (provided by migrid at svn)
+    # Volume used to contain the migrid code and conf (provided by migrid at svn)
     driver: local
     driver_opts:
       type: none
@@ -1059,7 +1059,7 @@ volumes:
       o: bind
 
   state:
-    # Volume used to contain the migrid state (provided by migrid)
+    # Volume used to contain the migrid state (provided by migrid)
     driver: local
     driver_opts:
       type: none
@@ -1067,7 +1067,7 @@ volumes:
       o: bind
   
   migrid-syslog:
-    # Volume used for exposing migrid system log
+    # Volume used for exposing migrid system log
     driver: local
     driver_opts:
       type: none
@@ -1075,7 +1075,7 @@ volumes:
       o: bind
 
   migrid-io-syslog:
-    # Volume used for exposing migrid system log
+    # Volume used for exposing migrid system log
     driver: local
     driver_opts:
       type: none
@@ -1083,7 +1083,7 @@ volumes:
       o: bind
 
   migrid-openid-syslog:
-    # Volume used for exposing migrid system log
+    # Volume used for exposing migrid system log
     driver: local
     driver_opts:
       type: none
@@ -1091,7 +1091,7 @@ volumes:
       o: bind
 
   migrid-sftp-syslog:
-    # Volume used for exposing migrid system log
+    # Volume used for exposing migrid system log
     driver: local
     driver_opts:
       type: none
@@ -1099,7 +1099,7 @@ volumes:
       o: bind
 
   migrid-webdavs-syslog:
-    # Volume used for exposing migrid system log
+    # Volume used for exposing migrid system log
     driver: local
     driver_opts:
       type: none
@@ -1107,7 +1107,7 @@ volumes:
       o: bind
 
   migrid-ftps-syslog:
-    # Volume used for exposing migrid system log
+    # Volume used for exposing migrid system log
     driver: local
     driver_opts:
       type: none
