@@ -10,6 +10,7 @@
 #            explicitly listed in docker-compose.yml *args* list, too.
 #            Furthermore they must be declared after FROM in each stage used.
 
+ARG DOCKER_MIGRID_ROOT=.
 ARG UID=1000
 ARG GID=1000
 ARG BUILD_TYPE=basic

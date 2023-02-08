@@ -33,6 +33,7 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -200,6 +201,7 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -377,6 +379,7 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -542,6 +545,7 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -705,6 +709,7 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -868,6 +873,7 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -1056,7 +1062,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/certs
+      device: ${DOCKER_MIGRID_ROOT}/certs
       o: bind
 
   httpd:
@@ -1064,7 +1070,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/httpd
+      device: ${DOCKER_MIGRID_ROOT}/httpd
       o: bind
 
   mig:
@@ -1072,7 +1078,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/mig
+      device: ${DOCKER_MIGRID_ROOT}/mig
       o: bind
 
   state:
@@ -1080,7 +1086,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/state
+      device: ${DOCKER_MIGRID_ROOT}/state
       o: bind
   
   migrid-syslog:
@@ -1088,7 +1094,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid
+      device: ${DOCKER_MIGRID_ROOT}/log/migrid
       o: bind
 
   migrid-io-syslog:
@@ -1096,7 +1102,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid-io
+      device: ${DOCKER_MIGRID_ROOT}/log/migrid-io
       o: bind
 
   migrid-openid-syslog:
@@ -1104,7 +1110,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid-openid
+      device: ${DOCKER_MIGRID_ROOT}/log/migrid-openid
       o: bind
 
   migrid-sftp-syslog:
@@ -1112,7 +1118,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid-sftp
+      device: ${DOCKER_MIGRID_ROOT}/log/migrid-sftp
       o: bind
 
   migrid-webdavs-syslog:
@@ -1120,7 +1126,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid-webdavs
+      device: ${DOCKER_MIGRID_ROOT}/log/migrid-webdavs
       o: bind
 
   migrid-ftps-syslog:
@@ -1128,5 +1134,5 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid-ftps
+      device: ${DOCKER_MIGRID_ROOT}/log/migrid-ftps
       o: bind
