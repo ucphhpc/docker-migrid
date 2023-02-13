@@ -74,7 +74,7 @@ ARG EMULATE_FQDN=migrid.org
 ARG SKIN_SUFFIX=basic
 ARG ENABLE_OPENID=True
 ARG ENABLE_SFTP=True
-ARG ENABLE_SFTP_SUSBSYS=True
+ARG ENABLE_SFTP_SUBSYS=True
 ARG ENABLE_DAVS=True
 ARG ENABLE_FTPS=True
 ARG ENABLE_SHARELINKS=True
@@ -527,8 +527,8 @@ RUN ln -s MiG/${WILDCARD_DOMAIN}/server.crt server.crt \
                [ -L "$domain" ] || ln -s MiG/${WILDCARD_DOMAIN} $domain; \
        done
 
-# Upgrade pip, required by cryptography
-RUN python2 -m pip install -U pip==20.3.4
+# Upgrade pip, required by cryptography - pip-21+ dropped python2 support, however
+RUN python2 -m pip install -U 'pip<21'
 
 # NOTE: make certs as mig user
 WORKDIR $MIG_ROOT
@@ -550,6 +550,8 @@ ARG MODERN_WSGIDAV
 
 # NOTE: Switch back to root for system-wide pip install here
 USER root
+
+# Prepare py2 dependencies no longer in yum or just outdated there
 
 # Prepare OpenID (python-openid for py2 and python-openid2 for py3)
 # TODO: switch to install from github or use python-openid2 for python2 here?
@@ -726,7 +728,7 @@ ARG EMULATE_FQDN
 ARG SKIN_SUFFIX
 ARG ENABLE_OPENID
 ARG ENABLE_SFTP
-ARG ENABLE_SFTP_SUSBSYS
+ARG ENABLE_SFTP_SUBSYS
 ARG ENABLE_DAVS
 ARG ENABLE_FTPS
 ARG ENABLE_SHARELINKS
@@ -836,7 +838,7 @@ RUN python2 ./generateconfs.py --source=. \
     --ext_oidc_remote_user_claim="${EXT_OIDC_REMOTE_USER_CLAIM}" \
     --ext_oidc_pass_claim_as="${EXT_OIDC_PASS_CLAIM_AS}" \
     --enable_openid=${ENABLE_OPENID} --enable_wsgi=True \
-    --enable_sftp=${ENABLE_SFTP} --enable_sftp_subsys=${ENABLE_SFTP_SUSBSYS} \
+    --enable_sftp=${ENABLE_SFTP} --enable_sftp_subsys=${ENABLE_SFTP_SUBSYS} \
     --enable_davs=${ENABLE_DAVS} --enable_ftps=${ENABLE_FTPS} \
     --enable_sharelinks=${ENABLE_SHARELINKS} --enable_transfers=${ENABLE_TRANSFERS} \
     --enable_duplicati=${ENABLE_DUPLICATI} --enable_seafile=${ENABLE_SEAFILE} \
