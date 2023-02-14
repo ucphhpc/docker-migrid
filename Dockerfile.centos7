@@ -106,6 +106,7 @@ ARG PEERS_CONTACT_HINT="authorized to invite you as peer"
 ARG ENABLE_SELF_SIGNED_CERTS=False
 ARG BUILD_MOD_AUTH_OPENID=False
 ARG UPGRADE_MOD_AUTH_OPENIDC=False
+ARG UPGRADE_PARAMIKO=False
 ARG PUBKEY_FROM_DNS=False
 ARG PREFER_PYTHON3=False
 ARG SIGNUP_METHODS=migoid
@@ -207,6 +208,7 @@ ARG ENABLE_GDP
 ARG ENABLE_SELF_SIGNED_CERTS
 ARG BUILD_MOD_AUTH_OPENID
 ARG UPGRADE_MOD_AUTH_OPENIDC
+ARG UPGRADE_PARAMIKO
 ARG WITH_PY3
 ARG PREFER_PYTHON3
 ARG UID
@@ -255,7 +257,6 @@ RUN yum update -y \
     lsof \
     python-pip \
     python-devel \
-    python-paramiko \
     python-enchant \
     python-jsonrpclib \
     python-requests \
@@ -264,16 +265,20 @@ RUN yum update -y \
     python-future \
     python2-cffi \
     pysendfile \
-    PyYAML \
     pyOpenSSL \
+    PyYAML \
     # NOTE: generally install cracklib from pip as yum/dnf only has py2 version
     #cracklib-python \
     cracklib-devel \
+    # NOTE: extra dependencies required for paramiko pip install
+    redhat-rpm-config pkg-config rust cargo libffi-devel \
     lftp \
     rsync \
     fail2ban \
     ipset \
     wget \
+    # NOTE: only install default paramiko if upgrade not requested
+    && [ "${UPGRADE_PARAMIKO}" = True ] || yum install -y python-paramiko \
     && yum clean all \
     && rm -fr /var/cache/yum
 
@@ -285,8 +290,6 @@ RUN if [ "${WITH_PY3}" = True ]; then \
       python3-pip \
       python3-devel \
       python3-mod_wsgi \
-      #python3-paramiko \
-      python36-paramiko \
       #python3-enchant \
       #python3-jsonrpclib \
       #python3-requests \
@@ -299,6 +302,8 @@ RUN if [ "${WITH_PY3}" = True ]; then \
       python36-cffi \
       python36-pyOpenSSL \
       python36-PyYAML \
+      # NOTE: only install default paramiko if upgrade not requested
+      && [ "${UPGRADE_PARAMIKO}" = True ] || yum install -y python36-paramiko \
       && yum clean all \
       && rm -fr /var/cache/yum; \
     else \
@@ -527,8 +532,12 @@ RUN ln -s MiG/${WILDCARD_DOMAIN}/server.crt server.crt \
                [ -L "$domain" ] || ln -s MiG/${WILDCARD_DOMAIN} $domain; \
        done
 
-# Upgrade pip, required by cryptography - pip-21+ dropped python2 support, however
+# Upgrade pip2, required by cryptography - pip-21+ dropped python2 support, however
 RUN python2 -m pip install -U 'pip<21'
+# Upgrade pip3, required by cryptography - pip-22+ dropped py3.6 support, however
+RUN if [ "${WITH_PY3}" = "True" ]; then \
+      python3 -m pip install -U 'pip<22'; \
+    fi;
 
 # NOTE: make certs as mig user
 WORKDIR $MIG_ROOT
@@ -547,11 +556,31 @@ FROM setup_security as mig_dependencies
 ARG DOMAIN
 ARG WITH_PY3
 ARG MODERN_WSGIDAV
+ARG UPGRADE_PARAMIKO
 
 # NOTE: Switch back to root for system-wide pip install here
 USER root
 
 # Prepare py2 dependencies no longer in yum or just outdated there
+
+# NOTE: use jsonrpclib and pysendfile from yum for py2 here but for py3 from pip
+RUN if [ "${WITH_PY3}" = "True" ]; then \
+      pip3 install 'jsonrpclib<0.2' pysendfile; \
+    fi;
+
+# NOTE: recent paramiko is required for modern host key algo
+RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
+      # NOTE: paramiko-3.0.0 & pyOpenSSL-22.0 dropped python2 support
+      pip2 install 'pyOpenSSL<22' 'paramiko<3'; \
+      if [ "${WITH_PY3}" = "True" ]; then \
+        # NOTE: paramiko-3.0.0 & pyOpenSSL-22.0 deps dropped python3.6 support
+        # NOTE: a newer setuptools MAY be needed and setuptools_rust MUST be 
+        #       installed separately here for whatever reason.
+        #pip3 install -U setuptools; \
+        pip3 install setuptools_rust; \
+        pip3 install 'pyOpenSSL<22' 'paramiko<3'; \
+      fi; \
+    fi;
 
 # Prepare OpenID (python-openid for py2 and python-openid2 for py3)
 # TODO: switch to install from github or use python-openid2 for python2 here?
@@ -562,7 +591,8 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
     fi;
 
 # Modules required by grid_events.py
-RUN pip2 install watchdog scandir
+# NOTE: watchdog-1.0 dropped python2 support
+RUN pip2 install 'watchdog<1.0' scandir
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install watchdog scandir; \
     fi;
@@ -603,21 +633,22 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
     fi;
 
 # Module required to run pytests
-# 4.6 is the latest with python2 support
-RUN pip2 install pytest
+# NOTE: pytest-5.0 dropped python2 support
+RUN pip2 install 'pytest<5.0'
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install pytest; \
     fi;
 
 # Modules required by 2FA
-# NOTE: we require <=2.3.0 for python2.
-RUN pip2 install pyotp==2.3.0
+# NOTE: pyotp-2.4 dropped python2 support
+RUN pip2 install 'pyotp<2.4'
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install pyotp; \
     fi;
 
 # Modules required for smart country selection
-RUN pip2 install iso3166
+# NOTE: iso3361-2.0 dropped python2 support
+RUN pip2 install 'iso3166<2.0'
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install iso3166; \
     fi;
@@ -629,7 +660,8 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
     fi;
 
 # Modules required for workflows
-RUN pip2 install nbformat nbconvert papermill
+# NOTE: nbformat-5.0, nbconvert-6.0 and papermill-2.0 dropped python2 support
+RUN pip2 install 'nbformat<5.0' 'nbconvert<6.0' 'papermill<2.0'
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install nbformat nbconvert papermill; \
     fi;

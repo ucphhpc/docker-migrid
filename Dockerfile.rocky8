@@ -106,6 +106,7 @@ ARG PEERS_CONTACT_HINT="authorized to invite you as peer"
 ARG ENABLE_SELF_SIGNED_CERTS=False
 ARG BUILD_MOD_AUTH_OPENID=False
 ARG UPGRADE_MOD_AUTH_OPENIDC=False
+ARG UPGRADE_PARAMIKO=False
 ARG PUBKEY_FROM_DNS=False
 ARG PREFER_PYTHON3=False
 ARG SIGNUP_METHODS=migoid
@@ -207,6 +208,7 @@ ARG ENABLE_GDP
 ARG ENABLE_SELF_SIGNED_CERTS
 ARG BUILD_MOD_AUTH_OPENID
 ARG UPGRADE_MOD_AUTH_OPENIDC
+ARG UPGRADE_PARAMIKO
 ARG WITH_PY3
 ARG PREFER_PYTHON3
 ARG UID
@@ -273,16 +275,20 @@ RUN dnf update -y \
     #python2-future \
     #python2-cffi \
     #pysendfile \
-    python2-pyyaml \
     #pyOpenSSL \
+    python2-pyyaml \
     # NOTE: generally install cracklib from pip as yum/dnf only has py2 version
     #cracklib-python \
     cracklib-devel \
+    # NOTE: extra dependencies required for paramiko pip install
+    redhat-rpm-config pkg-config rust cargo libffi-devel \
     lftp \
     rsync \
     fail2ban \
     ipset \
     wget \
+    # NOTE: no default paramiko for python2 here
+    #&& [ "${UPGRADE_PARAMIKO}" = True ] || yum install -y python-paramiko \
     && dnf clean all \
     && rm -fr /var/cache/dnf
 
@@ -294,7 +300,6 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       python3-pip \
       python3-devel \
       python3-mod_wsgi \
-      python3-paramiko \
       python3-enchant \
       #python3-jsonrpclib \
       python3-requests \
@@ -305,6 +310,8 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       python3-pyOpenSSL \
       python3-pycurl \
       python3-PyYAML \
+      # NOTE: only install default paramiko if upgrade not requested
+      && [ "${UPGRADE_PARAMIKO}" = True ] || dnf install -y python3-paramiko \
       && dnf clean all \
       && rm -fr /var/cache/dnf; \
     else \
@@ -345,8 +352,7 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       echo "no GDP deps"; \
     fi;
 
-# Apache OpenID (provided by epel)
-# TODO: unavailable here! build from centos source?
+# Apache OpenID (provided by epel for centos7) is unavailable here - build instead.
 #RUN dnf update -y  && dnf install -y mod_auth_openid \
 #        && dnf clean all \
 #        && rm -fr /var/cache/dnf
@@ -545,8 +551,12 @@ RUN ln -s MiG/${WILDCARD_DOMAIN}/server.crt server.crt \
                [ -L "$domain" ] || ln -s MiG/${WILDCARD_DOMAIN} $domain; \
        done
 
-# Upgrade pip, required by cryptography - pip-21+ dropped python2 support, however
+# Upgrade pip2, required by cryptography - pip-21+ dropped python2 support, however
 RUN python2 -m pip install -U 'pip<21'
+# Upgrade pip3, required by cryptography - pip-22+ dropped py3.6 support, however
+RUN if [ "${WITH_PY3}" = "True" ]; then \
+      python3 -m pip install -U 'pip<22'; \
+    fi;
 
 # NOTE: make certs as mig user
 WORKDIR $MIG_ROOT
@@ -572,14 +582,36 @@ FROM setup_security as mig_dependencies
 ARG DOMAIN
 ARG WITH_PY3
 ARG MODERN_WSGIDAV
+ARG UPGRADE_PARAMIKO
 
 # NOTE: Switch back to root for system-wide pip install here
 USER root
 
 # Prepare py2 dependencies no longer in dnf or just outdated there
 
-# NOTE: paramiko-3.0.0, pyOpenSSL-22.0 and jsonrpclib-0.2 dropped python2 support
-RUN pip2 install 'jsonrpclib<0.2' future cffi pysendfile 'pyOpenSSL<22' 'paramiko<3'
+# NOTE: use jsonrpclib and pysendfile from pip both for py2 and py3 here
+RUN pip2 install 'jsonrpclib<0.2' pysendfile; \
+    if [ "${WITH_PY3}" = "True" ]; then \
+      pip3 install 'jsonrpclib<0.2' pysendfile; \
+    fi;
+
+# NOTE: recent paramiko is required for modern host key algo
+# NOTE: paramiko is unavailable for py2 in dnf here so always install it with pip2
+RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
+      # NOTE: paramiko-3.0.0 & pyOpenSSL-22.0 dropped python2 support
+      pip2 install 'pyOpenSSL<22' 'paramiko<3'; \
+      if [ "${WITH_PY3}" = "True" ]; then \
+        # NOTE: paramiko-3.0.0 & pyOpenSSL-22.0 deps dropped python3.6 support
+        # NOTE: a newer setuptools MAY be needed and setuptools_rust MUST be 
+        #       installed separately here for whatever reason.
+        #pip3 install -U setuptools; \
+        pip3 install setuptools_rust; \
+        pip3 install 'pyOpenSSL<22' 'paramiko<3'; \
+      fi; \
+    else \
+      # NOTE: mimic python3 dnf versions in this case
+      pip2 install 'pyOpenSSL<20' 'cryptography<3.3' 'paramiko<2.5'; \
+    fi;
 
 # Prepare OpenID (python-openid for py2 and python-openid2 for py3)
 #RUN pip2 install python-openid
