@@ -182,7 +182,10 @@ services:
 
     env_file:
       - migrid-httpd.env
+    # IMPORTANT: please ONLY run with this test@ user for non-public hosts
     command: /app/docker-entry.sh -u test@gdp.testing -p TestPw0rd -s "sftp webdavs"
+    # NOTE: public hosts should create users through sign up and run like this
+    #command: /app/docker-entry.sh
     #privileged: true
 
   # A single container with all the daemons base migrid doesn't provide
