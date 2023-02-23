@@ -576,9 +576,16 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
         # NOTE: paramiko-3.0.0 & pyOpenSSL-22.0 deps dropped python3.6 support
         # NOTE: a newer setuptools MAY be needed and setuptools_rust MUST be 
         #       installed separately here for whatever reason.
+        # IMPORTANT: sftp_subsys.py is explicitly called with 'python -s' to
+        #            prevent loading arbitrary code libs from user home, but
+        #            with python3 that also excludes packages installed in
+        #            /usr/local, which is now the default install location for
+        #            pip3. Thus, we force pip3 to install the paramiko plus
+        #            dependencies specifically into /usr instead.
         #pip3 install -U setuptools; \
         pip3 install setuptools_rust; \
-        pip3 install 'pyOpenSSL<22' 'paramiko<3'; \
+        pip3 install --prefix=/usr pynacl bcrypt cryptography \
+	                           'pyOpenSSL<22' 'paramiko<3'; \
       fi; \
     fi;
 
