@@ -55,12 +55,13 @@ ARG FTPS_CTRL_SHOW_PORT=21
 ARG OPENID_PORT=8443
 ARG OPENID_SHOW_PORT=443
 ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
-ARG MIG_SVN_REV=5616
+ARG MIG_SVN_REV=5664
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
 ARG MIG_GIT_BRANCH=edge
-ARG MIG_GIT_REV=4b16f846aa36ebf3e5e2d60352a7d40a82bbc409
+ARG MIG_GIT_REV=5beb70412588d5c0c9c29b9acfd2b8e7968b8898
 ARG ADMIN_EMAIL=mig
 ARG ADMIN_LIST=
+ARG SMTP_SENDER=
 ARG LOG_LEVEL=info
 ARG TITLE="Minimum intrusion Grid"
 ARG SHORT_TITLE=MiG
@@ -746,6 +747,7 @@ ARG OPENID_PORT
 ARG OPENID_SHOW_PORT
 ARG ADMIN_EMAIL
 ARG ADMIN_LIST
+ARG SMTP_SENDER
 ARG LOG_LEVEL
 ARG TITLE
 ARG SHORT_TITLE
@@ -841,6 +843,7 @@ RUN python2 ./generateconfs.py --source=. \
     --io_fqdn=${IO_DOMAIN} \
     --user=$USER --group=$GROUP --log_level=${LOG_LEVEL} \
     --admin_email="${ADMIN_EMAIL}" --admin_list="${ADMIN_LIST}" \
+    --smtp_sender="${SMTP_SENDER}" \
     --apache_version=2.4 \
     --apache_etc=$WEB_DIR \
     --apache_run=/var/run/httpd \
