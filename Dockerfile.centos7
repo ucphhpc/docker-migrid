@@ -419,8 +419,8 @@ RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
 	echo "upgrading mod_auth_openidc from upstream centos7 rpm" \
 	&& yum update -y \
 	&& yum install -y jansson-devel \
-		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.0/cjose-0.6.1.5-2.el7.x86_64.rpm \
-		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.12.3/mod_auth_openidc-2.4.12.3-1.el7.x86_64.rpm \
+		https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.0/cjose-0.6.1.5-2.el7.x86_64.rpm \
+		https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.13.1/mod_auth_openidc-2.4.13.1-1.el7.x86_64.rpm \
                 && yum clean all \
                 && rm -fr /var/cache/yum; \
     fi;
