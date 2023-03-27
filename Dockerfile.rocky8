@@ -125,6 +125,7 @@ ARG WITH_PY3=False
 # NOTE: on rocky tests we go for wsgidav 3.x+ to get it stabilized
 ARG MODERN_WSGIDAV=True
 ARG WITH_GIT=False
+ARG OPENSSH_VERSION=7.4
 ARG VGRID_LABEL=VGrid
 ARG EXTRA_USERPAGE_SCRIPTS=""
 ARG EXTRA_USERPAGE_STYLES=""
@@ -843,6 +844,7 @@ ARG DEFAULT_MENU
 ARG USER_MENU
 ARG JUPYTER_SERVICES
 ARG JUPYTER_SERVICES_DESC
+ARG OPENSSH_VERSION
 ARG VGRID_LABEL
 ARG EXTRA_USERPAGE_SCRIPTS
 ARG EXTRA_USERPAGE_STYLES
@@ -890,12 +892,12 @@ RUN ./generateconfs.py --source=. \
     --apache_run=/var/run/httpd \
     --apache_lock=/var/lock/subsys/httpd \
     --apache_log=/var/log/httpd \
-    --openssh_version=7.4 \
+    --openssh_version=${OPENSSH_VERSION} \
     --mig_code=$MIG_ROOT/mig \
     --mig_state=$MIG_ROOT/state \
     --mig_certs=$CERT_DIR \
     --hg_path=/usr/bin/hg \
-    --hgweb_scripts=/usr/share/doc/mercurial-2.6.2 \
+    --hgweb_scripts=/usr/share/doc/mercurial \
     --trac_admin_path= \
     --trac_ini_path= \
     --openid_address=${OPENID_DOMAIN} \
