@@ -125,6 +125,7 @@ ARG WITH_PY3=False
 # NOTE: on centos we stick with tried and tested wsgidav 1.3
 ARG MODERN_WSGIDAV=False
 ARG WITH_GIT=False
+ARG OPENSSH_VERSION=7.4
 ARG VGRID_LABEL=VGrid
 ARG EXTRA_USERPAGE_SCRIPTS=""
 ARG EXTRA_USERPAGE_STYLES=""
@@ -813,6 +814,7 @@ ARG DEFAULT_MENU
 ARG USER_MENU
 ARG JUPYTER_SERVICES
 ARG JUPYTER_SERVICES_DESC
+ARG OPENSSH_VERSION
 ARG VGRID_LABEL
 ARG EXTRA_USERPAGE_SCRIPTS
 ARG EXTRA_USERPAGE_STYLES
@@ -849,7 +851,7 @@ RUN python2 ./generateconfs.py --source=. \
     --apache_run=/var/run/httpd \
     --apache_lock=/var/lock/subsys/httpd \
     --apache_log=/var/log/httpd \
-    --openssh_version=7.4 \
+    --openssh_version=${OPENSSH_VERSION} \
     --mig_code=$MIG_ROOT/mig \
     --mig_state=$MIG_ROOT/state \
     --mig_certs=$CERT_DIR \
