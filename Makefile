@@ -1,4 +1,4 @@
-PACKAGE_NAME=docker-migrid
+PACKAGE_NAME=migrid
 PACKAGE_NAME_FORMATTED=$(subst -,_,$(PACKAGE_NAME))
 OWNER=ucphhpc
 IMAGE=$(PACKAGE_NAME)
