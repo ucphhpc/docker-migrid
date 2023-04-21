@@ -6,6 +6,24 @@
 
 KEEPALIVE=0
 
+# Make sure requested timezone is actually used everywhere for consistent 
+# log time stamps.
+if [ -z "$TZ" ]; then
+    echo "INFO: TZ env unset - fall back to default UTC timezone"
+else
+    TZBASE="/usr/share/zoneinfo"
+    TZPATH="$TZBASE/$TZ"
+    if [ -e "$TZPATH" ]; then
+        echo "INFO: Enforcing timezone $TZ ($TZPATH)"
+        rm -f /etc/timezone
+        echo "$TZ" > /etc/timezone
+        rm -f /etc/localtime
+        ln -s $TZPATH /etc/localtime
+    else
+        echo "ERROR: unsupported timezone $TZ ($TZPATH) - fall back to UTC"
+    fi
+fi
+
 # Create any user requested
 while getopts ku:p:s: option; do
     case "${option}" in

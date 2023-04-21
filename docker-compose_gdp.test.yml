@@ -32,6 +32,7 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -77,6 +78,7 @@ services:
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
+        SMTP_SENDER: ${SMTP_SENDER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -94,7 +96,7 @@ services:
         SKIN_SUFFIX: ${SKIN_SUFFIX}
         ENABLE_OPENID: ${ENABLE_OPENID}
         ENABLE_SFTP: ${ENABLE_SFTP}
-        ENABLE_SFTP_SUSBSYS: ${ENABLE_SFTP_SUSBSYS}
+        ENABLE_SFTP_SUBSYS: ${ENABLE_SFTP_SUBSYS}
         ENABLE_DAVS: ${ENABLE_DAVS}
         ENABLE_FTPS: ${ENABLE_FTPS}
         ENABLE_SHARELINKS: ${ENABLE_SHARELINKS}
@@ -121,6 +123,7 @@ services:
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
         BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID:-False}
         UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC:-False}
+        UPGRADE_PARAMIKO: ${UPGRADE_PARAMIKO:-False}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -138,7 +141,10 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
+        DIGEST_SALT: ${DIGEST_SALT}
+        CRYPTO_SALT: ${CRYPTO_SALT}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -181,7 +187,10 @@ services:
 
     env_file:
       - migrid-httpd.env
+    # IMPORTANT: please ONLY run with this test@ user for non-public hosts
     command: /app/docker-entry.sh -u test@gdp.testing -p TestPw0rd -s "sftp webdavs"
+    # NOTE: public hosts should create users through sign up and run like this
+    #command: /app/docker-entry.sh
     #privileged: true
 
   # A single container with all the daemons base migrid doesn't provide
@@ -195,6 +204,7 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -240,6 +250,7 @@ services:
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
+        SMTP_SENDER: ${SMTP_SENDER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -257,7 +268,7 @@ services:
         SKIN_SUFFIX: ${SKIN_SUFFIX}
         ENABLE_OPENID: ${ENABLE_OPENID}
         ENABLE_SFTP: ${ENABLE_SFTP}
-        ENABLE_SFTP_SUSBSYS: ${ENABLE_SFTP_SUSBSYS}
+        ENABLE_SFTP_SUBSYS: ${ENABLE_SFTP_SUBSYS}
         ENABLE_DAVS: ${ENABLE_DAVS}
         ENABLE_FTPS: ${ENABLE_FTPS}
         ENABLE_SHARELINKS: ${ENABLE_SHARELINKS}
@@ -284,6 +295,7 @@ services:
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
         BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID:-False}
         UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC:-False}
+        UPGRADE_PARAMIKO: ${UPGRADE_PARAMIKO:-False}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -301,7 +313,10 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
+        DIGEST_SALT: ${DIGEST_SALT}
+        CRYPTO_SALT: ${CRYPTO_SALT}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -362,6 +377,7 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -407,6 +423,7 @@ services:
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
+        SMTP_SENDER: ${SMTP_SENDER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -424,7 +441,7 @@ services:
         SKIN_SUFFIX: ${SKIN_SUFFIX}
         ENABLE_OPENID: ${ENABLE_OPENID}
         ENABLE_SFTP: ${ENABLE_SFTP}
-        ENABLE_SFTP_SUSBSYS: ${ENABLE_SFTP_SUSBSYS}
+        ENABLE_SFTP_SUBSYS: ${ENABLE_SFTP_SUBSYS}
         ENABLE_DAVS: ${ENABLE_DAVS}
         ENABLE_FTPS: ${ENABLE_FTPS}
         ENABLE_SHARELINKS: ${ENABLE_SHARELINKS}
@@ -451,6 +468,7 @@ services:
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
         BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID:-False}
         UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC:-False}
+        UPGRADE_PARAMIKO: ${UPGRADE_PARAMIKO:-False}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -468,7 +486,10 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
+        DIGEST_SALT: ${DIGEST_SALT}
+        CRYPTO_SALT: ${CRYPTO_SALT}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -517,6 +538,7 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -562,6 +584,7 @@ services:
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
+        SMTP_SENDER: ${SMTP_SENDER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -579,7 +602,7 @@ services:
         SKIN_SUFFIX: ${SKIN_SUFFIX}
         ENABLE_OPENID: ${ENABLE_OPENID}
         ENABLE_SFTP: ${ENABLE_SFTP}
-        ENABLE_SFTP_SUSBSYS: ${ENABLE_SFTP_SUSBSYS}
+        ENABLE_SFTP_SUBSYS: ${ENABLE_SFTP_SUBSYS}
         ENABLE_DAVS: ${ENABLE_DAVS}
         ENABLE_FTPS: ${ENABLE_FTPS}
         ENABLE_SHARELINKS: ${ENABLE_SHARELINKS}
@@ -606,6 +629,7 @@ services:
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
         BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID:-False}
         UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC:-False}
+        UPGRADE_PARAMIKO: ${UPGRADE_PARAMIKO:-False}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -623,7 +647,10 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
+        DIGEST_SALT: ${DIGEST_SALT}
+        CRYPTO_SALT: ${CRYPTO_SALT}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -673,6 +700,7 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -718,6 +746,7 @@ services:
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
+        SMTP_SENDER: ${SMTP_SENDER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -735,7 +764,7 @@ services:
         SKIN_SUFFIX: ${SKIN_SUFFIX}
         ENABLE_OPENID: ${ENABLE_OPENID}
         ENABLE_SFTP: ${ENABLE_SFTP}
-        ENABLE_SFTP_SUSBSYS: ${ENABLE_SFTP_SUSBSYS}
+        ENABLE_SFTP_SUBSYS: ${ENABLE_SFTP_SUBSYS}
         ENABLE_DAVS: ${ENABLE_DAVS}
         ENABLE_FTPS: ${ENABLE_FTPS}
         ENABLE_SHARELINKS: ${ENABLE_SHARELINKS}
@@ -762,6 +791,7 @@ services:
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
         BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID:-False}
         UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC:-False}
+        UPGRADE_PARAMIKO: ${UPGRADE_PARAMIKO:-False}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -779,7 +809,10 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
+        DIGEST_SALT: ${DIGEST_SALT}
+        CRYPTO_SALT: ${CRYPTO_SALT}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -829,6 +862,7 @@ services:
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
+        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -874,6 +908,7 @@ services:
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
+        SMTP_SENDER: ${SMTP_SENDER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -891,7 +926,7 @@ services:
         SKIN_SUFFIX: ${SKIN_SUFFIX}
         ENABLE_OPENID: ${ENABLE_OPENID}
         ENABLE_SFTP: ${ENABLE_SFTP}
-        ENABLE_SFTP_SUSBSYS: ${ENABLE_SFTP_SUSBSYS}
+        ENABLE_SFTP_SUBSYS: ${ENABLE_SFTP_SUBSYS}
         ENABLE_DAVS: ${ENABLE_DAVS}
         ENABLE_FTPS: ${ENABLE_FTPS}
         ENABLE_SHARELINKS: ${ENABLE_SHARELINKS}
@@ -918,6 +953,7 @@ services:
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
         BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID:-False}
         UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC:-False}
+        UPGRADE_PARAMIKO: ${UPGRADE_PARAMIKO:-False}
         PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
         PREFER_PYTHON3: ${PREFER_PYTHON3}
         SIGNUP_METHODS: ${SIGNUP_METHODS}
@@ -935,7 +971,10 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
+        DIGEST_SALT: ${DIGEST_SALT}
+        CRYPTO_SALT: ${CRYPTO_SALT}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -1010,81 +1049,81 @@ services:
 
 volumes:
   certs:
+    # Volume for generated certificates (provided by migrid)
     driver: local
     driver_opts:
-      # Volume for generated certificates (provided by migrid)
       type: none
-      device: $PWD/certs
+      device: ${DOCKER_MIGRID_ROOT}/certs
       o: bind
 
   httpd:
-    # Volume used for httpd config (provided by migrid)
+    # Volume used for httpd config (provided by migrid)
     driver: local
     driver_opts:
       type: none
-      device: $PWD/httpd
+      device: ${DOCKER_MIGRID_ROOT}/httpd
       o: bind
 
   mig:
-    # Volume used to contain the migrid code and conf (provided by migrid at svn)
+    # Volume used to contain the migrid code and conf (provided by migrid at svn)
     driver: local
     driver_opts:
       type: none
-      device: $PWD/mig
+      device: ${DOCKER_MIGRID_ROOT}/mig
       o: bind
 
   state:
-    # Volume used to contain the migrid state (provided by migrid)
+    # Volume used to contain the migrid state (provided by migrid)
     driver: local
     driver_opts:
       type: none
-      device: $PWD/state
+      device: ${DOCKER_MIGRID_ROOT}/state
       o: bind
   
   migrid-syslog:
-    # Volume used for exposing migrid system log
+    # Volume used for exposing migrid system log
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid
+      device: ${DOCKER_MIGRID_ROOT}/log/migrid
       o: bind
 
   migrid-io-syslog:
-    # Volume used for exposing migrid system log
+    # Volume used for exposing migrid system log
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid-io
+      device: ${DOCKER_MIGRID_ROOT}/log/migrid-io
       o: bind
 
   migrid-openid-syslog:
-    # Volume used for exposing migrid system log
+    # Volume used for exposing migrid system log
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid-openid
+      device: ${DOCKER_MIGRID_ROOT}/log/migrid-openid
       o: bind
 
   migrid-sftp-syslog:
-    # Volume used for exposing migrid system log
+    # Volume used for exposing migrid system log
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid-sftp
+      device: ${DOCKER_MIGRID_ROOT}/log/migrid-sftp
       o: bind
 
   migrid-webdavs-syslog:
-    # Volume used for exposing migrid system log
+    # Volume used for exposing migrid system log
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid-webdavs
+      device: ${DOCKER_MIGRID_ROOT}/log/migrid-webdavs
       o: bind
 
   migrid-ftps-syslog:
-    # Volume used for exposing migrid system log
+    # Volume used for exposing migrid system log
     driver: local
     driver_opts:
       type: none
-      device: $PWD/log/migrid-ftps
+      device: ${DOCKER_MIGRID_ROOT}/log/migrid-ftps
       o: bind

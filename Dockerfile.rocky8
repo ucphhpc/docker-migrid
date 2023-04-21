@@ -10,6 +10,7 @@
 #            explicitly listed in docker-compose.yml *args* list, too.
 #            Furthermore they must be declared after FROM in each stage used.
 
+ARG DOCKER_MIGRID_ROOT=.
 ARG UID=1000
 ARG GID=1000
 ARG BUILD_TYPE=basic
@@ -54,12 +55,13 @@ ARG FTPS_CTRL_SHOW_PORT=21
 ARG OPENID_PORT=8443
 ARG OPENID_SHOW_PORT=443
 ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
-ARG MIG_SVN_REV=5577
+ARG MIG_SVN_REV=5683
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
 ARG MIG_GIT_BRANCH=edge
-ARG MIG_GIT_REV=3fc4e14b69adb949b9eb7117567e79f0f435d878
+ARG MIG_GIT_REV=b6c6a42c3952f8753f60a2f2571b99e3d48f5b11
 ARG ADMIN_EMAIL=mig
 ARG ADMIN_LIST=
+ARG SMTP_SENDER=
 ARG LOG_LEVEL=info
 ARG TITLE="Minimum intrusion Grid"
 ARG SHORT_TITLE=MiG
@@ -73,7 +75,7 @@ ARG EMULATE_FQDN=migrid.org
 ARG SKIN_SUFFIX=basic
 ARG ENABLE_OPENID=True
 ARG ENABLE_SFTP=True
-ARG ENABLE_SFTP_SUSBSYS=True
+ARG ENABLE_SFTP_SUBSYS=True
 ARG ENABLE_DAVS=True
 ARG ENABLE_FTPS=True
 ARG ENABLE_SHARELINKS=True
@@ -105,6 +107,7 @@ ARG PEERS_CONTACT_HINT="authorized to invite you as peer"
 ARG ENABLE_SELF_SIGNED_CERTS=False
 ARG BUILD_MOD_AUTH_OPENID=False
 ARG UPGRADE_MOD_AUTH_OPENIDC=False
+ARG UPGRADE_PARAMIKO=False
 ARG PUBKEY_FROM_DNS=False
 ARG PREFER_PYTHON3=False
 ARG SIGNUP_METHODS=migoid
@@ -122,7 +125,10 @@ ARG WITH_PY3=False
 # NOTE: on rocky tests we go for wsgidav 3.x+ to get it stabilized
 ARG MODERN_WSGIDAV=True
 ARG WITH_GIT=False
+ARG OPENSSH_VERSION=7.4
 ARG VGRID_LABEL=VGrid
+ARG DIGEST_SALT="AUTO"
+ARG CRYPTO_SALT="AUTO"
 ARG EXTRA_USERPAGE_SCRIPTS=""
 ARG EXTRA_USERPAGE_STYLES=""
 ARG GDP_EMAIL_NOTIFY=True
@@ -206,6 +212,7 @@ ARG ENABLE_GDP
 ARG ENABLE_SELF_SIGNED_CERTS
 ARG BUILD_MOD_AUTH_OPENID
 ARG UPGRADE_MOD_AUTH_OPENIDC
+ARG UPGRADE_PARAMIKO
 ARG WITH_PY3
 ARG PREFER_PYTHON3
 ARG UID
@@ -272,16 +279,20 @@ RUN dnf update -y \
     #python2-future \
     #python2-cffi \
     #pysendfile \
-    python2-pyyaml \
     #pyOpenSSL \
+    python2-pyyaml \
     # NOTE: generally install cracklib from pip as yum/dnf only has py2 version
     #cracklib-python \
     cracklib-devel \
+    # NOTE: extra dependencies required for paramiko pip install
+    redhat-rpm-config pkg-config rust cargo libffi-devel \
     lftp \
     rsync \
     fail2ban \
     ipset \
     wget \
+    # NOTE: no default paramiko for python2 here
+    #&& [ "${UPGRADE_PARAMIKO}" = True ] || yum install -y python-paramiko \
     && dnf clean all \
     && rm -fr /var/cache/dnf
 
@@ -293,7 +304,6 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       python3-pip \
       python3-devel \
       python3-mod_wsgi \
-      python3-paramiko \
       python3-enchant \
       #python3-jsonrpclib \
       python3-requests \
@@ -304,6 +314,8 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       python3-pyOpenSSL \
       python3-pycurl \
       python3-PyYAML \
+      # NOTE: only install default paramiko if upgrade not requested
+      && [ "${UPGRADE_PARAMIKO}" = True ] || dnf install -y python3-paramiko \
       && dnf clean all \
       && rm -fr /var/cache/dnf; \
     else \
@@ -344,8 +356,7 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       echo "no GDP deps"; \
     fi;
 
-# Apache OpenID (provided by epel)
-# TODO: unavailable here! build from centos source?
+# Apache OpenID (provided by epel for centos7) is unavailable here - build instead.
 #RUN dnf update -y  && dnf install -y mod_auth_openid \
 #        && dnf clean all \
 #        && rm -fr /var/cache/dnf
@@ -430,8 +441,8 @@ RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
 	echo "upgrading mod_auth_openidc from upstream centos7 rpm" \
 	&& yum update -y \
 	&& yum install -y jansson-devel \
-		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.0/cjose-0.6.1.5-2.el8.x86_64.rpm \
-		https://github.com/zmartzone/mod_auth_openidc/releases/download/v2.4.12.1/mod_auth_openidc-2.4.12.1-1.el8.x86_64.rpm \
+		https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.0/cjose-0.6.1.5-2.el8.x86_64.rpm \
+		https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.13.1/mod_auth_openidc-2.4.13.1-1.el8.x86_64.rpm \
                 && yum clean all \
                 && rm -fr /var/cache/yum; \
     fi;
@@ -544,8 +555,12 @@ RUN ln -s MiG/${WILDCARD_DOMAIN}/server.crt server.crt \
                [ -L "$domain" ] || ln -s MiG/${WILDCARD_DOMAIN} $domain; \
        done
 
-# Upgrade pip, required by cryptography
-RUN python2 -m pip install -U pip==20.3.4
+# Upgrade pip2, required by cryptography - pip-21+ dropped python2 support, however
+RUN python2 -m pip install -U 'pip<21'
+# Upgrade pip3, required by cryptography - pip-22+ dropped py3.6 support, however
+RUN if [ "${WITH_PY3}" = "True" ]; then \
+      python3 -m pip install -U 'pip<22'; \
+    fi;
 
 # NOTE: make certs as mig user
 WORKDIR $MIG_ROOT
@@ -571,13 +586,43 @@ FROM setup_security as mig_dependencies
 ARG DOMAIN
 ARG WITH_PY3
 ARG MODERN_WSGIDAV
+ARG UPGRADE_PARAMIKO
 
 # NOTE: Switch back to root for system-wide pip install here
 USER root
 
-# Prepare py2 dependencies no longer in dnf
-# NOTE: pyOpenSSL-22.0 and jsonrpclib-0.2 dropped python2 support
-RUN pip2 install 'jsonrpclib<0.2' future cffi pysendfile 'pyOpenSSL<22' paramiko
+# Prepare py2 dependencies no longer in dnf or just outdated there
+
+# NOTE: use jsonrpclib and pysendfile from pip both for py2 and py3 here
+RUN pip2 install 'jsonrpclib<0.2' pysendfile; \
+    if [ "${WITH_PY3}" = "True" ]; then \
+      pip3 install 'jsonrpclib<0.2' pysendfile; \
+    fi;
+
+# NOTE: recent paramiko is required for modern host key algo
+# NOTE: paramiko is unavailable for py2 in dnf here so always install it with pip2
+RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
+      # NOTE: paramiko-3.0.0 & pyOpenSSL-22.0 dropped python2 support
+      pip2 install 'pyOpenSSL<22' 'paramiko<3'; \
+      if [ "${WITH_PY3}" = "True" ]; then \
+        # NOTE: paramiko-3.0.0 & pyOpenSSL-22.0 deps dropped python3.6 support
+        # NOTE: a newer setuptools MAY be needed and setuptools_rust MUST be 
+        #       installed separately here for whatever reason.
+        # IMPORTANT: sftp_subsys.py is explicitly called with 'python -s' to
+        #            prevent loading arbitrary code libs from user home, but
+        #            with python3 that also excludes packages installed in
+        #            /usr/local, which is now the default install location for
+        #            pip3. Thus, we force pip3 to install the paramiko plus
+        #            dependencies specifically into /usr instead.
+        #pip3 install -U setuptools; \
+        pip3 install setuptools_rust; \
+        pip3 install --prefix=/usr pynacl bcrypt cryptography \
+	                           'pyOpenSSL<22' 'paramiko<3'; \
+      fi; \
+    else \
+      # NOTE: mimic python3 dnf versions in this case
+      pip2 install 'pyOpenSSL<20' 'cryptography<3.3' 'paramiko<2.5'; \
+    fi;
 
 # Prepare OpenID (python-openid for py2 and python-openid2 for py3)
 #RUN pip2 install python-openid
@@ -735,6 +780,7 @@ ARG OPENID_PORT
 ARG OPENID_SHOW_PORT
 ARG ADMIN_EMAIL
 ARG ADMIN_LIST
+ARG SMTP_SENDER
 ARG LOG_LEVEL
 ARG TITLE
 ARG SHORT_TITLE
@@ -756,7 +802,7 @@ ARG EMULATE_FQDN
 ARG SKIN_SUFFIX
 ARG ENABLE_OPENID
 ARG ENABLE_SFTP
-ARG ENABLE_SFTP_SUSBSYS
+ARG ENABLE_SFTP_SUBSYS
 ARG ENABLE_DAVS
 ARG ENABLE_FTPS
 ARG ENABLE_SHARELINKS
@@ -800,6 +846,9 @@ ARG DEFAULT_MENU
 ARG USER_MENU
 ARG JUPYTER_SERVICES
 ARG JUPYTER_SERVICES_DESC
+ARG OPENSSH_VERSION
+ARG DIGEST_SALT
+ARG CRYPTO_SALT
 ARG VGRID_LABEL
 ARG EXTRA_USERPAGE_SCRIPTS
 ARG EXTRA_USERPAGE_STYLES
@@ -841,17 +890,18 @@ RUN ./generateconfs.py --source=. \
     --io_fqdn=${IO_DOMAIN} \
     --user=$USER --group=$GROUP --log_level=${LOG_LEVEL} \
     --admin_email="${ADMIN_EMAIL}" --admin_list="${ADMIN_LIST}" \
+    --smtp_sender="${SMTP_SENDER}" \
     --apache_version=2.4 \
     --apache_etc=$WEB_DIR \
     --apache_run=/var/run/httpd \
     --apache_lock=/var/lock/subsys/httpd \
     --apache_log=/var/log/httpd \
-    --openssh_version=7.4 \
+    --openssh_version=${OPENSSH_VERSION} \
     --mig_code=$MIG_ROOT/mig \
     --mig_state=$MIG_ROOT/state \
     --mig_certs=$CERT_DIR \
     --hg_path=/usr/bin/hg \
-    --hgweb_scripts=/usr/share/doc/mercurial-2.6.2 \
+    --hgweb_scripts=/usr/share/doc/mercurial \
     --trac_admin_path= \
     --trac_ini_path= \
     --openid_address=${OPENID_DOMAIN} \
@@ -877,7 +927,7 @@ RUN ./generateconfs.py --source=. \
     --ext_oidc_remote_user_claim="${EXT_OIDC_REMOTE_USER_CLAIM}" \
     --ext_oidc_pass_claim_as="${EXT_OIDC_PASS_CLAIM_AS}" \
     --enable_openid=${ENABLE_OPENID} --enable_wsgi=True \
-    --enable_sftp=${ENABLE_SFTP} --enable_sftp_subsys=${ENABLE_SFTP_SUSBSYS} \
+    --enable_sftp=${ENABLE_SFTP} --enable_sftp_subsys=${ENABLE_SFTP_SUBSYS} \
     --enable_davs=${ENABLE_DAVS} --enable_ftps=${ENABLE_FTPS} \
     --enable_sharelinks=${ENABLE_SHARELINKS} --enable_transfers=${ENABLE_TRANSFERS} \
     --enable_duplicati=${ENABLE_DUPLICATI} --enable_seafile=${ENABLE_SEAFILE} \
@@ -911,6 +961,7 @@ RUN ./generateconfs.py --source=. \
     --distro=centos --user_interface="${USER_INTERFACES}" \
     --skin="${EMULATE_FLAVOR}-${SKIN_SUFFIX}" \
     --title="${TITLE}" --short_title="${SHORT_TITLE}" \
+    --digest_salt="${DIGEST_SALT}" --crypto_salt="${CRYPTO_SALT}" \
     --vgrid_label="${VGRID_LABEL}" --peers_permit=${PEERS_PERMIT} \
     --vgrid_creators=${VGRID_CREATORS} --vgrid_managers=${VGRID_MANAGERS} \
     --auto_add_cert_user=${AUTO_ADD_CERT_USER} \

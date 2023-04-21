@@ -1,16 +1,15 @@
 version: '3.7'
 
 services:
-# NOTE: not used in stand-alone mode
-#  devdns:
-#    image: ruudud/devdns
-#    container_name: devdns
-#    ports:
-#        - "127.0.0.1:53:53/udp"
-#    volumes:
-#      - /var/run/docker.sock:/var/run/docker.sock:ro
-#    environment:
-#      TZ: ${TZ}
+  devdns:
+    image: ruudud/devdns
+    container_name: devdns
+    ports:
+        - "127.0.0.1:53:53/udp"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      TZ: ${TZ}
 
   # The migrid core services including httpd and tightly integrated services
   # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
@@ -27,13 +26,11 @@ services:
   migrid:
     container_name: migrid
     image: ucphhpc/migrid:$BUILD_TYPE
-    network_mode: "host"
     build:
       context: ./
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -59,7 +56,6 @@ services:
         EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
         EXT_OIDC_SCOPE: ${EXT_OIDC_SCOPE}
         EXT_OIDC_REMOTE_USER_CLAIM: ${EXT_OIDC_REMOTE_USER_CLAIM}
-        EXT_OIDC_PASS_CLAIM_AS: ${EXT_OIDC_PASS_CLAIM_AS:-both}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -148,10 +144,7 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
-        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
-        DIGEST_SALT: ${DIGEST_SALT}
-        CRYPTO_SALT: ${CRYPTO_SALT}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -163,17 +156,16 @@ services:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy rsyslogd
-    # NOTE: devdns not used in stand-alone mode
-    #depends_on:
-    #  - devdns
-    #networks:
-    #  default:
-    #    aliases:
-    #      - dev-www.erda.dk
-    #      - dev-cert.erda.dk
-    #      - dev-ext.erda.dk
-    #      - dev-oid.erda.dk
-    #      - dev-sid.erda.dk
+    depends_on:
+      - devdns
+    networks:
+      default:
+        aliases:
+          - www.migrid.test
+          - cert.migrid.test
+          - ext.migrid.test
+          - oid.migrid.test
+          - sid.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -192,10 +184,10 @@ services:
         target: /var/log
     env_file:
       - migrid-httpd.env
-    # IMPORTANT: only enable test@ user during debug on internet-exposed hosts
-    #command: /app/docker-entry.sh -u test@dev.erda.dk -p TestPw0rd -s "sftp ftps webdavs" -k
+    # IMPORTANT: please ONLY run with this test@ user for non-public hosts
+    command: /app/docker-entry.sh -u test@migrid.testing -p TestPw0rd -s "sftp ftps webdavs"
     # NOTE: public hosts should create users through sign up and run like this
-    command: /app/docker-entry.sh -k
+    #command: /app/docker-entry.sh
 
   # A single container with all the daemons base migrid doesn't provide
   migrid-io:
@@ -203,13 +195,11 @@ services:
     profiles:
       - single
     image: ucphhpc/migrid:$BUILD_TYPE
-    network_mode: "host"
     build:
       context: ./
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -235,7 +225,6 @@ services:
         EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
         EXT_OIDC_SCOPE: ${EXT_OIDC_SCOPE}
         EXT_OIDC_REMOTE_USER_CLAIM: ${EXT_OIDC_REMOTE_USER_CLAIM}
-        EXT_OIDC_PASS_CLAIM_AS: ${EXT_OIDC_PASS_CLAIM_AS:-both}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -324,10 +313,7 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
-        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
-        DIGEST_SALT: ${DIGEST_SALT}
-        CRYPTO_SALT: ${CRYPTO_SALT}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -341,21 +327,22 @@ services:
       RUN_SERVICES: openid sftp sftpsubsys webdavs ftps notify rsyslogd
     depends_on:
       - migrid
-    #ports:
-    #  # NOTE: expose the unique raw port(s) to host 
-    #  - "2222:2222"
-    #  - "4443:4443"
-    #  - "8021:8021"
-    #  - "8100-8200:8100-8200"
-    #  - "8443:8443"
-    #  - "22222:22222"
-    #networks:
-    #  default:
-    #    aliases:
-    #      - dev-openid.erda.dk
-    #      - dev-webdavs.erda.dk
-    #      - dev-ftps.erda.dk
-    #      - dev-sftp.erda.dk
+    ports:
+      # NOTE: expose the unique raw port(s) to host 
+      - "2222:2222"
+      - "4443:4443"
+      - "8021:8021"
+      - "8100-8200:8100-8200"
+      - "8443:8443"
+      - "22222:22222"
+    networks:
+      default:
+        aliases:
+          - io.migrid.test
+          - openid.migrid.test
+          - webdavs.migrid.test
+          - ftps.migrid.test
+          - sftp.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -372,7 +359,7 @@ services:
       - type: volume
         source: migrid-io-syslog
         target: /var/log
-    command: /app/docker-entry.sh -k
+    command: /app/docker-entry.sh
 
   # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
   #
@@ -382,13 +369,11 @@ services:
     profiles:
       - multi
     image: ucphhpc/migrid:$BUILD_TYPE
-    network_mode: "host"
     build:
       context: ./
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -414,7 +399,6 @@ services:
         EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
         EXT_OIDC_SCOPE: ${EXT_OIDC_SCOPE}
         EXT_OIDC_REMOTE_USER_CLAIM: ${EXT_OIDC_REMOTE_USER_CLAIM}
-        EXT_OIDC_PASS_CLAIM_AS: ${EXT_OIDC_PASS_CLAIM_AS:-both}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -503,10 +487,7 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
-        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
-        DIGEST_SALT: ${DIGEST_SALT}
-        CRYPTO_SALT: ${CRYPTO_SALT}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -520,13 +501,13 @@ services:
       RUN_SERVICES: openid rsyslogd
     depends_on:
       - migrid
-    #ports:
-    #  # NOTE: expose the unique raw port(s) to host 
-    #  - "8443:8443"
-    #networks:
-    #  default:
-    #    aliases:
-    #      - dev-openid.erda.dk
+    ports:
+      # NOTE: expose the unique raw port(s) to host 
+      - "8443:8443"
+    networks:
+      default:
+        aliases:
+          - openid.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -543,20 +524,18 @@ services:
       - type: volume
         source: migrid-openid-syslog
         target: /var/log
-    command: /app/docker-entry.sh -k
+    command: /app/docker-entry.sh
 
   migrid-sftp:
     container_name: migrid-sftp
     profiles:
       - multi
     image: ucphhpc/migrid:$BUILD_TYPE
-    network_mode: "host"
     build:
       context: ./
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -582,7 +561,6 @@ services:
         EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
         EXT_OIDC_SCOPE: ${EXT_OIDC_SCOPE}
         EXT_OIDC_REMOTE_USER_CLAIM: ${EXT_OIDC_REMOTE_USER_CLAIM}
-        EXT_OIDC_PASS_CLAIM_AS: ${EXT_OIDC_PASS_CLAIM_AS:-both}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -671,10 +649,7 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
-        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
-        DIGEST_SALT: ${DIGEST_SALT}
-        CRYPTO_SALT: ${CRYPTO_SALT}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -688,14 +663,14 @@ services:
       RUN_SERVICES: sftp sftpsubsys rsyslogd
     depends_on:
       - migrid
-    #ports:
-    #  # NOTE: expose the unique raw port(s) to host 
-    #  - "2222:2222"
-    #  - "22222:22222"
-    #networks:
-    #  default:
-    #    aliases:
-    #      - dev-sftp.erda.dk
+    ports:
+      # NOTE: expose the unique raw port(s) to host 
+      - "2222:2222"
+      - "22222:22222"
+    networks:
+      default:
+        aliases:
+          - sftp.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -712,20 +687,18 @@ services:
       - type: volume
         source: migrid-sftp-syslog
         target: /var/log
-    command: /app/docker-entry.sh -k
+    command: /app/docker-entry.sh
 
   migrid-ftps:
     container_name: migrid-ftps
     profiles:
       - multi
     image: ucphhpc/migrid:$BUILD_TYPE
-    network_mode: "host"
     build:
       context: ./
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -751,7 +724,6 @@ services:
         EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
         EXT_OIDC_SCOPE: ${EXT_OIDC_SCOPE}
         EXT_OIDC_REMOTE_USER_CLAIM: ${EXT_OIDC_REMOTE_USER_CLAIM}
-        EXT_OIDC_PASS_CLAIM_AS: ${EXT_OIDC_PASS_CLAIM_AS:-both}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -840,10 +812,7 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
-        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
-        DIGEST_SALT: ${DIGEST_SALT}
-        CRYPTO_SALT: ${CRYPTO_SALT}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -857,14 +826,14 @@ services:
       RUN_SERVICES: ftps rsyslogd
     depends_on:
       - migrid
-    #ports:
-    #  # NOTE: expose the unique raw port(s) to host 
-    #  - "8021:8021"
-    #  - "8100-8200:8100-8200"
-    #networks:
-    #  default:
-    #    aliases:
-    #      - dev-ftps.erda.dk
+    ports:
+      # NOTE: expose the unique raw port(s) to host 
+      - "8021:8021"
+      - "8100-8200:8100-8200"
+    networks:
+      default:
+        aliases:
+          - ftps.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -881,20 +850,18 @@ services:
       - type: volume
         source: migrid-ftps-syslog
         target: /var/log
-    command: /app/docker-entry.sh -k
+    command: /app/docker-entry.sh
 
   migrid-webdavs:
     container_name: migrid-webdavs
     profiles:
       - multi
     image: ucphhpc/migrid:$BUILD_TYPE
-    network_mode: "host"
     build:
       context: ./
       dockerfile: Dockerfile
       # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
       args:
-        DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
         BUILD_TYPE: ${BUILD_TYPE}
@@ -920,7 +887,6 @@ services:
         EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
         EXT_OIDC_SCOPE: ${EXT_OIDC_SCOPE}
         EXT_OIDC_REMOTE_USER_CLAIM: ${EXT_OIDC_REMOTE_USER_CLAIM}
-        EXT_OIDC_PASS_CLAIM_AS: ${EXT_OIDC_PASS_CLAIM_AS:-both}
         PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
         PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
         MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
@@ -1009,10 +975,7 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
-        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
-        DIGEST_SALT: ${DIGEST_SALT}
-        CRYPTO_SALT: ${CRYPTO_SALT}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -1026,13 +989,13 @@ services:
       RUN_SERVICES: webdavs rsyslogd
     depends_on:
       - migrid
-    #ports:
-    #  # NOTE: expose the unique raw port(s) to host 
-    #  - "4443:4443"
-    #networks:
-    #  default:
-    #    aliases:
-    #      - dev-webdavs.erda.dk
+    ports:
+      # NOTE: expose the unique raw port(s) to host 
+      - "4443:4443"
+    networks:
+      default:
+        aliases:
+          - webdavs.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -1049,38 +1012,41 @@ services:
       - type: volume
         source: migrid-webdavs-syslog
         target: /var/log
-    command: /app/docker-entry.sh -k
+    command: /app/docker-entry.sh
 
-# NOTE: not used in stand-alone mode
-#  nginx-proxy:
-#    image: jwilder/nginx-proxy
-#    container_name: nginx-proxy
-#    network_mode: "host"
-#    # TODO: can we add an httpd health check and switch to wait for condition
-#    #       service_healthy to avoid the storm of initial avoid nginx errors
-#    #       from racing apache during start up? Apparently that will not work
-#    #       with on-going jupyter integration due to swarm mode, however.
-#    depends_on:
-#      - migrid
-#    #ports:
-#    #  # NOTE: expose the unique raw port(s) to host 
-#    #  - "80:80"
-#    #  - "443:443"
-#    volumes:
-#      - /var/run/docker.sock:/tmp/docker.sock:ro
-#      - ./nginx-proxy-dev.erda.dk.conf:/etc/nginx/conf.d/migrid.conf
-#      - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
-#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-www.erda.dk.crt
-#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-cert.erda.dk.crt
-#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-ext.erda.dk.crt
-#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-oid.erda.dk.crt
-#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-sid.erda.dk.crt
-#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-www.erda.dk.key
-#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-cert.erda.dk.key
-#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-ext.erda.dk.key
-#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-oid.erda.dk.key
-#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-sid.erda.dk.key
-#      - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    # TODO: can we add an httpd health check and switch to wait for condition
+    #       service_healthy to avoid the storm of initial avoid nginx errors
+    #       from racing apache during start up? Apparently that will not work
+    #       with on-going jupyter integration due to swarm mode, however.
+    depends_on:
+      - migrid
+    ports:
+      # NOTE: expose the unique raw port(s) to host 
+      - "80:80"
+      - "443:443"
+      - "444:444"
+      - "445:445"
+      - "446:446"
+      - "447:447"
+      - "448:448"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./nginx-proxy-migrid.test.conf:/etc/nginx/conf.d/migrid.conf
+      - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/www.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/cert.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/ext.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/oid.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/sid.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/www.migrid.test.key
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/cert.migrid.test.key
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/ext.migrid.test.key
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/oid.migrid.test.key
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/sid.migrid.test.key
+      - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
 
 volumes:
   certs:
@@ -1088,7 +1054,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/certs
+      device: $PWD/certs
       o: bind
 
   httpd:
@@ -1096,7 +1062,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/httpd
+      device: $PWD/httpd
       o: bind
 
   mig:
@@ -1104,7 +1070,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/mig
+      device: $PWD/mig
       o: bind
 
   state:
@@ -1112,7 +1078,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/state
+      device: $PWD/state
       o: bind
   
   migrid-syslog:
@@ -1120,7 +1086,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid
+      device: $PWD/log/migrid
       o: bind
 
   migrid-io-syslog:
@@ -1128,7 +1094,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-io
+      device: $PWD/log/migrid-io
       o: bind
 
   migrid-openid-syslog:
@@ -1136,7 +1102,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-openid
+      device: $PWD/log/migrid-openid
       o: bind
 
   migrid-sftp-syslog:
@@ -1144,7 +1110,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-sftp
+      device: $PWD/log/migrid-sftp
       o: bind
 
   migrid-webdavs-syslog:
@@ -1152,7 +1118,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-webdavs
+      device: $PWD/log/migrid-webdavs
       o: bind
 
   migrid-ftps-syslog:
@@ -1160,5 +1126,5 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-ftps
+      device: $PWD/log/migrid-ftps
       o: bind
