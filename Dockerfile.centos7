@@ -474,6 +474,7 @@ ARG OPENID_DOMAIN
 ARG FTPS_DOMAIN
 ARG SFTP_DOMAIN
 ARG WEBDAVS_DOMAIN
+ARG OS_CA_CERT_SOURCE_PATH=/etc/pki/ca-trust/source/anchors
 
 # Dhparam - https://wiki.mozilla.org/Security/Archive/Server_Side_TLS_4.0
 RUN curl https://ssl-config.mozilla.org/ffdhe4096.txt -o $CERT_DIR/dhparams.pem
@@ -555,6 +556,14 @@ RUN mkdir -p MiG-certificates \
     && ln -s $CERT_DIR/combined.pub combined.pub \
     && ln -s $CERT_DIR/dhparams.pem dhparams.pem
 
+USER root
+WORKDIR /tmp
+# Copy in any external certificates that should be part of the OS trusted ca bundle
+COPY external-certificates/ $OS_CA_CERT_SOURCE_PATH/
+RUN update-ca-trust
+
+WORKDIR $MIG_ROOT
+USER $USER
 
 FROM setup_security as mig_dependencies
 ARG DOMAIN

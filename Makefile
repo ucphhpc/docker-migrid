@@ -29,6 +29,7 @@ ifeq (,$(wildcard ./docker-compose.yml))
 	@ln -s docker-compose_migrid.test.yml docker-compose.yml
 	@sleep 5
 endif
+	mkdir -p external-certificates
 	mkdir -p certs
 	mkdir -p httpd
 	mkdir -p mig
@@ -64,6 +65,7 @@ distclean: dockerclean clean
 	@echo "*** Hit Ctrl-C to abort to preserve any local user and cert data ***"
 	@echo
 	@sleep 10
+	rm -fr ./external-certificates
 	rm -rf ./certs
 	mkdir -p ./state
 	chmod -R u+w ./state
