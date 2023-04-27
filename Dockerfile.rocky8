@@ -695,7 +695,9 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
     fi;
 
 # Modules required for email validation (not available in yum/dnf for py 2)
-RUN pip2 install email-validator
+# NOTE: latest version advertizing python-2.7 support is 1.3.0, but it fails
+#       with SyntaxError on import, so force the previous version on py2.
+RUN pip2 install 'email-validator<1.3.0'
 #RUN if [ "${WITH_PY3}" = "True" ]; then \
 #      pip3 install email-validator; \
 #    fi;
