@@ -11,10 +11,11 @@ This choice will lead you to select or configure an environment file that suit y
 An overview of the different prebuilt environments and the options within can be seen in <>
 
 After choosing an environment and adapting it to your needs, you can enable it by creating an .env symlink that points to your particular environment configuration.
-For instance, if you want to build the MiGrid image with the default environment settings, this is achived by the Makefile init target will automatically create a symlink that links the defaults.env to the expected .env file. If this behaviour is not wanted, a symlink has to be created before make is called that links the designated environment file, to the .env file. For instance:
+For instance, if you want to build the MiGrid image with the default environment settings, this is achived by the Makefile init target will automatically create a symlink that links the defaults.env to the expected .env file. If this behaviour is not wanted, a symlink has to be created before make is called that links the designated environment file, to the .env file. For instance::
 
     ln -s my-custom-environment.env .env
 
+Be aware that `.env` itself is exlcuded from the git repository via `.gitignore`.
 
 Quick Start
 -----------
