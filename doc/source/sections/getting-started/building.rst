@@ -49,8 +49,7 @@ In addition to the above output, several build lines should follow as the Docker
 The entire process should be succesfully completed, when the following lines have been printed::
 
 
-     => => naming to docker.io/ucphhpc/migrid:basic                                                                                                0.0s
-    Use 'docker scan' to run Snyk tests against images to find vulnerabilities and learn how to fix them
+     => => naming to docker.io/ucphhpc/migrid:basic                                         0.0s
 
 
 Additional Details
