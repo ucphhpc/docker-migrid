@@ -8,7 +8,7 @@ Overview
 
 Before you can build an image, you need to select which MiGrid services you would like to run.
 This choice will lead you to select or configure an environment file that suit your particular choice.
-An overview of the different prebuilt environments and the options within can be seen in <>
+There are different predefined environemts available in this repository (eg. `defaults.env` or `advaned.env`).
 
 After choosing an environment and adapting it to your needs, you can enable it by creating an .env symlink that points to your particular environment configuration.
 For instance, if you want to build the MiGrid image with the default environment settings, this is achived by the Makefile init target will automatically create a symlink that links the defaults.env to the expected .env file. If this behaviour is not wanted, a symlink has to be created before make is called that links the designated environment file, to the .env file. For instance::
