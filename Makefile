@@ -49,7 +49,11 @@ dockerbuild:
 	${DOCKER_COMPOSE} build $(ARGS)
 
 dockerclean:
+	# remove latest image and dangling cache entries
+	${DOCKER_COMPOSE} down || true
 	${DOCKER} rmi -f $(OWNER)/$(IMAGE):$(BUILD_TYPE)
+	# remove dangling images and build cache
+	${DOCKER} image prune -f
 
 dockerpush:
 	${DOCKER} push $(OWNER)/$(IMAGE):$(BUILD_TYPE)
