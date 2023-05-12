@@ -187,6 +187,8 @@ services:
       - type: volume
         source: migrid-syslog
         target: /var/log
+      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
+      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
     env_file:
       - migrid-httpd.env
     # IMPORTANT: please ONLY run with this test@ user for non-public hosts
@@ -369,6 +371,8 @@ services:
       - type: volume
         source: migrid-io-syslog
         target: /var/log
+      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
+      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
     command: /app/docker-entry.sh
 
   # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
@@ -707,6 +711,8 @@ services:
       - type: volume
         source: migrid-sftp-syslog
         target: /var/log
+      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
+      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
     command: /app/docker-entry.sh
 
   migrid-ftps:
@@ -875,6 +881,8 @@ services:
       - type: volume
         source: migrid-ftps-syslog
         target: /var/log
+      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
+      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
     command: /app/docker-entry.sh
 
   migrid-webdavs:
@@ -1042,6 +1050,8 @@ services:
       - type: volume
         source: migrid-webdavs-syslog
         target: /var/log
+      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
+      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
     command: /app/docker-entry.sh
 
   nginx-proxy:
