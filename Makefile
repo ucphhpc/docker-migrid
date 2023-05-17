@@ -9,7 +9,9 @@ BUILD_TYPE=basic
 DOCKER_BUILDKIT=1
 # NOTE: dynamic lookup with docker as default and fallback to podman
 DOCKER = $(shell which docker || which podman)
-DOCKER_COMPOSE = $(shell which docker-compose || which podman-compose)
+# if compose is not found, try to use it as plugin, eg. RHEL8
+DOCKER_COMPOSE = $(shell which docker-compose || which podman-compose || echo 'docker compose')
+$(echo ${DOCKER_COMPOSE} >/dev/null)
 
 .PHONY:	all init dockerbuild dockerclean dockerpush clean dist distclean
 .PHONY: install uninstall installcheck check
