@@ -14,7 +14,7 @@ DOCKER_COMPOSE = $(shell which docker-compose || which podman-compose || echo 'd
 $(echo ${DOCKER_COMPOSE} >/dev/null)
 
 .PHONY:	all init dockerbuild dockerclean dockerpush clean dist distclean
-.PHONY:	stateclean
+.PHONY:	stateclean warning
 .PHONY: install uninstall installcheck check
 
 all: init dockerbuild
@@ -58,23 +58,14 @@ clean:
 	rm -fr ./mig
 	rm -fr ./httpd
 
-stateclean:
+stateclean: warning
 	rm -rf ./state
 
 # IMPORTANT: this target is meant to reset the dir to a pristine checkout
 #            and thus runs full clean up of even the state dir with user data
 #            Be careful NOT to use it on production systems!
-distclean: dockerclean clean
-	@echo
-	@echo "*** WARNING ***"
-	@echo "*** Deleting ALL local state data in 10 seconds ***"
-	@echo "*** Hit Ctrl-C to abort to preserve any local user and cert data ***"
-	@echo
-	@sleep 10
+distclean: stateclean dockerclean clean
 	rm -rf ./certs
-	mkdir -p ./state
-	chmod -R u+w ./state
-	rm -rf ./state
 	rm -rf ./log
         # TODO: is something like this still needed to clean up completely?
         # It needs to NOT greedily remove ALL local volumes if so!
@@ -82,6 +73,13 @@ distclean: dockerclean clean
         #	${DOCKER} volume rm -f $$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*');\
         #fi
 	rm -f .env docker-compose.yml
+
+warning:
+	@echo
+	@echo "*** WARNING ***"
+	@echo "*** Deleting ALL local state data ***"
+	@echo
+	@echo "Are you sure? [y/N]" && read ans && [ $${ans:-N} = y ]
 
 uninstallcheck:
 ### PLACEHOLDER (it's purpose is to uninstall depedencies for check) ###
