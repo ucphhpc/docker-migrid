@@ -14,6 +14,7 @@ DOCKER_COMPOSE = $(shell which docker-compose || which podman-compose || echo 'd
 $(echo ${DOCKER_COMPOSE} >/dev/null)
 
 .PHONY:	all init dockerbuild dockerclean dockerpush clean dist distclean
+.PHONY:	stateclean
 .PHONY: install uninstall installcheck check
 
 all: init dockerbuild
@@ -56,6 +57,9 @@ dockerpush:
 clean:
 	rm -fr ./mig
 	rm -fr ./httpd
+
+stateclean:
+	rm -rf ./state
 
 # IMPORTANT: this target is meant to reset the dir to a pristine checkout
 #            and thus runs full clean up of even the state dir with user data
