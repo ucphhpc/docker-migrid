@@ -67,10 +67,11 @@ If neither of these two URLs takes you to the decribed OpenID login page. Please
 This should take you to the default OpenID login page. The default development credentials for this is set in the `docker-compose.yml` file
 under the `migrid` container `command` option::
 
-    command: /app/docker-entry.sh -u test@migrid.testing -p TestPw0rd -s "sftp ftps webdavs"
+    command: /app/docker-entry.sh -u ${MIG_TEST_USER} -p ${MIG_TEST_USER_PASSWORD} -s "sftp ftps webdavs"
 
-As shown here, the default user is set to `test@migrid.testing` and with the password `TestPw0rd`.
-
+The above command creates a user on container startup. You can change the user/password in your .env file
+This should only be used for development and testing purposes.
+Public hosts should create users through sign up or admin interface.
 
 .. image:: ../../res/images/getstart-authenticate.png
 

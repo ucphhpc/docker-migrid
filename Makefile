@@ -94,3 +94,15 @@ installcheck:
 
 check:
 ### PLACEHOLDER (this will run the repo's self-tests) ###
+
+test:
+	@cd tests; \
+		export DOCKER=${DOCKER}; \
+		err=0; \
+		for test in test-*.sh ; do \
+			bash ./$${test} || err=$$?; \
+			if [[ $$err != 0 ]]; then \
+				cat $${test}.log; \
+				exit $$err; \
+			fi; \
+		done;
