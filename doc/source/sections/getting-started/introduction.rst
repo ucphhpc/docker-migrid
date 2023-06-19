@@ -2,6 +2,10 @@ Introduction
 ============
 
 Before we can get started with Docker MiGrid, a good place to start, is to get an understanding of the repository itself and how it is structured.
+This repository provides a ``Makefile`` which allows fast and easy setup and teardown of docker-migrid deployments.
+A deployment is definded by a set of environement variables and corresponding ``docker-compose.yml`` and ``Dockerfile`` files.
+
+.. image:: ../../res/images/docker-compose-workflow.png
 
 Docker MiGrid Structure
 -----------------------

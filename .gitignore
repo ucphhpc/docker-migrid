@@ -120,7 +120,11 @@ mig/server/notify.stdin
 mig/
 .vscode/
 
+# MacOS
 .DS_Store
+
+# DrawIO backups
+*.bkp
 
 # By default these are expected to be symlinks that point to the
 # active set up and are created in make init if not there.

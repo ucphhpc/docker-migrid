@@ -1,0 +1,148 @@
+<mxfile host="Electron" modified="2023-05-23T14:35:59.806Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.2.8 Chrome/112.0.5615.165 Electron/24.2.0 Safari/537.36" etag="-pGX8674-TQIKiiGdv4f" version="21.2.8" type="device">
+  <diagram name="Page-1" id="bNkRfdhicZ-g602OSQtI">
+    <mxGraphModel dx="1434" dy="854" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="VUgbae-sCqPvGt3VthAw-52" value="Profile: single" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9f7ed;strokeColor=#36393d;labelPosition=center;verticalLabelPosition=middle;align=center;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="49" y="950" width="261" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-51" value="Profile: multi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9f7ed;strokeColor=#36393d;labelPosition=center;verticalLabelPosition=middle;align=center;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="453" y="810" width="290" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-46" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="VUgbae-sCqPvGt3VthAw-42" target="VUgbae-sCqPvGt3VthAw-21" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="648" y="790" />
+              <mxPoint x="144" y="790" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="VUgbae-sCqPvGt3VthAw-21" target="VUgbae-sCqPvGt3VthAw-34" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="250" y="890" />
+              <mxPoint x="250" y="890" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-36" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="VUgbae-sCqPvGt3VthAw-21" target="VUgbae-sCqPvGt3VthAw-33" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="333" y="890" />
+              <mxPoint x="333" y="990" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-39" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="VUgbae-sCqPvGt3VthAw-21" target="VUgbae-sCqPvGt3VthAw-37" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="333" y="890" />
+              <mxPoint x="333" y="940" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-55" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="VUgbae-sCqPvGt3VthAw-21" target="VUgbae-sCqPvGt3VthAw-53" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="20" y="890" />
+              <mxPoint x="20" y="1020" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-56" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="VUgbae-sCqPvGt3VthAw-21" target="VUgbae-sCqPvGt3VthAw-54" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="20" y="890" />
+              <mxPoint x="20" y="1070" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-21" value="generic migrid&lt;br&gt;Docker Image" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#647687;fontColor=#ffffff;strokeColor=#314354;" parent="1" vertex="1">
+          <mxGeometry x="84" y="850" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="VUgbae-sCqPvGt3VthAw-24" target="VUgbae-sCqPvGt3VthAw-26" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-23" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="VUgbae-sCqPvGt3VthAw-24" target="VUgbae-sCqPvGt3VthAw-30" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-24" value="docker-compose build" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="119" y="490" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-25" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="VUgbae-sCqPvGt3VthAw-26" target="VUgbae-sCqPvGt3VthAw-28" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-26" value=".env" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="149" y="550" width="50" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="VUgbae-sCqPvGt3VthAw-28" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="269" y="635" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="269" y="635" />
+              <mxPoint x="269" y="635" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-28" value="custom.env&lt;br&gt;&lt;br&gt;COMPOSE_PROFILE=...&lt;br&gt;RUN_SERVICES=...&lt;br&gt;etc." style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="84" y="590" width="150" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="VUgbae-sCqPvGt3VthAw-30" target="VUgbae-sCqPvGt3VthAw-31" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-30" value="docker-compose.yml" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="331.5" y="545" width="140" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-45" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="VUgbae-sCqPvGt3VthAw-31" target="VUgbae-sCqPvGt3VthAw-42" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-31" value="custom-compose.yml&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;&lt;br&gt;COMPOSE_PROFILE=$COMPOSE_PROFILE&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;RUN_SERVICES=$RUN_SERVICES&lt;br&gt;etc." style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="269" y="590" width="265" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-33" value="migrid-sftp&lt;br&gt;Docker Container" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#b1ddf0;strokeColor=#10739e;" parent="1" vertex="1">
+          <mxGeometry x="483" y="950" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-34" value="migrid&lt;br&gt;Docker Container" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#b1ddf0;strokeColor=#10739e;" parent="1" vertex="1">
+          <mxGeometry x="483" y="850" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-37" value="migrid-webdavs&lt;br&gt;Docker Continer" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#b1ddf0;strokeColor=#10739e;" parent="1" vertex="1">
+          <mxGeometry x="598" y="900" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-40" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="VUgbae-sCqPvGt3VthAw-41" target="VUgbae-sCqPvGt3VthAw-44" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-41" value="make" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="593" y="490" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-42" value="DOCKERFILE&lt;br&gt;&lt;br&gt;ARG DOMAIN=migrid.test&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;etc." style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="553" y="590" width="190" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-43" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="VUgbae-sCqPvGt3VthAw-44" target="VUgbae-sCqPvGt3VthAw-42" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-44" value="Makefile" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="598" y="545" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-47" value="The .env file contains values for the building of the containers as well as parameters for the running containers" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;labelBackgroundColor=default;" parent="1" vertex="1">
+          <mxGeometry x="49" y="703.75" width="209" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-48" value="In the docker-compose.yml file the amount and type of containers to spawn is defined.&lt;br&gt;All variables from .env are passed on" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="271.5" y="700" width="258.5" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-49" value="The Dockerfile describes the content of the containers and contains defaults for all .env variables" style="text;html=1;strokeColor=none;fillColor=default;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;labelBackgroundColor=default;" parent="1" vertex="1">
+          <mxGeometry x="545.25" y="703.75" width="205.5" height="52.5" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-50" value="etc. pp." style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#b1ddf0;strokeColor=#10739e;" parent="1" vertex="1">
+          <mxGeometry x="598" y="1000" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-53" value="migrid&lt;br&gt;Docker Container" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#b1ddf0;strokeColor=#10739e;" parent="1" vertex="1">
+          <mxGeometry x="60" y="980" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="VUgbae-sCqPvGt3VthAw-54" value="migrid-io&lt;br&gt;Docker Container" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#b1ddf0;strokeColor=#10739e;" parent="1" vertex="1">
+          <mxGeometry x="180" y="1030" width="120" height="80" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
