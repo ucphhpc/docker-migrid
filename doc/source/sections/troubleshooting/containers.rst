@@ -1,7 +1,7 @@
 TLS cert error
 --------------
 
-This message apprears if nginx is configured as reverse proxy and forwards via HTTPS to a host that speaks plain HTTP::
+This message appears if nginx is configured as reverse proxy and forwards via HTTPS to a host that speaks plain HTTP::
 
     nginx-proxy | nginx.1 | 2023/05/25 14:05:37 [error] 27#27: 
           *7 cannot load certificate "data:": PEM_read_bio_X509_AUX() failed 
@@ -27,7 +27,8 @@ This can happen due to different reasons.
 Ensure that:
 
 * Hosts keys are available and that they all have a corresponding pubkey file. Eg. `server.key` and `server.key.pub`
-* If the ListenAddress is a hostname, it must be resolvable inside the container to one iof its own IPs.* Another ssh service already uses the same address e.g. because it is configured to bind on all availabel interfaces (ListenAddress 0.0.0.0 or ListenAddress ::)
+* If the ListenAddress is a hostname, it must be resolvable inside the container to one iof its own IPs.
+* No other ssh service already uses the same address e.g. because it is configured to bind on all available interfaces (`ListenAddress 0.0.0.0` or `ListenAddress ::`)
 
 DevDNS can't get IPs of containers
 ----------------------------------
