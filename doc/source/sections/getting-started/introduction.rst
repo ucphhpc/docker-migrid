@@ -2,6 +2,10 @@ Introduction
 ============
 
 Before we can get started with Docker MiGrid, a good place to start, is to get an understanding of the repository itself and how it is structured.
+This repository provides a ``Makefile`` which allows fast and easy setup and teardown of docker-migrid deployments.
+A deployment is definded by a set of environement variables and corresponding ``docker-compose.yml`` and ``Dockerfile`` files.
+
+.. image:: ../../res/images/docker-compose-workflow.png
 
 Docker MiGrid Structure
 -----------------------
@@ -70,27 +74,27 @@ Deployment Profiles
 ~~~~~~~~~~~~~~~~~~~
 
 The specified deployment profile in the `.env` file determines which of these service will be launch when the Docker MiGrid is deployed.
-Currently, the available ones are `simplified` and `production`.
+Currently, the available ones are `single` and `multi`.
 
-- simplified
+- single
     This profile launches Docker MiGrid as two containers. Namely the `migrid` and `migrid-io` services.
     This setup is intended to be used for trying out MiGrid on your own laptop, or running it on a single host.
 
-- production
-    With the production profile, Docker MiGrid is launched as several independent services. Currently, this 
+- multi
+    With the multi profile, Docker MiGrid is launched as several independent services. Currently, this 
     includes the `migrid`, `migrid-openid`, `migrid-sftp`, `migrid-ftps`, and `migrid-webdavs`.
-    The point is to launch a production capable setup, where the MiGrid services can be launched across a span of hosts.
+    The point is to launch a multi capable setup, where the MiGrid services can be launched across a span of hosts.
 
 
 Simplified Profile Setup
 ~~~~~~~~~~~~~~~~~~~~~~~~
-The `simplified` profile setup is made up of the following services:
+The `single` profile setup is made up of the following services:
 
     :ref:`migrid <migrid_desc>` and :ref:`migrid-io <migrid_io_desc>`
 
 Production Profile Setup
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-The `production` profile setup is made up of the following services:
+The `multi` profile setup is made up of the following services:
 
     :ref:`migrid <migrid_desc>`, :ref:`migrid-openid <migrid_openid_desc>`, :ref:`migrid-sftp <migrid_sftp_desc>`, :ref:`migrid-ftps <migrid_ftps_desc>`, and :ref:`migrid-webdavs <migrid_webdavs_desc>`
 
