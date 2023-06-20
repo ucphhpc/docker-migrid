@@ -3,7 +3,7 @@ Introduction
 
 Before we can get started with Docker MiGrid, a good place to start, is to get an understanding of the repository itself and how it is structured.
 This repository provides a ``Makefile`` which allows fast and easy setup and teardown of docker-migrid deployments.
-A deployment is definded by a set of environement variables and corresponding ``docker-compose.yml`` and ``Dockerfile`` files.
+A deployment is definded by a set of environment variables and corresponding ``docker-compose.yml`` and ``Dockerfile`` files.
 
 .. image:: ../../res/images/docker-compose-workflow.png
 
@@ -47,28 +47,28 @@ The MiGrid services are composed of a number of different container services tha
 - migrid-io
     The migrid-io services is responsible for bundling and exposing all io services, that are not part of the basic MiGrid service.
     This is in addition to it also providing the OpenID authentication services, which is also not part of the basic MiGrid service.
-    In terms of io services, the `migrid-io` service supports the SFTP, WebDavs, and FTPS protocols.
+    In terms of io services, the `migrid-io` service supports the SFTP, WebDAVS, and FTPS protocols.
 
 .. _migrid_openid_desc:
 
 - migrid-openid
-    migrid-openid as the name indicates runs the OpenID service that can be used to authenticate on the MiGrid website.
+    migrid-openid as the name indicates runs the built-in OpenID service, which can be used to authenticate e.g. external users on the MiGrid website.
 
 .. _migrid_sftp_desc:
 
 - migrid-sftp
     The migrid-sftp service host's and runs the SFTP service, which enables the user to conduct data management tasks against their
-    MiGrid home directory.
+    MiGrid home directory and sharelinks.
 
 .. _migrid_ftps_desc:
 
 - migrid-ftps
-    This is similar to the `migrid-sftp` other than it hosts and runs the FTPS service.
+    This is similar to the `migrid-sftp` but just runs the FTPS service.
 
 .. _migrid_webdavs_desc:
 
 - migrid-webdavs
-    WebDavs is like the SFTP and FTPS services, other than it enables io tasks via the HTTP protocol.
+    WebDAVS is like the SFTP and FTPS services, but just provides WebDAV via the HTTPS protocol.
 
 Deployment Profiles
 ~~~~~~~~~~~~~~~~~~~
@@ -77,13 +77,13 @@ The specified deployment profile in the `.env` file determines which of these se
 Currently, the available ones are `single` and `multi`.
 
 - single
-    This profile launches Docker MiGrid as two containers. Namely the `migrid` and `migrid-io` services.
-    This setup is intended to be used for trying out MiGrid on your own laptop, or running it on a single host.
+    This profile launches Docker MiGrid as two containers. Namely the `migrid` and `migrid-io` service containers.
+    This setup is intended to be used for trying out MiGrid e.g. on your own laptop, or running it on a single host with scarce resources.
 
 - multi
-    With the multi profile, Docker MiGrid is launched as several independent services. Currently, this 
+    With the multi profile, Docker MiGrid is launched as several independent service containers. Currently, this 
     includes the `migrid`, `migrid-openid`, `migrid-sftp`, `migrid-ftps`, and `migrid-webdavs`.
-    The point is to launch a multi capable setup, where the MiGrid services can be launched across a span of hosts.
+    The point is to launch a more scalable setup, where the MiGrid services can be assigned resources individually and at some point in the future perhaps even launched across a span of hosts.
 
 
 Simplified Profile Setup
