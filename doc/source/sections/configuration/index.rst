@@ -9,4 +9,5 @@ Each of the services that are configurable can be found in the table below.
 
     mig
     dag
+    variables
 

@@ -11,6 +11,7 @@
 #            Furthermore they must be declared after FROM in each stage used.
 
 ARG DOCKER_MIGRID_ROOT=.
+ARG ARCH=amd64
 ARG UID=1000
 ARG GID=1000
 ARG BUILD_TYPE=basic
@@ -137,7 +138,8 @@ ARG GDP_EMAIL_NOTIFY=True
 ARG JUPYTER_SERVICES=""
 ARG JUPYTER_SERVICES_DESC="{}"
 
-FROM centos:7 as init
+#------------------------- first stage -----------------------------#
+FROM --platform=linux/$ARCH centos:7 as init
 ARG UID
 ARG GID
 ARG BUILD_TYPE
@@ -205,7 +207,8 @@ RUN echo "Enable python3 support: $WITH_PY3"
 #RUN echo "Designated jupyter services: $JUPYTER_SERVICES"
 #RUN echo "Enable git checkout: $WITH_GIT"
 
-FROM init as base
+#------------------------- next stage -----------------------------#
+FROM --platform=linux/$ARCH init as base
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG ENABLE_GDP
@@ -437,7 +440,7 @@ RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
 # NOTE: it looks like we don't need to generate this rather common locale here
 #       but on some platforms it's needed to install an English language pack
 #       to avoid various LC_X locale warnings and errors.
-#RUN localedef -c -i en_US -f UTF-8 en_US.UTF-8
+RUN localedef -c -i en_US -f UTF-8 en_US.UTF-8
 ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 
 # Setup user
@@ -458,8 +461,9 @@ RUN mkdir -p $CERT_DIR/MiG/${WILDCARD_DOMAIN} \
     && chown $USER:$GROUP $CERT_DIR \
     && chmod 775 $CERT_DIR
 
+#------------------------- next stage -----------------------------#
 # Certs and keys
-FROM base as setup_security
+FROM --platform=linux/$ARCH base as setup_security
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG PUBLIC_DOMAIN
@@ -565,7 +569,8 @@ RUN update-ca-trust
 WORKDIR $MIG_ROOT
 USER $USER
 
-FROM setup_security as mig_dependencies
+#------------------------- next stage -----------------------------#
+FROM --platform=linux/$ARCH setup_security as mig_dependencies
 ARG DOMAIN
 ARG WITH_PY3
 ARG MODERN_WSGIDAV
@@ -674,7 +679,10 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
     fi;
 
 # Modules required for email validation (not available in yum/dnf for py 2+3)
-RUN pip2 install email-validator
+# NOTE: latest version advertizing python-2.7 support is 1.3.0, but it fails
+#       with SyntaxError on import, so force the previous version on py2.
+#       https://github.com/JoshData/python-email-validator/issues/91
+RUN pip2 install 'email-validator<1.3.0'
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install email-validator; \
     fi;
@@ -686,7 +694,8 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install nbformat nbconvert papermill; \
     fi;
 
-FROM mig_dependencies as download_mig
+#------------------------- next stage -----------------------------#
+FROM --platform=linux/$ARCH mig_dependencies as download_mig
 ARG DOMAIN
 ARG MIG_SVN_REPO
 ARG MIG_SVN_REV
@@ -726,7 +735,8 @@ RUN if [ "${MODERN_WSGIDAV}" = "True" ]; then \
     fi;
 
 
-FROM download_mig as install_mig
+#------------------------- next stage -----------------------------#
+FROM --platform=linux/$ARCH download_mig as install_mig
 ARG DOMAIN
 ARG PUBLIC_DOMAIN
 ARG MIGCERT_DOMAIN
@@ -948,7 +958,8 @@ RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp $MIG_ROOT/mig/images/site-conf-${EMULATE_FQDN}.js $MIG_ROOT/mig/images/site-conf.js
 
 
-FROM install_mig as setup_mig_configs
+#------------------------- next stage -----------------------------#
+FROM --platform=linux/$ARCH install_mig as setup_mig_configs
 ARG DOMAIN
 ARG PUBLIC_DOMAIN
 ARG MIGCERT_DOMAIN
@@ -1093,7 +1104,8 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
         && echo "local0.*   /var/log/mig/gdp.log" >> /etc/rsyslog.conf; \
     fi;
 
-FROM setup_mig_configs as start_mig
+#------------------------- next stage -----------------------------#
+FROM --platform=linux/$ARCH setup_mig_configs as start_mig
 ARG DOMAIN
 
 # Reap defuncted/orphaned processes
