@@ -11,6 +11,7 @@
 #            Furthermore they must be declared after FROM in each stage used.
 
 ARG DOCKER_MIGRID_ROOT=.
+ARG ARCH=amd64
 ARG UID=1000
 ARG GID=1000
 ARG BUILD_TYPE=basic
@@ -137,7 +138,8 @@ ARG GDP_EMAIL_NOTIFY=True
 ARG JUPYTER_SERVICES=""
 ARG JUPYTER_SERVICES_DESC="{}"
 
-FROM rockylinux:8 as init
+#------------------------- first stage -----------------------------#
+FROM --platform=linux/$ARCH rockylinux:8 as init
 ARG UID
 ARG GID
 ARG BUILD_TYPE
@@ -205,7 +207,8 @@ RUN echo "Enable python3 support: $WITH_PY3"
 #RUN echo "Designated jupyter services: $JUPYTER_SERVICES"
 #RUN echo "Enable git checkout: $WITH_GIT"
 
-FROM init as base
+#------------------------- next stage -----------------------------#
+FROM --platform=linux/$ARCH init as base
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG ENABLE_GDP
@@ -477,8 +480,9 @@ RUN mkdir -p $CERT_DIR/MiG/${WILDCARD_DOMAIN} \
     && chown $USER:$GROUP $CERT_DIR \
     && chmod 775 $CERT_DIR
 
+#------------------------- next stage -----------------------------#
 # Certs and keys
-FROM base as setup_security
+FROM --platform=linux/$ARCH base as setup_security
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG PUBLIC_DOMAIN
@@ -582,7 +586,8 @@ RUN mkdir -p MiG-certificates \
     && ln -s $CERT_DIR/dhparams.pem dhparams.pem
 
 
-FROM setup_security as mig_dependencies
+#------------------------- next stage -----------------------------#
+FROM --platform=linux/$ARCH setup_security as mig_dependencies
 ARG DOMAIN
 ARG WITH_PY3
 ARG MODERN_WSGIDAV
@@ -710,7 +715,8 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install nbformat nbconvert papermill; \
     fi;
 
-FROM mig_dependencies as download_mig
+#------------------------- next stage -----------------------------#
+FROM --platform=linux/$ARCH mig_dependencies as download_mig
 ARG DOMAIN
 ARG MIG_SVN_REPO
 ARG MIG_SVN_REV
@@ -750,7 +756,8 @@ RUN if [ "${MODERN_WSGIDAV}" = "True" ]; then \
     fi;
 
 
-FROM download_mig as install_mig
+#------------------------- next stage -----------------------------#
+FROM --platform=linux/$ARCH download_mig as install_mig
 ARG DOMAIN
 ARG PUBLIC_DOMAIN
 ARG MIGCERT_DOMAIN
@@ -983,7 +990,8 @@ RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp $MIG_ROOT/mig/images/site-conf-${EMULATE_FQDN}.js $MIG_ROOT/mig/images/site-conf.js
 
 
-FROM install_mig as setup_mig_configs
+#------------------------- next stage -----------------------------#
+FROM --platform=linux/$ARCH install_mig as setup_mig_configs
 ARG DOMAIN
 ARG PUBLIC_DOMAIN
 ARG MIGCERT_DOMAIN
@@ -1134,7 +1142,8 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
         && echo "local0.*   /var/log/mig/gdp.log" >> /etc/rsyslog.conf; \
     fi;
 
-FROM setup_mig_configs as start_mig
+#------------------------- next stage -----------------------------#
+FROM --platform=linux/$ARCH setup_mig_configs as start_mig
 ARG DOMAIN
 
 # Reap defuncted/orphaned processes
