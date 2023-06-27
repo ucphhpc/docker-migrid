@@ -54,6 +54,7 @@ dockerclean:
 	${DOCKER} rmi -f $(OWNER)/$(IMAGE):$(BUILD_TYPE)
 	# remove dangling images and build cache
 	${DOCKER} image prune -f
+	${DOCKER} builder prune -f
 
 dockerpush:
 	${DOCKER} push $(OWNER)/$(IMAGE):$(BUILD_TYPE)
