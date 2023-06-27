@@ -98,7 +98,6 @@ Variables
    * - EXT_OIDC_SCOPE
      - unset
      - Used in the user ID exchange between external OpenID Connect IDP and the migrid web app. Should be negotiated with the IDP admins ahead of use.
-     - tba
    * - EXT_OIDC_REMOTE_USER_CLAIM
      - unset
      - Used for the local user ID in migrid when a user authenticates through an external OpenID Connect IDP. Might be negotiated with the IDP admins ahead of use to assure that it's always available and unique.
@@ -147,7 +146,6 @@ Variables
    * - FTPS_CTRL_PORT
      - 8021
      - TCP port of the service offering FTPS access through the native migrid ftps daemon
-     - tba
    * - FTPS_CTRL_SHOW_PORT
      - 21
      - Where the FTPS service is advertized to run for the users. Mainly used when the standard ftps port 21 is transparently forwarded in the local firewall.
