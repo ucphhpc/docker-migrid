@@ -307,7 +307,7 @@ Variables
      - A brief hint about possible Peers when signing up as an external user on this site
    * - ENABLE_SELF_SIGNED_CERTS
      - False
-     - Generate and use self-signed host certificates during build
+     - Generate and use self-signed host certificates during build. Also disables certificate verification when connecting to OpenID with self signed cert
    * - BUILD_MOD_AUTH_OPENID
      - False
      - Build and install the Apache mod auth OpenID from source during build 
