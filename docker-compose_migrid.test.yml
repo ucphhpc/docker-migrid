@@ -1,6 +1,19 @@
 version: '3.7'
 
 services:
+  devmail:
+    image: mwader/postfix-relay
+    container_name: devmail
+    depends_on:
+      - devdns
+    ports:
+      - "127.0.0.1:25:25"
+    environment:
+      POSTFIX_myhostname: ${SMTP_SERVER}
+    networks:
+      default:
+        aliases:
+          - mail.migrid.test
   devdns:
     image: ruudud/devdns
     container_name: devdns
@@ -78,6 +91,7 @@ services:
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
         SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -254,6 +268,7 @@ services:
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
         SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -435,6 +450,7 @@ services:
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
         SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -602,6 +618,7 @@ services:
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
         SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -772,6 +789,7 @@ services:
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
         SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -942,6 +960,7 @@ services:
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
         SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}

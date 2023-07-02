@@ -20,6 +20,10 @@ Associated Services
 The Associated services, are services that makes it possible to host and run the MiGrid on your local machine.
 These include the dynamic DNS service (devdns), and the Proxy service (nginx-proxy).
 
+- devmail
+    This service provides a simple Postfix based email relay. Make sure to set the ``$SMTP_SERVER`` variable to use this.
+    For development only, as it is an open relay!
+
 - devdns
     This service ensures that every container name is registered as an DNS entry in the devdns service under the `test` domain.
     In addition, it makes it possible for us to register additional aliases for each container, whereby they also can be reached.
