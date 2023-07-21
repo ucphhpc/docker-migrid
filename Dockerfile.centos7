@@ -310,6 +310,13 @@ RUN if [ "${WITH_PY3}" = True ]; then \
       python36-cffi \
       python36-pyOpenSSL \
       python36-PyYAML \
+      # NOTE: setuptools_rust requires typing-extensions and pip3 pulls in a
+      #       slightly incompatible version 4.1.1 causing random errors like
+      #       https://github.com/python/typing_extensions/issues/10
+      #       We explicitly install the slightly older but stable 3.7.4 version
+      #       here or with pip3 instead.
+      #       CentOS 7 does not include it so we go for pip below.
+      #python3-typing-extensions \
       # NOTE: only install default paramiko if upgrade not requested
       && [ "${UPGRADE_PARAMIKO}" = True ] || yum install -y python36-paramiko \
       && yum clean all \
@@ -593,6 +600,10 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
         #            pip3. Thus, we force pip3 to install the paramiko plus
         #            dependencies specifically into /usr instead.
         #pip3 install -U setuptools; \
+        # NOTE: explicitly install typing-extensions 3.7 to avoid the
+        #  compatibility issues mentioned in note above.
+        #  Only available from pip on CentOS 7.
+        pip3 install 'typing-extensions<3.8'; \
         pip3 install setuptools_rust; \
         pip3 install --prefix=/usr pynacl bcrypt cryptography \
 	                           'pyOpenSSL<22' 'paramiko<3'; \
