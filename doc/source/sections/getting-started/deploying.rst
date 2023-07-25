@@ -21,6 +21,9 @@ After this command has been executed succesfully it should have launched the 4 f
     6df1818e879c   ruudud/devdns                    "/run.sh"                4 minutes ago   Up 4 minutes   127.0.0.1:53->53/udp                                                                                                                                                                                                                             devdns
 
 
+DNS setup for development
+-------------------------
+
 Before your host will be able to discover the various migrid services on your localhost, it needs to know
 that it should ask the `devdns` container for the IP associated with those service containers.
 Therefore, you need to apply one of the options listed in the (Host Machine -> Containers) section at `DevDNS <https://github.com/ruudud/devdns>`_.
@@ -74,3 +77,38 @@ As shown here, the default user is set to `test@migrid.testing` and with the pas
 With these credentials, the authentication should redirect you to the Welcome page as shown below.
 
 .. image:: ../../res/images/getstart-authenticated.png
+
+
+DNS setup for production
+------------------------
+
+When running MiGrid in production, DNS is usually handled by an external service. Also a major difference might be that all HTTPs services should run on port 443 to be reachable by client without further knowledge.
+
+To achive that docker-migird usually runs on multiple IP addresses instead of using SNI.
+This way is doesn't matter in how many seperate servers the setup is splitted.
+At least 5 IP addresses are used by default to seperate different services from each other:
+
+.. list-table:: Standard IP address setup
+   :widths: 25 25 50
+   :header-rows: 1
+
+   * - Domain
+     - example IP
+     - Description
+   * - migrid.test \*.migrid.test 
+     - 10.0.0.1
+     - The webinterface (frontpage) with infos and login screen (``$DOMAIN``, ``$WILDCARD_DOMAIN``)
+   * - ext.migrid.test
+     - 10.0.0.2
+     - Handles migrids OWN OpenID (``$MIGOID_DOMAIN``)
+   * - oid.migrid.test
+     - 10.0.0.3
+     - Handles the external OpenID (``$EXTOID_DOMAIN``)
+   * - sid.migrid.test
+     - 10.0.0.4
+     - Session ID webinterface for signup+login (``$SID_DOMAIN``)
+   * - io.migrid.test
+     - 10.0.0.5
+     - Storage frontend protocols like sftp, ftps, webdavs (``$IO_DOMAIN``)
+
+Of course you can add more IPs for all the other domain if you want to fan out the services even more.
