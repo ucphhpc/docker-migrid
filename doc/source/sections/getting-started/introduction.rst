@@ -46,13 +46,6 @@ The MiGrid services are composed of a number of different container services tha
     its associated services. This includes features such as data management via the built-in filemanager, managing and creating WorkGroups,
     and establishing Share Links.
 
-.. _migrid_io_desc:
-
-- migrid-io
-    The migrid-io services is responsible for bundling and exposing all io services, that are not part of the basic MiGrid service.
-    This is in addition to it also providing the OpenID authentication services, which is also not part of the basic MiGrid service.
-    In terms of io services, the `migrid-io` service supports the SFTP, WebDAVS, and FTPS protocols.
-
 .. _migrid_openid_desc:
 
 - migrid-openid
@@ -74,31 +67,16 @@ The MiGrid services are composed of a number of different container services tha
 - migrid-webdavs
     WebDAVS is like the SFTP and FTPS services, but just provides WebDAV via the HTTPS protocol.
 
-Deployment Profiles
-~~~~~~~~~~~~~~~~~~~
+.. _migrid_io_desc:
 
-The specified deployment profile in the `.env` file determines which of these service will be launch when the Docker MiGrid is deployed.
-Currently, the available ones are `single` and `multi`.
+- migrid-io
+    The migrid-io services is responsible for bundling and exposing all io services, that are not part of the basic MiGrid service.
+    This is in addition to it also providing the OpenID authentication services, which is also not part of the basic MiGrid service.
+    In terms of io services, the `migrid-io` service supports the SFTP, WebDAVS, and FTPS protocols.
+    This service is can be used instead of the single protocol services.
 
-- single
-    This profile launches Docker MiGrid as two containers. Namely the `migrid` and `migrid-io` service containers.
-    This setup is intended to be used for trying out MiGrid e.g. on your own laptop, or running it on a single host with scarce resources.
-
-- multi
-    With the multi profile, Docker MiGrid is launched as several independent service containers. Currently, this 
-    includes the `migrid`, `migrid-openid`, `migrid-sftp`, `migrid-ftps`, and `migrid-webdavs`.
-    The point is to launch a more scalable setup, where the MiGrid services can be assigned resources individually and at some point in the future perhaps even launched across a span of hosts.
-
-
-Simplified Profile Setup
-~~~~~~~~~~~~~~~~~~~~~~~~
-The `single` profile setup is made up of the following services:
-
-    :ref:`migrid <migrid_desc>` and :ref:`migrid-io <migrid_io_desc>`
-
-Production Profile Setup
-~~~~~~~~~~~~~~~~~~~~~~~~~
-The `multi` profile setup is made up of the following services:
+Although the MiGrid Docker container contains all services, it is recommended to start multiple containers, each with as few services as possible. Eg. one container for the MiGrid webservices and one for each data transfer.
+You find an example in the docker-compose files in this repository.
 
     :ref:`migrid <migrid_desc>`, :ref:`migrid-openid <migrid_openid_desc>`, :ref:`migrid-sftp <migrid_sftp_desc>`, :ref:`migrid-ftps <migrid_ftps_desc>`, and :ref:`migrid-webdavs <migrid_webdavs_desc>`
 
