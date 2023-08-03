@@ -189,185 +189,12 @@ services:
     # NOTE: public hosts should create users through sign up and run like this
     #command: /app/docker-entry.sh
 
-  # A single container with all the daemons base migrid doesn't provide
-  migrid-io:
-    container_name: migrid-io
-    profiles:
-      - single
-    image: ucphhpc/migrid:$BUILD_TYPE
-    build:
-      context: ./
-      dockerfile: Dockerfile
-      # IMPORTANT: pass all ARGs used in Dockerfile here to allow optional override from .env file
-      args:
-        UID: ${UID:-1000}
-        GID: ${GID:-1000}
-        BUILD_TYPE: ${BUILD_TYPE}
-        BUILD_TARGET: ${BUILD_TARGET}
-        DOMAIN: ${DOMAIN}
-        WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
-        PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
-        MIGCERT_DOMAIN: ${MIGCERT_DOMAIN}
-        EXTCERT_DOMAIN: ${EXTCERT_DOMAIN}
-        MIGOID_DOMAIN: ${MIGOID_DOMAIN}
-        EXTOID_DOMAIN: ${EXTOID_DOMAIN}
-        EXTOIDC_DOMAIN: ${EXTOIDC_DOMAIN}
-        SID_DOMAIN: ${SID_DOMAIN}
-        IO_DOMAIN: ${IO_DOMAIN}
-        OPENID_DOMAIN: ${OPENID_DOMAIN}
-        FTPS_DOMAIN: ${FTPS_DOMAIN}
-        SFTP_DOMAIN: ${SFTP_DOMAIN}
-        WEBDAVS_DOMAIN: ${WEBDAVS_DOMAIN}
-        MIG_OID_PROVIDER: ${MIG_OID_PROVIDER}
-        EXT_OID_PROVIDER: ${EXT_OID_PROVIDER}
-        EXT_OIDC_PROVIDER_META_URL: ${EXT_OIDC_PROVIDER_META_URL}
-        EXT_OIDC_CLIENT_NAME: ${EXT_OIDC_CLIENT_NAME}
-        EXT_OIDC_CLIENT_ID: ${EXT_OIDC_CLIENT_ID}
-        EXT_OIDC_SCOPE: ${EXT_OIDC_SCOPE}
-        EXT_OIDC_REMOTE_USER_CLAIM: ${EXT_OIDC_REMOTE_USER_CLAIM}
-        PUBLIC_HTTP_PORT: ${PUBLIC_HTTP_PORT}
-        PUBLIC_HTTPS_PORT: ${PUBLIC_HTTPS_PORT}
-        MIGCERT_HTTPS_PORT: ${MIGCERT_HTTPS_PORT}
-        EXTCERT_HTTPS_PORT: ${EXTCERT_HTTPS_PORT}
-        MIGOID_HTTPS_PORT: ${MIGOID_HTTPS_PORT}
-        EXTOID_HTTPS_PORT: ${EXTOID_HTTPS_PORT}
-        EXTOIDC_HTTPS_PORT: ${EXTOIDC_HTTPS_PORT}
-        SID_HTTPS_PORT: ${SID_HTTPS_PORT}
-        SFTP_PORT: ${SFTP_PORT}
-        SFTP_SUBSYS_PORT: ${SFTP_SUBSYS_PORT}
-        SFTP_SHOW_PORT: ${SFTP_SHOW_PORT}
-        DAVS_PORT: ${DAVS_PORT}
-        DAVS_SHOW_PORT: ${DAVS_SHOW_PORT}
-        OPENID_PORT: ${OPENID_PORT}
-        OPENID_SHOW_PORT: ${OPENID_SHOW_PORT}
-        FTPS_CTRL_PORT: ${FTPS_CTRL_PORT}
-        FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
-        ADMIN_EMAIL: ${ADMIN_EMAIL}
-        ADMIN_LIST: ${ADMIN_LIST}
-        SMTP_SENDER: ${SMTP_SENDER}
-        LOG_LEVEL: ${LOG_LEVEL}
-        TITLE: ${TITLE}
-        SHORT_TITLE: ${SHORT_TITLE}
-        MIG_OID_TITLE: ${MIG_OID_TITLE}
-        EXT_OID_TITLE: ${EXT_OID_TITLE}
-        PEERS_PERMIT: ${PEERS_PERMIT}
-        VGRID_CREATORS: ${VGRID_CREATORS}
-        VGRID_MANAGERS: ${VGRID_MANAGERS}
-        MIG_SVN_REPO: ${MIG_SVN_REPO}
-        MIG_SVN_REV: ${MIG_SVN_REV}
-        MIG_GIT_REPO: ${MIG_GIT_REPO}
-        MIG_GIT_BRANCH: ${MIG_GIT_BRANCH}
-        MIG_GIT_REV: ${MIG_GIT_REV}
-        EMULATE_FLAVOR: ${EMULATE_FLAVOR}
-        EMULATE_FQDN: ${EMULATE_FQDN}
-        SKIN_SUFFIX: ${SKIN_SUFFIX}
-        ENABLE_OPENID: ${ENABLE_OPENID}
-        ENABLE_SFTP: ${ENABLE_SFTP}
-        ENABLE_SFTP_SUBSYS: ${ENABLE_SFTP_SUBSYS}
-        ENABLE_DAVS: ${ENABLE_DAVS}
-        ENABLE_FTPS: ${ENABLE_FTPS}
-        ENABLE_SHARELINKS: ${ENABLE_SHARELINKS}
-        ENABLE_TRANSFERS: ${ENABLE_TRANSFERS}
-        ENABLE_DUPLICATI: ${ENABLE_DUPLICATI}
-        ENABLE_SEAFILE: ${ENABLE_SEAFILE}
-        ENABLE_SANDBOXES: ${ENABLE_SANDBOXES}
-        ENABLE_VMACHINES: ${ENABLE_VMACHINES}
-        ENABLE_CRONTAB: ${ENABLE_CRONTAB}
-        ENABLE_JOBS: ${ENABLE_JOBS}
-        ENABLE_RESOURCES: ${ENABLE_RESOURCES}
-        ENABLE_EVENTS: ${ENABLE_EVENTS}
-        ENABLE_FREEZE: ${ENABLE_FREEZE}
-        ENABLE_CRACKLIB: ${ENABLE_CRACKLIB}
-        ENABLE_IMNOTIFY: ${ENABLE_IMNOTIFY}
-        ENABLE_NOTIFY: ${ENABLE_NOTIFY}
-        ENABLE_PREVIEW: ${ENABLE_PREVIEW}
-        ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
-        ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
-        ENABLE_JUPYTER: ${ENABLE_JUPYTER}
-        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
-        ENABLE_GDP: ${ENABLE_GDP}
-        ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
-        ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
-        ENABLE_PEERS: ${ENABLE_PEERS}
-        PEERS_MANDATORY: ${PEERS_MANDATORY}
-        PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
-        PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
-        ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
-        BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID:-False}
-        UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC:-False}
-        UPGRADE_PARAMIKO: ${UPGRADE_PARAMIKO:-False}
-        PUBKEY_FROM_DNS: ${PUBKEY_FROM_DNS}
-        PREFER_PYTHON3: ${PREFER_PYTHON3}
-        SIGNUP_METHODS: ${SIGNUP_METHODS}
-        LOGIN_METHODS: ${LOGIN_METHODS}
-        USER_INTERFACES: ${USER_INTERFACES}
-        AUTO_ADD_CERT_USER: ${AUTO_ADD_CERT_USER}
-        AUTO_ADD_OID_USER: ${AUTO_ADD_OID_USER}
-        AUTO_ADD_OIDC_USER: ${AUTO_ADD_OIDC_USER}
-        CERT_VALID_DAYS: ${CERT_VALID_DAYS}
-        OID_VALID_DAYS: ${OID_VALID_DAYS}
-        GENERIC_VALID_DAYS: ${GENERIC_VALID_DAYS}
-        DEFAULT_MENU: ${DEFAULT_MENU}
-        USER_MENU: ${USER_MENU}
-        WITH_PY3: ${WITH_PY3}
-        WITH_GIT: ${WITH_GIT}
-        JUPYTER_SERVICES: ${JUPYTER_SERVICES}
-        JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
-        VGRID_LABEL: ${VGRID_LABEL}
-        EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
-        EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
-        GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
-        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
-    environment:
-      TZ: ${TZ}
-      # RUN_SERVICES specifies which daemons to launch
-      # Available target service names follow migrid init script and are:
-      #   httpd script monitor sshmux events cron transfers
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: openid sftp sftpsubsys webdavs ftps notify rsyslogd
-    depends_on:
-      - migrid
-    ports:
-      # NOTE: expose the unique raw port(s) to host 
-      - "2222:2222"
-      - "4443:4443"
-      - "8021:8021"
-      - "8100-8200:8100-8200"
-      - "8443:8443"
-      - "22222:22222"
-    networks:
-      default:
-        aliases:
-          - io.migrid.test
-          - openid.migrid.test
-          - webdavs.migrid.test
-          - ftps.migrid.test
-          - sftp.migrid.test
-    volumes:
-      - type: volume
-        source: httpd
-        target: /etc/httpd/
-      - type: volume
-        source: mig
-        target: /home/mig/mig
-      - type: volume
-        source: certs
-        target: /etc/httpd/MiG-certificates
-      - type: volume
-        source: state
-        target: /home/mig/state
-      - type: volume
-        source: migrid-io-syslog
-        target: /var/log
-    command: /app/docker-entry.sh
 
   # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
   #
   # Multiple containers with individual daemons not provided by base migrid
   migrid-openid:
     container_name: migrid-openid
-    profiles:
-      - multi
     image: ucphhpc/migrid:$BUILD_TYPE
     build:
       context: ./
@@ -528,8 +355,6 @@ services:
 
   migrid-sftp:
     container_name: migrid-sftp
-    profiles:
-      - multi
     image: ucphhpc/migrid:$BUILD_TYPE
     build:
       context: ./
@@ -691,8 +516,6 @@ services:
 
   migrid-ftps:
     container_name: migrid-ftps
-    profiles:
-      - multi
     image: ucphhpc/migrid:$BUILD_TYPE
     build:
       context: ./
@@ -854,8 +677,6 @@ services:
 
   migrid-webdavs:
     container_name: migrid-webdavs
-    profiles:
-      - multi
     image: ucphhpc/migrid:$BUILD_TYPE
     build:
       context: ./
