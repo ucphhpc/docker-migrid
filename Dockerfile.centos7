@@ -107,6 +107,7 @@ ARG PEERS_MANDATORY=False
 ARG PEERS_EXPLICIT_FIELDS=""
 ARG PEERS_CONTACT_HINT="authorized to invite you as peer"
 ARG ENABLE_SELF_SIGNED_CERTS=False
+ARG MIG_PASSWORD_POLICY="MODERN:12"
 ARG BUILD_MOD_AUTH_OPENID=False
 ARG UPGRADE_MOD_AUTH_OPENIDC=False
 ARG UPGRADE_PARAMIKO=False
@@ -824,6 +825,7 @@ ARG ENABLE_PEERS
 ARG PEERS_MANDATORY
 ARG PEERS_EXPLICIT_FIELDS
 ARG PEERS_CONTACT_HINT
+ARG MIG_PASSWORD_POLICY
 ARG PUBKEY_FROM_DNS
 ARG PREFER_PYTHON3
 ARG SIGNUP_METHODS
@@ -928,7 +930,7 @@ RUN python2 ./generateconfs.py --source=. \
     --enable_vhost_certs=True --enable_verify_certs=${ENABLE_VERIFY_CERTS} \
     --enable_jupyter=${ENABLE_JUPYTER} --enable_migadmin=${ENABLE_MIGADMIN} \
     --enable_gdp=${ENABLE_GDP} --gdp_email_notify=${GDP_EMAIL_NOTIFY} \
-    --password_policy=${PASSWORD_POLICY} \
+    --password_policy=${MIG_PASSWORD_POLICY} \
     --jupyter_services=${JUPYTER_SERVICES} \
     --jupyter_services_desc="${JUPYTER_SERVICES_DESC}" \
     --prefer_python3=${PREFER_PYTHON3} \
