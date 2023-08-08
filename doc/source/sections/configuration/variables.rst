@@ -308,6 +308,9 @@ Variables
    * - ENABLE_SELF_SIGNED_CERTS
      - False
      - Generate and use self-signed host certificates during build. Also disables certificate verification when connecting to OpenID with self signed cert
+   * - PASSWORD_POLICY
+     - MODERN:12
+     - The password policy and length for user sign-up. Possible values are: NONE, WEAK, MEDIUM, HIGH, MODERN, CUSTOM optionally followed by a colon and the minimum length
    * - BUILD_MOD_AUTH_OPENID
      - False
      - Build and install the Apache mod auth OpenID from source during build 
