@@ -14,7 +14,6 @@ services:
 
   # The migrid core services including httpd and tightly integrated services
   # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
-
   # NOTE: in order to test the publishing of container services on the host
   #       with standard ports on 1.2.3.x one can set up a local dummy device:
   #       sudo ip link add dummylan type dummy

@@ -10,6 +10,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       TZ: ${TZ}
+      NETWORK: ${DOCKER_NETWORK:-docker-migrid_default}
 
   # The migrid core services including httpd and tightly integrated services
   # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
