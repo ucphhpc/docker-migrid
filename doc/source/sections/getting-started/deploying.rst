@@ -5,12 +5,11 @@ To deploy the MiGrid service, the Docker MiGrid package makes use of Docker-Comp
 
 The easiest way to deploy the Docker MiGrid services, is to execute the following command::
 
-    docker-compose up -d
-
+    make up
 
 To stop the services, execute the following command::
 
-    docker-compose down
+    make down
 
 After this command has been executed succesfully it should have launched the 4 following containers::
 

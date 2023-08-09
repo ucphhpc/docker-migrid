@@ -13,11 +13,11 @@ DOCKER = $(shell which docker || which podman)
 DOCKER_COMPOSE = $(shell which docker-compose || which podman-compose || echo 'docker compose')
 $(echo ${DOCKER_COMPOSE} >/dev/null)
 
-.PHONY:	all init dockerbuild dockerclean dockerpush clean dist distclean
-.PHONY:	stateclean warning
-.PHONY: install uninstall installcheck check
+.PHONY: all init dockerbuild dockerpush
+.PHONY: dockerclean distclean stateclean clean warning
+.PHONY: up stop down
 
-all: init dockerbuild
+all: init dockerbuild up
 
 init:
 ifeq (,$(wildcard ./Dockerfile))
@@ -44,6 +44,12 @@ endif
 	mkdir -p log/migrid-webdavs
 	mkdir -p log/migrid-ftps
 	sed 's@#unset @unset @g;s@#export @export @g' migrid-httpd.env > migrid-httpd-init.sh
+
+up:
+	${DOCKER_COMPOSE} up -d
+
+down:
+	${DOCKER_COMPOSE} down
 
 dockerbuild:
 	${DOCKER_COMPOSE} build $(ARGS)
@@ -85,15 +91,6 @@ warning:
 	@echo "*** Deleting ALL local state data ***"
 	@echo
 	@echo "Are you sure? [y/N]" && read ans && [ $${ans:-N} = y ]
-
-uninstallcheck:
-### PLACEHOLDER (it's purpose is to uninstall depedencies for check) ###
-
-installcheck:
-### PLACEHOLDER (this will install the dependencies for check) ###
-
-check:
-### PLACEHOLDER (this will run the repo's self-tests) ###
 
 test:
 	@cd tests; \
