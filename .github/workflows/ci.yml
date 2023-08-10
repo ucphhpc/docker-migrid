@@ -1,0 +1,39 @@
+name: Continuous Integration
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+    branches:
+      - master
+    paths-ignore:
+      - '**/README.md'
+      - 'doc/**'
+      - '1.gocd.yml'
+      - '.gitignore'
+
+jobs:
+  default-centos7:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build images
+        run: |
+          make init
+          make dockerbuild
+      - name: Start services
+        run: |
+          docker-compose up -d
+      #- name: Run tests
+      #  run: |
+      #    make test
+      - name: Read logs after bootup
+        run: |
+          docker-compose logs
+      - name: Stop services
+        run: |
+          docker-compose down
