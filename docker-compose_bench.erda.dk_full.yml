@@ -684,7 +684,7 @@ services:
     #ports:
     #  # NOTE: expose the unique raw port(s) to host 
     #  - "8021:8021"
-    #  - "8100-8200:8100-8200"
+    #  - "8100-8399:8100-8399"
     #networks:
     #  default:
     #    aliases:
