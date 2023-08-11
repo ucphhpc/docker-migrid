@@ -29,9 +29,6 @@ Variables
    * - GID
      - 1000
      - Group ID of the migrid group inside the container, which might be useful to avoid various permission errors when juggling data inside and outside containers.
-   * - BUILD_TYPE
-     - basic
-     - Unused for now but might be used to differentiate builds in the future
    * - DOMAIN
      - migrid.test
      - The main domain under which the migrid service is hosted. Used for web landing page.

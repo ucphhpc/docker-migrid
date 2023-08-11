@@ -62,7 +62,6 @@ An indication of this can be seen by investigating the `Makefile` itself::
     NAME=docker-migrid
     OWNER=ucphhpc
     IMAGE=migrid
-    BUILD_TYPE=basic
     # Enable that the builder should use buildkit
     # https://docs.docker.com/develop/develop-images/build_enhancements/
     DOCKER_BUILDKIT=1
@@ -103,7 +102,7 @@ An indication of this can be seen by investigating the `Makefile` itself::
         fi
 
     push:
-        docker push ${OWNER}/${IMAGE}:${BUILD_TYPE}
+        docker push ${OWNER}/${IMAGE}
 
 For starters, when `make` is being executed within the directory. The directory is firstly being cleaned of any old state data that might be hanging around from the last build.
 This is achived by executing the `clean` target within the `Makefile`. The `clean` target removes the runtime directories and all of the associated docker volumes that is used to store persistent data between runtimes::

@@ -3,7 +3,6 @@ PACKAGE_NAME_FORMATTED=$(subst -,_,$(PACKAGE_NAME))
 IMAGE=migrid
 OWNER ?= ucphhpc
 
-BUILD_TYPE=basic
 # Enable that the builder should use buildkit
 # https://docs.docker.com/develop/develop-images/build_enhancements/
 DOCKER_BUILDKIT=1
@@ -57,13 +56,13 @@ dockerbuild: init
 dockerclean:
 	# remove latest image and dangling cache entries
 	${DOCKER_COMPOSE} down || true
-	${DOCKER} rmi -f $(OWNER)/$(IMAGE):$(BUILD_TYPE)
+	${DOCKER} rmi -f $(OWNER)/$(IMAGE)
 	# remove dangling images and build cache
 	${DOCKER} image prune -f
 	${DOCKER} builder prune -f
 
 dockerpush:
-	${DOCKER} push $(OWNER)/$(IMAGE):$(BUILD_TYPE)
+	${DOCKER} push $(OWNER)/$(IMAGE)
 
 clean:
 	rm -fr ./mig
