@@ -1,16 +1,17 @@
+# docker-compose version
 version: '3.7'
 
 services:
-  devdns:
-    image: ruudud/devdns
-    container_name: devdns
-    ports:
-        - "127.0.0.1:53:53/udp"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    environment:
-      TZ: ${TZ}
-      NETWORK: ${DOCKER_NETWORK:-docker-migrid_default}
+# NOTE: not used in stand-alone mode
+#  devdns:
+#    image: ruudud/devdns
+#    container_name: devdns
+#    ports:
+#        - "127.0.0.1:53:53/udp"
+#    volumes:
+#      - /var/run/docker.sock:/var/run/docker.sock:ro
+#    environment:
+#      TZ: ${TZ}
 
   # The migrid core services including httpd and tightly integrated services
   # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
@@ -27,6 +28,7 @@ services:
   migrid:
     container_name: migrid
     image: ucphhpc/migrid:$BUILD_TYPE
+    network_mode: "host"
     build:
       context: ./
       dockerfile: Dockerfile
@@ -78,6 +80,8 @@ services:
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
+        SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -123,6 +127,8 @@ services:
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
         ENABLE_PEERS: ${ENABLE_PEERS}
         MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
+        ENABLE_LOGROTATE: ${ENABLE_LOGROTATE}
+        LOGROTATE_MIGRID: ${LOGROTATE_MIGRID}
         PEERS_MANDATORY: ${PEERS_MANDATORY}
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
@@ -147,7 +153,10 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
+        DIGEST_SALT: ${DIGEST_SALT:-AUTO}
+        CRYPTO_SALT: ${CRYPTO_SALT:-AUTO}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -159,16 +168,6 @@ services:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy crond rsyslogd
-    depends_on:
-      - devdns
-    networks:
-      default:
-        aliases:
-          - dev-www.erda.dk
-          - dev-cert.erda.dk
-          - dev-ext.erda.dk
-          - dev-oid.erda.dk
-          - dev-sid.erda.dk
     volumes:
       - type: volume
         source: httpd
@@ -185,6 +184,8 @@ services:
       - type: volume
         source: migrid-syslog
         target: /var/log
+      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
+      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
     env_file:
       - migrid-httpd.env
     command: /app/docker-entry.sh -k -V
@@ -195,6 +196,7 @@ services:
   migrid-openid:
     container_name: migrid-openid
     image: ucphhpc/migrid:$BUILD_TYPE
+    network_mode: "host"
     build:
       context: ./
       dockerfile: Dockerfile
@@ -246,6 +248,8 @@ services:
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
+        SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -291,6 +295,8 @@ services:
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
         ENABLE_PEERS: ${ENABLE_PEERS}
         MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
+        ENABLE_LOGROTATE: ${ENABLE_LOGROTATE}
+        LOGROTATE_MIGRID: ${LOGROTATE_MIGRID}
         PEERS_MANDATORY: ${PEERS_MANDATORY}
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
@@ -315,7 +321,10 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
+        DIGEST_SALT: ${DIGEST_SALT:-AUTO}
+        CRYPTO_SALT: ${CRYPTO_SALT:-AUTO}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -329,13 +338,9 @@ services:
       RUN_SERVICES: openid rsyslogd
     depends_on:
       - migrid
-    ports:
-      # NOTE: expose the unique raw port(s) to host 
-      - "8443:8443"
-    #networks:
-    #  default:
-    #    aliases:
-    #      - dev-openid.erda.dk
+    #ports:
+    #  # NOTE: expose the unique raw port(s) to host 
+    #  - "8443:8443"
     volumes:
       - type: volume
         source: httpd
@@ -357,6 +362,7 @@ services:
   migrid-sftp:
     container_name: migrid-sftp
     image: ucphhpc/migrid:$BUILD_TYPE
+    network_mode: "host"
     build:
       context: ./
       dockerfile: Dockerfile
@@ -408,6 +414,8 @@ services:
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
+        SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -453,6 +461,8 @@ services:
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
         ENABLE_PEERS: ${ENABLE_PEERS}
         MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
+        ENABLE_LOGROTATE: ${ENABLE_LOGROTATE}
+        LOGROTATE_MIGRID: ${LOGROTATE_MIGRID}
         PEERS_MANDATORY: ${PEERS_MANDATORY}
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
@@ -477,7 +487,10 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
+        DIGEST_SALT: ${DIGEST_SALT:-AUTO}
+        CRYPTO_SALT: ${CRYPTO_SALT:-AUTO}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -491,14 +504,10 @@ services:
       RUN_SERVICES: sftp sftpsubsys rsyslogd
     depends_on:
       - migrid
-    ports:
-      # NOTE: expose the unique raw port(s) to host 
-      - "2222:2222"
-      - "22222:22222"
-    #networks:
-    #  default:
-    #    aliases:
-    #      - dev-sftp.erda.dk
+    #ports:
+    #  # NOTE: expose the unique raw port(s) to host 
+    #  - "2222:2222"
+    #  - "22222:22222"
     volumes:
       - type: volume
         source: httpd
@@ -515,11 +524,14 @@ services:
       - type: volume
         source: migrid-sftp-syslog
         target: /var/log
+      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
+      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
     command: /app/docker-entry.sh -k
 
   migrid-ftps:
     container_name: migrid-ftps
     image: ucphhpc/migrid:$BUILD_TYPE
+    network_mode: "host"
     build:
       context: ./
       dockerfile: Dockerfile
@@ -571,6 +583,8 @@ services:
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
+        SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -616,6 +630,8 @@ services:
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}  
         ENABLE_PEERS: ${ENABLE_PEERS}
         MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
+        ENABLE_LOGROTATE: ${ENABLE_LOGROTATE}
+        LOGROTATE_MIGRID: ${LOGROTATE_MIGRID}
         PEERS_MANDATORY: ${PEERS_MANDATORY}
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
@@ -640,7 +656,10 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
+        DIGEST_SALT: ${DIGEST_SALT:-AUTO}
+        CRYPTO_SALT: ${CRYPTO_SALT:-AUTO}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -654,14 +673,9 @@ services:
       RUN_SERVICES: ftps rsyslogd
     depends_on:
       - migrid
-    ports:
-      # NOTE: expose the unique raw port(s) to host 
-      - "8021:8021"
-      - "8100-8399:8100-8399"
-    #networks:
-    #  default:
-    #    aliases:
-    #      - dev-ftps.erda.dk
+    #ports:
+    #  # NOTE: expose the unique raw port(s) to host 
+    #  - "8021:8021"
     volumes:
       - type: volume
         source: httpd
@@ -678,11 +692,14 @@ services:
       - type: volume
         source: migrid-ftps-syslog
         target: /var/log
+      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
+      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
     command: /app/docker-entry.sh -k
 
   migrid-webdavs:
     container_name: migrid-webdavs
     image: ucphhpc/migrid:$BUILD_TYPE
+    network_mode: "host"
     build:
       context: ./
       dockerfile: Dockerfile
@@ -734,6 +751,8 @@ services:
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
+        SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -779,6 +798,8 @@ services:
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
         ENABLE_PEERS: ${ENABLE_PEERS}
         MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
+        ENABLE_LOGROTATE: ${ENABLE_LOGROTATE}
+        LOGROTATE_MIGRID: ${LOGROTATE_MIGRID}
         PEERS_MANDATORY: ${PEERS_MANDATORY}
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
@@ -803,7 +824,10 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
+        DIGEST_SALT: ${DIGEST_SALT:-AUTO}
+        CRYPTO_SALT: ${CRYPTO_SALT:-AUTO}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -817,13 +841,9 @@ services:
       RUN_SERVICES: webdavs rsyslogd
     depends_on:
       - migrid
-    ports:
-      # NOTE: expose the unique raw port(s) to host 
-      - "4443:4443"
-    #networks:
-    #  default:
-    #    aliases:
-    #      - dev-webdavs.erda.dk
+    #ports:
+    #  # NOTE: expose the unique raw port(s) to host 
+    #  - "4443:4443"
     volumes:
       - type: volume
         source: httpd
@@ -840,36 +860,40 @@ services:
       - type: volume
         source: migrid-webdavs-syslog
         target: /var/log
+      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
+      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
     command: /app/docker-entry.sh -k
 
-  nginx-proxy:
-    image: jwilder/nginx-proxy
-    container_name: nginx-proxy
-    # TODO: can we add an httpd health check and switch to wait for condition
-    #       service_healthy to avoid the storm of initial avoid nginx errors
-    #       from racing apache during start up? Apparently that will not work
-    #       with on-going jupyter integration due to swarm mode, however.
-    depends_on:
-      - migrid
-    ports:
-      # NOTE: expose the unique raw port(s) to host 
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ./nginx-proxy-dev.erda.dk.conf:/etc/nginx/conf.d/migrid.conf
-      - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
-      - ./certs/MiG/*.erda.dk/server.crt:/etc/nginx/certs/dev-www.erda.dk.crt
-      - ./certs/MiG/*.erda.dk/server.crt:/etc/nginx/certs/dev-cert.erda.dk.crt
-      - ./certs/MiG/*.erda.dk/server.crt:/etc/nginx/certs/dev-ext.erda.dk.crt
-      - ./certs/MiG/*.erda.dk/server.crt:/etc/nginx/certs/dev-oid.erda.dk.crt
-      - ./certs/MiG/*.erda.dk/server.crt:/etc/nginx/certs/dev-sid.erda.dk.crt
-      - ./certs/MiG/*.erda.dk/server.key:/etc/nginx/certs/dev-www.erda.dk.key
-      - ./certs/MiG/*.erda.dk/server.key:/etc/nginx/certs/dev-cert.erda.dk.key
-      - ./certs/MiG/*.erda.dk/server.key:/etc/nginx/certs/dev-ext.erda.dk.key
-      - ./certs/MiG/*.erda.dk/server.key:/etc/nginx/certs/dev-oid.erda.dk.key
-      - ./certs/MiG/*.erda.dk/server.key:/etc/nginx/certs/dev-sid.erda.dk.key
-      - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
+# NOTE: not used in stand-alone mode
+#  nginx-proxy:
+#    image: jwilder/nginx-proxy
+#    container_name: nginx-proxy
+#    network_mode: "host"
+#    # TODO: can we add an httpd health check and switch to wait for condition
+#    #       service_healthy to avoid the storm of initial avoid nginx errors
+#    #       from racing apache during start up? Apparently that will not work
+#    #       with on-going jupyter integration due to swarm mode, however.
+#    depends_on:
+#      - migrid
+#    #ports:
+#    #  # NOTE: expose the unique raw port(s) to host 
+#    #  - "80:80"
+#    #  - "443:443"
+#    volumes:
+#      - /var/run/docker.sock:/tmp/docker.sock:ro
+#      - ./nginx-proxy-dev.erda.dk.conf:/etc/nginx/conf.d/migrid.conf
+#      - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
+#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-www.erda.dk.crt
+#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-cert.erda.dk.crt
+#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-ext.erda.dk.crt
+#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-oid.erda.dk.crt
+#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-sid.erda.dk.crt
+#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-www.erda.dk.key
+#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-cert.erda.dk.key
+#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-ext.erda.dk.key
+#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-oid.erda.dk.key
+#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-sid.erda.dk.key
+#      - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
 
 volumes:
   certs:

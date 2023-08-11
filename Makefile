@@ -30,7 +30,7 @@ ifeq (,$(wildcard ./docker-compose.yml))
 	@echo
 	@echo "*** No docker-compose.yml selected - defaulting to migrid.test ***"
 	@echo
-	@ln -s docker-compose_migrid.test.yml docker-compose.yml
+	@ln -s docker-compose_defaults.yml docker-compose.yml
 	@sleep 5
 endif
 	mkdir -p certs
