@@ -20,17 +20,25 @@ all: init dockerbuild up
 
 init:
 ifeq (,$(wildcard ./Dockerfile))
+	@echo
+	@echo "*** No Dockerfile selected - defaulting to centos7 ***"
+	@echo
 	ln -s Dockerfile.centos7 Dockerfile
+	@sleep 2
 endif
 ifeq (,$(wildcard ./.env))
+	@echo
+	@echo "*** No deployment environment selected - defaulting to defaults ***"
+	@echo
 	ln -s defaults.env .env
+	@sleep 2
 endif
 ifeq (,$(wildcard ./docker-compose.yml))
 	@echo
-	@echo "*** No docker-compose.yml selected - defaulting to migrid.test ***"
+	@echo "*** No docker-compose.yml selected - defaulting to defaults ***"
 	@echo
-	@ln -s docker-compose_defaults.yml docker-compose.yml
-	@sleep 5
+	ln -s docker-compose_defaults.yml docker-compose.yml
+	@sleep 2
 endif
 	mkdir -p certs
 	mkdir -p httpd
