@@ -15,7 +15,6 @@ ARG ARCH=amd64
 ARG UID=1000
 ARG GID=1000
 ARG BUILD_TYPE=basic
-ARG BUILD_TARGET=development
 ARG DOMAIN=migrid.test
 ARG WILDCARD_DOMAIN=*.migrid.test
 ARG PUBLIC_DOMAIN=www.migrid.test
@@ -149,7 +148,6 @@ FROM --platform=linux/$ARCH rockylinux:8 as init
 ARG UID
 ARG GID
 ARG BUILD_TYPE
-#ARG BUILD_TARGET
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG PUBLIC_DOMAIN
@@ -194,7 +192,6 @@ ARG JUPYTER_SERVICES
 
 RUN echo "UID and GID: $UID $GID"
 RUN echo "Build type: $BUILD_TYPE"
-#RUN echo "Build target: $BUILD_TARGET"
 RUN echo "Domains: $DOMAIN" "${PUBLIC_DOMAIN}" "${MIGCERT_DOMAIN}" \
            "${EXTCERT_DOMAIN}" "${MIGOID_DOMAIN}" "${EXTOID_DOMAIN}" \
            "${EXTOIDC_DOMAIN}" "${SID_DOMAIN}" "${IO_DOMAIN}" \

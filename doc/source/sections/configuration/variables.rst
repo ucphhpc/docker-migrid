@@ -32,9 +32,6 @@ Variables
    * - BUILD_TYPE
      - basic
      - Unused for now but might be used to differentiate builds in the future
-   * - BUILD_TARGET
-     - development
-     - Unused for now but might be used to differentiate builds in the future
    * - DOMAIN
      - migrid.test
      - The main domain under which the migrid service is hosted. Used for web landing page.
