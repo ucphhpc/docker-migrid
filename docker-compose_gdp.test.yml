@@ -10,6 +10,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       TZ: ${TZ}
+      NETWORK: ${DOCKER_NETWORK:-docker-migrid_default}
 
   # The migrid core services including httpd and tightly integrated services
   # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
@@ -188,10 +189,9 @@ services:
     env_file:
       - migrid-httpd.env
     # IMPORTANT: please ONLY run with this test@ user for non-public hosts
-    command: /app/docker-entry.sh -u test@gdp.testing -p TestPw0rd -s "sftp webdavs"
+    command: /app/docker-entry.sh -u ${MIG_TEST_USER} -p ${MIG_TEST_USER_PASSWORD} -s "sftp ftps webdavs"
     # NOTE: public hosts should create users through sign up and run like this
     #command: /app/docker-entry.sh
-    #privileged: true
 
   # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
   #

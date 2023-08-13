@@ -1,0 +1,7 @@
+source ../.env
+
+RED="\e[41m"
+GREEN="\e[42m"
+ENDCOLOR="\e[49m"
+
+echo -n "Running $(basename $0): "

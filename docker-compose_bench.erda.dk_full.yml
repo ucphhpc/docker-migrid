@@ -14,7 +14,6 @@ services:
 
   # The migrid core services including httpd and tightly integrated services
   # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
-
   # NOTE: in order to test the publishing of container services on the host
   #       with standard ports on 1.2.3.x one can set up a local dummy device:
   #       sudo ip link add dummylan type dummy
@@ -195,9 +194,6 @@ services:
       - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
     env_file:
       - migrid-httpd.env
-    # IMPORTANT: only enable test@ user during debug on internet-exposed hosts
-    #command: /app/docker-entry.sh -u test@bench.erda.dk -p TestPw0rd -s "sftp ftps webdavs" -k
-    # NOTE: public hosts should create users through sign up and run like this
     command: /app/docker-entry.sh -k
 
   # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
@@ -688,7 +684,7 @@ services:
     #ports:
     #  # NOTE: expose the unique raw port(s) to host 
     #  - "8021:8021"
-    #  - "8100-8200:8100-8200"
+    #  - "8100-8399:8100-8399"
     #networks:
     #  default:
     #    aliases:

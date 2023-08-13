@@ -10,6 +10,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       TZ: ${TZ}
+      NETWORK: ${DOCKER_NETWORK:-docker-migrid_default}
 
   # The migrid core services including httpd and tightly integrated services
   # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
@@ -186,9 +187,6 @@ services:
         target: /var/log
     env_file:
       - migrid-httpd.env
-    # IMPORTANT: only enable test@ user during debug on internet-exposed hosts
-    #command: /app/docker-entry.sh -u test@dev.erda.dk -p TestPw0rd -s "sftp ftps webdavs" -k
-    # NOTE: public hosts should create users through sign up and run like this
     command: /app/docker-entry.sh -k
 
   # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
@@ -659,7 +657,7 @@ services:
     ports:
       # NOTE: expose the unique raw port(s) to host 
       - "8021:8021"
-      - "8100-8200:8100-8200"
+      - "8100-8399:8100-8399"
     #networks:
     #  default:
     #    aliases:
