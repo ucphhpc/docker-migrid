@@ -28,9 +28,9 @@ jobs:
       - name: Start services
         run: |
           docker-compose up -d
-      #- name: Run tests
-      #  run: |
-      #    make test
+      - name: Run tests
+        run: |
+          make test
       - name: Read logs after bootup
         run: |
           docker-compose logs

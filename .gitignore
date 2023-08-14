@@ -108,6 +108,7 @@ venv.bak/
 # Migrid mount volume directories
 httpd/
 state/
+log/
 
 # Do not store current config and db
 mig/server/MiG-users.db

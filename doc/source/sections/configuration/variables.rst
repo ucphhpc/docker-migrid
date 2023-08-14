@@ -309,7 +309,7 @@ Variables
      - False
      - Generate and use self-signed host certificates during build. Also disables certificate verification when connecting to OpenID with self signed cert
    * - MIG_PASSWORD_POLICY
-     - MODERN:12
+     - MEDIUM
      - The password strength policy for user sign-up and all enabled I/O-services. Possible values are: NONE, WEAK, MEDIUM, HIGH, MODERN:L, CUSTOM:L:C where `:L` can be used to specify the minimum length and `:L:C` both the length and the required number of character classes (lowercase, uppercase, numeric and other). More details are available in the resulting MiGserver.conf but in short MEDIUM equals CUSTOM:8:3, HIGH equals CUSTOM:10:4 and MODERN:12 equals CUSTOM:12:1. NOTE: modern password guidelines now typically favor complexity requirements through longer passwords over the far less user-friendly character class demands.
    * - BUILD_MOD_AUTH_OPENID
      - False
