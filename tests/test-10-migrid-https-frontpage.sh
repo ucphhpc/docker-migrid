@@ -9,6 +9,7 @@ ${DOCKER:?} run --rm --network host curlimages/curl:8.2.1 \
   -k \
   -s \
   -v \
+  --fail \
   -o /dev/null \
   -sw 'HTTP status code: %{http_code}\n' \
   > $(basename "$0").log \

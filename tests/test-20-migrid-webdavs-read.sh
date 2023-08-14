@@ -11,6 +11,7 @@ ${DOCKER:?} run --rm --network host curlimages/curl:8.2.1 \
   -s \
   -v \
   -o /dev/null \
+  --fail \
   -sw '%{http_code}\n' \
   > $(basename "$0").log \
   2>&1
