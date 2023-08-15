@@ -244,6 +244,7 @@ RUN yum update -y \
     httpd \
     htop \
     openssh \
+    cronie \
     crontabs \
     nano \
     mod_ssl \

@@ -249,6 +249,7 @@ RUN dnf update -y \
     httpd \
     htop \
     openssh \
+    cronie \
     crontabs \
     nano \
     mod_ssl \

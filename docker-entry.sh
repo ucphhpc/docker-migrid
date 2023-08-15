@@ -92,6 +92,17 @@ for svc in ${RUN_SERVICES}; do
         else
             CHK_SERVICES="${CHK_SERVICES} $svc"
         fi
+    elif [ "$svc" = "crond" ]; then
+        # TODO: can we switch to proper service start?
+        #service crond start
+        /usr/sbin/crond
+        status=$?
+        if [ $status -ne 0 ]; then
+            echo "Failed to start $svc: $status"
+            exit $status
+        else
+            CHK_SERVICES="${CHK_SERVICES} $svc"
+        fi
     else
         # Start requested migrid daemons individually and detect if enabled
         service migrid startdaemon $svc

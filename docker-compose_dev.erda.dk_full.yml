@@ -163,7 +163,7 @@ services:
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy rsyslogd
+      RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy crond rsyslogd
     # NOTE: devdns not used in stand-alone mode
     #depends_on:
     #  - devdns
