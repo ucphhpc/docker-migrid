@@ -187,7 +187,7 @@ services:
         target: /var/log
     env_file:
       - migrid-httpd.env
-    command: /app/docker-entry.sh -k
+    command: /app/docker-entry.sh -k -V
 
   # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
   #

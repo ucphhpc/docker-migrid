@@ -195,7 +195,7 @@ services:
       - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
     env_file:
       - migrid-httpd.env
-    command: /app/docker-entry.sh -k
+    command: /app/docker-entry.sh -k -V
 
   # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
   #

@@ -5,6 +5,7 @@
 # Continuously checks whether the selected services are still alive.
 
 KEEPALIVE=0
+VERSIONINFO=0
 
 # Make sure requested timezone is actually used everywhere for consistent 
 # log time stamps.
@@ -25,14 +26,35 @@ else
 fi
 
 # Create any user requested
-while getopts ku:p:s: option; do
+while getopts ku:p:s:V option; do
     case "${option}" in
         k) KEEPALIVE=1;;
         u) USERNAME=${OPTARG};;
         p) PASSWORD=${OPTARG};;
         s) SVCLOGINS=${OPTARG};;
+        V) VERSIONINFO=1;;
     esac
 done
+
+# Display active OS and migrid version to ease support
+if [ $VERSIONINFO -eq 1 ]; then
+  if [ -x /usr/bin/lsb_release ]; then
+    OSVERSION=$(/usr/bin/lsb_release -d -s)
+  elif [ -e /etc/redhat-release ]; then
+    OSVERSION=$(cat /etc/redhat-release)
+  elif [ -e /etc/debian_version ]; then
+    OSVERSION=$(cat /etc/debian_version)
+  else
+    OSVERSION="Unknown OS"
+  fi
+  if [ -e /home/mig/active-migrid-version.txt ]; then
+    MIGRIDVERSION=$(cat /home/mig/active-migrid-version.txt)
+  else
+    MIGRIDVERSION="Unknown migrid version"
+  fi
+  echo "Container running on ${OSVERSION}"
+  echo "using ${MIGRIDVERSION}"
+fi
 
 # Create a default account (Use service owner account)
 if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
@@ -130,6 +152,9 @@ while [ ${KEEP_RUNNING} -eq 1 ]; do
             PROCNAME="MiG-sftp-subsys"
             PROCUSER="root"
         elif [ "$svc" = "rsyslogd" ]; then
+            PROCNAME="$svc"
+            PROCUSER="root"
+        elif [ "$svc" = "crond" ]; then
             PROCNAME="$svc"
             PROCUSER="root"
         else

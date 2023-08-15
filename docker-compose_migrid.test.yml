@@ -208,9 +208,9 @@ services:
     env_file:
       - migrid-httpd.env
     # IMPORTANT: please ONLY run with this test@ user for non-public hosts
-    command: /app/docker-entry.sh -u ${MIG_TEST_USER} -p ${MIG_TEST_USER_PASSWORD} -s "sftp ftps webdavs"
+    command: /app/docker-entry.sh -V -u ${MIG_TEST_USER} -p ${MIG_TEST_USER_PASSWORD} -s "sftp ftps webdavs"
     # NOTE: public hosts should create users through sign up and run like this
-    #command: /app/docker-entry.sh
+    #command: /app/docker-entry.sh -V
 
   # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
   #
