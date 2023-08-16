@@ -13,6 +13,22 @@ Docker MiGrid Structure
 The Docker MiGrid is build up of several different components and services.
 These have been seperated into two different categories, Associated services and MiGrid services.
 
+Example Deployments
+-------------------
+
+This repository contains three example deployments which can be used to test migrid or be extended to production use.
+
+- development
+  This is the default deployment which contains a standard migrid setup and a test account to login.
+
+- development_gdp
+  This deployment contains a configuration with all GDPR related functionalities enabled. That means the system will be
+  more closed down and depend on higher security standards.
+
+- production
+  This is an example of a production configuration which is not deployable additional configuration.
+  It runs in host network namespace and relies on multiple available IP addresses with corresponding (external) DNS entries.
+  This deployment is meant to be used as a baseline for production setups. Might be used with docker-compose extends or similar.
 
 Associated Services
 -------------------
