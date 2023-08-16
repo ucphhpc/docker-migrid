@@ -28,16 +28,16 @@ ifeq (,$(wildcard ./Dockerfile))
 endif
 ifeq (,$(wildcard ./.env))
 	@echo
-	@echo "*** No deployment environment selected - defaulting to defaults ***"
+	@echo "*** No deployment environment selected - defaulting to development ***"
 	@echo
-	ln -s defaults.env .env
+	ln -s development.env .env
 	@sleep 2
 endif
 ifeq (,$(wildcard ./docker-compose.yml))
 	@echo
-	@echo "*** No docker-compose.yml selected - defaulting to defaults ***"
+	@echo "*** No docker-compose.yml selected - defaulting to development ***"
 	@echo
-	ln -s docker-compose_defaults.yml docker-compose.yml
+	ln -s docker-compose_development.yml docker-compose.yml
 	@sleep 2
 endif
 	mkdir -p certs

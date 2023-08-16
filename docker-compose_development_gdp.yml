@@ -1,4 +1,3 @@
-# docker-compose version
 version: '3.7'
 
 services:
@@ -137,8 +136,6 @@ services:
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
         ENABLE_PEERS: ${ENABLE_PEERS}
         MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
-        ENABLE_LOGROTATE: ${ENABLE_LOGROTATE}
-        LOGROTATE_MIGRID: ${LOGROTATE_MIGRID}
         PEERS_MANDATORY: ${PEERS_MANDATORY}
         PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
         PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
@@ -183,11 +180,11 @@ services:
     networks:
       default:
         aliases:
-          - www.migrid.test
-          - cert.migrid.test
-          - ext.migrid.test
-          - oid.migrid.test
-          - sid.migrid.test
+          - www.gdp.test
+          - cert.gdp.test
+          - ext.gdp.test
+          - oid.gdp.test
+          - sid.gdp.test
     volumes:
       - type: volume
         source: httpd
@@ -204,8 +201,10 @@ services:
       - type: volume
         source: migrid-syslog
         target: /var/log
-      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
-      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
+      - type: bind
+        source: /run/dbus/system_bus_socket
+        target: /run/dbus/system_bus_socket
+
     env_file:
       - migrid-httpd.env
     # IMPORTANT: please ONLY run with this test@ user for non-public hosts
@@ -275,7 +274,6 @@ services:
         SHORT_TITLE: ${SHORT_TITLE}
         MIG_OID_TITLE: ${MIG_OID_TITLE}
         EXT_OID_TITLE: ${EXT_OID_TITLE}
-        PEERS_PERMIT: ${PEERS_PERMIT}
         VGRID_CREATORS: ${VGRID_CREATORS}
         VGRID_MANAGERS: ${VGRID_MANAGERS}
         MIG_SVN_REPO: ${MIG_SVN_REPO}
@@ -309,18 +307,13 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
-        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
-        ENABLE_PEERS: ${ENABLE_PEERS}
+        ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
         MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
         ENABLE_LOGROTATE: ${ENABLE_LOGROTATE}
         LOGROTATE_MIGRID: ${LOGROTATE_MIGRID}
-        PEERS_MANDATORY: ${PEERS_MANDATORY}
-        PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
-        PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
-        ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
         BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID:-False}
         UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC:-False}
         UPGRADE_PARAMIKO: ${UPGRADE_PARAMIKO:-False}
@@ -348,7 +341,6 @@ services:
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
-        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -360,11 +352,11 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "8443:8443"
+      - "${OPENID_PORT}:${OPENID_PORT}"
     networks:
       default:
         aliases:
-          - openid.migrid.test
+          - openid.gdp.test
     volumes:
       - type: volume
         source: httpd
@@ -382,6 +374,7 @@ services:
         source: migrid-openid-syslog
         target: /var/log
     command: /app/docker-entry.sh
+    #privileged: true
 
   migrid-sftp:
     container_name: migrid-sftp
@@ -442,7 +435,6 @@ services:
         SHORT_TITLE: ${SHORT_TITLE}
         MIG_OID_TITLE: ${MIG_OID_TITLE}
         EXT_OID_TITLE: ${EXT_OID_TITLE}
-        PEERS_PERMIT: ${PEERS_PERMIT}
         VGRID_CREATORS: ${VGRID_CREATORS}
         VGRID_MANAGERS: ${VGRID_MANAGERS}
         MIG_SVN_REPO: ${MIG_SVN_REPO}
@@ -476,18 +468,13 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
-        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
-        ENABLE_PEERS: ${ENABLE_PEERS}
+        ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
         MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
         ENABLE_LOGROTATE: ${ENABLE_LOGROTATE}
         LOGROTATE_MIGRID: ${LOGROTATE_MIGRID}
-        PEERS_MANDATORY: ${PEERS_MANDATORY}
-        PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
-        PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
-        ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
         BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID:-False}
         UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC:-False}
         UPGRADE_PARAMIKO: ${UPGRADE_PARAMIKO:-False}
@@ -515,7 +502,6 @@ services:
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
-        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -527,12 +513,12 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "2222:2222"
-      - "22222:22222"
+      - "${SFTP_PORT}:${SFTP_PORT}"
+      - "${SFTP_SUBSYS_PORT}:${SFTP_SUBSYS_PORT}"
     networks:
       default:
         aliases:
-          - sftp.migrid.test
+          - sftp.gdp.test
     volumes:
       - type: volume
         source: httpd
@@ -549,9 +535,8 @@ services:
       - type: volume
         source: migrid-sftp-syslog
         target: /var/log
-      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
-      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
     command: /app/docker-entry.sh
+    #privileged: true
 
   migrid-ftps:
     container_name: migrid-ftps
@@ -612,7 +597,6 @@ services:
         SHORT_TITLE: ${SHORT_TITLE}
         MIG_OID_TITLE: ${MIG_OID_TITLE}
         EXT_OID_TITLE: ${EXT_OID_TITLE}
-        PEERS_PERMIT: ${PEERS_PERMIT}
         VGRID_CREATORS: ${VGRID_CREATORS}
         VGRID_MANAGERS: ${VGRID_MANAGERS}
         MIG_SVN_REPO: ${MIG_SVN_REPO}
@@ -646,18 +630,13 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
-        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}  
-        ENABLE_PEERS: ${ENABLE_PEERS}
+        ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
         MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
         ENABLE_LOGROTATE: ${ENABLE_LOGROTATE}
         LOGROTATE_MIGRID: ${LOGROTATE_MIGRID}
-        PEERS_MANDATORY: ${PEERS_MANDATORY}
-        PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
-        PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
-        ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
         BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID:-False}
         UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC:-False}
         UPGRADE_PARAMIKO: ${UPGRADE_PARAMIKO:-False}
@@ -685,7 +664,6 @@ services:
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
-        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -697,12 +675,12 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "8021:8021"
-      - "8100-8399:8100-8399"
+      - "${FTPS_CTRL_PORT}:${FTPS_CTRL_PORT}"
+      - "${FTPS_PASSIVE_PORTS}:${FTPS_PASSIVE_PORTS}"
     networks:
       default:
         aliases:
-          - ftps.migrid.test
+          - ftps.gdp.test
     volumes:
       - type: volume
         source: httpd
@@ -719,9 +697,8 @@ services:
       - type: volume
         source: migrid-ftps-syslog
         target: /var/log
-      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
-      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
     command: /app/docker-entry.sh
+    #privileged: true
 
   migrid-webdavs:
     container_name: migrid-webdavs
@@ -782,7 +759,6 @@ services:
         SHORT_TITLE: ${SHORT_TITLE}
         MIG_OID_TITLE: ${MIG_OID_TITLE}
         EXT_OID_TITLE: ${EXT_OID_TITLE}
-        PEERS_PERMIT: ${PEERS_PERMIT}
         VGRID_CREATORS: ${VGRID_CREATORS}
         VGRID_MANAGERS: ${VGRID_MANAGERS}
         MIG_SVN_REPO: ${MIG_SVN_REPO}
@@ -816,18 +792,13 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
-        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
-        ENABLE_PEERS: ${ENABLE_PEERS}
+        ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
         MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
         ENABLE_LOGROTATE: ${ENABLE_LOGROTATE}
         LOGROTATE_MIGRID: ${LOGROTATE_MIGRID}
-        PEERS_MANDATORY: ${PEERS_MANDATORY}
-        PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
-        PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
-        ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
         BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID:-False}
         UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC:-False}
         UPGRADE_PARAMIKO: ${UPGRADE_PARAMIKO:-False}
@@ -855,7 +826,6 @@ services:
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
-        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -867,11 +837,11 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "4443:4443"
+      - "${DAVS_PORT}:${DAVS_PORT}"
     networks:
       default:
         aliases:
-          - webdavs.migrid.test
+          - webdavs.gdp.test
     volumes:
       - type: volume
         source: httpd
@@ -888,9 +858,8 @@ services:
       - type: volume
         source: migrid-webdavs-syslog
         target: /var/log
-      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
-      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
     command: /app/docker-entry.sh
+    #privileged: true
 
   nginx-proxy:
     image: jwilder/nginx-proxy
@@ -912,18 +881,18 @@ services:
       - "448:448"
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ./nginx-proxy-defaults.conf:/etc/nginx/conf.d/migrid.conf
+      - ./nginx-proxy-development_gdp.conf:/etc/nginx/conf.d/migrid.conf
       - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
-      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/www.migrid.test.crt
-      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/cert.migrid.test.crt
-      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/ext.migrid.test.crt
-      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/oid.migrid.test.crt
-      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/sid.migrid.test.crt
-      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/www.migrid.test.key
-      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/cert.migrid.test.key
-      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/ext.migrid.test.key
-      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/oid.migrid.test.key
-      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/sid.migrid.test.key
+      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/www.gdp.test.crt
+      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/cert.gdp.test.crt
+      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/ext.gdp.test.crt
+      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/oid.gdp.test.crt
+      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/sid.gdp.test.crt
+      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/www.gdp.test.key
+      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/cert.gdp.test.key
+      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/ext.gdp.test.key
+      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/oid.gdp.test.key
+      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/sid.gdp.test.key
       - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
 
 volumes:
