@@ -8,7 +8,7 @@ on:
     branches:
       - master
     paths-ignore:
-      - '**/README.md'
+      - '**/README.*'
       - 'doc/**'
       - '1.gocd.yml'
       - '.gitignore'
