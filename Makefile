@@ -98,7 +98,7 @@ test:
 		err=0; \
 		for test in test-*.sh ; do \
 			bash ./$${test} || err=$$?; \
-			if [[ $$err != 0 ]]; then \
+			if [ $$err != 0 ]; then \
 				cat $${test}.log; \
 				exit $$err; \
 			fi; \

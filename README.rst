@@ -8,7 +8,7 @@ docker-migrid
 |docsbadge|
 
 .. |cibadge| image:: https://github.com/benibr/docker-migrid/actions/workflows/ci.yml/badge.svg
-    :target: https://github.com/benibr/docker-migrid/actions/workflows/ci.yml
+    :target: https://github.com/ucphhpc/docker-migrid/actions/workflows/ci.yml
     :alt: Continuous Integration
 |cibadge|
 

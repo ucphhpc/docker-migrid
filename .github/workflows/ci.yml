@@ -8,13 +8,13 @@ on:
     branches:
       - master
     paths-ignore:
-      - '**/README.md'
+      - '**/README.*'
       - 'doc/**'
       - '1.gocd.yml'
       - '.gitignore'
 
 jobs:
-  default-centos7:
+  defaults:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository code
@@ -31,9 +31,12 @@ jobs:
       - name: Run tests
         run: |
           make test
-      - name: Read logs after bootup
+      - name: Read docker-compose logs
         run: |
           docker-compose logs
+      - name: Read migrid logs
+        run: |
+          tail -n +1 state/log/*
       - name: Stop services
         run: |
           docker-compose down
