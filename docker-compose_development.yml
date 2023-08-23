@@ -40,7 +40,7 @@ services:
 
   migrid:
     container_name: migrid
-    image: ucphhpc/migrid
+    image: ucphhpc/migrid${CONTAINER_TAG}
     build:
       context: ./
       dockerfile: Dockerfile
@@ -218,7 +218,7 @@ services:
   # Multiple containers with individual daemons not provided by base migrid
   migrid-openid:
     container_name: migrid-openid
-    image: ucphhpc/migrid
+    image: ucphhpc/migrid${CONTAINER_TAG}
     build:
       context: ./
       dockerfile: Dockerfile
@@ -385,7 +385,7 @@ services:
 
   migrid-sftp:
     container_name: migrid-sftp
-    image: ucphhpc/migrid
+    image: ucphhpc/migrid${CONTAINER_TAG}
     build:
       context: ./
       dockerfile: Dockerfile
@@ -555,7 +555,7 @@ services:
 
   migrid-ftps:
     container_name: migrid-ftps
-    image: ucphhpc/migrid
+    image: ucphhpc/migrid${CONTAINER_TAG}
     build:
       context: ./
       dockerfile: Dockerfile
@@ -725,7 +725,7 @@ services:
 
   migrid-webdavs:
     container_name: migrid-webdavs
-    image: ucphhpc/migrid
+    image: ucphhpc/migrid${CONTAINER_TAG}
     build:
       context: ./
       dockerfile: Dockerfile

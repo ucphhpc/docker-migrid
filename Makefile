@@ -12,9 +12,15 @@ DOCKER = $(shell which docker || which podman)
 DOCKER_COMPOSE = $(shell which docker-compose || which podman-compose || echo 'docker compose')
 $(echo ${DOCKER_COMPOSE} >/dev/null)
 
-.PHONY: all init dockerbuild dockerpush
-.PHONY: dockerclean distclean stateclean clean warning
+.PHONY: all init clean warning
+.PHONY: dockerclean distclean stateclean dockerbuild dockerpush
 .PHONY: up stop down
+
+.ONESHELL:
+
+ifeq ("$(wildcard .env)",".env")
+include .env
+endif
 
 all: init dockerbuild up
 
@@ -64,13 +70,13 @@ dockerbuild: init
 dockerclean:
 	# remove latest image and dangling cache entries
 	${DOCKER_COMPOSE} down || true
-	${DOCKER} rmi -f $(OWNER)/$(IMAGE)
+	${DOCKER} rmi -f $(OWNER)/$(IMAGE)${CONTAINER_TAG}
 	# remove dangling images and build cache
 	${DOCKER} image prune -f
 	${DOCKER} builder prune -f
 
 dockerpush:
-	${DOCKER} push $(OWNER)/$(IMAGE)
+	${DOCKER} push $(OWNER)/$(IMAGE)${CONTAINER_TAG}
 
 clean:
 	rm -fr ./mig
