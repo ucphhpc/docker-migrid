@@ -593,6 +593,8 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
       pip2 install 'pyOpenSSL<22' 'paramiko<3'; \
       if [ "${WITH_PY3}" = "True" ]; then \
         # NOTE: paramiko-3.0.0 & pyOpenSSL-22.0 deps dropped python3.6 support
+        # NOTE: cryptography-38+ breaks pyOpenSSL-21 in py3 here (ftps crashes)
+        #       background at https://github.com/pyca/pyopenssl/issues/1143
         # NOTE: a newer setuptools MAY be needed and setuptools_rust MUST be 
         #       installed separately here for whatever reason.
         # IMPORTANT: sftp_subsys.py is explicitly called with 'python -s' to
@@ -607,7 +609,7 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
         #  Only available from pip on CentOS 7.
         pip3 install 'typing-extensions<3.8'; \
         pip3 install setuptools_rust; \
-        pip3 install --prefix=/usr pynacl bcrypt cryptography \
+        pip3 install --prefix=/usr pynacl bcrypt 'cryptography<38' \
 	                           'pyOpenSSL<22' 'paramiko<3'; \
       fi; \
     fi;
