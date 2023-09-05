@@ -108,9 +108,10 @@ ARG PEERS_EXPLICIT_FIELDS=""
 ARG PEERS_CONTACT_HINT="authorized to invite you as peer"
 ARG ENABLE_SELF_SIGNED_CERTS=False
 ARG MIG_PASSWORD_POLICY="MEDIUM"
+ARG ENABLE_LOGROTATE="False"
 # TODO: logrotate conf needs to be adjusted to the manual docker service launch 
-#ARG MIG_LOGROTATE="True"
-ARG MIG_LOGROTATE="False"
+#ARG LOGROTATE_MIGRID="True"
+ARG LOGROTATE_MIGRID="False"
 ARG BUILD_MOD_AUTH_OPENID=False
 ARG UPGRADE_MOD_AUTH_OPENIDC=False
 ARG UPGRADE_PARAMIKO=False
@@ -1072,8 +1073,12 @@ RUN chmod 755 generated-confs/{migstateclean,migerrors} \
     && cp generated-confs/{migstateclean,migerrors} /etc/cron.daily/
 
 # Logrotate config if enabled
-RUN if [ "${MIG_LOGROTATE}" = "False" ]; then \
+RUN if [ "${ENABLE_LOGROTATE}" = "True" ]; then \
+      if [ "${LOGROTATE_MIGRID}" = "True" ]; then \
         cp generated-confs/logrotate-migrid /etc/logrotate.d/migrid; \
+      fi; \
+    else \
+        rm /etc/crond.daily/logrotate; \
     fi;
 
 # Init scripts
