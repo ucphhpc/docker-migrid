@@ -1123,7 +1123,7 @@ RUN if [ "${ENABLE_LOGROTATE}" = "True" ]; then \
         cp generated-confs/logrotate-migrid /etc/logrotate.d/migrid; \
       fi; \
     else \
-        rm /etc/crond.daily/logrotate; \
+        rm /etc/cron.daily/logrotate; \
     fi;
 
 # Init scripts
