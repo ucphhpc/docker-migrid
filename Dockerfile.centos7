@@ -440,7 +440,7 @@ RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
 	&& yum update -y \
 	&& yum install -y jansson-devel \
 		https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.0/cjose-0.6.1.5-2.el7.x86_64.rpm \
-		https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.13.1/mod_auth_openidc-2.4.13.1-1.el7.x86_64.rpm \
+		https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.13.2/mod_auth_openidc-2.4.13.2-1.el7.x86_64.rpm \
                 && yum clean all \
                 && rm -fr /var/cache/yum; \
     fi;
