@@ -77,6 +77,7 @@ services:
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
         SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -248,6 +249,7 @@ services:
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
         SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -409,6 +411,7 @@ services:
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
         SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -571,6 +574,7 @@ services:
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
         SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -733,6 +737,7 @@ services:
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
         SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
