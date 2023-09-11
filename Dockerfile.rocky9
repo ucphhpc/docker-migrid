@@ -116,7 +116,8 @@ ARG BUILD_MOD_AUTH_OPENID=False
 ARG UPGRADE_MOD_AUTH_OPENIDC=False
 ARG UPGRADE_PARAMIKO=False
 ARG PUBKEY_FROM_DNS=False
-ARG PREFER_PYTHON3=False
+# NOTE: python2 support is gone on rocky9+
+ARG PREFER_PYTHON3=True
 ARG SIGNUP_METHODS=migoid
 ARG LOGIN_METHODS=migoid
 ARG USER_INTERFACES=V3
@@ -234,15 +235,15 @@ WORKDIR /tmp
 # https://superuser.com/questions/784451/centos-on-docker-how-to-install-doc-files
 RUN sed -i '/nodocs/d' /etc/yum.conf
 
-# NOTE: Enable powertools repo by default on Rocky for cracklib-devel, sshfs, ...
+# NOTE: Enable crb repo by default on rocky9 for cracklib-devel, sshfs, ...
 RUN dnf update -y \
     && dnf install -y epel-release dnf-plugins-core \
-    && dnf config-manager --set-enabled powertools \
+    && dnf config-manager --enable crb \
     && dnf clean all \
     && rm -fr /var/cache/dnf
 
 RUN dnf update -y \
-    && dnf module enable -y mod_auth_openidc \
+    # NOTE: mod_auth_openidc is available by default on rocky9+
     && dnf install -y \
     gcc \
     make \
@@ -257,8 +258,6 @@ RUN dnf update -y \
     crontabs \
     nano \
     mod_ssl \
-    # NOTE: python2 wsgi is no longer available here
-    #mod_wsgi \
     # NOTE: mod_proxy is included in base httpd now
     #mod_proxy \
     # NOTE: OpenID 2.0 needs special care here
@@ -277,21 +276,8 @@ RUN dnf update -y \
     openssh-clients \
     rsyslog \
     lsof \
-    python2-pip \
-    python2-devel \
-    # NOTE: several packages are only available through pip
-    #python2-paramiko \
-    #python2-enchant \
-    #python2-jsonrpclib \
-    python2-requests \
-    python2-psutil \
-    #python2-email-validator \
-    #python2-future \
-    #python2-cffi \
-    #pysendfile \
-    #pyOpenSSL \
-    python2-pyyaml \
-    # NOTE: generally install cracklib from pip as yum/dnf only has py2 version
+    # NOTE: python2 support is gone on rocky9+
+    # NOTE: generally install cracklib from pip as yum/dnf doesn't have it
     #cracklib-python \
     cracklib-devel \
     # NOTE: extra dependencies required for paramiko pip install
@@ -301,8 +287,6 @@ RUN dnf update -y \
     fail2ban \
     ipset \
     wget \
-    # NOTE: no default paramiko for python2 here
-    #&& [ "${UPGRADE_PARAMIKO}" = True ] || yum install -y python-paramiko \
     && dnf clean all \
     && rm -fr /var/cache/dnf
 
@@ -321,15 +305,12 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       python3-email-validator \
       python3-future \
       python3-cffi \
+      python3-openid \
       python3-pyOpenSSL \
       python3-pycurl \
       python3-PyYAML \
-      # NOTE: setuptools_rust requires typing-extensions and pip3 pulls in a
-      #       slightly incompatible version 4.1.1 causing random errors like
-      #       https://github.com/python/typing_extensions/issues/10
-      #       We explicitly install the slightly older but stable 3.7.4 version
-      #       here or with pip3 instead.
-      #       Rocky 8 repos include it so just install here.
+      # NOTE: we can just use native Cryptography and typing-extensions here
+      python3-cryptography \
       python3-typing-extensions \
       # NOTE: only install default paramiko if upgrade not requested
       && [ "${UPGRADE_PARAMIKO}" = True ] || dnf install -y python3-paramiko \
@@ -341,10 +322,9 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
 
 RUN if [ "${PREFER_PYTHON3}" = "True" ]; then \
       echo "set up py3 as default python" && \
-      update-alternatives --set python /usr/bin/python3; \
+      update-alternatives --install /usr/bin/python python /usr/bin/python3 10; \
     else \
-      echo "set up py2 as default python" && \
-      update-alternatives --set python /usr/bin/python2; \
+      echo "*** No python2 support here ***" ; exit 1; \
     fi;
 
 
@@ -355,12 +335,10 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       && dnf update -y \
       && dnf install -y \
       postfix \
-      python-xvfbwrapper \
-      wkhtmltopdf \
+      # NOTE: python2 support is gone on rocky9+
       xorg-x11-server-Xvfb \
       && dnf clean all \
-      && rm -fr /var/cache/dnf \
-      && pip2 install pdfkit; \
+      && rm -fr /var/cache/dnf; \
       if [ "${WITH_PY3}" = "True" ]; then \
          echo "install py3 deps" && \
 	 dnf update -y && \
@@ -458,8 +436,9 @@ RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
 	echo "upgrading mod_auth_openidc from upstream centos7 rpm" \
 	&& yum update -y \
 	&& yum install -y jansson-devel \
-		https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.0/cjose-0.6.1.5-2.el8.x86_64.rpm \
-		https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.13.1/mod_auth_openidc-2.4.13.1-1.el8.x86_64.rpm \
+	        # NOTE: recent cjose is already included in rocky9
+		#https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.0/cjose-0.6.1.5-2.el9.x86_64.rpm \
+		https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.14.3/mod_auth_openidc-2.4.14.3-1.el9.x86_64.rpm \
                 && yum clean all \
                 && rm -fr /var/cache/yum; \
     fi;
@@ -573,23 +552,14 @@ RUN ln -s MiG/${WILDCARD_DOMAIN}/server.crt server.crt \
                [ -L "$domain" ] || ln -s MiG/${WILDCARD_DOMAIN} $domain; \
        done
 
-# Upgrade pip2, required by cryptography - pip-21+ dropped python2 support, however
-RUN python2 -m pip install -U 'pip<21'
-# Upgrade pip3, required by cryptography - pip-22+ dropped py3.6 support, however
-RUN if [ "${WITH_PY3}" = "True" ]; then \
-      python3 -m pip install -U 'pip<22'; \
-    fi;
+# Upgrade pip3 is only required for cryptography from pip - irrelevant here
+#RUN if [ "${WITH_PY3}" = "True" ]; then \
+#      python3 -m pip install -U 'pip'; \
+#    fi;
 
 # NOTE: make certs as mig user
 WORKDIR $MIG_ROOT
 USER $USER
-
-# Prepare mod WSGI for py2 (no longer in dnf here)
-# See standalone notes on https://pypi.org/project/mod-wsgi/
-# TODO: build is broken - fix!
-#RUN dnf install -y apr-devel && dnf clean all && rm -fr /var/cache/dnf
-#RUN pip2 install mod_wsgi-standalone
-
 
 RUN mkdir -p MiG-certificates \
     && cd MiG-certificates \
@@ -610,21 +580,16 @@ ARG UPGRADE_PARAMIKO
 # NOTE: Switch back to root for system-wide pip install here
 USER root
 
-# Prepare py2 dependencies no longer in dnf or just outdated there
+# Prepare py dependencies not in dnf or just outdated there
 
-# NOTE: use jsonrpclib and pysendfile from pip both for py2 and py3 here
-RUN pip2 install 'jsonrpclib<0.2' pysendfile; \
-    if [ "${WITH_PY3}" = "True" ]; then \
+# NOTE: use jsonrpclib and pysendfile from pip for py3 here
+RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install 'jsonrpclib<0.2' pysendfile; \
     fi;
 
 # NOTE: recent paramiko is required for modern host key algo
-# NOTE: paramiko is unavailable for py2 in dnf here so always install it with pip2
 RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
-      # NOTE: paramiko-3.0.0 & pyOpenSSL-22.0 dropped python2 support
-      pip2 install 'pyOpenSSL<22' 'paramiko<3'; \
       if [ "${WITH_PY3}" = "True" ]; then \
-        # NOTE: paramiko-3.0.0 & pyOpenSSL-22.0 deps dropped python3.6 support
         # NOTE: a newer setuptools MAY be needed and setuptools_rust MUST be 
         #       installed separately here for whatever reason.
         # IMPORTANT: sftp_subsys.py is explicitly called with 'python -s' to
@@ -634,101 +599,65 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
         #            pip3. Thus, we force pip3 to install the paramiko plus
         #            dependencies specifically into /usr instead.
         #pip3 install -U setuptools; \
-        # NOTE: explicitly install typing-extensions 3.7 to avoid the
-        #  compatibility issues mentioned in note above.
-        #  Just use distro package on Rocky 8.
-        #pip3 install 'typing-extensions<3.8'; \
-        pip3 install setuptools_rust; \
-        pip3 install --prefix=/usr pynacl bcrypt cryptography \
-	                           'pyOpenSSL<22' 'paramiko<3'; \
+        #pip3 install setuptools_rust; \
+        pip3 install --prefix=/usr paramiko; \
       fi; \
-    else \
-      # NOTE: mimic python3 dnf versions in this case
-      pip2 install 'pyOpenSSL<20' 'cryptography<3.3' 'paramiko<2.5'; \
     fi;
 
-# Prepare OpenID (python-openid for py2 and python-openid2 for py3)
-#RUN pip2 install python-openid
-RUN pip2 install https://github.com/openid/python-openid/archive/master.zip
-RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install python-openid2; \
-    fi;
+# OpenID support in python (python-openid2 for py3) - use alternative from dnf 
+#RUN if [ "${WITH_PY3}" = "True" ]; then \
+#      pip3 install python-openid2; \
+#    fi;
 
 # Modules required by grid_events.py
-# NOTE: watchdog-1.0 dropped python2 support
-RUN pip2 install 'watchdog<1.0' scandir
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install watchdog scandir; \
     fi;
 
 # Modules required by grid_webdavs
-# NOTE: on python 2 we require either wsgidav 1.3 bundled with cherrypy or 
-#       wsgidav 3.x using standalone cheroot
-RUN if [ "${MODERN_WSGIDAV}" = "False" ]; then \
-      pip2 install 'wsgidav<2'; \
-    else \
-      pip2 install 'more-itertools<6' 'jaraco.functools<3' 'jinja2<3' \
-               'markupsafe<2' 'pyyaml<6' cheroot 'wsgidav<4'; \
-    fi;
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install cheroot 'wsgidav>=3.1.1'; \
     fi;
-# Prefer sslkeylog as session tracking helper in webdavs daemon if available.
-# Automatic fallback  to our _sslsession C-extension when not.
-RUN python2 -V 2>&1 | egrep -q 'Python 2\.7\.[0-8]$' || pip2 install sslkeylog
+# Prefer sslkeylog as session tracking helper in webdavs daemon.
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install sslkeylog ; \
     fi;
 
 # Modules required by grid_ftps
 # NOTE: relies on pyOpenSSL and Cryptography from yum/dnf for now
-RUN pip2 install pyftpdlib
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install pyftpdlib; \
     fi;
 
-# Modules required by grid_X IO daemons (not available in yum/dnf for py 3)
+# Modules required by grid_X IO daemons (not available in yum/dnf for py3)
 # IMPORTANT: install in main python site-packages to work with 'python -s'
 #            Otherwise sftpsubsys will fail to import it because the /usr/local
 #            dir used as prefix by default in pip is outside sys.path
-RUN pip2 install --prefix=$(python2-config --prefix) cracklib
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install --prefix=$(python3-config --prefix) cracklib; \
     fi;
 
 # Module required to run pytests
-# NOTE: pytest-5.0 dropped python2 support
-RUN pip2 install 'pytest<5.0'
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install pytest; \
     fi;
 
 # Modules required by 2FA
-# NOTE: pyotp-2.4 dropped python2 support
-RUN pip2 install 'pyotp<2.4'
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install pyotp; \
     fi;
 
 # Modules required for smart country selection
-# NOTE: iso3361-2.0 dropped python2 support
-RUN pip2 install 'iso3166<2.0'
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install iso3166; \
     fi;
 
-# Modules required for email validation (not available in yum/dnf for py 2)
-# NOTE: latest version advertizing python-2.7 support is 1.3.0, but it fails
-#       with SyntaxError on import, so force the previous version on py2.
-#       https://github.com/JoshData/python-email-validator/issues/91
-RUN pip2 install 'email-validator<1.3.0'
+# Modules required for email validation (already available in yum/dnf for py3)
 #RUN if [ "${WITH_PY3}" = "True" ]; then \
 #      pip3 install email-validator; \
 #    fi;
 
 # Modules required for workflows
-# NOTE: nbformat-5.0, nbconvert-6.0 and papermill-2.0 dropped python2 support
-RUN pip2 install 'nbformat<5.0' 'nbconvert<6.0' 'papermill<2.0'
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install nbformat nbconvert papermill; \
     fi;
@@ -900,11 +829,9 @@ RUN echo "Designated jupyter services descriptions: ${JUPYTER_SERVICES_DESC}"
 
 RUN mkdir -p ${MIG_ROOT}/.local/bin; \
     if [ "${PREFER_PYTHON3}" = "True" ]; then \
-      echo "setup py3 as default python in ${MIG_ROOT}" && \
-      ln -s /usr/bin/python3 ${MIG_ROOT}/.local/bin/python; \
+      echo "already has py3 as default python"; \
     else \
-      echo "setup py2 as default python in $MIG_ROOT" && \
-      ln -s /usr/bin/python2 ${MIG_ROOT}/.local/bin/python; \
+      echo "*** No python2 support here ***" ; exit 1; \
     fi;
 
 RUN ./generateconfs.py --source=. \
@@ -1049,8 +976,6 @@ RUN cd $MIG_ROOT/mig/src/libnss-mig \
 # NOTE: both require openssl-devel to build and sslkeylog is only supported
 # on python 2.7.9+ and 3. The sslsession module generally builds but fails at
 # runtime when used with OpenSSL-1.1+, however.
-RUN cd $MIG_ROOT/mig/src/sslsession \
-    && pip2 install . ;
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       cd $MIG_ROOT/mig/src/sslsession \
       && pip3 install . ; \
@@ -1123,7 +1048,7 @@ RUN if [ "${ENABLE_LOGROTATE}" = "True" ]; then \
         cp generated-confs/logrotate-migrid /etc/logrotate.d/migrid; \
       fi; \
     else \
-        rm /etc/cron.daily/logrotate; \
+        [ ! -f /etc/cron.daily/logrotate ] || rm -f /etc/cron.daily/logrotate; \
     fi;
 
 # Init scripts
