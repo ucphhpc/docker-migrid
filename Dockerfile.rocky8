@@ -1156,18 +1156,26 @@ RUN sed -i 's/^module(load="imjournal"/#module(load="imjournal"/g' /etc/rsyslog.
 RUN sed -i 's/       StateFile="imjournal.state"/#       StateFile="imjournal.state"/g' /etc/rsyslog.conf
 RUN sed -i 's/SysSock.Use="off"/SysSock.Use="on"/g' /etc/rsyslog.conf
 
-# Create mig syslog dir
-RUN mkdir -p /var/log/mig \
-  && chmod 700 /var/log/mig;
-
 # Enable GDP log 
+# NOTE: on RHEL clones the default messages log will also get a copy unless we
+#       explicitly exclude local0 there with local0.none in the line:
+#*.info;mail.none;authpriv.none;cron.none               /var/log/messages
 RUN if [ "${ENABLE_GDP}" = "True" ]; then \
-      [ ! -f "/var/log/mig/gdp.log" ] \
-        && touch /var/log/mig/gdp.log \
-        && chmod 600 /var/log/mig/gdp.log; \
-      cat /etc/rsyslog.conf | grep -q "# Save MiG GDP messages" \
-        || echo "# Save MiG GDP messages" >> /etc/rsyslog.conf \
-        && echo "local0.*   /var/log/mig/gdp.log" >> /etc/rsyslog.conf; \
+      GDP_LOG_DIR="${MIG_ROOT}/state/log" ; \
+      GDP_LOG_PATH="${GDP_LOG_DIR}/gdp.log" ; \
+      [ ! -d "${GDP_LOG_DIR}" ] \
+        && mkdir ${GDP_LOG_DIR} \
+        && chmod 700 ${GDP_LOG_DIR} ; \
+      [ ! -f "${GDP_LOG_PATH}" ] \
+        && touch ${GDP_LOG_PATH} \
+        && chmod 600 ${GDP_LOG_PATH}; \
+      if ! grep -q "${GDP_LOG_PATH}" /etc/rsyslog.conf ; then \
+        sed -i -E "s@^(\*\.info;.*;cron\.none) @\1;local0.none @g" \
+                /etc/rsyslog.conf ; \
+        echo "" >> /etc/rsyslog.conf ; \
+        echo "# MiG GDP messages" >> /etc/rsyslog.conf ; \
+        echo "local0.*               ${GDP_LOG_PATH}" >> /etc/rsyslog.conf ; \
+      fi; \
     fi;
 
 #------------------------- next stage -----------------------------#
