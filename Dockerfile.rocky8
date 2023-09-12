@@ -1174,6 +1174,7 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
                 /etc/rsyslog.conf ; \
         echo "" >> /etc/rsyslog.conf ; \
         echo "# MiG GDP messages" >> /etc/rsyslog.conf ; \
+        echo "local0.*               /var/log/mig/gdp.log" >> /etc/rsyslog.conf ; \
         echo "local0.*               ${GDP_LOG_PATH}" >> /etc/rsyslog.conf ; \
       fi; \
     fi;
