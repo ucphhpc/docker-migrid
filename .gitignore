@@ -107,7 +107,8 @@ venv.bak/
 
 # Migrid mount volume directories
 httpd/
-state/
+state
+lustate
 log/
 
 # Do not store current config and db

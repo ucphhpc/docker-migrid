@@ -51,7 +51,7 @@ up:
 down:
 	${DOCKER_COMPOSE} down
 
-dockerbuild:
+dockerbuild: init
 	${DOCKER_COMPOSE} build $(ARGS)
 
 dockerclean:
