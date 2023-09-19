@@ -17,7 +17,7 @@ The short edition of this, is first to initialize a particular host with the clu
 The <MANAGER-IP> being the address of the host interface where the cluster should operate.
 
 After this has been succesfully completed, if additional nodes are to be part of this cluster, they can now be added by generating a join command from the initial Manager node.
-This is achived by utilizing the `docker swarm join-token` command. There are two variants of this command, one for establing the additional node as either a Manager or a Worker node::
+This is achieved by utilizing the `docker swarm join-token` command. There are two variants of this command, one for establing the additional node as either a Manager or a Worker node::
 
     # Generate the token for a Manager node
     docker swarm join-token manager

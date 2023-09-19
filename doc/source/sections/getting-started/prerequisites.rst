@@ -39,7 +39,7 @@ In terms of installation, the `Docker Swarm` capability is included by default i
 so no additional steps are needed to be taken in that regard.
 
 However, what is required is that the initial Swarm cluster is setup before any service can be deployed.
-How this is achived can be seen in the <configuration/docker_swarm> section.
+How this is achieved can be seen in the <configuration/docker_swarm> section.
 
 
 

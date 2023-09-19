@@ -1,6 +1,19 @@
 version: '3.7'
 
 services:
+  devmail:
+    image: mwader/postfix-relay
+    container_name: devmail
+    depends_on:
+      - devdns
+    ports:
+      - "127.0.0.1:25:25"
+    environment:
+      POSTFIX_myhostname: ${SMTP_SERVER}
+    networks:
+      default:
+        aliases:
+          - mail.migrid.test
   devdns:
     image: ruudud/devdns
     container_name: devdns
@@ -26,7 +39,7 @@ services:
 
   migrid:
     container_name: migrid
-    image: ucphhpc/migrid:$BUILD_TYPE
+    image: ucphhpc/migrid${CONTAINER_TAG}
     build:
       context: ./
       dockerfile: Dockerfile
@@ -35,8 +48,6 @@ services:
         DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
-        BUILD_TYPE: ${BUILD_TYPE}
-        BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
         WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
@@ -78,6 +89,8 @@ services:
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
+        SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
@@ -147,7 +160,10 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
+        DIGEST_SALT: ${DIGEST_SALT:-AUTO}
+        CRYPTO_SALT: ${CRYPTO_SALT:-AUTO}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
@@ -164,11 +180,11 @@ services:
     networks:
       default:
         aliases:
-          - dev-www.erda.dk
-          - dev-cert.erda.dk
-          - dev-ext.erda.dk
-          - dev-oid.erda.dk
-          - dev-sid.erda.dk
+          - www.gdp.test
+          - cert.gdp.test
+          - ext.gdp.test
+          - oid.gdp.test
+          - sid.gdp.test
     volumes:
       - type: volume
         source: httpd
@@ -185,16 +201,23 @@ services:
       - type: volume
         source: migrid-syslog
         target: /var/log
+      - type: bind
+        source: /run/dbus/system_bus_socket
+        target: /run/dbus/system_bus_socket
+
     env_file:
       - migrid-httpd.env
-    command: /app/docker-entry.sh -k -V
+    # IMPORTANT: please ONLY run with this test@ user for non-public hosts
+    command: /app/docker-entry.sh -V -u ${MIG_TEST_USER} -p ${MIG_TEST_USER_PASSWORD} -s "sftp ftps webdavs"
+    # NOTE: public hosts should create users through sign up and run like this
+    #command: /app/docker-entry.sh -V
 
   # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
   #
   # Multiple containers with individual daemons not provided by base migrid
   migrid-openid:
     container_name: migrid-openid
-    image: ucphhpc/migrid:$BUILD_TYPE
+    image: ucphhpc/migrid${CONTAINER_TAG}
     build:
       context: ./
       dockerfile: Dockerfile
@@ -203,8 +226,6 @@ services:
         DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
-        BUILD_TYPE: ${BUILD_TYPE}
-        BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
         WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
@@ -246,12 +267,13 @@ services:
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
+        SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
         MIG_OID_TITLE: ${MIG_OID_TITLE}
         EXT_OID_TITLE: ${EXT_OID_TITLE}
-        PEERS_PERMIT: ${PEERS_PERMIT}
         VGRID_CREATORS: ${VGRID_CREATORS}
         VGRID_MANAGERS: ${VGRID_MANAGERS}
         MIG_SVN_REPO: ${MIG_SVN_REPO}
@@ -285,16 +307,13 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
-        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
-        ENABLE_PEERS: ${ENABLE_PEERS}
-        MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
-        PEERS_MANDATORY: ${PEERS_MANDATORY}
-        PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
-        PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
+        ENABLE_LOGROTATE: ${ENABLE_LOGROTATE}
+        LOGROTATE_MIGRID: ${LOGROTATE_MIGRID}
         BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID:-False}
         UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC:-False}
         UPGRADE_PARAMIKO: ${UPGRADE_PARAMIKO:-False}
@@ -315,11 +334,13 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
+        DIGEST_SALT: ${DIGEST_SALT:-AUTO}
+        CRYPTO_SALT: ${CRYPTO_SALT:-AUTO}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
-        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -331,11 +352,11 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "8443:8443"
-    #networks:
-    #  default:
-    #    aliases:
-    #      - dev-openid.erda.dk
+      - "${OPENID_PORT}:${OPENID_PORT}"
+    networks:
+      default:
+        aliases:
+          - openid.gdp.test
     volumes:
       - type: volume
         source: httpd
@@ -352,11 +373,12 @@ services:
       - type: volume
         source: migrid-openid-syslog
         target: /var/log
-    command: /app/docker-entry.sh -k
+    command: /app/docker-entry.sh
+    #privileged: true
 
   migrid-sftp:
     container_name: migrid-sftp
-    image: ucphhpc/migrid:$BUILD_TYPE
+    image: ucphhpc/migrid${CONTAINER_TAG}
     build:
       context: ./
       dockerfile: Dockerfile
@@ -365,8 +387,6 @@ services:
         DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
-        BUILD_TYPE: ${BUILD_TYPE}
-        BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
         WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
@@ -408,12 +428,13 @@ services:
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
+        SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
         MIG_OID_TITLE: ${MIG_OID_TITLE}
         EXT_OID_TITLE: ${EXT_OID_TITLE}
-        PEERS_PERMIT: ${PEERS_PERMIT}
         VGRID_CREATORS: ${VGRID_CREATORS}
         VGRID_MANAGERS: ${VGRID_MANAGERS}
         MIG_SVN_REPO: ${MIG_SVN_REPO}
@@ -447,16 +468,13 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
-        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
-        ENABLE_PEERS: ${ENABLE_PEERS}
-        MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
-        PEERS_MANDATORY: ${PEERS_MANDATORY}
-        PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
-        PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
+        ENABLE_LOGROTATE: ${ENABLE_LOGROTATE}
+        LOGROTATE_MIGRID: ${LOGROTATE_MIGRID}
         BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID:-False}
         UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC:-False}
         UPGRADE_PARAMIKO: ${UPGRADE_PARAMIKO:-False}
@@ -477,11 +495,13 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
+        DIGEST_SALT: ${DIGEST_SALT:-AUTO}
+        CRYPTO_SALT: ${CRYPTO_SALT:-AUTO}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
-        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -493,12 +513,12 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "2222:2222"
-      - "22222:22222"
-    #networks:
-    #  default:
-    #    aliases:
-    #      - dev-sftp.erda.dk
+      - "${SFTP_PORT}:${SFTP_PORT}"
+      - "${SFTP_SUBSYS_PORT}:${SFTP_SUBSYS_PORT}"
+    networks:
+      default:
+        aliases:
+          - sftp.gdp.test
     volumes:
       - type: volume
         source: httpd
@@ -515,11 +535,12 @@ services:
       - type: volume
         source: migrid-sftp-syslog
         target: /var/log
-    command: /app/docker-entry.sh -k
+    command: /app/docker-entry.sh
+    #privileged: true
 
   migrid-ftps:
     container_name: migrid-ftps
-    image: ucphhpc/migrid:$BUILD_TYPE
+    image: ucphhpc/migrid${CONTAINER_TAG}
     build:
       context: ./
       dockerfile: Dockerfile
@@ -528,8 +549,6 @@ services:
         DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
-        BUILD_TYPE: ${BUILD_TYPE}
-        BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
         WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
@@ -571,12 +590,13 @@ services:
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
+        SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
         MIG_OID_TITLE: ${MIG_OID_TITLE}
         EXT_OID_TITLE: ${EXT_OID_TITLE}
-        PEERS_PERMIT: ${PEERS_PERMIT}
         VGRID_CREATORS: ${VGRID_CREATORS}
         VGRID_MANAGERS: ${VGRID_MANAGERS}
         MIG_SVN_REPO: ${MIG_SVN_REPO}
@@ -610,16 +630,13 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
-        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}  
-        ENABLE_PEERS: ${ENABLE_PEERS}
-        MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
-        PEERS_MANDATORY: ${PEERS_MANDATORY}
-        PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
-        PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
+        ENABLE_LOGROTATE: ${ENABLE_LOGROTATE}
+        LOGROTATE_MIGRID: ${LOGROTATE_MIGRID}
         BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID:-False}
         UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC:-False}
         UPGRADE_PARAMIKO: ${UPGRADE_PARAMIKO:-False}
@@ -640,11 +657,13 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
+        DIGEST_SALT: ${DIGEST_SALT:-AUTO}
+        CRYPTO_SALT: ${CRYPTO_SALT:-AUTO}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
-        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -656,12 +675,12 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "8021:8021"
-      - "8100-8399:8100-8399"
-    #networks:
-    #  default:
-    #    aliases:
-    #      - dev-ftps.erda.dk
+      - "${FTPS_CTRL_PORT}:${FTPS_CTRL_PORT}"
+      - "${FTPS_PASSIVE_PORTS}:${FTPS_PASSIVE_PORTS}"
+    networks:
+      default:
+        aliases:
+          - ftps.gdp.test
     volumes:
       - type: volume
         source: httpd
@@ -678,11 +697,12 @@ services:
       - type: volume
         source: migrid-ftps-syslog
         target: /var/log
-    command: /app/docker-entry.sh -k
+    command: /app/docker-entry.sh
+    #privileged: true
 
   migrid-webdavs:
     container_name: migrid-webdavs
-    image: ucphhpc/migrid:$BUILD_TYPE
+    image: ucphhpc/migrid${CONTAINER_TAG}
     build:
       context: ./
       dockerfile: Dockerfile
@@ -691,8 +711,6 @@ services:
         DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT:-.}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
-        BUILD_TYPE: ${BUILD_TYPE}
-        BUILD_TARGET: ${BUILD_TARGET}
         DOMAIN: ${DOMAIN}
         WILDCARD_DOMAIN: ${WILDCARD_DOMAIN}
         PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
@@ -734,12 +752,13 @@ services:
         FTPS_CTRL_SHOW_PORT: ${FTPS_CTRL_SHOW_PORT}
         ADMIN_EMAIL: ${ADMIN_EMAIL}
         ADMIN_LIST: ${ADMIN_LIST}
+        SMTP_SENDER: ${SMTP_SENDER}
+        SMTP_SERVER: ${SMTP_SERVER}
         LOG_LEVEL: ${LOG_LEVEL}
         TITLE: ${TITLE}
         SHORT_TITLE: ${SHORT_TITLE}
         MIG_OID_TITLE: ${MIG_OID_TITLE}
         EXT_OID_TITLE: ${EXT_OID_TITLE}
-        PEERS_PERMIT: ${PEERS_PERMIT}
         VGRID_CREATORS: ${VGRID_CREATORS}
         VGRID_MANAGERS: ${VGRID_MANAGERS}
         MIG_SVN_REPO: ${MIG_SVN_REPO}
@@ -773,16 +792,13 @@ services:
         ENABLE_WORKFLOWS: ${ENABLE_WORKFLOWS}
         ENABLE_VERIFY_CERTS: ${ENABLE_VERIFY_CERTS}
         ENABLE_JUPYTER: ${ENABLE_JUPYTER}
-        ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
         ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
-        ENABLE_PEERS: ${ENABLE_PEERS}
-        MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
-        PEERS_MANDATORY: ${PEERS_MANDATORY}
-        PEERS_EXPLICIT_FIELDS: ${PEERS_EXPLICIT_FIELDS}
-        PEERS_CONTACT_HINT: ${PEERS_CONTACT_HINT}
         ENABLE_SELF_SIGNED_CERTS: ${ENABLE_SELF_SIGNED_CERTS}
+        MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
+        ENABLE_LOGROTATE: ${ENABLE_LOGROTATE}
+        LOGROTATE_MIGRID: ${LOGROTATE_MIGRID}
         BUILD_MOD_AUTH_OPENID: ${BUILD_MOD_AUTH_OPENID:-False}
         UPGRADE_MOD_AUTH_OPENIDC: ${UPGRADE_MOD_AUTH_OPENIDC:-False}
         UPGRADE_PARAMIKO: ${UPGRADE_PARAMIKO:-False}
@@ -803,11 +819,13 @@ services:
         WITH_GIT: ${WITH_GIT}
         JUPYTER_SERVICES: ${JUPYTER_SERVICES}
         JUPYTER_SERVICES_DESC: ${JUPYTER_SERVICES_DESC}
+        OPENSSH_VERSION: ${OPENSSH_VERSION}
         VGRID_LABEL: ${VGRID_LABEL}
+        DIGEST_SALT: ${DIGEST_SALT:-AUTO}
+        CRYPTO_SALT: ${CRYPTO_SALT:-AUTO}
         EXTRA_USERPAGE_SCRIPTS: ${EXTRA_USERPAGE_SCRIPTS}
         EXTRA_USERPAGE_STYLES: ${EXTRA_USERPAGE_STYLES}
         GDP_EMAIL_NOTIFY: ${GDP_EMAIL_NOTIFY}
-        MODERN_WSGIDAV: ${MODERN_WSGIDAV}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -819,11 +837,11 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "4443:4443"
-    #networks:
-    #  default:
-    #    aliases:
-    #      - dev-webdavs.erda.dk
+      - "${DAVS_PORT}:${DAVS_PORT}"
+    networks:
+      default:
+        aliases:
+          - webdavs.gdp.test
     volumes:
       - type: volume
         source: httpd
@@ -840,7 +858,8 @@ services:
       - type: volume
         source: migrid-webdavs-syslog
         target: /var/log
-    command: /app/docker-entry.sh -k
+    command: /app/docker-entry.sh
+    #privileged: true
 
   nginx-proxy:
     image: jwilder/nginx-proxy
@@ -855,20 +874,25 @@ services:
       # NOTE: expose the unique raw port(s) to host 
       - "80:80"
       - "443:443"
+      - "444:444"
+      - "445:445"
+      - "446:446"
+      - "447:447"
+      - "448:448"
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ./nginx-proxy-dev.erda.dk.conf:/etc/nginx/conf.d/migrid.conf
+      - ./nginx-proxy-development_gdp.conf:/etc/nginx/conf.d/migrid.conf
       - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
-      - ./certs/MiG/*.erda.dk/server.crt:/etc/nginx/certs/dev-www.erda.dk.crt
-      - ./certs/MiG/*.erda.dk/server.crt:/etc/nginx/certs/dev-cert.erda.dk.crt
-      - ./certs/MiG/*.erda.dk/server.crt:/etc/nginx/certs/dev-ext.erda.dk.crt
-      - ./certs/MiG/*.erda.dk/server.crt:/etc/nginx/certs/dev-oid.erda.dk.crt
-      - ./certs/MiG/*.erda.dk/server.crt:/etc/nginx/certs/dev-sid.erda.dk.crt
-      - ./certs/MiG/*.erda.dk/server.key:/etc/nginx/certs/dev-www.erda.dk.key
-      - ./certs/MiG/*.erda.dk/server.key:/etc/nginx/certs/dev-cert.erda.dk.key
-      - ./certs/MiG/*.erda.dk/server.key:/etc/nginx/certs/dev-ext.erda.dk.key
-      - ./certs/MiG/*.erda.dk/server.key:/etc/nginx/certs/dev-oid.erda.dk.key
-      - ./certs/MiG/*.erda.dk/server.key:/etc/nginx/certs/dev-sid.erda.dk.key
+      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/www.gdp.test.crt
+      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/cert.gdp.test.crt
+      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/ext.gdp.test.crt
+      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/oid.gdp.test.crt
+      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/sid.gdp.test.crt
+      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/www.gdp.test.key
+      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/cert.gdp.test.key
+      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/ext.gdp.test.key
+      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/oid.gdp.test.key
+      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/sid.gdp.test.key
       - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
 
 volumes:

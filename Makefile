@@ -3,7 +3,6 @@ PACKAGE_NAME_FORMATTED=$(subst -,_,$(PACKAGE_NAME))
 IMAGE=migrid
 OWNER ?= ucphhpc
 
-BUILD_TYPE=basic
 # Enable that the builder should use buildkit
 # https://docs.docker.com/develop/develop-images/build_enhancements/
 DOCKER_BUILDKIT=1
@@ -13,25 +12,39 @@ DOCKER = $(shell which docker || which podman)
 DOCKER_COMPOSE = $(shell which docker-compose || which podman-compose || echo 'docker compose')
 $(echo ${DOCKER_COMPOSE} >/dev/null)
 
-.PHONY: all init dockerbuild dockerpush
-.PHONY: dockerclean distclean stateclean clean warning
+.PHONY: all init clean warning
+.PHONY: dockerclean distclean stateclean dockerbuild dockerpush
 .PHONY: up stop down
+
+.ONESHELL:
+
+ifeq ("$(wildcard .env)",".env")
+include .env
+endif
 
 all: init dockerbuild up
 
 init:
 ifeq (,$(wildcard ./Dockerfile))
+	@echo
+	@echo "*** No Dockerfile selected - defaulting to centos7 ***"
+	@echo
 	ln -s Dockerfile.centos7 Dockerfile
+	@sleep 2
 endif
 ifeq (,$(wildcard ./.env))
-	ln -s defaults.env .env
+	@echo
+	@echo "*** No deployment environment selected - defaulting to development ***"
+	@echo
+	ln -s development.env .env
+	@sleep 2
 endif
 ifeq (,$(wildcard ./docker-compose.yml))
 	@echo
-	@echo "*** No docker-compose.yml selected - defaulting to migrid.test ***"
+	@echo "*** No docker-compose.yml selected - defaulting to development ***"
 	@echo
-	@ln -s docker-compose_migrid.test.yml docker-compose.yml
-	@sleep 5
+	ln -s docker-compose_development.yml docker-compose.yml
+	@sleep 2
 endif
 	mkdir -p certs
 	mkdir -p httpd
@@ -57,13 +70,13 @@ dockerbuild: init
 dockerclean:
 	# remove latest image and dangling cache entries
 	${DOCKER_COMPOSE} down || true
-	${DOCKER} rmi -f $(OWNER)/$(IMAGE):$(BUILD_TYPE)
+	${DOCKER} rmi -f $(OWNER)/$(IMAGE)${CONTAINER_TAG}
 	# remove dangling images and build cache
 	${DOCKER} image prune -f
 	${DOCKER} builder prune -f
 
 dockerpush:
-	${DOCKER} push $(OWNER)/$(IMAGE):$(BUILD_TYPE)
+	${DOCKER} push $(OWNER)/$(IMAGE)${CONTAINER_TAG}
 
 clean:
 	rm -fr ./mig

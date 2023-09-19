@@ -8,10 +8,10 @@ Overview
 
 Before you can build an image, you need to select which MiGrid services you would like to run.
 This choice will lead you to select or configure an environment file that suit your particular choice.
-There are different predefined environments available in this repository (eg. `defaults.env` or `advanced.env`).
+There are different predefined environments available in this repository (eg. `development.env` or `production.env`).
 
 After choosing an environment and adapting it to your needs, you can enable it by creating an .env symlink that points to your particular environment configuration.
-For instance, if you want to build the MiGrid image with the default environment settings, this is achived by the Makefile init target, which will automatically create a symlink from defaults.env to the expected .env file. If this behaviour is not wanted, a symlink has to be manually created before make is called to link the designated environment file to the .env file. For instance::
+For instance, if you want to build the MiGrid image with the default environment settings, this is achieved by the Makefile init target, which will automatically create a symlink from development.env to the expected .env file. If this behaviour is not wanted, a symlink has to be manually created before make is called to link the designated environment file to the .env file. For instance::
 
     ln -s my-custom-environment.env .env
 
@@ -62,7 +62,6 @@ An indication of this can be seen by investigating the `Makefile` itself::
     NAME=docker-migrid
     OWNER=ucphhpc
     IMAGE=migrid
-    BUILD_TYPE=basic
     # Enable that the builder should use buildkit
     # https://docs.docker.com/develop/develop-images/build_enhancements/
     DOCKER_BUILDKIT=1
@@ -103,10 +102,10 @@ An indication of this can be seen by investigating the `Makefile` itself::
         fi
 
     push:
-        docker push ${OWNER}/${IMAGE}:${BUILD_TYPE}
+        docker push ${OWNER}/${IMAGE}
 
 For starters, when `make` is being executed within the directory. The directory is firstly being cleaned of any old state data that might be hanging around from the last build.
-This is achived by executing the `clean` target within the `Makefile`. The `clean` target removes the runtime directories and all of the associated docker volumes that is used to store persistent data between runtimes::
+This is achieved by executing the `clean` target within the `Makefile`. The `clean` target removes the runtime directories and all of the associated docker volumes that is used to store persistent data between runtimes::
 
 
     :docker-migrid username$ make clean
@@ -145,7 +144,7 @@ The result therefore of executing the `init` Makefile target can be seen below::
     mkdir -p state
 
 Finally, once the repository directory has been initialize, the Docker MiGrid image is ready to be built.
-This is achived with the `build` target inside the Makefile. By executing this, the image build process will comence, an example of this can be seen below::
+This is achieved with the `build` target inside the Makefile. By executing this, the image build process will comence, an example of this can be seen below::
 
     docker-compose build
     WARNING: Python-dotenv could not parse statement starting at line 5
