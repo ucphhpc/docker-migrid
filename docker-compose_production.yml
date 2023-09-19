@@ -619,7 +619,7 @@ services:
         ENABLE_MIGADMIN: ${ENABLE_MIGADMIN}
         ENABLE_GDP: ${ENABLE_GDP}
         ENABLE_TWOFACTOR: ${ENABLE_TWOFACTOR}
-        ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}  
+        ENABLE_TWOFACTOR_STRICT_ADDRESS: ${ENABLE_TWOFACTOR_STRICT_ADDRESS}
         ENABLE_PEERS: ${ENABLE_PEERS}
         MIG_PASSWORD_POLICY: ${MIG_PASSWORD_POLICY}
         ENABLE_LOGROTATE: ${ENABLE_LOGROTATE}
@@ -871,18 +871,9 @@ services:
 #    #  - "443:443"
 #    volumes:
 #      - /var/run/docker.sock:/tmp/docker.sock:ro
-#      - ./nginx-proxy-dev.erda.dk.conf:/etc/nginx/conf.d/migrid.conf
+#      - ./nginx-proxy-production.conf:/etc/nginx/conf.d/migrid.conf
 #      - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
-#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-www.erda.dk.crt
-#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-cert.erda.dk.crt
-#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-ext.erda.dk.crt
-#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-oid.erda.dk.crt
-#      - ./certs/MiG/dev*.erda.dk/server.crt:/etc/nginx/certs/dev-sid.erda.dk.crt
-#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-www.erda.dk.key
-#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-cert.erda.dk.key
-#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-ext.erda.dk.key
-#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-oid.erda.dk.key
-#      - ./certs/MiG/dev*.erda.dk/server.key:/etc/nginx/certs/dev-sid.erda.dk.key
+#      - ./certs/MiG/site/server.crt:/etc/nginx/certs/server.crt
 #      - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
 
 volumes:
