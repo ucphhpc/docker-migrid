@@ -26,7 +26,7 @@ This repository contains three example deployments which can be used to test mig
   more closed down and depend on higher security standards.
 
 - production
-  This is an example of a production configuration which is not deployable additional configuration.
+  This is an example of a production configuration which is not deployable without additional configuration.
   It runs in host network namespace and relies on multiple available IP addresses with corresponding (external) DNS entries.
   This deployment is meant to be used as a baseline for production setups. Might be used with docker-compose extends or similar.
 
