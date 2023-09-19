@@ -14,8 +14,6 @@ ARG DOCKER_MIGRID_ROOT=.
 ARG ARCH=amd64
 ARG UID=1000
 ARG GID=1000
-ARG BUILD_TYPE=basic
-ARG BUILD_TARGET=development
 ARG DOMAIN=migrid.test
 ARG WILDCARD_DOMAIN=*.migrid.test
 ARG PUBLIC_DOMAIN=www.migrid.test
@@ -59,7 +57,7 @@ ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
 ARG MIG_SVN_REV=5787
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
 ARG MIG_GIT_BRANCH=edge
-ARG MIG_GIT_REV=1e3968626c29168521b350a6b70a1471c7f8e1cd
+ARG MIG_GIT_REV=HEAD
 ARG ADMIN_EMAIL=mig
 ARG ADMIN_LIST=
 ARG SMTP_SENDER=
@@ -149,8 +147,6 @@ ARG JUPYTER_SERVICES_DESC="{}"
 FROM --platform=linux/$ARCH rockylinux:9 as init
 ARG UID
 ARG GID
-ARG BUILD_TYPE
-#ARG BUILD_TARGET
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG PUBLIC_DOMAIN
@@ -194,8 +190,6 @@ ARG JUPYTER_SERVICES
 #ARG WITH_GIT
 
 RUN echo "UID and GID: $UID $GID"
-RUN echo "Build type: $BUILD_TYPE"
-#RUN echo "Build target: $BUILD_TARGET"
 RUN echo "Domains: $DOMAIN" "${PUBLIC_DOMAIN}" "${MIGCERT_DOMAIN}" \
            "${EXTCERT_DOMAIN}" "${MIGOID_DOMAIN}" "${EXTOID_DOMAIN}" \
            "${EXTOIDC_DOMAIN}" "${SID_DOMAIN}" "${IO_DOMAIN}" \
@@ -436,9 +430,9 @@ RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
 	echo "upgrading mod_auth_openidc from upstream centos7 rpm" \
 	&& yum update -y \
 	&& yum install -y jansson-devel \
-	        # NOTE: recent cjose is already included in rocky8+
-	        cjose \
-		#https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.0/cjose-0.6.1.5-2.el9.x86_64.rpm \
+                # NOTE: recent cjose is already included in rocky8+
+                #https://github.com/OpenIDC/cjose/releases/download/v0.6.2.2/cjose-0.6.2.2-1.el9.x86_64.rpm \
+                cjose \
                 https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.14.3/mod_auth_openidc-2.4.14.3-1.el9.x86_64.rpm \
                 && yum clean all \
                 && rm -fr /var/cache/yum; \
@@ -630,7 +624,7 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install pyftpdlib; \
     fi;
 
-# Modules required by grid_X IO daemons (not available in yum/dnf for py3)
+# Modules required by grid_X IO daemons (not available in yum/dnf for python3)
 # IMPORTANT: install in main python site-packages to work with 'python -s'
 #            Otherwise sftpsubsys will fail to import it because the /usr/local
 #            dir used as prefix by default in pip is outside sys.path
@@ -653,7 +647,7 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install iso3166; \
     fi;
 
-# Modules required for email validation (already available in yum/dnf for py3)
+# Modules required for email validation (already available in yum/dnf for python3)
 #RUN if [ "${WITH_PY3}" = "True" ]; then \
 #      pip3 install email-validator; \
 #    fi;
@@ -693,8 +687,6 @@ RUN if [ "$WITH_GIT" = "True" ]; then \
       svn checkout -r ${MIG_SVN_REV} ${MIG_SVN_REPO} . && \
 	echo "migrid version: ${MIG_SVN_REPO} trunk ${MIG_SVN_REV}" > ./active-migrid-version.txt; \
     fi;
-
-ADD --chown=$USER:$GROUP mig $MIG_ROOT/
 
 # NOTE: we manually need to enable modern grid_webdavs.py here for now.
 #       Replace any existing symlink with one to the 3.x script.
@@ -830,7 +822,7 @@ RUN echo "Designated jupyter services descriptions: ${JUPYTER_SERVICES_DESC}"
 
 RUN mkdir -p ${MIG_ROOT}/.local/bin; \
     if [ "${PREFER_PYTHON3}" = "True" ]; then \
-      echo "already has py3 as default python"; \
+      echo "already has python3 as default python"; \
     else \
       echo "*** No python2 support here ***" ; exit 1; \
     fi;
