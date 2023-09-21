@@ -20,36 +20,23 @@ Be aware that `.env` itself is excluded from the git repository via `.gitignore`
 Quick Start
 -----------
 
-If you are not interested in learning what goes into building the image, the easiest way to get started, is to simply run `make` inside the `docker-migrid` directory::
+If you just want to get stated right away without any configuration changes you can use the default development environment by simply running `make` inside the `docker-migrid` directory::
 
     make
 
-This should produces the following output::
-
-    rm -rf ./certs
-    rm -rf ./httpd
-    rm -rf ./mig
-    rm -rf ./state
-    if [ "$(docker volume ls -q -f 'name=docker-migrid*')" != "" ]; then\
-            docker volume rm -f $(docker volume ls -q -f 'name=docker-migrid*');\
-        fi
-    mkdir -p certs
-    mkdir -p httpd
-    mkdir -p mig
-    mkdir -p state
-    docker-compose build
-    WARNING: Python-dotenv could not parse statement starting at line 5
-    devdns uses an image, skipping
-    nginx-proxy uses an image, skipping
-    Building migrid
-    [+] Building 38.6s (13/75)
-    ...
-
-In addition to the above output, several build lines should follow as the Docker container image is being build.
+The Makefile creates all the necessary files, builds an migrid image and starts up the services.
 The entire process should be succesfully completed, when the following lines have been printed::
 
-
-     => => naming to docker.io/ucphhpc/migrid:basic                                         0.0s
+    [+] Running 15/15
+     ✔ Network docker-migrid_default              Created                            0.0s
+     ✔ Container devdns                           Started                            0.0s
+     ✔ Container migrid                           Started                           10.6s
+     ✔ Container devmail                          Started                            0.0s
+     ✔ Container migrid-sftp                      Started                            0.2s
+     ✔ Container migrid-openid                    Started                            0.2s
+     ✔ Container migrid-ftps                      Started                            0.2s
+     ✔ Container nginx-proxy                      Started                            0.0s
+     ✔ Container migrid-webdavs                   Started                            0.0s
 
 
 Additional Details
