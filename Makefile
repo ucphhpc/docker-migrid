@@ -12,6 +12,17 @@ DOCKER = $(shell which docker || which podman)
 DOCKER_COMPOSE = $(shell which docker-compose || which podman-compose || echo 'docker compose')
 $(echo ${DOCKER_COMPOSE} >/dev/null)
 
+define DOCKER_COMPOSE_SHARED_HEADER
+services:
+  migrid-shared:
+    image: ucphhpc/migrid$${CONTAINER_TAG}
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+endef
+export DOCKER_COMPOSE_SHARED_HEADER
+
 .PHONY: all init clean warning
 .PHONY: dockerclean distclean stateclean dockerbuild dockerpush
 .PHONY: up stop down
@@ -57,6 +68,10 @@ endif
 	mkdir -p log/migrid-webdavs
 	mkdir -p log/migrid-ftps
 	sed 's@#unset @unset @g;s@#export @export @g' migrid-httpd.env > migrid-httpd-init.sh
+	@echo "creating env variable map in docker-compose_shared.yml"
+	@echo "$$DOCKER_COMPOSE_SHARED_HEADER" > docker-compose_shared.yml
+	@grep -v '\(^#.*\|^$$\)' .env >> docker-compose_shared.yml
+	@sed -E -i 's!^(.*)=.*!        - \1=\$$\{\1\}!' docker-compose_shared.yml
 
 up:
 	${DOCKER_COMPOSE} up -d
@@ -79,6 +94,7 @@ dockerpush:
 	${DOCKER} push $(OWNER)/$(IMAGE)${CONTAINER_TAG}
 
 clean:
+	rm -f docker-compose_shared.yml
 	rm -fr ./mig
 	rm -fr ./httpd
 

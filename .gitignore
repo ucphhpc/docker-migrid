@@ -131,6 +131,7 @@ mig/
 # By default these are expected to be symlinks that point to the
 # active set up and are created in make init if not there.
 docker-compose.yml
+docker-compose_shared.yml
 Dockerfile
 
 # Also include docker-compose.override.yml, to be able to follow
