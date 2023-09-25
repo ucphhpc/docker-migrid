@@ -138,6 +138,8 @@ ARG CRYPTO_SALT="AUTO"
 ARG EXTRA_USERPAGE_SCRIPTS=""
 ARG EXTRA_USERPAGE_STYLES=""
 ARG GDP_EMAIL_NOTIFY=True
+ARG GDP_ID_SCRAMBLE=safe_hash
+ARG GDP_PATH_SCRAMBLE=safe_encrypt
 
 # Jupyter Arguments
 ARG JUPYTER_SERVICES=""
@@ -804,6 +806,8 @@ ARG VGRID_LABEL
 ARG EXTRA_USERPAGE_SCRIPTS
 ARG EXTRA_USERPAGE_STYLES
 ARG GDP_EMAIL_NOTIFY
+ARG GDP_ID_SCRAMBLE
+ARG GDP_PATH_SCRAMBLE
 
 # TODO: do we still need the ~/.local/ wrapper now that update-alternatives run?
 ENV PYTHONPATH=${MIG_ROOT}
@@ -895,6 +899,7 @@ RUN ./generateconfs.py --source=. \
     --enable_vhost_certs=True --enable_verify_certs=${ENABLE_VERIFY_CERTS} \
     --enable_jupyter=${ENABLE_JUPYTER} --enable_migadmin=${ENABLE_MIGADMIN} \
     --enable_gdp=${ENABLE_GDP} --gdp_email_notify=${GDP_EMAIL_NOTIFY} \
+    --gdp_id_scramble=${GDP_ID_SCRAMBLE} --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
     --password_policy=${MIG_PASSWORD_POLICY} \
     --jupyter_services=${JUPYTER_SERVICES} \
     --jupyter_services_desc="${JUPYTER_SERVICES_DESC}" \
