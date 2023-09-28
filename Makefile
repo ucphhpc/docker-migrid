@@ -2,6 +2,7 @@ PACKAGE_NAME=docker-migrid
 PACKAGE_NAME_FORMATTED=$(subst -,_,$(PACKAGE_NAME))
 IMAGE=migrid
 OWNER ?= ucphhpc
+SHELL=/bin/bash
 
 # Enable that the builder should use buildkit
 # https://docs.docker.com/develop/develop-images/build_enhancements/
@@ -15,6 +16,7 @@ $(echo ${DOCKER_COMPOSE} >/dev/null)
 .PHONY: all init clean warning
 .PHONY: dockerclean distclean stateclean dockerbuild dockerpush
 .PHONY: up stop down
+.PHONY: test-doc
 
 .ONESHELL:
 
@@ -104,6 +106,18 @@ warning:
 	@echo "*** Deleting ALL local state data ***"
 	@echo
 	@echo "Are you sure? [y/N]" && read ans && [ $${ans:-N} = y ]
+
+test-doc:
+	@shopt -s extglob; \
+	for i in $$( grep -hv '\(^#.*\|^$$\)' !(migrid-httpd).env | sed -E 's!^([^=]*)=.*$$!\1!g' | sort | uniq ) ; do \
+		grep -q "$$i" doc/source/sections/configuration/variables.rst \
+		|| missing+=( "$$i" ) ; \
+	done; \
+	[ "$${#missing[@]}" != "0" ] && echo "ERROR: Missing documentation in doc/source/sections/configuration/variables.rst for:" \
+	&& for i in $${missing[@]}; do \
+		echo "  $$i"; \
+	done && exit 1 \
+	|| echo "OK: found all envionment variables in documentation" && exit 0
 
 test:
 	@cd tests; \
