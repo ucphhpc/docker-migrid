@@ -9,7 +9,6 @@ Below you can find a list of the available variable names.
 For further information you can have a look at the underlying `generateconfs.py <https://github.com/ucphhpc/migrid-sync/blob/master/mig/install/generateconfs.py>`
 
 
-
 Variables
 ---------
 
@@ -20,6 +19,39 @@ Variables
    * - Variable
      - Default
      - Notes
+   * - CONFIGPROXY_AUTH_TOKEN
+     - unset
+     - Jupyter integration token - just leave empty if you don't know what it does
+   * - CONTAINER_TAG
+     - ${MIG_GIT_BRANCH}
+     - The Docker tag used for the MiGrid image that is created. This might either be a Git tag, a MiGrid version or a arbitrary name.
+   * - FTPS_PASSIVE_PORTS
+     - 8100-8399
+     - The port range for FTPS passive ports used for data transmission.
+   * - JUPYTERHUB_CRYPT_KEY
+     - unset
+     - Jupyter integration key - just leave empty if you don't know what it does
+   * - ENABLE_LOGROTATE
+     - False
+     - Whether or not the logrotate cron job should be started inside the containers. Be aware that the cron daemon itself might be started through the #RUN_SERVICES variable in the docker-entry.sh.
+   * - LOGROTATE_MIGRID
+     - False
+     - Add explicit logrotate of migrid log files inside the container
+   * - MAIL_DOMAIN
+     - unset
+     - Notes
+   * - MIG_TEST_USER
+     - test@external.domain
+     - The username of the test user. Used by the development environments for tests.
+   * - MIG_TEST_USER_PASSWORD
+     - TestPw0rd
+     - The password for the test user. Used by the development environments for tests.
+   * - SMTP_SERVER
+     - localhost
+     - The MTA that is used to submit mails from migrid. Can be a hostname or an IP.
+   * - TZ
+     - Europe/Copenhagen
+     - The timezone that is used inside the containers.
    * - DOCKER_MIGRID_ROOT
      - .
      - Optionally use DOCKER_MIGRID_ROOT to point to another root location than PWD, which might be useful e.g. when automating deployment with ansible.
@@ -169,7 +201,7 @@ Variables
      - The email address to send various internal status and account request emails to from the migrid stack
    * - ADMIN_LIST
      - 
-     - List of user accounts that have administrative rights (meaning they can access the Server Admin panel in the webinterface)
+     - List of user accounts that have administrative rights (meaning they can access the Server Admin panel in the webinterface). Needs to be comma-separated list of full migrid user IDs on the usual x509-format.
    * - SMTP_SENDER
      - 
      - Mainly used to set a noreply@ sender address on various outgoing notification email from the instance, when there is no sane recipient for users to reply to. 

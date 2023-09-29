@@ -1,3 +1,4 @@
+# docker-compose version
 version: '3.7'
 
 services:
@@ -43,13 +44,14 @@ services:
     extends:
       file: docker-compose_shared.yml
       service: migrid-shared
+
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy crond rsyslogd
+      RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy notify crond rsyslogd
     depends_on:
       - devdns
     networks:
@@ -87,8 +89,6 @@ services:
     # NOTE: public hosts should create users through sign up and run like this
     #command: /app/docker-entry.sh -V
 
-  # TODO: simplify migrid-X containers with extends and a migrid-shared.yml ?
-  #
   # Multiple containers with individual daemons not provided by base migrid
   migrid-openid:
     container_name: migrid-openid
