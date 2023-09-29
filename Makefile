@@ -24,7 +24,7 @@ services:
 endef
 export DOCKER_COMPOSE_SHARED_HEADER
 
-.PHONY: all init clean warning
+.PHONY: all init initbuild initdirs initcomposevars clean warning
 .PHONY: dockerclean distclean stateclean dockerbuild dockerpush
 .PHONY: up stop down
 .PHONY: test-doc
@@ -37,7 +37,9 @@ endif
 
 all: init dockerbuild up
 
-init:
+init:	initbuild initdirs initcomposevars
+
+initbuild:
 ifeq (,$(wildcard ./Dockerfile))
 	@echo
 	@echo "*** No Dockerfile selected - defaulting to centos7 ***"
@@ -59,6 +61,9 @@ ifeq (,$(wildcard ./docker-compose.yml))
 	ln -s docker-compose_development.yml docker-compose.yml
 	@sleep 2
 endif
+	sed 's@#unset @unset @g;s@#export @export @g' migrid-httpd.env > migrid-httpd-init.sh
+
+initdirs:
 	mkdir -p certs
 	mkdir -p httpd
 	mkdir -p mig
@@ -69,28 +74,29 @@ endif
 	mkdir -p log/migrid-sftp
 	mkdir -p log/migrid-webdavs
 	mkdir -p log/migrid-ftps
-	sed 's@#unset @unset @g;s@#export @export @g' migrid-httpd.env > migrid-httpd-init.sh
+
+initcomposevars:	init
 	@echo "creating env variable map in docker-compose_shared.yml"
 	@echo "$$DOCKER_COMPOSE_SHARED_HEADER" > docker-compose_shared.yml
 	@grep -v '\(^#.*\|^$$\)' .env >> docker-compose_shared.yml
 	@sed -E -i 's!^([^=]*)=.*!        - \1=\$$\{\1\}!' docker-compose_shared.yml
 
-up:
+up:	initcomposevars
 	${DOCKER_COMPOSE} up -d
 
-down:
+down:	initcomposevars
 	${DOCKER_COMPOSE} down
 
 dockerbuild: init
 	${DOCKER_COMPOSE} build $(ARGS)
 
-dockerclean:
+dockerclean: initcomposevars
 	# remove latest image and dangling cache entries
 	${DOCKER_COMPOSE} down || true
 	${DOCKER} rmi -f $(OWNER)/$(IMAGE)${CONTAINER_TAG}
 	# remove dangling images and build cache
 	${DOCKER} image prune -f
-	${DOCKER} builder prune -f
+	${DOCKER} builder prune -f || true
 
 dockerpush:
 	${DOCKER} push $(OWNER)/$(IMAGE)${CONTAINER_TAG}
