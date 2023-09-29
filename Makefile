@@ -73,7 +73,7 @@ endif
 	@echo "creating env variable map in docker-compose_shared.yml"
 	@echo "$$DOCKER_COMPOSE_SHARED_HEADER" > docker-compose_shared.yml
 	@grep -v '\(^#.*\|^$$\)' .env >> docker-compose_shared.yml
-	@sed -E -i 's!^(.*)=.*!        - \1=\$$\{\1\}!' docker-compose_shared.yml
+	@sed -E -i 's!^([^=]*)=.*!        - \1=\$$\{\1\}!' docker-compose_shared.yml
 
 up:
 	${DOCKER_COMPOSE} up -d
