@@ -41,6 +41,7 @@ services:
 
   migrid:
     container_name: migrid
+    image: ucphhpc/migrid${CONTAINER_TAG}
     extends:
       file: docker-compose_shared.yml
       service: migrid-shared

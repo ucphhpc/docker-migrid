@@ -15,6 +15,7 @@ services:
       default:
         aliases:
           - mail.migrid.test
+
   devdns:
     image: ruudud/devdns
     container_name: devdns
@@ -44,7 +45,6 @@ services:
     extends:
       file: docker-compose_shared.yml
       service: migrid-shared
-
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -126,7 +126,6 @@ services:
         source: migrid-openid-syslog
         target: /var/log
     command: /app/docker-entry.sh
-    #privileged: true
 
   migrid-sftp:
     container_name: migrid-sftp
@@ -165,7 +164,6 @@ services:
         source: migrid-sftp-syslog
         target: /var/log
     command: /app/docker-entry.sh
-    #privileged: true
 
   migrid-ftps:
     container_name: migrid-ftps
@@ -204,7 +202,6 @@ services:
         source: migrid-ftps-syslog
         target: /var/log
     command: /app/docker-entry.sh
-    #privileged: true
 
   migrid-webdavs:
     container_name: migrid-webdavs
@@ -242,7 +239,6 @@ services:
         source: migrid-webdavs-syslog
         target: /var/log
     command: /app/docker-entry.sh
-    #privileged: true
 
   nginx-proxy:
     image: jwilder/nginx-proxy
