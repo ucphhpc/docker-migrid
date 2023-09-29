@@ -20,11 +20,11 @@ Be aware that `.env` itself is excluded from the git repository via `.gitignore`
 Quick Start
 -----------
 
-If you just want to get stated right away without any configuration changes you can use the default development environment by simply running `make` inside the `docker-migrid` directory::
+If you just want to get started right away without any configuration changes you can use the default development environment by simply running `make` inside the `docker-migrid` directory::
 
     make
 
-The Makefile creates all the necessary files, builds an migrid image and starts up the services.
+The Makefile creates all the necessary files, builds a migrid image and starts up the services.
 The entire process should be succesfully completed, when the following lines have been printed::
 
     [+] Running 15/15
