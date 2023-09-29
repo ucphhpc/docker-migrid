@@ -21,7 +21,7 @@ Variables
      - Notes
    * - CONFIGPROXY_AUTH_TOKEN
      - unset
-     - tba
+     - Jupyter integration token - just leave empty if you don't know what it does
    * - CONTAINER_TAG
      - ${MIG_GIT_BRANCH}
      - The Docker tag used for the MiGrid image that is created. This might either be a Git tag, a MiGrid version or a arbitrary name.
@@ -30,13 +30,13 @@ Variables
      - The port range for FTPS passive ports used for data transmission.
    * - JUPYTERHUB_CRYPT_KEY
      - unset
-     - tba
+     - Jupyter integration key - just leave empty if you don't know what it does
    * - ENABLE_LOGROTATE
      - False
-     - Whether or not the logrotate service should be started inside the containers. Be aware that it also might be started through the #RUN_SERVICES variable in the docker-entry.sh.
+     - Whether or not the logrotate cron job should be started inside the containers. Be aware that the cron daemon itself might be started through the #RUN_SERVICES variable in the docker-entry.sh.
    * - LOGROTATE_MIGRID
      - False
-     - Notes
+     - Add explicit logrotate of migrid log files inside the container
    * - MAIL_DOMAIN
      - unset
      - Notes
@@ -201,7 +201,7 @@ Variables
      - The email address to send various internal status and account request emails to from the migrid stack
    * - ADMIN_LIST
      - 
-     - List of user accounts that have administrative rights (meaning they can access the Server Admin panel in the webinterface)
+     - List of user accounts that have administrative rights (meaning they can access the Server Admin panel in the webinterface). Needs to be comma-separated list of full migrid user IDs on the usual x509-format.
    * - SMTP_SENDER
      - 
      - Mainly used to set a noreply@ sender address on various outgoing notification email from the instance, when there is no sane recipient for users to reply to. 
