@@ -1,0 +1,11 @@
+--- python3-openid/openid/server/server.py	2023-10-13 10:48:22.150778323 +0200
++++ python3-openid-patched/openid/server/server.py	2023-10-13 10:46:45.259655434 +0200
+@@ -1243,7 +1243,7 @@
+         @returntype: L{openid.association.Association}
+         """
+         secret = cryptutil.getBytes(getSecretSize(assoc_type))
+-        uniq = oidutil.toBase64(cryptutil.getBytes(4))
++        uniq = oidutil.toBase64(cryptutil.getBytes(4)).decode()
+         handle = '{%s}{%x}{%s}' % (assoc_type, int(time.time()), uniq)
+ 
+         assoc = Association.fromExpiresIn(self.SECRET_LIFETIME, handle, secret,
