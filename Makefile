@@ -64,6 +64,7 @@ endif
 	sed 's@#unset @unset @g;s@#export @export @g' migrid-httpd.env > migrid-httpd-init.sh
 
 initdirs:
+	mkdir -p external-certificates
 	mkdir -p certs
 	mkdir -p httpd
 	mkdir -p mig
@@ -113,6 +114,7 @@ stateclean: warning
 #            and thus runs full clean up of even the state dir with user data
 #            Be careful NOT to use it on production systems!
 distclean: stateclean dockerclean clean
+	rm -fr ./external-certificates
 	rm -rf ./certs
 	rm -rf ./log
         # TODO: is something like this still needed to clean up completely?
