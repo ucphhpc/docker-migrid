@@ -35,7 +35,7 @@ ifeq ("$(wildcard .env)",".env")
 include .env
 endif
 
-all: init dockerbuild up
+all: init dockerbuild
 
 init:	initbuild initdirs initcomposevars
 
