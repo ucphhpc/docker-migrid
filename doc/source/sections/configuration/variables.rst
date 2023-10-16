@@ -406,6 +406,12 @@ Variables
    * - GDP_EMAIL_NOTIFY
      - True
      - Whether to send project administration emails to address(es) configured in state/gdp_home/notifyemails.txt when in GDP mode
+   * - GDP_ID_SCRAMBLE
+     - safe_hash
+     - Which method to use for scrambling user IDs in the gdp.log associated with GDP sites. Uses SHA256 hashing by default to allow logs to be forwarded to less restrictive remote log environments without disclosing actual user info and to allow 'forgetting' removed users. 
+   * - GDP_PATH_SCRAMBLE
+     - safe_encrypt
+     - Which method to use for scrambling potentially sensitive path and filenames in the gdp.log associated with GDP sites. Uses Fernet encryption by default to allow logs to be forwarded to less restrictive remote log environments without disclosing actual metadata from the user data.
    * - JUPYTER_SERVICES
      - ""
      - Where the optional external Jupyter nodes can be reached

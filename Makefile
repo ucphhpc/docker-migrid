@@ -141,7 +141,7 @@ test-doc:
 	&& for i in $${missing[@]}; do \
 		echo "  $$i"; \
 	done && exit 1 \
-	|| echo "OK: found all envionment variables in documentation" && exit 0
+	|| echo "OK: found all environment variables in documentation" && exit 0
 
 test:
 	@cd tests; \
