@@ -31,9 +31,6 @@ Variables
    * - LOGROTATE_MIGRID
      - False
      - Add explicit logrotate of migrid log files inside the container
-   * - MAIL_DOMAIN
-     - unset
-     - Notes
    * - MIG_TEST_USER
      - test@external.domain
      - The username of the test user. Used by the development environments for tests.
@@ -179,7 +176,7 @@ Variables
      - https://svn.code.sf.net/p/migrid/code/trunk
      - The Subversion repository from which the migrid code will be pulled, if Git isn't specifically requested (i.e. unless WITH_GIT=True) 
    * - MIG_SVN_REV
-     - 5683
+     - HEAD
      - Which SVN revision of the migrid codebase to deploy from the above repo when SVN is used
    * - MIG_GIT_REPO
      - https://github.com/ucphhpc/migrid-sync.git
@@ -188,7 +185,7 @@ Variables
      - edge
      - The Git branch which should be used when migrid source code is pulled.
    * - MIG_GIT_REV
-     - b6c6a42c3952f8753f60a2f2571b99e3d48f5b11
+     - HEAD
      - The Git revision which should be used when migrid source code is pulled.
    * - ADMIN_EMAIL
      - mig
@@ -216,13 +213,13 @@ Variables
      - Title or label for the intended audience of the external OpenID 2.0 service
    * - PEERS_PERMIT
      - "distinguished_name:.*"
-     - A regex-filter to define which users can act as Peers in external user approval
+     - A regex-filter to define which users can act as Peers in external user approval. Applied to user database entries.
    * - VGRID_CREATORS
      - "distinguished_name:.*"
-     - A regex-filter to define which users can create VGrids / Workgroups / Projects
+     - A regex-filter to define which users can create VGrids / Workgroups / Projects. Applied to user database entries.
    * - VGRID_MANAGERS
      - "distinguished_name:.*"
-     - A regex-filter to define which users can manage existing VGrids / Workgroups / Projects when assigned ownership
+     - A regex-filter to define which users can manage existing VGrids / Workgroups / Projects when assigned ownership. Applied to user database entries.
    * - EMULATE_FLAVOR
      - migrid
      - Which web design and site to use as a basis when generating the instance web pages
@@ -234,10 +231,10 @@ Variables
      - Which skin variant to use as a basis. If flavor is migrid and skin suffix is basic the skin in migrid-basic will effectively be used.
    * - ENABLE_OPENID
      - True
-     - Enable the built-in OpenID service
+     - Enable the built-in OpenID 2.0 service for authenticating local users on web
    * - ENABLE_SFTP
      - True
-     - Enable the built-in native SFTP service
+     - Enable the built-in native SFTP service using Paramiko only
    * - ENABLE_SFTP_SUBSYS
      - True
      - Enable the built-in SFTP service provided as a sftp-subsystem to OpenSSH
@@ -249,25 +246,25 @@ Variables
      - Enable the built-in native FTPS service
    * - ENABLE_SHARELINKS
      - True
-     - Enable the built-in sharelinks feature
+     - Enable the built-in sharelinks feature for easy data sharing without account requirement
    * - ENABLE_TRANSFERS
      - True
-     - Enable the built-in datatransfers feature
+     - Enable the built-in datatransfers feature for data import and export
    * - ENABLE_DUPLICATI
      - True
-     - Enable the built-in Duplicati integration
+     - Enable the built-in Duplicati integration for client backup
    * - ENABLE_SEAFILE
      - False
-     - Enable the built-in Seafile integration
+     - Enable the built-in Seafile integration for file synchronization. Requires a stand-alone Seafile instance.
    * - ENABLE_SANDBOXES
      - False
-     - Enable the built-in sandbox resource feature
+     - Enable the built-in sandbox resource feature for grid jobs
    * - ENABLE_VMACHINES
      - False
-     - Enable the built-in vmachine resource feature
+     - Enable the built-in vmachine resource feature for grid jobs
    * - ENABLE_CRONTAB
      - True
-     - Enable the built-in Schedule Tasks feature
+     - Enable the built-in Schedule Tasks feature for users
    * - ENABLE_JOBS
      - True
      - Enable the built-in grid job execution feature
@@ -276,46 +273,46 @@ Variables
      - Enable the built-in grid execution resource feature
    * - ENABLE_EVENTS
      - True
-     - Enable the built-in file system event triggers feature
+     - Enable the built-in file system event triggers feature with inotify
    * - ENABLE_FREEZE
      - False
-     - Enable the built-in frozen archives feature
+     - Enable the built-in frozen archives feature for write-protecting and publishing user data.
    * - ENABLE_CRACKLIB
      - True
-     - Enable the built-in cracklib password checking integration
+     - Enable the built-in cracklib password checking integration on user-supplied passwords
    * - ENABLE_IMNOTIFY
      - False
-     - Enable the built-in instant messaging integration
+     - Enable the built-in instant messaging service integration. Requires a stand-alone messaging service.
    * - ENABLE_NOTIFY
      - True
-     - Enable the built-in user notification daemon
+     - Enable the built-in user notification daemon to inform users about failed logins, etc. on email.
    * - ENABLE_PREVIEW
      - False
-     - Enable the built-in image preview feature
+     - Enable the built-in image preview feature - deprecated.
    * - ENABLE_WORKFLOWS
      - False
-     - Enable the built-in workflows feature
+     - Enable the built-in workflows feature to act on file system events
    * - ENABLE_VERIFY_CERTS
      - True
-     - Enable the built-in LetsEncrypt HTTP-01 support
+     - Enable the built-in LetsEncrypt HTTP-01 support with a catch-all http vhost in the web server
    * - ENABLE_JUPYTER
      - True
      - Enable the built-in Jupyter integration - requires stand-alone Jupyter nodes
    * - ENABLE_MIGADMIN
      - False
-     - Enable the built-in Server Admin feature
+     - Enable the built-in Server Admin feature for web based management of external user, log inspection, etc.
    * - ENABLE_GDP
      - False
      - Enable GDP mode for sensitive data with a lot of restrictions on access and logging
    * - ENABLE_TWOFACTOR
      - True
-     - Enable the built-in twofactor authentication feature
+     - Enable the built-in twofactor authentication feature with TOTP tokens
    * - ENABLE_TWOFACTOR_STRICT_ADDRESS
      - False
      - Require client IO sessions to come from the same IP where user already has an active web login session with 2FA
    * - ENABLE_PEERS
      - True
-     - Enable the built-in Peers system
+     - Enable the built-in Peers system for privileged users to invite external collaboration partners
    * - PEERS_MANDATORY
      - False
      - Whether Peers validation by an existing user is mandatory before an external sign up request can be accepted.
@@ -396,10 +393,10 @@ Variables
      - The label used to describe VGrids everywhere: e.g. VGrid, Workgroup or Project
    * - DIGEST_SALT
      - "AUTO"
-     - A hex salt value used for various string digest purposes. Can be a string or a reference to a file where the value is actually stored. The latter is better as the value should remain constant once set.
+     - A 32-byte hex salt value used for various string digest purposes. Can be a string or a reference to a file where the value is actually stored. The latter is better as the value should remain constant once set.
    * - CRYPTO_SALT
      - "AUTO"
-     - A hex salt value used for various string crypto purposes. Can be a string or a reference to a file where the value is actually stored. The latter is better as the value should remain constant once set.
+     - A 32-byte hex salt value used for various string crypto purposes. Can be a string or a reference to a file where the value is actually stored. The latter is better as the value should remain constant once set.
    * - EXTRA_USERPAGE_SCRIPTS
      - ""
      - Optional extra web page scripts to embed on site user web pages (analytics, etc.) 
@@ -408,10 +405,10 @@ Variables
      - Optional extra web page styles to embed on site user web pages (branding, etc.) 
    * - GDP_EMAIL_NOTIFY
      - True
-     - Where to send project administration emails when in GDP mode
+     - Whether to send project administration emails to address(es) configured in state/gdp_home/notifyemails.txt when in GDP mode
    * - JUPYTER_SERVICES
      - ""
-     - Where the external Jupyter nodes can be reached
+     - Where the optional external Jupyter nodes can be reached
    * - JUPYTER_SERVICES_DESC
      - "{}"
-     - A text to decribe the external Jupyter nodes
+     - A text to decribe the optional external Jupyter nodes
