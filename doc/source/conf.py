@@ -4,8 +4,8 @@ import sphinx_rtd_theme
 # -- Project information -----------------------------------------------------
 
 project = 'docker-migrid'
-copyright = '2022, Jonas Bardino, Martin Rehr, and Rasmus Munk'
-author = 'Jonas Bardino, Martin Rehr, Rasmus Munk'
+copyright = '2023, Jonas Bardino, Martin Rehr, Rasmus Munk and Benedikt Alexander Braunger'
+author = 'Jonas Bardino, Martin Rehr, Rasmus Munk, Benedikt Alexander Braunger'
 
 
 # -- General configuration ---------------------------------------------------
