@@ -19,18 +19,12 @@ Variables
    * - Variable
      - Default
      - Notes
-   * - CONFIGPROXY_AUTH_TOKEN
-     - unset
-     - Jupyter integration token - just leave empty if you don't know what it does
    * - CONTAINER_TAG
      - ${MIG_GIT_BRANCH}
      - The Docker tag used for the MiGrid image that is created. This might either be a Git tag, a MiGrid version or a arbitrary name.
    * - FTPS_PASSIVE_PORTS
      - 8100-8399
      - The port range for FTPS passive ports used for data transmission.
-   * - JUPYTERHUB_CRYPT_KEY
-     - unset
-     - Jupyter integration key - just leave empty if you don't know what it does
    * - ENABLE_LOGROTATE
      - False
      - Whether or not the logrotate cron job should be started inside the containers. Be aware that the cron daemon itself might be started through the #RUN_SERVICES variable in the docker-entry.sh.
