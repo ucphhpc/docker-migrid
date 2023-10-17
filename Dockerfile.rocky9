@@ -435,7 +435,7 @@ RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
                 # NOTE: recent cjose is already included in rocky8+
                 #https://github.com/OpenIDC/cjose/releases/download/v0.6.2.2/cjose-0.6.2.2-1.el9.x86_64.rpm \
                 cjose \
-                https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.14.3/mod_auth_openidc-2.4.14.3-1.el9.x86_64.rpm \
+                https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.14.4/mod_auth_openidc-2.4.14.4-1.el9.x86_64.rpm \
                 && yum clean all \
                 && rm -fr /var/cache/yum; \
     fi;
