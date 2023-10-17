@@ -107,6 +107,7 @@ clean:
 	rm -f docker-compose_shared.yml
 	rm -fr ./mig
 	rm -fr ./httpd
+	rm -fr ./certs
 
 stateclean: warning
 	rm -rf ./state
@@ -116,7 +117,6 @@ stateclean: warning
 #            Be careful NOT to use it on production systems!
 distclean: stateclean clean dockerclean
 	rm -fr ./external-certificates
-	rm -rf ./certs
 	rm -rf ./log
         # TODO: is something like this still needed to clean up completely?
         # It needs to NOT greedily remove ALL local volumes if so!
