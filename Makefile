@@ -107,7 +107,9 @@ clean:
 	rm -f docker-compose_shared.yml
 	rm -fr ./mig
 	rm -fr ./httpd
-	rm -fr ./certs
+	# NOTE: certs may be a symlink to a externally maintained dir
+	#       only remove it here if that's not the case.
+	[ -L ./certs ] || rm -fr ./certs
 
 stateclean: warning
 	rm -rf ./state
@@ -118,11 +120,13 @@ stateclean: warning
 distclean: stateclean clean dockerclean
 	rm -fr ./external-certificates
 	rm -rf ./log
-        # TODO: is something like this still needed to clean up completely?
-        # It needs to NOT greedily remove ALL local volumes if so!
-        #if [ "$$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*')" != "" ]; then\
-        #	${DOCKER} volume rm -f $$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*');\
-        #fi
+	# NOTE: certs remove in clean is conditional - always remove it here
+	rm -fr ./certs
+	# TODO: is something like this still needed to clean up completely?
+	# It needs to NOT greedily remove ALL local volumes if so!
+	#if [ "$$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*')" != "" ]; then\
+	#	${DOCKER} volume rm -f $$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*');\
+	#fi
 	rm -f .env docker-compose.yml
 
 warning:
