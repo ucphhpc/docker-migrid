@@ -76,8 +76,9 @@ initdirs:
 	mkdir -p log/migrid-webdavs
 	mkdir -p log/migrid-ftps
 
-initcomposevars:	init
+initcomposevars:
 	@echo "creating env variable map in docker-compose_shared.yml"
+	@[ -f .env ] || echo "ERROR: no .env file found. Run 'make init' first."
 	@echo "$$DOCKER_COMPOSE_SHARED_HEADER" > docker-compose_shared.yml
 	@grep -v '\(^#.*\|^$$\)' .env >> docker-compose_shared.yml
 	@sed -E -i 's!^([^=]*)=.*!        - \1=\$$\{\1\}!' docker-compose_shared.yml
@@ -106,6 +107,7 @@ clean:
 	rm -f docker-compose_shared.yml
 	rm -fr ./mig
 	rm -fr ./httpd
+	rm -fr ./certs
 
 stateclean: warning
 	rm -rf ./state
@@ -113,9 +115,8 @@ stateclean: warning
 # IMPORTANT: this target is meant to reset the dir to a pristine checkout
 #            and thus runs full clean up of even the state dir with user data
 #            Be careful NOT to use it on production systems!
-distclean: stateclean dockerclean clean
+distclean: stateclean clean dockerclean
 	rm -fr ./external-certificates
-	rm -rf ./certs
 	rm -rf ./log
         # TODO: is something like this still needed to clean up completely?
         # It needs to NOT greedily remove ALL local volumes if so!
