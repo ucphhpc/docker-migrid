@@ -107,9 +107,9 @@ clean:
 	rm -f docker-compose_shared.yml
 	rm -fr ./mig
 	rm -fr ./httpd
-	# NOTE: certs may be a symlink to a externally maintained dir
-	#       only remove it here if that's not the case.
-	[ -L ./certs ] || rm -fr ./certs
+
+certclean:
+	rm -fr ./certs
 
 stateclean: warning
 	rm -rf ./state
@@ -117,11 +117,9 @@ stateclean: warning
 # IMPORTANT: this target is meant to reset the dir to a pristine checkout
 #            and thus runs full clean up of even the state dir with user data
 #            Be careful NOT to use it on production systems!
-distclean: stateclean clean dockerclean
+distclean: stateclean clean certclean dockerclean
 	rm -fr ./external-certificates
 	rm -rf ./log
-	# NOTE: certs remove in clean is conditional - always remove it here
-	rm -fr ./certs
 	# TODO: is something like this still needed to clean up completely?
 	# It needs to NOT greedily remove ALL local volumes if so!
 	#if [ "$$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*')" != "" ]; then\
