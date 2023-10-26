@@ -107,9 +107,9 @@ clean:
 	rm -f docker-compose_shared.yml
 	rm -fr ./mig
 	rm -fr ./httpd
-	# NOTE: certs may be a symlink to a externally maintained dir
-	#       only remove it here if that's not the case.
-	[ -L ./certs ] || rm -fr ./certs
+	# NOTE: certs may be injected or symlink to externally maintained dir.
+	#       Only remove it here if that's not the case.
+	[ -L ./certs ] || [ -f ./certs/.persistent ] || rm -fr ./certs
 
 stateclean: warning
 	rm -rf ./state
