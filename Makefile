@@ -1,4 +1,4 @@
-PACKAGE_NAME=docker-migrid
+PACKAGE_NAME=$(shell basename $$(pwd))
 PACKAGE_NAME_FORMATTED=$(subst -,_,$(PACKAGE_NAME))
 IMAGE=migrid
 OWNER ?= ucphhpc
@@ -25,7 +25,7 @@ endef
 export DOCKER_COMPOSE_SHARED_HEADER
 
 .PHONY: all init initbuild initdirs initcomposevars clean warning
-.PHONY: dockerclean distclean stateclean dockerbuild dockerpush
+.PHONY: dockerclean dockervolumeclean distclean stateclean dockerbuild dockerpush
 .PHONY: up stop down
 .PHONY: test-doc
 
@@ -103,6 +103,12 @@ dockerclean: initcomposevars
 dockerpush:
 	${DOCKER} push $(OWNER)/$(IMAGE)${CONTAINER_TAG}
 
+dockervolumeclean:
+	@if [ "$$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*')" != "" ]; then \
+		echo "Removing volumes with name ${PACKAGE_NAME}*:"; \
+		${DOCKER} volume rm -f $$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*'); \
+	fi
+
 clean:
 	rm -f docker-compose_shared.yml
 	rm -fr ./mig
@@ -117,16 +123,11 @@ stateclean: warning
 # IMPORTANT: this target is meant to reset the dir to a pristine checkout
 #            and thus runs full clean up of even the state dir with user data
 #            Be careful NOT to use it on production systems!
-distclean: stateclean clean dockerclean
+distclean: stateclean clean dockerclean dockervolumeclean
 	rm -fr ./external-certificates
 	rm -rf ./log
 	# NOTE: certs remove in clean is conditional - always remove it here
 	rm -fr ./certs
-	# TODO: is something like this still needed to clean up completely?
-	# It needs to NOT greedily remove ALL local volumes if so!
-	#if [ "$$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*')" != "" ]; then\
-	#	${DOCKER} volume rm -f $$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*');\
-	#fi
 	rm -f .env docker-compose.yml
 
 warning:
