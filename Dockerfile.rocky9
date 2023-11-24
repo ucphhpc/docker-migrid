@@ -110,7 +110,6 @@ ARG ENABLE_LOGROTATE="False"
 # TODO: logrotate conf needs to be adjusted to the manual docker service launch 
 #ARG LOGROTATE_MIGRID="True"
 ARG LOGROTATE_MIGRID="False"
-ARG BUILD_MOD_AUTH_OPENID=False
 ARG UPGRADE_MOD_AUTH_OPENIDC=False
 ARG UPGRADE_PARAMIKO=False
 ARG PUBKEY_FROM_DNS=False
@@ -146,7 +145,7 @@ ARG JUPYTER_SERVICES=""
 ARG JUPYTER_SERVICES_DESC="{}"
 
 #------------------------- first stage -----------------------------#
-FROM --platform=linux/$ARCH rockylinux:9 as init
+FROM --platform=linux/$ARCH rockylinux:9.2 as init
 ARG UID
 ARG GID
 ARG DOMAIN
@@ -216,13 +215,13 @@ ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG ENABLE_GDP
 ARG ENABLE_SELF_SIGNED_CERTS
-ARG BUILD_MOD_AUTH_OPENID
 ARG UPGRADE_MOD_AUTH_OPENIDC
 ARG UPGRADE_PARAMIKO
 ARG WITH_PY3
 ARG PREFER_PYTHON3
 ARG UID
 ARG GID
+ARG ENABLE_OPENID
 
 WORKDIR /tmp
 
@@ -283,6 +282,7 @@ RUN dnf update -y \
     fail2ban \
     ipset \
     wget \
+    patch \
     && dnf clean all \
     && rm -fr /var/cache/dnf
 
@@ -308,6 +308,11 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       # NOTE: we can just use native Cryptography and typing-extensions here
       python3-cryptography \
       python3-typing-extensions \
+      # Patch python3-openid until our pull request makes it to the Rocky repo
+      && echo "Pull python3 openid patch from own repo" \
+      && wget -O /tmp/python3-openid-assoc_handle.patch.diff https://raw.githubusercontent.com/ucphhpc/docker-migrid/master/patches/python3-openid-assoc_handle.patch.diff \
+      && patch -p 0 /usr/lib/python3.9/site-packages/openid/server/server.py < /tmp/python3-openid-assoc_handle.patch.diff \
+      && rm -f /tmp/python3-openid-assoc_handle.patch.diff \
       # NOTE: only install default paramiko if upgrade not requested
       && [ "${UPGRADE_PARAMIKO}" = True ] || dnf install -y python3-paramiko \
       && dnf clean all \
@@ -333,92 +338,76 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       postfix \
       # NOTE: python2 support is gone on rocky9+
       xorg-x11-server-Xvfb \
+      # NOTE: wkhtmltopdf not yet build for Rocky9 
+      https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox-0.12.6-1.centos8.x86_64.rpm \
+      # NOTE: compat-openssl11.x86_64 is needed by Rocky8 version of wkhtmltopdf 
+      compat-openssl11.x86_64 \
       && dnf clean all \
       && rm -fr /var/cache/dnf; \
       if [ "${WITH_PY3}" = "True" ]; then \
          echo "install py3 deps" && \
-	 dnf update -y && \
-	 dnf install -y python3-xvfbwrapper \
-         && dnf clean all \
-         && rm -fr /var/cache/dnf \
-	 && pip3 install pdfkit; \
+         pip3 install xvfbwrapper && \
+	     pip3 install pdfkit; \
       fi; \
     else \
       echo "no GDP deps"; \
     fi;
 
-# Apache OpenID (provided by epel for centos7) is unavailable here - build instead.
-#RUN dnf update -y  && dnf install -y mod_auth_openid \
-#        && dnf clean all \
-#        && rm -fr /var/cache/dnf
 
-# Build mod_auth_openid from source if requested - mainly for rocky8+ or self-signed hack
-RUN echo "BUILD_MOD_AUTH_OPENID: $BUILD_MOD_AUTH_OPENID"
-RUN echo "ENABLE_SELF_SIGNED_CERTS: $ENABLE_SELF_SIGNED_CERTS"
-RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" -o "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
-	echo "building mod_auth_openid from centos7 source rpm" \
-	&& dnf update -y \
-	&& dnf install -y gcc-c++ \
-		rpm-build \
-		mock \
-		make \
-		autoconf \
-		automake \
-		httpd-devel \
-		libcurl-devel \
-		libtidy-devel \
-		pcre-devel \
-		openssl-devel \
-		libtool \
-		sqlite-devel \
-		boost-devel \
-		libxslt \
-		expat-devel \
-		tidy-devel \
-		libuuid-devel \
-		&& dnf clean all \
-		&& rm -fr /var/cache/dnf \
-        #&& rpm -e --nodeps libopkele \
-        # NOTE: add EPEL CentOS 7 repos here but completely disabled
-	&& cat /etc/yum.repos.d/epel.repo | \
-		sed 's/\[epel/\[epel7/g;s/8/7/g;s/enabled=1/enabled=0/g' \
-		> /etc/yum.repos.d/epel7.repo \
-	&& echo "build libopkele from centos7 source rpm" \
-        # NOTE: avoid hard-coded version using yumdownloader from yum-utils
-        && yumdownloader -y --enablerepo=epel7-source --source --resolve --destdir /root/rpmbuild/SRPMS libopkele \
+# Build Apache OpenID (provided by epel for centos7) 
+RUN if [ "$ENABLE_OPENID" = "True" ]; then \
+        echo "Install mod_auth_openid" \
+        && dnf install -y gcc-c++ \
+            rpm-build \
+            mock \
+            make \
+            autoconf \
+            automake \
+            httpd-devel \
+            libcurl-devel \
+            libtidy-devel \
+            pcre-devel \
+            openssl-devel \
+            libtool \
+            sqlite-devel \
+            boost-devel \
+            libxslt \
+            expat-devel \
+            tidy-devel \
+            libuuid-devel \
+        && echo "Switch to epel for centos7" \ 
+        && dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm \
+        && echo "install libopkele centos7 source rpm" \
+        && yumdownloader -y --source --destdir /root/rpmbuild/SRPMS libopkele \
         && rpm -ivh /root/rpmbuild/SRPMS/libopkele-*.src.rpm \
-        # Optionally pull more recent gcc4.9 patch from Debian on rocky8+ (local copy in patches)
+        && echo "pull more recent gcc4.9 patch from Debian on rocky8 (local copy in patches)" \
         && wget -O /root/rpmbuild/SOURCES/fix-ftbfs-gcc4.9.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-ftbfs-gcc4.9.diff \
-        # Pull the more recent required OpenSSL-1.1 patch from Debian on rocky8+ (local copy in patches)
+        && echo "Pull the more recent required OpenSSL-1.1 patch from Debian on rocky8 (local copy in patches)" \
         && wget -O /root/rpmbuild/SOURCES/fix-openssl-1.1.0.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-openssl-1.1.0.diff \
-        # Pull patch from own repo to rpmbuild with Debian patches on rocky8+ (local copy in patches)
+        && echo "Pull patch from own repo to rpmbuild with Debian patches on rocky8 (local copy in patches)" \
         && wget -O /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff https://github.com/ucphhpc/docker-migrid/raw/master/patches/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff \
         && cd /root && patch -p 0 < /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff && cd - \
-        # TODO: is this security crippling needed or a matter of proper apache proxying?
-        # Disable Apache OpenID ssl-certificate verification if self-signed
-        # (recompile libopkele with --disable-ssl-verify-host --disable-ssl-verify-peer)
-        && if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
-	      echo "Re-building libopkele with ssl verification disabled"; \
-              sed -i 's/^%configure$/%configure --disable-ssl-verify-host --disable-ssl-verify-peer/g' /root/rpmbuild/SPECS/libopkele.spec; fi \
+        && echo "build patched libopkele" \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
         && rm -f /root/rpmbuild/RPMS/*/libopkele-*debug*.rpm \
-        #&& dnf erase -y 'libopkele-*' \
+        && dnf erase -y 'libopkele-*' \
+        && echo "install  patched libopkele" \
         && dnf install -y /root/rpmbuild/RPMS/*/libopkele-*.rpm \
-	&& echo "install mod_auth_openid centos7 source rpm" \
-        #&& rpm -e --nodeps mod_auth_openid \
-        # NOTE: avoid hard-coded version using yumdownloader from yum-utils
-        && yumdownloader -y --enablerepo=epel7-source --source --resolve --destdir /root/rpmbuild/SRPMS mod_auth_openid \
+        && echo "install mod_auth_openid centos7 source rpm" \
+        && yumdownloader -y --source --destdir /root/rpmbuild/SRPMS mod_auth_openid \
         && rpm -ivh /root/rpmbuild/SRPMS/mod_auth_openid-*.src.rpm \
-	&& echo "build mod_auth_openid centos7 source rpm" \
+        && echo "build mod_auth_openid centos7 source rpm" \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/mod_auth_openid.spec \
         && rm -f /root/rpmbuild/RPMS/*/mod_auth_openid-*debug*.rpm \
-	&& echo "install the rebuilt mod_auth_openid rpm" \
-        #&& dnf erase -y 'mod_auth_openid-*' \
+        && echo "install the rebuilt mod_auth_openid rpm" \
+        && dnf erase -y 'mod_auth_openid-*' \
         && dnf install -y /root/rpmbuild/RPMS/*/mod_auth_openid-*.rpm \
-	&& echo "cleaning up after rebuilding and installing mod_auth_openid rpm" \
+        && echo "cleaning up after rebuilding and installing mod_auth_openid rpm" \
         && rm -rf /root/rpmbuild \
         && dnf clean all \
-        && rm -fr /var/cache/dnf; \
+        && rm -fr /var/cache/dnf \
+        && echo "Switch back to epel for rocky9" \
+        && dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm ; \
     fi;
 
 
@@ -435,7 +424,7 @@ RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
                 # NOTE: recent cjose is already included in rocky8+
                 #https://github.com/OpenIDC/cjose/releases/download/v0.6.2.2/cjose-0.6.2.2-1.el9.x86_64.rpm \
                 cjose \
-                https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.14.4/mod_auth_openidc-2.4.14.4-1.el9.x86_64.rpm \
+                https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.14.3/mod_auth_openidc-2.4.14.3-1.el9.x86_64.rpm \
                 && yum clean all \
                 && rm -fr /var/cache/yum; \
     fi;
@@ -958,7 +947,7 @@ ARG SID_DOMAIN
 ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
 ARG ENABLE_SELF_SIGNED_CERTS
-ARG BUILD_MOD_AUTH_OPENID
+ARG ENABLE_OPENID
 ARG WITH_PY3
 ARG ENABLE_LOGROTATE
 ARG LOGROTATE_MIGRID
@@ -1007,7 +996,7 @@ RUN cp generated-confs/MiG.conf $WEB_DIR/conf.d/ \
     && cp generated-confs/apache2.service /lib/systemd/system/httpd.service
 
 # Disable missing mod auth openid in this case
-RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" ]; then \
+RUN if [ "$ENABLE_OPENID" = "True" ]; then \
         echo "Keep mod_auth_openid in apache"; \
     else \
         echo "Disable missing mod_auth_openid in apache" && \
