@@ -145,7 +145,7 @@ ARG JUPYTER_SERVICES=""
 ARG JUPYTER_SERVICES_DESC="{}"
 
 #------------------------- first stage -----------------------------#
-FROM --platform=linux/$ARCH rockylinux:9.2 as init
+FROM --platform=linux/$ARCH rockylinux:9.3 as init
 ARG UID
 ARG GID
 ARG DOMAIN
@@ -1076,6 +1076,7 @@ RUN update-ca-trust force-enable \
 #    sed -i "s/^\$SystemLogSocketName/#\$SystemLogSocketName/g" /etc/rsyslog.d/listen.conf;
 # New format and no listen.conf
 RUN sed -i 's/^module(load="imjournal"/#module(load="imjournal"/g' /etc/rsyslog.conf
+RUN sed -i 's/       UsePid="system"/#       UsePid="system"/g' /etc/rsyslog.conf
 RUN sed -i 's/       StateFile="imjournal.state"/#       StateFile="imjournal.state"/g' /etc/rsyslog.conf
 RUN sed -i 's/SysSock.Use="off"/SysSock.Use="on"/g' /etc/rsyslog.conf
 
