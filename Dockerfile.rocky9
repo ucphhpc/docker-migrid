@@ -145,7 +145,7 @@ ARG JUPYTER_SERVICES=""
 ARG JUPYTER_SERVICES_DESC="{}"
 
 #------------------------- first stage -----------------------------#
-FROM --platform=linux/$ARCH rockylinux:9.3 as init
+FROM --platform=linux/$ARCH rockylinux:9 as init
 ARG UID
 ARG GID
 ARG DOMAIN
