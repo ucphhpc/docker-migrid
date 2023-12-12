@@ -869,6 +869,12 @@ RUN echo "PYTHONPATH=${MIG_ROOT}" >> ~/.bash_profile \
 #RUN echo "PATH=$HOME/.local/bin:${PATH}" >> ~/.bash_profile \
 #    && echo "export PATH" >> ~/.bash_profile
 
+# TODO: remove next lines once fully migrated to python3 or switch to rocky
+# Silence noisy python2 deprecation warning from cryptography module
+# We are fully aware and working on switching to py3 ASAP. 
+RUN echo "PYTHONWARNINGS='ignore:Python 2 is no longer supported by the Python core team. Support for it is now deprecated in cryptography:UserWarning'" >> ~/.bash_profile \
+    && echo "export PYTHONWARNINGS" >> ~/.bash_profile
+
 WORKDIR $MIG_ROOT/mig/install
 
 RUN echo "Designated jupyter services: ${JUPYTER_SERVICES}"
