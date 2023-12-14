@@ -86,6 +86,32 @@ if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
     fi
 fi
 
+# Adjust IO session cleanup to match actual services
+SESSCLEANUP="/etc/cron.daily/migstateclean"
+echo "Setting MiG state cleanup"
+if [ -f "$SESSCLEANUP" ]; then
+    protos=""
+    for svc in ${RUN_SERVICES}; do
+        if [[ "$svc" == "webdavs" ]]; then
+            protos="davs $protos"
+        elif [[ "$svc" == "ftps" ]]; then
+            protos="ftps $protos"
+        elif [[ "$svc" == "sftp"* \
+		        && ! "$protos" == *"sftp"* ]] ; then
+            protos="sftp $protos"
+        fi
+    done
+    if [ -z "$protos" ]; then
+        echo "Disabling IO session cleanup"
+        sed -i 's/^SESSCLEANUP=\".*\"/SESSCLEANUP=\"\"/g' "$SESSCLEANUP"
+    else
+	protos="${protos%?}"
+        echo "Enabling IO session cleanup for: $protos"
+        cmd="sed -i 's/^SESSCLEANUP=\".*\"/SESSCLEANUP=\"$protos\"/g' \"$SESSCLEANUP\""
+	eval "$cmd"
+    fi
+fi
+
 echo "Run services: ${RUN_SERVICES}"
 CHK_SERVICES=""
 for svc in ${RUN_SERVICES}; do
