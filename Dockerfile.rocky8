@@ -1154,17 +1154,12 @@ RUN update-ca-trust force-enable \
 
 # rsyslog: Disable systemd and enable /dev/log
 # NOTE: rsyslog.conf module loading changed between centos 7 and centos/rocky 8
-#       try the old CamelCase style first but fallback to new functional style.
 # https://projectatomic.io/blog/2014/09/running-syslog-within-a-docker-container/
-# Old format and separate listen.conf
-#RUN sed -i "s/^\$ModLoad imjournal/#\$ModLoad imjournal/g" /etc/rsyslog.conf; \
-#    sed -i "s/^\$OmitLocalLogging on/\$OmitLocalLogging off/g" /etc/rsyslog.conf; \
-#    sed -i "s/^\$IMJournalStateFile/#\$IMJournalStateFile/g" /etc/rsyslog.conf; \
-#    sed -i "s/^\$SystemLogSocketName/#\$SystemLogSocketName/g" /etc/rsyslog.d/listen.conf;
 # New format and no listen.conf
-RUN sed -i 's/^module(load="imjournal"/#module(load="imjournal"/g' /etc/rsyslog.conf
-RUN sed -i 's/       StateFile="imjournal.state"/#       StateFile="imjournal.state"/g' /etc/rsyslog.conf
-RUN sed -i 's/SysSock.Use="off"/SysSock.Use="on"/g' /etc/rsyslog.conf
+RUN sed -i -e 's/^module(load="imjournal"/#module(load="imjournal"/g' \
+	-e 's/       UsePid="system"/#       UsePid="system"/g' \
+        -e 's/       StateFile="imjournal.state"/#       StateFile="imjournal.state"/g' \
+	-e 's/SysSock.Use="off"/SysSock.Use="on"/g' /etc/rsyslog.conf
 
 # Enable GDP log 
 # NOTE: on RHEL clones the default messages log will also get a copy unless we
