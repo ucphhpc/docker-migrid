@@ -139,6 +139,9 @@ ARG EXTRA_USERPAGE_STYLES=""
 ARG GDP_EMAIL_NOTIFY=True
 ARG GDP_ID_SCRAMBLE=safe_hash
 ARG GDP_PATH_SCRAMBLE=safe_encrypt
+ARG SFTP_MAX_SESSIONS=32
+ARG WSGI_PROCS=25
+ARG APACHE_WORKER_PROCS=256
 
 # Jupyter Arguments
 ARG JUPYTER_SERVICES=""
@@ -861,6 +864,9 @@ ARG EXTRA_USERPAGE_STYLES
 ARG GDP_EMAIL_NOTIFY
 ARG GDP_ID_SCRAMBLE
 ARG GDP_PATH_SCRAMBLE
+ARG SFTP_MAX_SESSIONS
+ARG WSGI_PROCS
+ARG APACHE_WORKER_PROCS
 
 ENV PYTHONPATH=${MIG_ROOT}
 # Ensure that the $USER sets it during session start
@@ -978,7 +984,8 @@ RUN python2 ./generateconfs.py --source=. \
     --default_menu="${DEFAULT_MENU}" --user_menu="${USER_MENU}" \
     --extra_userpage_scripts="${EXTRA_USERPAGE_SCRIPTS}" \
     --extra_userpage_styles="${EXTRA_USERPAGE_STYLES}" \
-    --apache_worker_procs=256 --wsgi_procs=25
+    --sftp_max_sessions=${SFTP_MAX_SESSIONS} \
+    --apache_worker_procs=${APACHE_WORKER_PROCS} --wsgi_procs=${WSGI_PROCS}
 
 RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/static-skin.css $MIG_ROOT/mig/images/ \
