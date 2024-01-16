@@ -321,6 +321,8 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       python3-future \
       python3-cffi \
       python3-pyOpenSSL \
+      # NOTE: lxml and libxslt-devel required to build python-openid2
+      python3-lxml \
       python3-pycurl \
       python3-PyYAML \
       # NOTE: setuptools_rust requires typing-extensions and pip3 pulls in a
