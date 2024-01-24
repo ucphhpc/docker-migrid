@@ -132,7 +132,9 @@ for svc in ${RUN_SERVICES}; do
     elif [ "$svc" = "rsyslogd" ]; then
         # TODO: can we switch to proper service start?
         #service rsyslog start
-        /usr/sbin/rsyslogd
+        # limit the amout of open files for rsyslog due to
+        # https://github.com/rsyslog/rsyslog/issues/5158#issuecomment-1708760846
+        ( ulimit -n 1024; /usr/sbin/rsyslogd )
         status=$?
         if [ $status -ne 0 ]; then
             echo "Failed to start $svc: $status"
