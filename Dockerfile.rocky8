@@ -747,6 +747,7 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
 
 #------------------------- next stage -----------------------------#
 FROM --platform=linux/$ARCH mig_dependencies as download_mig
+LABEL MIGRID=true
 ARG DOMAIN
 ARG MIG_SVN_REPO
 ARG MIG_SVN_REV
@@ -1216,3 +1217,4 @@ WORKDIR /app
 EXPOSE 80 443 444 445 446 447 448 449 2222 4443 8021 22222
 
 CMD ["bash", "/app/docker-entry.sh"]
+LABEL MIGRID=false
