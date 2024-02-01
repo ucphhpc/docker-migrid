@@ -1127,9 +1127,11 @@ RUN if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
     fi
 
 # Front page
-RUN cp -a $MIG_ROOT/state/wwwpublic/index-${EMULATE_FQDN}.html \
-        $MIG_ROOT/state/wwwpublic/index-${DOMAIN}.html && \
-    ln -s index-${DOMAIN}.html $MIG_ROOT/state/wwwpublic/index.html && \
+RUN [ "${EMULATE_FQDN}" = "${DOMAIN}" ] || \
+	cp -a $MIG_ROOT/state/wwwpublic/index-${EMULATE_FQDN}.html \
+		$MIG_ROOT/state/wwwpublic/index-${DOMAIN}.html
+
+RUN ln -s index-${DOMAIN}.html $MIG_ROOT/state/wwwpublic/index.html && \
     ln -s about-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/about-snippet.html && \
     ln -s support-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/support-snippet.html && \
     ln -s tips-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/tips-snippet.html && \
