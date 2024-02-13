@@ -57,7 +57,7 @@ services:
         target: /var/log
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: volume
-        source: state-ro
+        source: vgrid_files_readonly
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
     env_file:
@@ -134,7 +134,7 @@ services:
         target: /var/log
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: volume
-        source: state-ro
+        source: vgrid_files_readonly
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
     command: /app/docker-entry.sh -k
@@ -173,7 +173,7 @@ services:
         target: /var/log
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: volume
-        source: state-ro
+        source: vgrid_files_readonly
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
     command: /app/docker-entry.sh -k
@@ -212,7 +212,7 @@ services:
         target: /var/log
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: volume
-        source: state-ro
+        source: vgrid_files_readonly
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
     command: /app/docker-entry.sh -k
@@ -272,7 +272,7 @@ volumes:
       device: ${DOCKER_MIGRID_ROOT}/state
       o: bind
   
-  state-ro:
+  vgrid_files_readonly:
     driver: local
     driver_opts:
       type: none
