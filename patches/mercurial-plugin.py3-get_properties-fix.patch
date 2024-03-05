@@ -1,6 +1,6 @@
 diff -Naur mercurial-plugin/tracext/hg/backend.py mercurial-plugin.py3-get_properties-fix/tracext/hg/backend.py
---- mercurial-plugin/tracext/hg/backend.py      2024-03-04 16:13:37.559929198 +0100
-+++ mercurial-plugin.py3-get_properties-fix/tracext/hg/backend.py       2024-03-04 16:10:35.165778213 +0100
+--- mercurial-plugin/tracext/hg/backend.py	2024-03-04 16:13:37.559929198 +0100
++++ mercurial-plugin.py3-get_properties-fix/tracext/hg/backend.py	2024-03-04 16:10:35.165778213 +0100
 @@ -1315,7 +1315,7 @@
          return annotations
  
@@ -11,8 +11,8 @@ diff -Naur mercurial-plugin/tracext/hg/backend.py mercurial-plugin.py3-get_prope
          else:
              return {}
 diff -Naur mercurial-plugin/tracext/hg/tests/backend.py mercurial-plugin.py3-get_properties-fix/tracext/hg/tests/backend.py
---- mercurial-plugin/tracext/hg/tests/backend.py        2024-03-04 16:13:37.562929200 +0100
-+++ mercurial-plugin.py3-get_properties-fix/tracext/hg/tests/backend.py 2024-03-04 15:37:39.742044554 +0100
+--- mercurial-plugin/tracext/hg/tests/backend.py	2024-03-04 16:13:37.562929200 +0100
++++ mercurial-plugin.py3-get_properties-fix/tracext/hg/tests/backend.py	2024-03-05 09:28:24.009019674 +0100
 @@ -240,6 +240,7 @@
          repos.repo.invalidate()
          self.assertEqual(rev, repos.normalize_rev(repos.get_node('/', 'alpha').rev))
