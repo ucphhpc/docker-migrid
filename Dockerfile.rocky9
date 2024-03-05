@@ -60,6 +60,7 @@ ARG MIG_GIT_BRANCH=edge
 ARG MIG_GIT_REV=HEAD
 ARG ADMIN_EMAIL=mig
 ARG ADMIN_LIST=
+ARG SUPPORT_EMAIL=mig
 ARG SMTP_SENDER=
 ARG SMTP_SERVER=localhost
 ARG LOG_LEVEL=info
@@ -355,8 +356,28 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
     fi;
 
 RUN if [ -n "${TRAC_ADMIN_PATH}" ]; then \
-      echo "install Trac deps" \
-      && pip3 install Trac; \
+      echo "install Trac and plugins" \
+      && pip3 install Trac TracWikiPrint TracGraphviz TracFullBlog TracWikiCssPlugin \
+      # IMPORTANT: Mercurial plugin is required for our repos but the latest
+      #             stable release does NOT support current python and Trac
+      #             versions. We need the latest dev version for the default
+      #             Python 3 and Trac-1.6
+      #             We're patching the mercurial-plugin while waiting for a
+      #             minor python3 fix to be applied upstream.
+      #&& pip3 install TracMercurial \
+      && hg clone https://hg.edgewall.org/trac/mercurial-plugin \
+      && echo "Pull patch for https://trac.edgewall.org/ticket/13493 from own repo on rocky8+ (local copy in patches)" \
+      && wget -O /tmp/mercurial-plugin.py3-get_properties-fix.patch https://github.com/ucphhpc/docker-migrid/raw/master/patches/mercurial-plugin.py3-get_properties-fix.patch \
+      && patch -p 0 --batch --forward < /tmp/mercurial-plugin.py3-get_properties-fix.patch \
+      && pip3 install ./mercurial-plugin \
+      && rm -rf ./mercurial-plugin \
+      # NOTE: these plugins would be nice but have gone stale and only support
+      #       older Trac versions.
+      #&& pip3 install TracStats TracMasterTickets TracDiscussion TracDownloads TracWysiwyg \
+      #&& pip3 install https://trac-hacks.org/svn/tracwysiwygplugin/0.12
+      # NOTE: install more recent dev versions of those with Trac-1.6+ support
+      # latest tag https://github.com/trac-hacks/tracstats/releases/tag/v0.6.1 is pre 1.6
+      && pip3 install https://github.com/trac-hacks/tracstats/archive/refs/heads/master.zip ; \
     else \
       echo "no Trac deps"; \
     fi;
@@ -777,6 +798,7 @@ ARG OPENID_PORT
 ARG OPENID_SHOW_PORT
 ARG ADMIN_EMAIL
 ARG ADMIN_LIST
+ARG SUPPORT_EMAIL
 ARG SMTP_SENDER
 ARG SMTP_SERVER
 ARG LOG_LEVEL
@@ -917,7 +939,7 @@ RUN ./generateconfs.py --source=. \
     --io_fqdn=${IO_DOMAIN} \
     --user=$USER --group=$GROUP --log_level=${LOG_LEVEL} \
     --admin_email="${ADMIN_EMAIL}" --admin_list="${ADMIN_LIST}" \
-    --smtp_sender="${SMTP_SENDER}" \
+    --support_email="${SUPPORT_EMAIL}" --smtp_sender="${SMTP_SENDER}" \
     --smtp_server="${SMTP_SERVER}" \
     --apache_version=2.4 \
     --apache_etc=${WEB_DIR} \
@@ -1044,6 +1066,8 @@ ARG ENABLE_OPENID
 ARG WITH_PY3
 ARG ENABLE_LOGROTATE
 ARG LOGROTATE_MIGRID
+ARG TRAC_ADMIN_PATH
+ARG TRAC_INI_PATH
 ARG ENABLE_GDP
 
 # Prepare oiddiscover for httpd
@@ -1130,6 +1154,11 @@ RUN ln -s index-${DOMAIN}.html $MIG_ROOT/state/wwwpublic/index.html && \
 # TODO: improve this hard-coded translation
 # Replace index.html redirects to instance domains
 RUN sed -i -e "s@https://ext\.${EMULATE_FQDN}@https://${MIGOID_DOMAIN}@g;s@https://oid\.${EMULATE_FQDN}@https://${EXTOID_DOMAIN}@g;s@https://${EMULATE_FQDN}@https://${EXTOID_DOMAIN}@g;s@https://cert\.${EMULATE_FQDN}@https://${EXTCERT_DOMAIN}@g;s@https://sid\.${EMULATE_FQDN}@https://${SID_DOMAIN}@g" $MIG_ROOT/state/wwwpublic/index-${DOMAIN}.html
+
+# link relevant py trac ini into default location if no TRAC_INI_PATH is set here
+RUN if [ -n "${TRAC_ADMIN_PATH}" -a -z "${TRAC_INI_PATH}" ]; then \
+        ln -s ${MIG_ROOT}/mig/server/trac-py3.ini ${MIG_ROOT}/mig/server/trac.ini; \
+    fi;
 
 # State clean services
 RUN chmod 755 generated-confs/{migstateclean,migerrors} \
