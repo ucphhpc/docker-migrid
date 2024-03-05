@@ -1,0 +1,23 @@
+diff -Naur mercurial-plugin/tracext/hg/backend.py mercurial-plugin.py3-get_properties-fix/tracext/hg/backend.py
+--- mercurial-plugin/tracext/hg/backend.py      2024-03-04 16:13:37.559929198 +0100
++++ mercurial-plugin.py3-get_properties-fix/tracext/hg/backend.py       2024-03-04 16:10:35.165778213 +0100
+@@ -1315,7 +1315,7 @@
+         return annotations
+ 
+     def get_properties(self):
+-        if self.isfile and 'x' in self.manifest.flags(self.str_path):
++        if self.isfile and b'x' in self.manifest.flags(self.str_path):
+             return {'exe': '*'}
+         else:
+             return {}
+diff -Naur mercurial-plugin/tracext/hg/tests/backend.py mercurial-plugin.py3-get_properties-fix/tracext/hg/tests/backend.py
+--- mercurial-plugin/tracext/hg/tests/backend.py        2024-03-04 16:13:37.562929200 +0100
++++ mercurial-plugin.py3-get_properties-fix/tracext/hg/tests/backend.py 2024-03-04 15:37:39.742044554 +0100
+@@ -240,6 +240,7 @@
+         repos.repo.invalidate()
+         self.assertEqual(rev, repos.normalize_rev(repos.get_node('/', 'alpha').rev))
+         self.assertEqual(rev, repos.normalize_rev(repos.get_node('/.hgignore', 'alpha').rev))
++        self.assertEqual([], list(repos.get_node('/.hgignore').get_properties()))
+ 
+     def test_on_empty_repos(self):
+         self._hg_init(data=False)
