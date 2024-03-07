@@ -56,7 +56,10 @@ services:
         source: migrid-syslog
         target: /var/log
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
-      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
+      - type: volume
+        source: vgrid_files_readonly
+        target: /home/mig/state/vgrid_files_readonly
+        read_only: true
     env_file:
       - migrid-httpd.env
     command: /app/docker-entry.sh -k -V
@@ -130,7 +133,10 @@ services:
         source: migrid-sftp-syslog
         target: /var/log
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
-      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
+      - type: volume
+        source: vgrid_files_readonly
+        target: /home/mig/state/vgrid_files_readonly
+        read_only: true
     command: /app/docker-entry.sh -k
 
   migrid-ftps:
@@ -166,7 +172,10 @@ services:
         source: migrid-ftps-syslog
         target: /var/log
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
-      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
+      - type: volume
+        source: vgrid_files_readonly
+        target: /home/mig/state/vgrid_files_readonly
+        read_only: true
     command: /app/docker-entry.sh -k
 
   migrid-webdavs:
@@ -202,7 +211,10 @@ services:
         source: migrid-webdavs-syslog
         target: /var/log
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
-      - ./state/vgrid_files_writable:/home/mig/state/vgrid_files_readonly:ro
+      - type: volume
+        source: vgrid_files_readonly
+        target: /home/mig/state/vgrid_files_readonly
+        read_only: true
     command: /app/docker-entry.sh -k
 
 # NOTE: not used in stand-alone mode
@@ -260,6 +272,13 @@ volumes:
       device: ${DOCKER_MIGRID_ROOT}/state
       o: bind
   
+  vgrid_files_readonly:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DOCKER_MIGRID_ROOT}/state/vgrid_files_writable
+      o: "bind, ro"
+
   migrid-syslog:
     # Volume used for exposing migrid system log
     driver: local
