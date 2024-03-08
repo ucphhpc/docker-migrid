@@ -699,7 +699,9 @@ RUN if [ "${MODERN_WSGIDAV}" = "False" ]; then \
                'markupsafe<2' 'pyyaml<6' cheroot 'wsgidav<4'; \
     fi;
 RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install cheroot 'wsgidav>=3.1.1'; \
+      # IMPORTANT: use at least 4.1 here to avoid a potential security issue 
+      # https://github.com/mar10/wsgidav/security/advisories/GHSA-xx6g-jj35-pxjv
+      pip3 install cheroot 'wsgidav>=4.1.0'; \
     fi;
 # Prefer sslkeylog as session tracking helper in webdavs daemon if available.
 # Automatic fallback  to our _sslsession C-extension when not.
