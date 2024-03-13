@@ -60,6 +60,7 @@ ARG MIG_GIT_BRANCH=edge
 ARG MIG_GIT_REV=HEAD
 ARG ADMIN_EMAIL=mig
 ARG ADMIN_LIST=
+ARG SUPPORT_EMAIL=mig
 ARG SMTP_SENDER=
 ARG SMTP_SERVER=localhost
 ARG LOG_LEVEL=info
@@ -125,6 +126,8 @@ ARG PREFER_PYTHON3=False
 ARG SIGNUP_METHODS=migoid
 ARG LOGIN_METHODS=migoid
 ARG USER_INTERFACES=V3
+# TODO: implement support for new user default UI arg
+#ARG NEW_USER_DEFAULT_UI=V3
 ARG AUTO_ADD_CERT_USER=False
 ARG AUTO_ADD_OID_USER=False
 ARG AUTO_ADD_OIDC_USER=False
@@ -368,6 +371,18 @@ RUN if [ -n "${TRAC_ADMIN_PATH}" ]; then \
     else \
       echo "no Trac deps"; \
     fi;
+
+# TODO: this breaks yum etc in build - can we switch default?
+#RUN if [ "${PREFER_PYTHON3}" = "True" ]; then \
+#      echo "set up py3 as default python" && \
+#      # No python alternatives configured here, yet, so set up
+#      alternatives --install /usr/bin/python python /usr/bin/python2 50 && \
+#      alternatives --install /usr/bin/python python /usr/bin/python3 60 && \
+#      update-alternatives --set python /usr/bin/python3; \
+#    else \
+#      echo "py2 already set up as default python"; \
+#    fi;
+
 
 # Install GDP dependencies
 # TODO: does postfix "just work" and should it perhaps always be installed?
@@ -794,11 +809,14 @@ RUN if [ "$WITH_GIT" = "True" ]; then \
 	echo "migrid version: ${MIG_SVN_REPO} trunk ${MIG_SVN_REV}" > ./active-migrid-version.txt; \
     fi;
 
-# NOTE: we manually need to enable modern grid_webdavs.py here for now.
-#       Replace any existing symlink with one to the 3.x script.
-RUN if [ "${MODERN_WSGIDAV}" = "True" ]; then \
+# NOTE: we manually need to toggle grid_webdavs.py link here for now.
+#       Replace any existing symlink with one to the 1.x or 3.x script.
+RUN if [ "${PREFER_PYTHON3}" = "True" -o "${MODERN_WSGIDAV}" = "True" ]; then \
       rm -f ${MIG_ROOT}/mig/server/grid_webdavs.py ; \
       ln -s grid_webdavs-3.x.py ${MIG_ROOT}/mig/server/grid_webdavs.py; \
+    else \
+      rm -f ${MIG_ROOT}/mig/server/grid_webdavs.py ; \
+      ln -s grid_webdavs-1.x.py ${MIG_ROOT}/mig/server/grid_webdavs.py; \
     fi;
 
 
@@ -942,23 +960,40 @@ ARG SFTP_MAX_SESSIONS
 ARG WSGI_PROCS
 ARG APACHE_WORKER_PROCS
 
+# NOTE: we need the ~/.local/ wrapper here because update-alternatives breaks yum, etc.
 ENV PYTHONPATH=${MIG_ROOT}
+ENV PATH=/home/$USER/.local/bin:$PATH
 # Ensure that the $USER sets it during session start
 RUN echo "PYTHONPATH=${MIG_ROOT}" >> ~/.bash_profile \
     && echo "export PYTHONPATH" >> ~/.bash_profile
-#RUN echo "PATH=$HOME/.local/bin:${PATH}" >> ~/.bash_profile \
-#    && echo "export PATH" >> ~/.bash_profile
+RUN echo "PATH=$HOME/.local/bin:${PATH}" >> ~/.bash_profile \
+    && echo "export PATH" >> ~/.bash_profile
 
 # TODO: remove next lines once fully migrated to python3 or switch to rocky
-# Silence noisy python2 deprecation warning from cryptography module
-# We are fully aware and working on switching to py3 ASAP. 
-RUN echo "PYTHONWARNINGS='ignore:Python 2 is no longer supported by the Python core team. Support for it is now deprecated in cryptography:UserWarning'" >> ~/.bash_profile \
-    && echo "export PYTHONWARNINGS" >> ~/.bash_profile
+# Silence noisy python 2 and 3.6 deprecation warning from cryptography module
+# We are fully aware and working on switching to recent py3 ASAP. 
+RUN if [ "${PREFER_PYTHON3}" = "True" ]; then \
+      # TODO: the comma in string breaks -W because it splits on that. Ignore prefix for now.
+      #echo "PYTHONWARNINGS='ignore:Python 3.6 is no longer supported by the Python core team. Therefore, support for it is deprecated in cryptography:UserWarning'" >> ~/.bash_profile ; \    
+      echo "PYTHONWARNINGS='ignore:Python 3.6 is no longer supported by the Python core team.:UserWarning'" >> ~/.bash_profile ; \    
+    else \
+      echo "PYTHONWARNINGS='ignore:Python 2 is no longer supported by the Python core team. Support for it is now deprecated in cryptography:UserWarning'" >> ~/.bash_profile ; \
+    fi; echo "export PYTHONWARNINGS" >> ~/.bash_profile
 
 WORKDIR $MIG_ROOT/mig/install
 
 RUN echo "Designated jupyter services: ${JUPYTER_SERVICES}"
 RUN echo "Designated jupyter services descriptions: ${JUPYTER_SERVICES_DESC}"
+
+# NOTE: we need the ~/.local/ wrapper here because update-alternatives breaks yum, etc.
+RUN mkdir -p ${MIG_ROOT}/.local/bin; \
+    if [ "${PREFER_PYTHON3}" = "True" ]; then \
+      echo "setup python3 as default python in ${MIG_ROOT}" && \
+      ln -s /usr/bin/python3 ${MIG_ROOT}/.local/bin/python; \
+    else \
+      echo "setup python2 as default python in $MIG_ROOT" && \
+      ln -s /usr/bin/python2 ${MIG_ROOT}/.local/bin/python; \
+    fi;
 
 RUN python2 ./generateconfs.py --source=. \
     --destination=generated-confs \
@@ -973,7 +1008,7 @@ RUN python2 ./generateconfs.py --source=. \
     --io_fqdn=${IO_DOMAIN} \
     --user=$USER --group=$GROUP --log_level=${LOG_LEVEL} \
     --admin_email="${ADMIN_EMAIL}" --admin_list="${ADMIN_LIST}" \
-    --smtp_sender="${SMTP_SENDER}" \
+    --support_email="${SUPPORT_EMAIL}" --smtp_sender="${SMTP_SENDER}" \
     --smtp_server="${SMTP_SERVER}" \
     --apache_version=2.4 \
     --apache_etc=${WEB_DIR} \
@@ -1048,6 +1083,7 @@ RUN python2 ./generateconfs.py --source=. \
     --signup_methods="${SIGNUP_METHODS}" \
     --login_methods="${LOGIN_METHODS}" \
     --distro=centos --user_interface="${USER_INTERFACES}" \
+    #--new_user_default_ui=${NEW_USER_DEFAULT_UI} \
     --skin="${EMULATE_FLAVOR}-${SKIN_SUFFIX}" \
     --title="${TITLE}" --short_title="${SHORT_TITLE}" \
     --digest_salt="${DIGEST_SALT}" --crypto_salt="${CRYPTO_SALT}" \
@@ -1069,8 +1105,7 @@ RUN python2 ./generateconfs.py --source=. \
     --imnotify_username=${IMNOTIFY_USERNAME} --imnotify_password=${IMNOTIFY_PASSWD} \
     --external_doc=${EXTERNAL_DOC} \
     #--peers_notice="${PEERS_NOTICE}" --logo_center="${LOGO_CENTER}" \
-    #--support-text="${SUPPORT_TEXT}" \
-    #--privacy_text="${PRIVACY_TEXT}" \
+    #--support-text="${SUPPORT_TEXT}" --privacy_text="${PRIVACY_TEXT}" \
     #--datasafety_link="${DATASAFETY_LINK}" --datasafety_text="${DATASAFETY_TEXT}" \
     --extra_userpage_scripts="${EXTRA_USERPAGE_SCRIPTS}" \
     --extra_userpage_styles="${EXTRA_USERPAGE_STYLES}" \
@@ -1098,8 +1133,11 @@ ARG EMULATE_FQDN
 ARG ENABLE_SELF_SIGNED_CERTS
 ARG BUILD_MOD_AUTH_OPENID
 ARG WITH_PY3
+ARG PREFER_PYTHON3
 ARG ENABLE_LOGROTATE
 ARG LOGROTATE_MIGRID
+ARG TRAC_ADMIN_PATH
+ARG TRAC_INI_PATH
 ARG ENABLE_GDP
 
 # Prepare oiddiscover for httpd
@@ -1182,6 +1220,15 @@ RUN ln -s index-${DOMAIN}.html $MIG_ROOT/state/wwwpublic/index.html && \
 # TODO: improve this hard-coded translation
 # Replace index.html redirects to instance domains
 RUN sed -i -e "s@https://ext\.${EMULATE_FQDN}@https://${MIGOID_DOMAIN}@g;s@https://oid\.${EMULATE_FQDN}@https://${EXTOID_DOMAIN}@g;s@https://${EMULATE_FQDN}@https://${EXTOID_DOMAIN}@g;s@https://cert\.${EMULATE_FQDN}@https://${EXTCERT_DOMAIN}@g;s@https://sid\.${EMULATE_FQDN}@https://${SID_DOMAIN}@g" $MIG_ROOT/state/wwwpublic/index-${DOMAIN}.html
+
+# link relevant py trac ini into default location if no TRAC_INI_PATH is set here
+RUN if [ -n "${TRAC_ADMIN_PATH}" -a -z "${TRAC_INI_PATH}" ]; then \
+        if [ "${PREFER_PYTHON3}" = "True" ]; then \
+            ln -s ${MIG_ROOT}/mig/server/trac-py3.ini ${MIG_ROOT}/mig/server/trac.ini; \
+        else \
+            ln -s ${MIG_ROOT}/mig/server/trac-py2.ini ${MIG_ROOT}/mig/server/trac.ini; \
+        fi; \
+    fi;
 
 # State clean services
 RUN chmod 755 generated-confs/{migstateclean,migerrors} \

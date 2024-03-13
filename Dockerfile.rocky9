@@ -126,6 +126,8 @@ ARG PREFER_PYTHON3=True
 ARG SIGNUP_METHODS=migoid
 ARG LOGIN_METHODS=migoid
 ARG USER_INTERFACES=V3
+# TODO: implement support for new user default UI arg
+#ARG NEW_USER_DEFAULT_UI=V3
 ARG AUTO_ADD_CERT_USER=False
 ARG AUTO_ADD_OID_USER=False
 ARG AUTO_ADD_OIDC_USER=False
@@ -1016,6 +1018,7 @@ RUN ./generateconfs.py --source=. \
     --signup_methods="${SIGNUP_METHODS}" \
     --login_methods="${LOGIN_METHODS}" \
     --distro=centos --user_interface="${USER_INTERFACES}" \
+    #--new_user_default_ui=${NEW_USER_DEFAULT_UI} \
     --skin="${EMULATE_FLAVOR}-${SKIN_SUFFIX}" \
     --title="${TITLE}" --short_title="${SHORT_TITLE}" \
     --digest_salt="${DIGEST_SALT}" --crypto_salt="${CRYPTO_SALT}" \
@@ -1037,8 +1040,7 @@ RUN ./generateconfs.py --source=. \
     --imnotify_username=${IMNOTIFY_USERNAME} --imnotify_password=${IMNOTIFY_PASSWD} \
     --external_doc=${EXTERNAL_DOC} \
     #--peers_notice="${PEERS_NOTICE}" --logo_center="${LOGO_CENTER}" \
-    #--support-text="${SUPPORT_TEXT}" \
-    #--privacy_text="${PRIVACY_TEXT}" \
+    #--support-text="${SUPPORT_TEXT}" --privacy_text="${PRIVACY_TEXT}" \
     #--datasafety_link="${DATASAFETY_LINK}" --datasafety_text="${DATASAFETY_TEXT}" \
     --extra_userpage_scripts="${EXTRA_USERPAGE_SCRIPTS}" \
     --extra_userpage_styles="${EXTRA_USERPAGE_STYLES}" \

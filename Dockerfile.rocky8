@@ -60,6 +60,7 @@ ARG MIG_GIT_BRANCH=edge
 ARG MIG_GIT_REV=HEAD
 ARG ADMIN_EMAIL=mig
 ARG ADMIN_LIST=
+ARG SUPPORT_EMAIL=mig
 ARG SMTP_SENDER=
 ARG SMTP_SERVER=localhost
 ARG LOG_LEVEL=info
@@ -126,6 +127,8 @@ ARG PREFER_PYTHON3=False
 ARG SIGNUP_METHODS=migoid
 ARG LOGIN_METHODS=migoid
 ARG USER_INTERFACES=V3
+# TODO: implement support for new user default UI arg
+#ARG NEW_USER_DEFAULT_UI=V3
 ARG AUTO_ADD_CERT_USER=False
 ARG AUTO_ADD_OID_USER=False
 ARG AUTO_ADD_OIDC_USER=False
@@ -844,11 +847,14 @@ RUN if [ "$WITH_GIT" = "True" ]; then \
 	echo "migrid version: ${MIG_SVN_REPO} trunk ${MIG_SVN_REV}" > ./active-migrid-version.txt; \
     fi;
 
-# NOTE: we manually need to enable modern grid_webdavs.py here for now.
-#       Replace any existing symlink with one to the 3.x script.
-RUN if [ "${MODERN_WSGIDAV}" = "True" ]; then \
+# NOTE: we manually need to toggle grid_webdavs.py link here for now.
+#       Replace any existing symlink with one to the 1.x or 3.x script.
+RUN if [ "${PREFER_PYTHON3}" = "True" -o "${MODERN_WSGIDAV}" = "True" ]; then \
       rm -f ${MIG_ROOT}/mig/server/grid_webdavs.py ; \
       ln -s grid_webdavs-3.x.py ${MIG_ROOT}/mig/server/grid_webdavs.py; \
+    else \
+      rm -f ${MIG_ROOT}/mig/server/grid_webdavs.py ; \
+      ln -s grid_webdavs-1.x.py ${MIG_ROOT}/mig/server/grid_webdavs.py; \
     fi;
 
 
@@ -1001,11 +1007,23 @@ RUN echo "PYTHONPATH=${MIG_ROOT}" >> ~/.bash_profile \
 RUN echo "PATH=$HOME/.local/bin:${PATH}" >> ~/.bash_profile \
     && echo "export PATH" >> ~/.bash_profile
 
+# TODO: remove next lines once fully migrated to python3 or switch to rocky
+# Silence noisy python 2 and 3.6 deprecation warning from cryptography module
+# We are fully aware and working on switching to recent py3 ASAP. 
+RUN if [ "${PREFER_PYTHON3}" = "True" ]; then \
+      # TODO: the comma in string breaks -W because it splits on that. Ignore prefix for now.
+      #echo "PYTHONWARNINGS='ignore:Python 3.6 is no longer supported by the Python core team. Therefore, support for it is deprecated in cryptography:UserWarning'" >> ~/.bash_profile ; \    
+      echo "PYTHONWARNINGS='ignore:Python 3.6 is no longer supported by the Python core team.:UserWarning'" >> ~/.bash_profile ; \    
+    else \
+      echo "PYTHONWARNINGS='ignore:Python 2 is no longer supported by the Python core team. Support for it is now deprecated in cryptography:UserWarning'" >> ~/.bash_profile ; \
+    fi; echo "export PYTHONWARNINGS" >> ~/.bash_profile
+
 WORKDIR $MIG_ROOT/mig/install
 
 RUN echo "Designated jupyter services: ${JUPYTER_SERVICES}"
 RUN echo "Designated jupyter services descriptions: ${JUPYTER_SERVICES_DESC}"
 
+# TODO: do we still need the ~/.local/ wrapper now that update-alternatives run?
 RUN mkdir -p ${MIG_ROOT}/.local/bin; \
     if [ "${PREFER_PYTHON3}" = "True" ]; then \
       echo "setup python3 as default python in ${MIG_ROOT}" && \
@@ -1028,7 +1046,7 @@ RUN ./generateconfs.py --source=. \
     --io_fqdn=${IO_DOMAIN} \
     --user=$USER --group=$GROUP --log_level=${LOG_LEVEL} \
     --admin_email="${ADMIN_EMAIL}" --admin_list="${ADMIN_LIST}" \
-    --smtp_sender="${SMTP_SENDER}" \
+    --support_email="${SUPPORT_EMAIL}" --smtp_sender="${SMTP_SENDER}" \
     --smtp_server="${SMTP_SERVER}" \
     --apache_version=2.4 \
     --apache_etc=${WEB_DIR} \
@@ -1103,6 +1121,7 @@ RUN ./generateconfs.py --source=. \
     --signup_methods="${SIGNUP_METHODS}" \
     --login_methods="${LOGIN_METHODS}" \
     --distro=centos --user_interface="${USER_INTERFACES}" \
+    #--new_user_default_ui=${NEW_USER_DEFAULT_UI} \
     --skin="${EMULATE_FLAVOR}-${SKIN_SUFFIX}" \
     --title="${TITLE}" --short_title="${SHORT_TITLE}" \
     --digest_salt="${DIGEST_SALT}" --crypto_salt="${CRYPTO_SALT}" \
@@ -1124,8 +1143,7 @@ RUN ./generateconfs.py --source=. \
     --imnotify_username=${IMNOTIFY_USERNAME} --imnotify_password=${IMNOTIFY_PASSWD} \
     --external_doc=${EXTERNAL_DOC} \
     #--peers_notice="${PEERS_NOTICE}" --logo_center="${LOGO_CENTER}" \
-    #--support-text="${SUPPORT_TEXT}" \
-    #--privacy_text="${PRIVACY_TEXT}" \
+    #--support-text="${SUPPORT_TEXT}" --privacy_text="${PRIVACY_TEXT}" \
     #--datasafety_link="${DATASAFETY_LINK}" --datasafety_text="${DATASAFETY_TEXT}" \
     --extra_userpage_scripts="${EXTRA_USERPAGE_SCRIPTS}" \
     --extra_userpage_styles="${EXTRA_USERPAGE_STYLES}" \
