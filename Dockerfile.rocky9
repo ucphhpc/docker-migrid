@@ -491,7 +491,7 @@ RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
 		cjose \
                 #https://github.com/OpenIDC/cjose/releases/download/v0.6.2.2/cjose-0.6.2.2-1.el9.x86_64.rpm \
 	&& dnf install -y \
-                https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.15.5/mod_auth_openidc-2.4.15.5-1.el9.x86_64.rpm \
+                https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.15.6/mod_auth_openidc-2.4.15.6-1.el9.x86_64.rpm \
 	&& dnf clean all \
 	&& rm -fr /var/cache/dnf; \
 	if [ $? -ne 0 ]; then \
