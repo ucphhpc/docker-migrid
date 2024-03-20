@@ -665,14 +665,12 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
         #            dependencies specifically into /usr instead.
         #pip3 install -U setuptools; \
         #pip3 install setuptools_rust; \
-        pip3 install --prefix=/usr paramiko; \
+        pip3 install --prefix=$(python3-config --prefix) paramiko; \
       fi; \
     fi;
 
 # OpenID support in python (python-openid2 for py3) - use alternative from dnf 
-#RUN if [ "${WITH_PY3}" = "True" ]; then \
-#      pip3 install python-openid2; \
-#    fi;
+#RUN pip3 install python-openid2;
 
 # Modules required by grid_events.py
 RUN if [ "${WITH_PY3}" = "True" ]; then \
@@ -720,9 +718,10 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
     fi;
 
 # Modules required for email validation (already available in yum/dnf for python3)
-#RUN if [ "${WITH_PY3}" = "True" ]; then \
-#      pip3 install email-validator; \
-#    fi;
+# IMPORTANT: install in main python site-packages to work with 'python -s'
+#            Otherwise sftpsubsys will fail to import it because the /usr/local
+#            dir used as prefix by default in pip is outside sys.path
+#RUN pip3 install --prefix=$(python3-config --prefix) email-validator;
 
 # Modules required for workflows
 RUN if [ "${WITH_PY3}" = "True" ]; then \
