@@ -9,8 +9,12 @@ SHELL=/bin/bash
 DOCKER_BUILDKIT=1
 # NOTE: dynamic lookup with docker as default and fallback to podman
 DOCKER = $(shell which docker || which podman)
-# if compose is not found, try to use it as plugin, eg. RHEL8
-DOCKER_COMPOSE = $(shell which docker-compose || which podman-compose || echo 'docker compose')
+# if docker compose plugin is not available, try old docker-compose/podman-compose
+ifeq (, $(shell ${DOCKER} help|grep compose))
+	DOCKER_COMPOSE = $(shell which docker-compose || which podman-compose)
+else
+	DOCKER_COMPOSE = 'docker compose'
+endif
 $(echo ${DOCKER_COMPOSE} >/dev/null)
 
 define DOCKER_COMPOSE_SHARED_HEADER
@@ -38,6 +42,7 @@ endif
 all: init dockerbuild
 
 init:	initbuild initdirs initcomposevars
+	@echo "using ${DOCKER_COMPOSE} as compose command"
 
 initbuild:
 ifeq (,$(wildcard ./Dockerfile))
