@@ -32,10 +32,9 @@ jobs:
           make test-doc
       - name: Build images
         run: |
+          echo "# NOTE: try absolute path to current dir to get docker ro-mount to work"
+          export "DOCKER_MIGRID_ROOT=$PWD"
           make init
-          echo "" >> .env
-          echo "# NOTE: try absolute path to current dir to get docker ro-mount to work" >> .env
-          echo "DOCKER_MIGRID_ROOT=$PWD" >> .env
           make dockerbuild
       - name: Start services
         run: |
