@@ -328,7 +328,7 @@ volumes:
     driver_opts:
       type: none
       device: ${DOCKER_MIGRID_ROOT}/state/vgrid_files_writable
-      o: "bind, ro"
+      o: bind,ro
 
   migrid-syslog:
     # Volume used for exposing migrid system log
