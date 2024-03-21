@@ -36,16 +36,16 @@ jobs:
           make dockerbuild
       - name: Start services
         run: |
-          docker-compose up -d
+          make up
       - name: Run tests
         run: |
           make test
-      - name: Read docker-compose logs
+      - name: Read docker compose logs
         run: |
-          docker-compose logs
+          make logs
       - name: Read migrid logs
         run: |
           tail -n +1 state/log/*
       - name: Stop services
         run: |
-          docker-compose down
+          make down

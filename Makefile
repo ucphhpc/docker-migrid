@@ -100,6 +100,9 @@ dockerclean: initcomposevars
 	${DOCKER} image prune -f
 	${DOCKER} builder prune -f || true
 
+logs:	initcomposevars
+	${DOCKER_COMPOSE} logs
+
 dockerpush:
 	${DOCKER} push $(OWNER)/$(IMAGE)${CONTAINER_TAG}
 
