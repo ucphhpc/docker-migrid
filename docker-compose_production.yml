@@ -217,7 +217,7 @@ services:
         read_only: true
     command: /app/docker-entry.sh -k
 
-# NOTE: not used in stand-alone mode
+# NOTE: not used in stand-alone production mode
 #  nginx-proxy:
 #    image: jwilder/nginx-proxy
 #    container_name: nginx-proxy
@@ -234,7 +234,7 @@ services:
 #    #  - "443:443"
 #    volumes:
 #      - /var/run/docker.sock:/tmp/docker.sock:ro
-#      - ./nginx-proxy-production.conf:/etc/nginx/conf.d/migrid.conf
+#      - ./nginx-proxy-development.conf:/etc/nginx/conf.d/migrid.conf
 #      - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
 #      - ./certs/MiG/site/server.crt:/etc/nginx/certs/server.crt
 #      - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
