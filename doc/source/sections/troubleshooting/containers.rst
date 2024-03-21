@@ -39,3 +39,13 @@ DevDNS can't get IPs of containers
 
 This error occurs when DevDNS gets a notification of a container in another network.
 You can set the network in which DevDNS works with the environment variable `NETWORK=docker-migrid_default` for example.
+
+
+Docker Compose complains about volume paths
+-------------------------------------------
+
+::
+
+    Error response from daemon: invalid mount config for type "bind": invalid mount path: 'docker-migrid_httpd' mount path must be absolute
+
+This error message happens when Docker Compose V2 is used and a target path in one of the volumes contains a **trailing slash**
