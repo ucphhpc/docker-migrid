@@ -158,8 +158,8 @@ ARG IO_ACCOUNT_EXPIRE="False"
 #ARG PRIVACY_TEXT=""
 #ARG DATASAFETY_LINK=""
 #ARG DATASAFETY_TEXT=""
-# NOTE: on rocky tests we go for wsgidav 3.x+ to get it stabilized
-ARG MODERN_WSGIDAV=True
+# NOTE: no python2 here and we already get 4.3+ for python3
+ARG MODERN_WSGIDAV=False
 ARG WITH_GIT=False
 ARG OPENSSH_VERSION=7.4
 ARG VGRID_LABEL=VGrid
@@ -762,10 +762,8 @@ RUN if [ "$WITH_GIT" = "True" ]; then \
 
 # NOTE: we manually need to enable modern grid_webdavs.py here for now.
 #       Replace any existing symlink with one to the 3.x script.
-RUN if [ "${MODERN_WSGIDAV}" = "True" ]; then \
-      rm -f ${MIG_ROOT}/mig/server/grid_webdavs.py ; \
-      ln -s grid_webdavs-3.x.py ${MIG_ROOT}/mig/server/grid_webdavs.py; \
-    fi;
+RUN rm -f ${MIG_ROOT}/mig/server/grid_webdavs.py ; \
+    ln -s grid_webdavs-3.x.py ${MIG_ROOT}/mig/server/grid_webdavs.py;
 
 
 #------------------------- next stage -----------------------------#
