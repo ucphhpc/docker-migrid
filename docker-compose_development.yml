@@ -66,7 +66,7 @@ services:
     volumes:
       - type: volume
         source: httpd
-        target: /etc/httpd/
+        target: /etc/httpd
       - type: volume
         source: mig
         target: /home/mig/mig
@@ -123,7 +123,7 @@ services:
     volumes:
       - type: volume
         source: httpd
-        target: /etc/httpd/
+        target: /etc/httpd
       - type: volume
         source: mig
         target: /home/mig/mig
@@ -167,7 +167,7 @@ services:
     volumes:
       - type: volume
         source: httpd
-        target: /etc/httpd/
+        target: /etc/httpd
       - type: volume
         source: mig
         target: /home/mig/mig
@@ -215,7 +215,7 @@ services:
     volumes:
       - type: volume
         source: httpd
-        target: /etc/httpd/
+        target: /etc/httpd
       - type: volume
         source: mig
         target: /home/mig/mig
@@ -262,7 +262,7 @@ services:
     volumes:
       - type: volume
         source: httpd
-        target: /etc/httpd/
+        target: /etc/httpd
       - type: volume
         source: mig
         target: /home/mig/mig
