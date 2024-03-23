@@ -40,9 +40,11 @@ jobs:
           grep -v "DOCKER_MIGRID_ROOT=|MIG_SYSTEM_RUN=" .env >> ci.env
           rm -f .env
           mv ci.env .env
+          grep "DOCKER_MIGRID_ROOT=|MIG_SYSTEM_RUN=" .env
           make dockerbuild
       - name: Start services
         run: |
+          grep "DOCKER_MIGRID_ROOT=|MIG_SYSTEM_RUN=" .env
           make up
       - name: Run tests
         run: |

@@ -47,6 +47,7 @@ services:
       service: migrid-shared
     environment:
       TZ: ${TZ}
+      DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT}
       MIG_SYSTEM_RUN: ${MIG_SYSTEM_RUN}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
@@ -105,6 +106,7 @@ services:
     image: ucphhpc/migrid${CONTAINER_TAG}
     environment:
       TZ: ${TZ}
+      DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT}
       MIG_SYSTEM_RUN: ${MIG_SYSTEM_RUN}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
@@ -148,6 +150,7 @@ services:
     image: ucphhpc/migrid${CONTAINER_TAG}
     environment:
       TZ: ${TZ}
+      DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT}
       MIG_SYSTEM_RUN: ${MIG_SYSTEM_RUN}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
@@ -196,6 +199,7 @@ services:
     image: ucphhpc/migrid${CONTAINER_TAG}
     environment:
       TZ: ${TZ}
+      DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT}
       MIG_SYSTEM_RUN: ${MIG_SYSTEM_RUN}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
@@ -244,6 +248,7 @@ services:
     image: ucphhpc/migrid${CONTAINER_TAG}
     environment:
       TZ: ${TZ}
+      DOCKER_MIGRID_ROOT: ${DOCKER_MIGRID_ROOT}
       MIG_SYSTEM_RUN: ${MIG_SYSTEM_RUN}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
