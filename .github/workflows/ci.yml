@@ -35,7 +35,7 @@ jobs:
           make init
           echo "# NOTE: use absolute paths to current dir to get docker bind mounts to work" > ci.env
           echo "DOCKER_MIGRID_ROOT=$PWD" >> ci.env
-          echo "MIG_SYSTEM_RUN=$PWD/state/mig_system_run" >> ci.env
+          echo "MIG_SYSTEM_RUN=/tmp" >> ci.env
           echo "" >> ci.env
           grep -E -v "DOCKER_MIGRID_ROOT=|MIG_SYSTEM_RUN=" .env >> ci.env
           rm -f .env
