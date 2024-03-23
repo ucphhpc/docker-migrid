@@ -33,10 +33,11 @@ jobs:
       - name: Build images
         run: |
           make init
-          echo "# NOTE: try absolute path to current dir to get docker ro-mount to work" > ci.env
+          echo "# NOTE: use absolute paths to current dir to get docker bind mounts to work" > ci.env
           echo "DOCKER_MIGRID_ROOT=$PWD" >> ci.env
+          echo "MIG_SYSTEM_RUN=$PWD/state/mig_system_run" >> ci.env
           echo "" >> ci.env
-          grep -v DOCKER_MIGRID_ROOT .env >> ci.env
+          grep -v "DOCKER_MIGRID_ROOT=|MIG_SYSTEM_RUN=" .env >> ci.env
           rm -f .env
           mv ci.env .env
           make dockerbuild
