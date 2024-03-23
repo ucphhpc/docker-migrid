@@ -403,6 +403,9 @@ Variables
    * - EXTRA_USERPAGE_STYLES
      - ""
      - Optional extra web page styles to embed on site user web pages (branding, etc.) 
+   * - MIG_SYSTEM_RUN
+     - "state/mig_system_run"
+     - A preferably fast (e.g. tmpfs-backed) scratch folder path for various internal cache and helper files. It must have read/write access by the same USER:GROUP running in the containers and will be shared among all containers for cache and state coherence.
    * - GDP_EMAIL_NOTIFY
      - True
      - Whether to send project administration emails to address(es) configured in state/gdp_home/notifyemails.txt when in GDP mode
