@@ -33,7 +33,7 @@ jobs:
       - name: Build images
         run: |
           echo "NOTE: run complete clean first to rule out any stale cache"
-          make distclean
+          echo y | make distclean
           make init
           echo "# NOTE: use absolute paths to current dir to get docker bind mounts to work" > ci.env
           echo "DOCKER_MIGRID_ROOT=$PWD" >> ci.env
