@@ -40,6 +40,9 @@ Variables
    * - SMTP_SERVER
      - localhost
      - The MTA that is used to submit mails from migrid. Can be a hostname or an IP.
+   * - SMTP_LISTEN_PORT
+     - 25
+     - Which local port for container SMTP process to listen on when using the devmail container as in the development env. Must be an integer below 65536 specifying a port which isn't already in use on the host.
    * - TZ
      - Europe/Copenhagen
      - The timezone that is used inside the containers.
