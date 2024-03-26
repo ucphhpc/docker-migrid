@@ -32,6 +32,8 @@ jobs:
           make test-doc
       - name: Build images
         run: |
+          echo "NOTE: run complete clean first to rule out any stale cache"
+          make distclean
           make init
           echo "# NOTE: try absolute path to current dir to get docker ro-mount to work" > ci.env
           echo "DOCKER_MIGRID_ROOT=$PWD" >> ci.env

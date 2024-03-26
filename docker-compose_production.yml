@@ -34,7 +34,6 @@ services:
       service: migrid-shared
     environment:
       TZ: ${TZ}
-      MIG_SYSTEM_RUN: ${MIG_SYSTEM_RUN}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
@@ -80,7 +79,6 @@ services:
     network_mode: "host"
     environment:
       TZ: ${TZ}
-      MIG_SYSTEM_RUN: ${MIG_SYSTEM_RUN}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
@@ -120,7 +118,6 @@ services:
     network_mode: "host"
     environment:
       TZ: ${TZ}
-      MIG_SYSTEM_RUN: ${MIG_SYSTEM_RUN}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
@@ -165,7 +162,6 @@ services:
     network_mode: "host"
     environment:
       TZ: ${TZ}
-      MIG_SYSTEM_RUN: ${MIG_SYSTEM_RUN}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
@@ -209,7 +205,6 @@ services:
     network_mode: "host"
     environment:
       TZ: ${TZ}
-      MIG_SYSTEM_RUN: ${MIG_SYSTEM_RUN}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers
