@@ -89,6 +89,9 @@ initcomposevars:
 	@sed -E -i 's!^([^=]*)=.*!        - \1=\$$\{\1\}!' docker-compose_shared.yml
 
 up:	initcomposevars
+	# IMPORTANT: split up into create and start to avoid racy overlap
+	#            parallel container creation and start breaks nested bind mounts
+	${DOCKER_COMPOSE} create
 	${DOCKER_COMPOSE} up -d
 
 down:	initcomposevars
