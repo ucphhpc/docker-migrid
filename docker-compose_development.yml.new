@@ -57,11 +57,11 @@ services:
     networks:
       default:
         aliases:
-          - www.gdp.test
-          - cert.gdp.test
-          - ext.gdp.test
-          - oid.gdp.test
-          - sid.gdp.test
+          - www.migrid.test
+          - cert.migrid.test
+          - ext.migrid.test
+          - oid.migrid.test
+          - sid.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -87,9 +87,6 @@ services:
       - type: volume
         source: mig_system_run
         target: /home/mig/state/mig_system_run
-      - type: bind
-        source: /run/dbus/system_bus_socket
-        target: /run/dbus/system_bus_socket
     # NOTE: openid_store is a volatile cache and should use fast local tmpfs
     # TODO: enable the tmpfs or a similar structure as MIG_SYSTEM_RUN here?
     #tmpfs:
@@ -116,11 +113,11 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "${OPENID_PORT}:${OPENID_PORT}"
+      - "8443:8443"
     networks:
       default:
         aliases:
-          - openid.gdp.test
+          - openid.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -158,12 +155,12 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "${SFTP_PORT}:${SFTP_PORT}"
-      - "${SFTP_SUBSYS_PORT}:${SFTP_SUBSYS_PORT}"
+      - "2222:2222"
+      - "22222:22222"
     networks:
       default:
         aliases:
-          - sftp.gdp.test
+          - sftp.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -205,12 +202,12 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "${FTPS_CTRL_PORT}:${FTPS_CTRL_PORT}"
-      - "${FTPS_PASSIVE_PORTS}:${FTPS_PASSIVE_PORTS}"
+      - "8021:8021"
+      - "8100-8399:8100-8399"
     networks:
       default:
         aliases:
-          - ftps.gdp.test
+          - ftps.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -252,11 +249,11 @@ services:
       - migrid
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "${DAVS_PORT}:${DAVS_PORT}"
+      - "4443:4443"
     networks:
       default:
         aliases:
-          - webdavs.gdp.test
+          - webdavs.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -304,18 +301,18 @@ services:
       - "448:448"
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ./nginx-proxy-development_gdp.conf:/etc/nginx/conf.d/migrid.conf
+      - ./nginx-proxy-development.conf:/etc/nginx/conf.d/migrid.conf
       - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
-      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/www.gdp.test.crt
-      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/cert.gdp.test.crt
-      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/ext.gdp.test.crt
-      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/oid.gdp.test.crt
-      - ./certs/MiG/*.gdp.test/server.crt:/etc/nginx/certs/sid.gdp.test.crt
-      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/www.gdp.test.key
-      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/cert.gdp.test.key
-      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/ext.gdp.test.key
-      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/oid.gdp.test.key
-      - ./certs/MiG/*.gdp.test/server.key:/etc/nginx/certs/sid.gdp.test.key
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/www.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/cert.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/ext.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/oid.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/sid.migrid.test.crt
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/www.migrid.test.key
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/cert.migrid.test.key
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/ext.migrid.test.key
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/oid.migrid.test.key
+      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/sid.migrid.test.key
       - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
 
 volumes:

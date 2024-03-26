@@ -35,15 +35,18 @@ jobs:
           echo "NOTE: run complete clean first to rule out any stale cache"
           make distclean
           make init
-          echo "# NOTE: try absolute path to current dir to get docker ro-mount to work" > ci.env
+          echo "# NOTE: use absolute paths to current dir to get docker bind mounts to work" > ci.env
           echo "DOCKER_MIGRID_ROOT=$PWD" >> ci.env
+          echo "MIG_SYSTEM_RUN=/tmp" >> ci.env
           echo "" >> ci.env
-          grep -v DOCKER_MIGRID_ROOT .env >> ci.env
+          grep -E -v "DOCKER_MIGRID_ROOT=|MIG_SYSTEM_RUN=" .env >> ci.env
           rm -f .env
           mv ci.env .env
+          grep -E "DOCKER_MIGRID_ROOT=|MIG_SYSTEM_RUN=" .env
           make dockerbuild
       - name: Start services
         run: |
+          grep -E "DOCKER_MIGRID_ROOT=|MIG_SYSTEM_RUN=" .env
           make up
       - name: Run tests
         run: |
