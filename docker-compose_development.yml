@@ -8,7 +8,7 @@ services:
     depends_on:
       - devdns
     ports:
-      - "127.0.0.1:25:25"
+      - "127.0.0.1:${SMTP_LISTEN_PORT}:25"
     environment:
       POSTFIX_myhostname: ${SMTP_SERVER}
     networks:
