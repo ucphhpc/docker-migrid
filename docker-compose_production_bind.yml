@@ -2,30 +2,16 @@
 version: '3.7'
 
 services:
-  devmail:
-    image: mwader/postfix-relay
-    container_name: devmail
-    depends_on:
-      - devdns
-    ports:
-      - "127.0.0.1:${SMTP_LISTEN_PORT}:25"
-    environment:
-      POSTFIX_myhostname: ${SMTP_SERVER}
-    networks:
-      default:
-        aliases:
-          - mail.migrid.test
-
-  devdns:
-    image: ruudud/devdns
-    container_name: devdns
-    ports:
-        - "127.0.0.1:53:53/udp"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    environment:
-      TZ: ${TZ}
-      NETWORK: ${DOCKER_NETWORK:-docker-migrid_default}
+# NOTE: not used in stand-alone mode
+#  devdns:
+#    image: ruudud/devdns
+#    container_name: devdns
+#    ports:
+#        - "127.0.0.1:53:53/udp"
+#    volumes:
+#      - /var/run/docker.sock:/var/run/docker.sock:ro
+#    environment:
+#      TZ: ${TZ}
 
   # The migrid core services including httpd and tightly integrated services
   # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
@@ -42,6 +28,7 @@ services:
   migrid:
     container_name: migrid
     image: ucphhpc/migrid${CONTAINER_TAG}
+    network_mode: "host"
     extends:
       file: docker-compose_shared.yml
       service: migrid-shared
@@ -52,16 +39,6 @@ services:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy notify crond rsyslogd
-    depends_on:
-      - devdns
-    networks:
-      default:
-        aliases:
-          - www.migrid.test
-          - cert.migrid.test
-          - ext.migrid.test
-          - oid.migrid.test
-          - sid.migrid.test
     volumes:
       - type: volume
         source: httpd
@@ -93,15 +70,13 @@ services:
     #  - /home/mig/state/openid_store:mode=770,uid=${UID:-1000},gid=${GID:-1000}
     env_file:
       - migrid-httpd.env
-    # IMPORTANT: please ONLY run with this test@ user for non-public hosts
-    command: /app/docker-entry.sh -V -u ${MIG_TEST_USER} -p ${MIG_TEST_USER_PASSWORD} -s "sftp ftps webdavs"
-    # NOTE: public hosts should create users through sign up and run like this
-    #command: /app/docker-entry.sh -V
+    command: /app/docker-entry.sh -k -V
 
   # Multiple containers with individual daemons not provided by base migrid
   migrid-openid:
     container_name: migrid-openid
     image: ucphhpc/migrid${CONTAINER_TAG}
+    network_mode: "host"
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -111,13 +86,9 @@ services:
       RUN_SERVICES: openid rsyslogd
     depends_on:
       - migrid
-    ports:
-      # NOTE: expose the unique raw port(s) to host 
-      - "8443:8443"
-    networks:
-      default:
-        aliases:
-          - openid.migrid.test
+    #ports:
+    #  # NOTE: expose the unique raw port(s) to host 
+    #  - "8443:8443"
     volumes:
       - type: volume
         source: httpd
@@ -139,11 +110,12 @@ services:
       - type: bind
         source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
-    command: /app/docker-entry.sh
+    command: /app/docker-entry.sh -k
 
   migrid-sftp:
     container_name: migrid-sftp
     image: ucphhpc/migrid${CONTAINER_TAG}
+    network_mode: "host"
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -153,14 +125,10 @@ services:
       RUN_SERVICES: sftp sftpsubsys rsyslogd
     depends_on:
       - migrid
-    ports:
-      # NOTE: expose the unique raw port(s) to host 
-      - "2222:2222"
-      - "22222:22222"
-    networks:
-      default:
-        aliases:
-          - sftp.migrid.test
+    #ports:
+    #  # NOTE: expose the unique raw port(s) to host 
+    #  - "2222:2222"
+    #  - "22222:22222"
     volumes:
       - type: volume
         source: httpd
@@ -186,11 +154,12 @@ services:
       - type: bind
         source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
-    command: /app/docker-entry.sh
+    command: /app/docker-entry.sh -k
 
   migrid-ftps:
     container_name: migrid-ftps
     image: ucphhpc/migrid${CONTAINER_TAG}
+    network_mode: "host"
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -200,14 +169,9 @@ services:
       RUN_SERVICES: ftps rsyslogd
     depends_on:
       - migrid
-    ports:
-      # NOTE: expose the unique raw port(s) to host 
-      - "8021:8021"
-      - "8100-8399:8100-8399"
-    networks:
-      default:
-        aliases:
-          - ftps.migrid.test
+    #ports:
+    #  # NOTE: expose the unique raw port(s) to host 
+    #  - "8021:8021"
     volumes:
       - type: volume
         source: httpd
@@ -233,11 +197,12 @@ services:
       - type: bind
         source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
-    command: /app/docker-entry.sh
+    command: /app/docker-entry.sh -k
 
   migrid-webdavs:
     container_name: migrid-webdavs
     image: ucphhpc/migrid${CONTAINER_TAG}
+    network_mode: "host"
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -247,13 +212,9 @@ services:
       RUN_SERVICES: webdavs rsyslogd
     depends_on:
       - migrid
-    ports:
-      # NOTE: expose the unique raw port(s) to host 
-      - "4443:4443"
-    networks:
-      default:
-        aliases:
-          - webdavs.migrid.test
+    #ports:
+    #  # NOTE: expose the unique raw port(s) to host 
+    #  - "4443:4443"
     volumes:
       - type: volume
         source: httpd
@@ -279,41 +240,29 @@ services:
       - type: bind
         source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
-    command: /app/docker-entry.sh
+    command: /app/docker-entry.sh -k
 
-  nginx-proxy:
-    image: jwilder/nginx-proxy
-    container_name: nginx-proxy
-    # TODO: can we add an httpd health check and switch to wait for condition
-    #       service_healthy to avoid the storm of initial avoid nginx errors
-    #       from racing apache during start up? Apparently that will not work
-    #       with on-going jupyter integration due to swarm mode, however.
-    depends_on:
-      - migrid
-    ports:
-      # NOTE: expose the unique raw port(s) to host 
-      - "80:80"
-      - "443:443"
-      - "444:444"
-      - "445:445"
-      - "446:446"
-      - "447:447"
-      - "448:448"
-    volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ./nginx-proxy-development.conf:/etc/nginx/conf.d/migrid.conf
-      - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
-      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/www.migrid.test.crt
-      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/cert.migrid.test.crt
-      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/ext.migrid.test.crt
-      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/oid.migrid.test.crt
-      - ./certs/MiG/*.migrid.test/server.crt:/etc/nginx/certs/sid.migrid.test.crt
-      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/www.migrid.test.key
-      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/cert.migrid.test.key
-      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/ext.migrid.test.key
-      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/oid.migrid.test.key
-      - ./certs/MiG/*.migrid.test/server.key:/etc/nginx/certs/sid.migrid.test.key
-      - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
+# NOTE: not used in stand-alone production mode
+#  nginx-proxy:
+#    image: jwilder/nginx-proxy
+#    container_name: nginx-proxy
+#    network_mode: "host"
+#    # TODO: can we add an httpd health check and switch to wait for condition
+#    #       service_healthy to avoid the storm of initial avoid nginx errors
+#    #       from racing apache during start up? Apparently that will not work
+#    #       with on-going jupyter integration due to swarm mode, however.
+#    depends_on:
+#      - migrid
+#    #ports:
+#    #  # NOTE: expose the unique raw port(s) to host 
+#    #  - "80:80"
+#    #  - "443:443"
+#    volumes:
+#      - /var/run/docker.sock:/tmp/docker.sock:ro
+#      - ./nginx-proxy-development.conf:/etc/nginx/conf.d/migrid.conf
+#      - ./nginx-harden-https.conf:/etc/nginx/harden-https.conf
+#      - ./certs/MiG/site/server.crt:/etc/nginx/certs/server.crt
+#      - ./certs/dhparams.pem:/etc/nginx/dhparam/dhparam.pem
 
 volumes:
   certs:

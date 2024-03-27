@@ -79,13 +79,13 @@ services:
         source: state
         target: /home/mig/state
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
-      - type: volume
-        source: vgrid_files_readonly
+      - type: bind
+        source: ${VGRID_FILES_WRITABLE:-${DOCKER_MIGRID_ROOT}/state/vgrid_files_writable}
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
-      - type: volume
-        source: mig_system_run
+      - type: bind
+        source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
       - type: bind
         source: /run/dbus/system_bus_socket
@@ -139,8 +139,8 @@ services:
         target: /home/mig/state
       # NOTE: we don't need read-only vgrids/workgroups in the openid container
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
-      - type: volume
-        source: mig_system_run
+      - type: bind
+        source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
     command: /app/docker-entry.sh
 
@@ -181,13 +181,13 @@ services:
         source: state
         target: /home/mig/state
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
-      - type: volume
-        source: vgrid_files_readonly
+      - type: bind
+        source: ${VGRID_FILES_WRITABLE:-${DOCKER_MIGRID_ROOT}/state/vgrid_files_writable}
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
-      - type: volume
-        source: mig_system_run
+      - type: bind
+        source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
     command: /app/docker-entry.sh
 
@@ -228,13 +228,13 @@ services:
         source: state
         target: /home/mig/state
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
-      - type: volume
-        source: vgrid_files_readonly
+      - type: bind
+        source: ${VGRID_FILES_WRITABLE:-${DOCKER_MIGRID_ROOT}/state/vgrid_files_writable}
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
-      - type: volume
-        source: mig_system_run
+      - type: bind
+        source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
     command: /app/docker-entry.sh
 
@@ -274,13 +274,13 @@ services:
         source: state
         target: /home/mig/state
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
-      - type: volume
-        source: vgrid_files_readonly
+      - type: bind
+        source: ${VGRID_FILES_WRITABLE:-${DOCKER_MIGRID_ROOT}/state/vgrid_files_writable}
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
-      - type: volume
-        source: mig_system_run
+      - type: bind
+        source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
     command: /app/docker-entry.sh
 
@@ -351,21 +351,6 @@ volumes:
       device: ${DOCKER_MIGRID_ROOT}/state
       o: bind
   
-  vgrid_files_readonly:
-    driver: local
-    driver_opts:
-      type: none
-      device: ${DOCKER_MIGRID_ROOT}/state/vgrid_files_writable
-      o: bind,ro
-
-  mig_system_run:
-    # Volume used to map a fast host disk or tmpfs into the shared cache folder
-    driver: local
-    driver_opts:
-      type: none
-      device: ${MIG_SYSTEM_RUN}
-      o: bind
-
   migrid-syslog:
     # Volume used for exposing migrid container system log
     driver: local
