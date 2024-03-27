@@ -98,17 +98,18 @@ services:
         target: /home/mig/state
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: bind
-        source: ${VGRID_FILES_WRITABLE:-${DOCKER_MIGRID_ROOT}/state/vgrid_files_writable}
+        source: ${VGRID_FILES_WRITABLE}
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
       - type: bind
         source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
-    # NOTE: openid_store is a volatile cache and should use fast local tmpfs
-    # TODO: enable the tmpfs or a similar structure as MIG_SYSTEM_RUN here?
-    #tmpfs:
-    #  - /home/mig/state/openid_store:mode=770,uid=${UID:-1000},gid=${GID:-1000}
+      # NOTE: openid_store is a volatile state for apache mod auth openid and
+      #       gains scalability and performance from using a fast local tmpfs
+      - type: bind
+        source: ${OPENID_STORE}
+        target: /home/mig/state/openid_store
     env_file:
       - migrid-httpd.env
     command: /app/docker-entry.sh -k -V
@@ -188,7 +189,7 @@ services:
         target: /home/mig/state
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: bind
-        source: ${VGRID_FILES_WRITABLE:-${DOCKER_MIGRID_ROOT}/state/vgrid_files_writable}
+        source: ${VGRID_FILES_WRITABLE}
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
@@ -231,7 +232,7 @@ services:
         target: /home/mig/state
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: bind
-        source: ${VGRID_FILES_WRITABLE:-${DOCKER_MIGRID_ROOT}/state/vgrid_files_writable}
+        source: ${VGRID_FILES_WRITABLE}
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
@@ -274,7 +275,7 @@ services:
         target: /home/mig/state
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: bind
-        source: ${VGRID_FILES_WRITABLE:-${DOCKER_MIGRID_ROOT}/state/vgrid_files_writable}
+        source: ${VGRID_FILES_WRITABLE}
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs

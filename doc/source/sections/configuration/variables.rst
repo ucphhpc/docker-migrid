@@ -409,6 +409,12 @@ Variables
    * - MIG_SYSTEM_RUN
      - "state/mig_system_run"
      - A preferably fast (e.g. tmpfs-backed) scratch folder path for various internal cache and helper files. It must have read/write access by the same USER:GROUP running in the containers and will be shared among all containers for cache and state coherence.
+   * - OPENID_STORE
+     - "state/openid_store"
+     - A preferably fast (e.g. tmpfs-backed) scratch folder path for the optional OpenID 2.0 authentication of users in the apache web server. It must have read/write access by the same USER:GROUP running in the containers and will only be exposed in the migrid container for mod auth openid cache and session state.
+   * - VGRID_FILES_WRITABLE
+     - "state/vgrid_files_writable"
+     - The path where the vgrid_files_writable directory is available. It is used as a source for a read-only bind mount of the data there onto the vgrid_files_readonly directory in order to support users write-protecting VGrids/Workgroups shared folders on the site.
    * - GDP_EMAIL_NOTIFY
      - True
      - Whether to send project administration emails to address(es) configured in state/gdp_home/notifyemails.txt when in GDP mode
