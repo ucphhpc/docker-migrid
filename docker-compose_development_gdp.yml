@@ -8,7 +8,7 @@ services:
     depends_on:
       - devdns
     ports:
-      - "127.0.0.1:25:25"
+      - "127.0.0.1:${SMTP_LISTEN_PORT}:25"
     environment:
       POSTFIX_myhostname: ${SMTP_SERVER}
     networks:
@@ -26,6 +26,43 @@ services:
     environment:
       TZ: ${TZ}
       NETWORK: ${DOCKER_NETWORK:-docker-migrid_default}
+
+  # NOTE: we use a shared volume init helper container to make sure volumes
+  #       are fully created and instantiated before we try to bind mount
+  #       subdirs from e.g. the state volume in the service containers.
+  migrid-volume-init:
+    container_name: migrid-volume-init
+    image: ucphhpc/migrid${CONTAINER_TAG}
+    extends:
+      file: docker-compose_shared.yml
+      service: migrid-shared
+    environment:
+      TZ: ${TZ}
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: 
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: migrid-syslog
+        target: /var/log
+      - type: volume
+        source: state
+        target: /home/mig/state
+    env_file:
+      - migrid-httpd.env
+    # NOTE: public hosts should create users through sign up and run like this
+    command: /app/docker-entry.sh -V
 
   # The migrid core services including httpd and tightly integrated services
   # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
@@ -53,7 +90,11 @@ services:
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy notify crond rsyslogd
     depends_on:
-      - devdns
+      devdns:
+        condition: service_started
+      # IMPORTANT: finish volume init before migrid launch as explained above
+      migrid-volume-init:
+        condition: service_completed_successfully
     networks:
       default:
         aliases:

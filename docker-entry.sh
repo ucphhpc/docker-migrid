@@ -170,7 +170,11 @@ for svc in ${RUN_SERVICES}; do
 done
 
 # Keep monitoring any active services 
-KEEP_RUNNING=1
+if [ -z "${CHK_SERVICES}" ]; then
+    KEEP_RUNNING=0
+else
+    KEEP_RUNNING=1
+fi
 EXIT_CODE=0
 # Check launched services
 while [ ${KEEP_RUNNING} -eq 1 ]; do
