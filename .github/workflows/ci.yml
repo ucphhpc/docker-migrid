@@ -42,9 +42,6 @@ jobs:
           make dockerbuild
       - name: Start services
         run: |
-          grep -E "DOCKER_MIGRID_ROOT=|MIG_SYSTEM_RUN=" .env
-          echo "NOTE: use sequential start here to make docker bind mounts behave"
-          export COMPOSE_PARALLEL_LIMIT=1
           make up
       - name: Run tests
         run: |
