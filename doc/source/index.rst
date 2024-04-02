@@ -10,7 +10,7 @@ Welcome to Docker MiGrid
 **Note! This documentation is currently WIP.**
 
 Docker MiGrid provides a prepackaged build of the Minimum Intrusion Grid (MiG) middleware system.
-It does this, by building and deploying the MiG across a number of Docker containers, that each is tasked with delievering a single or multiple MiG service(s).
+It does this, by building and deploying the MiG across a number of Docker containers, that each is tasked with delivering a single or multiple MiG service(s).
 
 To jump right into having your own version of MiGrid deployed, please
 read on in

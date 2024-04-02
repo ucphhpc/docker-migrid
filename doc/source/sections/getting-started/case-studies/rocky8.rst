@@ -53,7 +53,7 @@ Please note that Rocky 8 uses a central systemd conf in
 /etc/crypto-policies/back-ends/opensshserver.config for configuring
 Ciphers, KexAlgorithms and MACs rather than the usual
 /etc/sshd/sshd_config. You can remove those and check that the sshd
-processs does not run with them hard-coded on the command line based
+process does not run with them hard-coded on the command line based
 on the output of::
   
     ps ax|grep sshd

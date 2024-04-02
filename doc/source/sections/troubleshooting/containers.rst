@@ -30,7 +30,7 @@ SFTP Subsystem doesn't start
 This can happen due to different reasons.
 Ensure that:
 
-* Hosts keys are available and that they all have a corresponding pubkey file. Eg. `server.key` and `server.key.pub`
+* Hosts keys are available and that they all have a corresponding pubkey file. E.g. `server.key` and `server.key.pub`
 * If the ListenAddress is a hostname, it must be resolvable inside the container to one of its own IPs.
 * No other ssh service already uses the same address e.g. because it is configured to bind on all available interfaces (`ListenAddress 0.0.0.0` or `ListenAddress ::`)
 

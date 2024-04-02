@@ -11,7 +11,7 @@ To stop the services, execute the following command::
 
     make down
 
-After this command has been executed succesfully it should have launched the 4 following containers::
+After this command has been executed successfully it should have launched the 4 following containers::
 
     CONTAINER ID   IMAGE                            COMMAND                  CREATED         STATUS         PORTS                                                                                                                                                                                                                                            NAMES
     419e4ede2af3   ucphhpc/migrid:basic           "/tini -- /app/docke…"   4 minutes ago   Up 4 minutes   80/tcp, 0.0.0.0:2222->2222/tcp, :::2222->2222/tcp, 0.0.0.0:4443->4443/tcp, :::4443->4443/tcp, 0.0.0.0:8021->8021/tcp, :::8021->8021/tcp, 0.0.0.0:8443->8443/tcp, :::8443->8443/tcp, 443-448/tcp, 0.0.0.0:22222->22222/tcp, :::22222->22222/tcp   migrid-io
@@ -63,7 +63,7 @@ After this is completed, you should be able to access the basic MiGrid page via 
     https://migrid.test
 
 If you are running `docker-migrid` on a remote server, this might give you a redirection error. If so try the following URL instead.
-If neither of these two URLs takes you to the decribed OpenID login page. Please get in touch with us.::
+If neither of these two URLs takes you to the described OpenID login page. Please get in touch with us.::
 
     https://ext.migrid.test
 
@@ -86,10 +86,10 @@ With these credentials, the authentication should redirect you to the Welcome pa
 DNS setup for production
 ------------------------
 
-When running MiGrid in production, DNS is usually handled by an external service. Also a major difference might be that all HTTPs services should run on port 443 to be reachable by client without further knowledge.
+When running MiGrid in production, DNS is usually handled by an external service. Also a major difference might be that all HTTPS services should run on port 443 to be reachable by client without further knowledge.
 
-To achive that docker-migird usually runs on multiple IP addresses instead of using SNI.
-This way is doesn't matter in how many seperate servers the setup is splitted.
+To achieve that docker-migrid usually runs on multiple IP addresses instead of using SNI.
+This way is doesn't matter in how many separate servers the setup is split.
 At least 5 IP addresses are used by default to seperate different services from each other:
 
 .. list-table:: Standard IP address setup
@@ -101,10 +101,10 @@ At least 5 IP addresses are used by default to seperate different services from 
      - Description
    * - migrid.test \*.migrid.test 
      - 10.0.0.1
-     - The webinterface (frontpage) with infos and login screen (``$DOMAIN``, ``$WILDCARD_DOMAIN``)
+     - The web interface (front page) with info and login screen (``$DOMAIN``, ``$WILDCARD_DOMAIN``)
    * - ext.migrid.test
      - 10.0.0.2
-     - Handles migrids OWN OpenID (``$MIGOID_DOMAIN``)
+     - Handles migrid's OWN OpenID (``$MIGOID_DOMAIN``)
    * - oid.migrid.test
      - 10.0.0.3
      - Handles the external OpenID (``$EXTOID_DOMAIN``)

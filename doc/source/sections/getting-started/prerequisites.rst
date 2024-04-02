@@ -5,7 +5,7 @@ Docker
 ------
 
 Because Docker MiGrid is based on deploying the various services with Docker.
-The natural implicatation is that Docker has to be installed before it can be deployed.
+The natural implication is that Docker has to be installed before it can be deployed.
 
 Depending on which operating system you are thinking of deploying Docker Migrid to,
 you have to follow the Docker installation guide that is applicable to your system.
@@ -33,7 +33,7 @@ Docker-Swarm
 of the deployed service. However, if the requirement of data processing via these services present itself, they both require that
 their container services is deployed via `Docker Swarm`.
 
-`Docker Swarm` is a multi-host orchstration framework that enables manages the health and lifetime of a particular service across a defined `Docker Swarm` cluster.
+`Docker Swarm` is a multi-host orchestration framework that enables manages the health and lifetime of a particular service across a defined `Docker Swarm` cluster.
 
 In terms of installation, the `Docker Swarm` capability is included by default in the regular `Docker` install,
 so no additional steps are needed to be taken in that regard.

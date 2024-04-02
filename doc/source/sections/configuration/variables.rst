@@ -228,7 +228,7 @@ Variables
      - Which web design and site to use as a basis when generating the instance web pages
    * - EMULATE_FQDN
      - migrid.org
-     - The FQDN of the site on the basis siste to replace with the one of this instance
+     - The FQDN of the site on the basis site to replace with the one of this instance
    * - SKIN_SUFFIX
      - basic
      - Which skin variant to use as a basis. If flavor is migrid and skin suffix is basic the skin in migrid-basic will effectively be used.
@@ -429,4 +429,4 @@ Variables
      - Where the optional external Jupyter nodes can be reached
    * - JUPYTER_SERVICES_DESC
      - "{}"
-     - A text to decribe the optional external Jupyter nodes
+     - A text to describe the optional external Jupyter nodes

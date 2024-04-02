@@ -8,7 +8,7 @@ Overview
 
 Before you can build an image, you need to select which MiGrid services you would like to run.
 This choice will lead you to select or configure an environment file that suit your particular choice.
-There are different predefined environments available in this repository (eg. `development.env` or `production.env`).
+There are different predefined environments available in this repository (e.g. `development.env` or `production.env`).
 
 After choosing an environment and adapting it to your needs, you can enable it by creating an .env symlink that points to your particular environment configuration.
 For instance, if you want to build the MiGrid image with the default environment settings, this is achieved by the Makefile init target, which will automatically create a symlink from development.env to the expected .env file. If this behaviour is not wanted, a symlink has to be manually created before make is called to link the designated environment file to the .env file. For instance::
@@ -25,7 +25,7 @@ If you just want to get started right away without any configuration changes you
     make up
 
 The Makefile takes care of creating all the necessary files, builds a migrid image and starts up the services.
-The entire process should be succesfully completed, when the following lines have been printed::
+The entire process should be successfully completed, when the following lines have been printed::
 
     [+] Running 15/15
      ✔ Network docker-migrid_default              Created                            0.0s
@@ -72,7 +72,7 @@ The result of executing the `init` Makefile target can be seen below::
     mkdir -p state
 
 Finally, once the repository directory has been initialized, the Docker MiGrid image is ready to be built.
-This is achieved with the `build` target inside the Makefile. By executing this, the image build process will comence, an example of this can be seen below::
+This is achieved with the `build` target inside the Makefile. By executing this, the image build process will commence, an example of this can be seen below::
 
     docker-compose build
     WARNING: Python-dotenv could not parse statement starting at line 5
