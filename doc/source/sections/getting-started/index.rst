@@ -11,6 +11,7 @@ You have to go through the following numerical steps, in order to have a fully f
     prerequisites
     building
     deploying
+    ../troubleshooting/index
 
 
 We include a step-by-step example of a set up we did on :doc:`Rocky 8.5 <case-studies/rocky8>` for illustration.
