@@ -402,14 +402,6 @@ volumes:
       device: ${DOCKER_MIGRID_ROOT}/log/migrid
       o: bind
 
-  migrid-io-syslog:
-    # Volume used for exposing migrid io container system log
-    driver: local
-    driver_opts:
-      type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-io
-      o: bind
-
   migrid-openid-syslog:
     # Volume used for exposing migrid openid container system log
     driver: local
