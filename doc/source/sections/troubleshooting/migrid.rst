@@ -1,3 +1,7 @@
+MiGrid
+======
+Issues related to the core MiGrid stack are covered here.
+
 Login not possible
 ------------------
 
