@@ -2,7 +2,7 @@ matrix:
 - name: Markdown
   expect_match: false
   aspell:
-    mode: en
+    lang: en
   dictionary:
     wordlists:
     - .spellcheck-wordlist.txt
@@ -24,4 +24,5 @@ matrix:
   sources:
   - '*.md'
   - 'doc/source/**/*.md'
+  - 'doc/source/**/*.rst'
   default_encoding: utf-8
