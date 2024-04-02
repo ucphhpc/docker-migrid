@@ -1,0 +1,17 @@
+MiGrid
+MiG
+ERDA
+SIF
+HPC
+docker
+podman
+ansible
+centos
+rocky
+sftp
+ftps
+webdavs
+openid
+seafile
+jupyter
+duplicati

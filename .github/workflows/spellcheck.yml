@@ -1,0 +1,31 @@
+name: Spell Checking
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+    branches:
+      - master
+    paths-ignore:
+      - '**/*.py'
+      - '**/*.yml'
+      - '.gitignore'
+
+  push:
+    branches:
+      - master
+    tags:
+      - v**
+
+jobs:
+  check-spelling:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository contents
+        uses: actions/checkout@v3
+      - name: Check Spelling of docs
+        uses: rojopolis/spellcheck-github-actions@0.36.0
+        with:
+          config_path: .spellcheck.yml
+          task_name: Markdown

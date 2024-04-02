@@ -12,6 +12,8 @@ on:
       - 'doc/**'
       - '1.gocd.yml'
       - '.gitignore'
+      - '.spellcheck.yml'
+      - '.spellcheckwordlist.txt'
 
   push:
     branches:
