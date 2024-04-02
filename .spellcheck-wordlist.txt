@@ -137,6 +137,10 @@ DNS
 TLS
 SNI
 namespace
+getstart
+opensshserver
+gss
+deployable
 env
 init
 symlink
@@ -248,6 +252,7 @@ linux
 MacOS
 OSX
 MACOSX
+nitty
 maxdepth
 toctree
 desc
