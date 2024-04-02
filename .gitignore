@@ -1,6 +1,6 @@
 # Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
+	__pycache__/
+	*.py[cod]
 *$py.class
 
 # C extensions
@@ -104,6 +104,9 @@ venv.bak/
 .mypy_cache/
 
 .idea/
+
+# From github actions
+wordlist.dic
 
 # Migrid mount volume directories
 httpd/
