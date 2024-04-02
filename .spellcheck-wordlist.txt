@@ -210,7 +210,6 @@ EXTOIDC
 SUBSYS
 DAVS
 CTRL
-VMACHINES
 vmachines
 vmachine
 CRONTAB
@@ -253,6 +252,11 @@ MacOS
 OSX
 MACOSX
 nitty
+advertize
+advertized
+virtualized
+analytics
+TestPw
 maxdepth
 toctree
 desc

@@ -38,7 +38,7 @@ Do note, that `resolv.conf` is often reset between reboots, and therefore the `n
 resolv will likely have to be configured via your specific network manager or added again each time.
 
 An alternative is to use the exposed ports on localhost instead of connecting to the containers directly.
-This is also helpful on macOS where Docker runs inside a VM and one cannot directly reach the Docker bridge.
+This is also helpful on MacOS where Docker runs inside a VM and one cannot directly reach the Docker bridge.
 To use the exposed ports just add the migrid domain names to your `/etc/hosts`::
 
     127.0.0.1     migrid.test sid.migrid.test oid.migrid.test www.migrid.test io.migrid.test sftp.migrid.test webdavs.migrid.test ftps.migrid.test ext.migrid.test
@@ -90,7 +90,7 @@ When running MiGrid in production, DNS is usually handled by an external service
 
 To achieve that docker-migrid usually runs on multiple IP addresses instead of using SNI.
 This way is doesn't matter in how many separate servers the setup is split.
-At least 5 IP addresses are used by default to seperate different services from each other:
+At least 5 IP addresses are used by default to separate different services from each other:
 
 .. list-table:: Standard IP address setup
    :widths: 25 25 50
@@ -104,7 +104,7 @@ At least 5 IP addresses are used by default to seperate different services from 
      - The web interface (front page) with info and login screen (``$DOMAIN``, ``$WILDCARD_DOMAIN``)
    * - ext.migrid.test
      - 10.0.0.2
-     - Handles migrid's OWN OpenID (``$MIGOID_DOMAIN``)
+     - Handles migrid\'s OWN OpenID (``$MIGOID_DOMAIN``)
    * - oid.migrid.test
      - 10.0.0.3
      - Handles the external OpenID (``$EXTOID_DOMAIN``)

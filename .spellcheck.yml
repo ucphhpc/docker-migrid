@@ -3,6 +3,8 @@ matrix:
   expect_match: false
   aspell:
     lang: en
+    # NOTE: uncomment to use US English
+    #d: en_US
   dictionary:
     wordlists:
     - .spellcheck-wordlist.txt
