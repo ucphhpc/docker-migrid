@@ -1,16 +1,10 @@
 Troubleshooting
 ===============
+This is a collection of some common issues you may encounter while setting up
+your own docker-migrid instance.
 
-Containers
-==========
 .. toctree::
     :maxdepth: 2
 
     containers
-    
-MiGrid
-======
-.. toctree::
-    :maxdepth: 2
-
     migrid
