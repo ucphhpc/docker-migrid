@@ -8,6 +8,7 @@ We will announce any critical issues and specifically mark any known affected re
 
 | Version            | Supported          |
 | ------------------ | ------------------ |
+| Stable-20240403    | :white_check_mark: |
 | Stable-20240201    | :white_check_mark: |
 | Stable-20231025    | :white_check_mark: |
 | Stable-20231016    | :white_check_mark: |
