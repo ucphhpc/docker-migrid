@@ -252,6 +252,7 @@ MacOS
 OSX
 MACOSX
 nitty
+preconfigured
 advertize
 advertized
 virtualized
