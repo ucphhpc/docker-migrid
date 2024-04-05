@@ -9,7 +9,7 @@ DAG or Data Analysis Gateway is enabled by building a version of the Docker MiGr
 Configuring DAG
 ---------------
 
-DAG or Data Analysis Gateway is primarlied configured via the supplied `hub/jupyterhub_config.py`.
+DAG or Data Analysis Gateway is primarily configured via the supplied `hub/jupyterhub_config.py`.
 This can be configured as per the official `JupyterHub <https://jupyterhub.readthedocs.io/en/stable/>` configuration.
 
-This however should not be nessesary as a first step, since the supplied preconfigured `hub/jupyterhub_config.py` should cover a basic setup.
+This however should not be necessary as a first step, since the supplied pre-configured `hub/jupyterhub_config.py` should cover a basic setup.
