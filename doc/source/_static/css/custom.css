@@ -1,4 +1,8 @@
+/* Make sure tables wrap text and align with page width to not overflow outside view e.g. on Configuration -> Environment Variables */
 .rst-content table.docutils td, .rst-content table.docutils th, .rst-content table.field-list td, 
 .rst-content table.field-list th, .wy-table td, .wy-table th {
 	text-wrap: wrap;
+}
+.wy-table-responsive table td {
+        white-space: normal;
 }
