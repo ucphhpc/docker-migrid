@@ -56,7 +56,8 @@ ARG OPENID_SHOW_PORT=443
 ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
 ARG MIG_SVN_REV=HEAD
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
-ARG MIG_GIT_BRANCH=edge
+# NOTE: experimental branch is needed for python3 support
+ARG MIG_GIT_BRANCH=experimental
 ARG MIG_GIT_REV=HEAD
 ARG ADMIN_EMAIL=mig
 ARG ADMIN_LIST=
