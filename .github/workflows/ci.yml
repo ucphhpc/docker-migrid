@@ -20,7 +20,12 @@ on:
     branches:
       - master
     paths-ignore:
+      - '**/README.*'
+      - 'doc/**'
+      - '1.gocd.yml'
       - '.gitignore'
+      - '.spellcheck.yml'
+      - '.spellcheckwordlist.txt'
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
