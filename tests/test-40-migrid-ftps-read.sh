@@ -2,7 +2,7 @@
 
 source default
 
-${DOCKER:?} run --rm --network host --dns 127.0.0.1 curlimages/curl:7.78.0 \
+${DOCKER:?} run --rm --network host --dns 127.0.0.1 curlimages/curl:8.7.1 \
   --connect-timeout 1 \
   --retry 1 \
   --user "${MIG_TEST_USER}:${MIG_TEST_USER_PASSWORD}" \
