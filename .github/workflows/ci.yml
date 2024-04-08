@@ -20,13 +20,22 @@ on:
     branches:
       - master
     paths-ignore:
+      - '**/README.*'
+      - 'doc/**'
+      - '1.gocd.yml'
       - '.gitignore'
+      - '.spellcheck.yml'
+      - '.spellcheckwordlist.txt'
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
-  defaults:
+  build-run-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        container_os: [centos7, rocky8, rocky9]
+        environment_profile: [development]
     steps:
       - name: Check out repository contents
         uses: actions/checkout@v3
@@ -37,6 +46,9 @@ jobs:
           make test-doc
       - name: Build images
         run: |
+          ln -s Dockerfile.${{ matrix.container_os }} Dockerfile
+          ln -s docker-compose_${{ matrix.environment_profile }}.yml docker-compose.yml
+          ln -s ${{ matrix.environment_profile }}.env .env
           make init
           echo "# NOTE: use absolute paths to current dir to get docker bind mounts to work" > ci.env
           echo "DOCKER_MIGRID_ROOT=$PWD" >> ci.env
