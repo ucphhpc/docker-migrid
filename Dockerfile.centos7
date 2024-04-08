@@ -206,13 +206,9 @@ ARG EXTOIDC_HTTPS_PORT
 ARG SID_HTTPS_PORT
 ARG SFTP_PORT
 ARG SFTP_SUBSYS_PORT
-ARG SFTP_SHOW_PORT
 ARG DAVS_PORT
-ARG DAVS_SHOW_PORT
 ARG FTPS_CTRL_PORT
-ARG FTPS_CTRL_SHOW_PORT
 ARG OPENID_PORT
-ARG OPENID_SHOW_PORT
 #ARG MIG_SVN_REPO
 #ARG MIG_SVN_REV
 #ARG MIG_GIT_REPO
@@ -1064,6 +1060,7 @@ RUN python2 ./generateconfs.py --source=. \
     --davs_port=${DAVS_PORT} --davs_show_port=${DAVS_SHOW_PORT} \
     --ftps_ctrl_port=${FTPS_CTRL_PORT} --ftps_ctrl_show_port=${FTPS_CTRL_SHOW_PORT} \
     --ftps_pasv_ports=${FTPS_PASV_PORTS} \
+    --openid_port=${OPENID_PORT} --openid_show_port=${OPENID_SHOW_PORT} \
     --io_account_expire=${IO_ACCOUNT_EXPIRE} \
     --mig_oid_title="${MIG_OID_TITLE}" --ext_oid_title="${EXT_OID_TITLE}" \
     --mig_oid_provider=${MIG_OID_PROVIDER} \
