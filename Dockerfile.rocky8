@@ -285,8 +285,9 @@ RUN dnf update -y \
     crontabs \
     nano \
     mod_ssl \
-    # NOTE: python2 wsgi is no longer available here
+    # NOTE: python2 wsgi is no longer available here - prepare for pip2 build
     #mod_wsgi \
+    httpd-devel \
     # NOTE: mod_proxy is included in base httpd now
     #mod_proxy \
     # NOTE: OpenID 2.0 needs special care here
@@ -432,6 +433,16 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
     else \
       echo "no GDP deps"; \
     fi;
+
+# Prepare mod WSGI for py2 (no longer in dnf here)
+# See standalone notes on https://pypi.org/project/mod-wsgi/
+#RUN dnf install -y apr-devel && dnf clean all && rm -fr /var/cache/dnf
+#RUN pip2 install mod_wsgi-standalone
+RUN pip2 install mod_wsgi && \
+    #find /usr/lib64/python2.7/site-packages/mod_wsgi && \
+    cp /usr/lib64/python2.7/site-packages/mod_wsgi/server/mod_wsgi-py27.so \
+        /etc/httpd/modules/mod_wsgi.so && \
+    pip2 uninstall -y mod_wsgi
 
 # Apache OpenID (provided by epel for centos7) is unavailable here - build instead.
 #RUN dnf update -y  && dnf install -y mod_auth_openid \
@@ -653,13 +664,6 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
 # NOTE: make certs as mig user
 WORKDIR $MIG_ROOT
 USER $USER
-
-# Prepare mod WSGI for py2 (no longer in dnf here)
-# See standalone notes on https://pypi.org/project/mod-wsgi/
-# TODO: build is broken - fix!
-#RUN dnf install -y apr-devel && dnf clean all && rm -fr /var/cache/dnf
-#RUN pip2 install mod_wsgi-standalone
-
 
 RUN mkdir -p MiG-certificates \
     && cd MiG-certificates \
