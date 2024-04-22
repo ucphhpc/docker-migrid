@@ -364,19 +364,10 @@ RUN if [ -n "${TRAC_ADMIN_PATH}" ]; then \
       && pip2 install Trac TracMercurial TracWikiPrint TracGraphviz TracFullBlog TracWikiCssPlugin; \
       if [ "${WITH_PY3}" = "True" ]; then \
           pip3 install Trac TracWikiPrint TracGraphviz TracFullBlog TracWikiCssPlugin \
-          # IMPORTANT: Mercurial plugin is required for our repos but the latest
-          #             stable release does NOT support current python and Trac
-          #             versions. We need the latest dev version for the default
-          #             Python 3 and Trac-1.6
-          #             We're patching the mercurial-plugin while waiting for a
-          #             minor python3 fix to be applied upstream.
-          #&& pip3 install TracMercurial \
-          && hg clone https://hg.edgewall.org/trac/mercurial-plugin \
-          && echo "Pull patch for https://trac.edgewall.org/ticket/13493 from own repo on rocky8+ (local copy in patches)" \
-          && wget -O /tmp/mercurial-plugin.py3-get_properties-fix.patch https://github.com/ucphhpc/docker-migrid/raw/master/patches/mercurial-plugin.py3-get_properties-fix.patch \
-          && patch -p 0 --batch --forward < /tmp/mercurial-plugin.py3-get_properties-fix.patch \
-          && pip3 install ./mercurial-plugin \
-          && rm -rf ./mercurial-plugin \
+          # IMPORTANT: Mercurial plugin is required for our repos and only recent
+          #            stable releases support current python and Trac versions.
+          #            We need 1.0.0.11+ for the default Python 3 and Trac-1.6.
+          && pip3 install 'TracMercurial>=1.0.0.11' \
           # NOTE: these plugins would be nice but have gone stale and only support
           #       older Trac versions.
           #&& pip3 install TracStats TracMasterTickets TracDiscussion TracDownloads TracWysiwyg \
