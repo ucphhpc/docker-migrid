@@ -313,6 +313,9 @@ Variables
    * - ENABLE_TWOFACTOR_STRICT_ADDRESS
      - False
      - Require client IO sessions to come from the same IP where user already has an active web login session with 2FA
+   * - TWOFACTOR_AUTH_APPS
+     - 
+     - Which 2FA apps to suggest and link to on the 2-Factor Auth Setup wizard. Space-separated list of app names or empty string for all (bitwarden, freeotp, google, microfocus, microsoft, yubico).
    * - ENABLE_PEERS
      - True
      - Enable the built-in Peers system for privileged users to invite external collaboration partners
