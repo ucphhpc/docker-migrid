@@ -983,7 +983,7 @@ RUN ./generateconfs.py --source=. \
     --enable_freeze=${ENABLE_FREEZE} --enable_imnotify=${ENABLE_IMNOTIFY} \
     --enable_cracklib=${ENABLE_CRACKLIB} --enable_twofactor=${ENABLE_TWOFACTOR} \
     --enable_twofactor_strict_address=${ENABLE_TWOFACTOR_STRICT_ADDRESS} \
-    --twofactor_auth_apps=${TWOFACTOR_AUTH_APPS} \
+    --twofactor_auth_apps="${TWOFACTOR_AUTH_APPS}" \
     --enable_peers=${ENABLE_PEERS} --peers_mandatory=${PEERS_MANDATORY} \
     --peers_explicit_fields="${PEERS_EXPLICIT_FIELDS}" \
     --peers_contact_hint="${PEERS_CONTACT_HINT}" \
