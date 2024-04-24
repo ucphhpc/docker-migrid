@@ -720,12 +720,15 @@ RUN if [ "${MODERN_WSGIDAV}" = "False" ]; then \
       pip2 install 'wsgidav<2'; \
     else \
       pip2 install 'more-itertools<6' 'jaraco.functools<3' 'jinja2<3' \
-               'markupsafe<2' 'pyyaml<6' cheroot 'wsgidav<4'; \
+               'markupsafe<2' 'pyyaml<6' 'cheroot<10.0.1' 'wsgidav<4'; \
     fi;
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       # IMPORTANT: use at least 4.1 here to avoid a potential security issue 
       # https://github.com/mar10/wsgidav/security/advisories/GHSA-xx6g-jj35-pxjv
-      pip3 install cheroot 'wsgidav>=4.1.0'; \
+      # IMPORTANT: use cheroot before 10.0.1 as it currently crashes webdavs
+      #            One can trigger the crash with a simple testssl.sh run
+      # TODO: investigate if the problem is in cheroot, wsgidav or migrid.
+      pip3 install 'cheroot<10.0.1' 'wsgidav>=4.1.0'; \
     fi;
 # Prefer sslkeylog as session tracking helper in webdavs daemon if available.
 # Automatic fallback  to our _sslsession C-extension when not.
