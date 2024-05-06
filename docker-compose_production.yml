@@ -13,6 +13,43 @@ services:
 #    environment:
 #      TZ: ${TZ}
 
+  # NOTE: we use a shared volume init helper container to make sure volumes
+  #       are fully created and instantiated before we try to bind mount
+  #       subdirs from e.g. the state volume in the service containers.
+  migrid-volume-init:
+    container_name: migrid-volume-init
+    image: ucphhpc/migrid${CONTAINER_TAG}
+    extends:
+      file: docker-compose_shared.yml
+      service: migrid-shared
+    environment:
+      TZ: ${TZ}
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: 
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: migrid-syslog
+        target: /var/log
+      - type: volume
+        source: state
+        target: /home/mig/state
+    env_file:
+      - migrid-httpd.env
+    # NOTE: public hosts should create users through sign up and run like this
+    command: /app/docker-entry.sh -V
+
   # The migrid core services including httpd and tightly integrated services
   # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
 
@@ -39,6 +76,10 @@ services:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy notify crond rsyslogd
+    depends_on:
+      # IMPORTANT: finish volume init before migrid launch as explained above
+      migrid-volume-init:
+        condition: service_completed_successfully
     volumes:
       - type: volume
         source: httpd
@@ -56,18 +97,19 @@ services:
         source: state
         target: /home/mig/state
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
-      - type: volume
-        source: vgrid_files_readonly
+      - type: bind
+        source: ${VGRID_FILES_WRITABLE}
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
-      - type: volume
-        source: mig_system_run
+      - type: bind
+        source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
-    # NOTE: openid_store is a volatile cache and should use fast local tmpfs
-    # TODO: enable the tmpfs or a similar structure as MIG_SYSTEM_RUN here?
-    #tmpfs:
-    #  - /home/mig/state/openid_store:mode=770,uid=${UID:-1000},gid=${GID:-1000}
+      # NOTE: openid_store is a volatile state for apache mod auth openid and
+      #       gains scalability and performance from using a fast local tmpfs
+      - type: bind
+        source: ${OPENID_STORE}
+        target: /home/mig/state/openid_store
     env_file:
       - migrid-httpd.env
     command: /app/docker-entry.sh -k -V
@@ -107,8 +149,8 @@ services:
         target: /home/mig/state
       # NOTE: we don't need read-only vgrids/workgroups in the openid container
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
-      - type: volume
-        source: mig_system_run
+      - type: bind
+        source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
     command: /app/docker-entry.sh -k
 
@@ -146,13 +188,13 @@ services:
         source: state
         target: /home/mig/state
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
-      - type: volume
-        source: vgrid_files_readonly
+      - type: bind
+        source: ${VGRID_FILES_WRITABLE}
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
-      - type: volume
-        source: mig_system_run
+      - type: bind
+        source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
     command: /app/docker-entry.sh -k
 
@@ -189,13 +231,13 @@ services:
         source: state
         target: /home/mig/state
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
-      - type: volume
-        source: vgrid_files_readonly
+      - type: bind
+        source: ${VGRID_FILES_WRITABLE}
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
-      - type: volume
-        source: mig_system_run
+      - type: bind
+        source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
     command: /app/docker-entry.sh -k
 
@@ -232,13 +274,13 @@ services:
         source: state
         target: /home/mig/state
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
-      - type: volume
-        source: vgrid_files_readonly
+      - type: bind
+        source: ${VGRID_FILES_WRITABLE}
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
-      - type: volume
-        source: mig_system_run
+      - type: bind
+        source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
     command: /app/docker-entry.sh -k
 
@@ -297,21 +339,6 @@ volumes:
       device: ${DOCKER_MIGRID_ROOT}/state
       o: bind
   
-  vgrid_files_readonly:
-    driver: local
-    driver_opts:
-      type: none
-      device: ${DOCKER_MIGRID_ROOT}/state/vgrid_files_writable
-      o: bind,ro
-
-  mig_system_run:
-    # Volume used to map a fast host disk or tmpfs into the shared cache folder
-    driver: local
-    driver_opts:
-      type: none
-      device: ${MIG_SYSTEM_RUN}
-      o: bind
-
   migrid-syslog:
     # Volume used for exposing migrid container system log
     driver: local
