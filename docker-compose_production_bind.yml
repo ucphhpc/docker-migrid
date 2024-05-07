@@ -16,9 +16,14 @@ services:
   # NOTE: we use a shared volume init helper container to make sure volumes
   #       are fully created and instantiated before we try to bind mount
   #       subdirs from e.g. the state volume in the service containers.
+  # NOTE: Even though no services are started then use network_mode: "host"
+  #       to avoid creating virtual container networks.
+  #       Lustre Networking (LNET) locks up if the network is changed
+  #       while lustre is mounted.
   migrid-volume-init:
     container_name: migrid-volume-init
     image: ucphhpc/migrid${CONTAINER_TAG}
+    network_mode: "host"
     extends:
       file: docker-compose_shared.yml
       service: migrid-shared
