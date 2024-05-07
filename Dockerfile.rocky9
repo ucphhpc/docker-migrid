@@ -110,6 +110,7 @@ ARG ENABLE_TWOFACTOR=True
 ARG ENABLE_TWOFACTOR_STRICT_ADDRESS=False
 ARG TWOFACTOR_AUTH_APPS=""
 ARG ENABLE_PEERS=True
+ARG ENABLE_QUOTA=False
 ARG PEERS_MANDATORY=False
 ARG PEERS_EXPLICIT_FIELDS=""
 ARG PEERS_CONTACT_HINT="authorized to invite you as peer"
@@ -192,6 +193,13 @@ ARG GDP_PATH_SCRAMBLE=safe_encrypt
 ARG SFTP_MAX_SESSIONS=32
 ARG WSGI_PROCS=25
 ARG APACHE_WORKER_PROCS=256
+ARG QUOTA_BACKEND=""
+ARG QUOTA_USER_LIMIT=1099511627776
+ARG QUOTA_VGRID_LIMIT=1099511627776
+ARG QUOTA_LUSTRE_VERSION="2.15.4"
+ARG QUOTA_LUSTRE_BASE="/dev/null"
+ARG QUOTA_GOCRYPYFS_XRAY="/dev/null"
+ARG QUOTA_GOCRYPYFS_SOCK="/dev/null"
 
 # Jupyter Arguments
 ARG JUPYTER_SERVICES=""
@@ -866,6 +874,7 @@ ARG ENABLE_TWOFACTOR
 ARG ENABLE_TWOFACTOR_STRICT_ADDRESS
 ARG TWOFACTOR_AUTH_APPS
 ARG ENABLE_PEERS
+ARG ENABLE_QUOTA
 ARG PEERS_MANDATORY
 ARG PEERS_EXPLICIT_FIELDS
 ARG PEERS_CONTACT_HINT
@@ -933,6 +942,10 @@ ARG GDP_PATH_SCRAMBLE
 ARG SFTP_MAX_SESSIONS
 ARG WSGI_PROCS
 ARG APACHE_WORKER_PROCS
+ARG QUOTA_BACKEND
+ARG QUOTA_LUSTRE_VERSION
+ARG QUOTA_USER_LIMIT
+ARG QUOTA_VGRID_LIMIT
 
 # TODO: do we still need the ~/.local/ wrapper now that update-alternatives run?
 ENV PYTHONPATH=${MIG_ROOT}
@@ -1047,6 +1060,8 @@ RUN ./generateconfs.py --source=. \
     --enable_jupyter=${ENABLE_JUPYTER} --enable_migadmin=${ENABLE_MIGADMIN} \
     --enable_gdp=${ENABLE_GDP} --gdp_email_notify=${GDP_EMAIL_NOTIFY} \
     --gdp_id_scramble=${GDP_ID_SCRAMBLE} --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
+    --enable_quota=${ENABLE_QUOTA} --quota_backend=${QUOTA_BACKEND} \
+    --quota_user_limit=${QUOTA_USER_LIMIT} --quota_vgrid_limit=${QUOTA_VGRID_LIMIT} \
     --password_policy=${MIG_PASSWORD_POLICY} \
     --jupyter_services="${JUPYTER_SERVICES}" \
     --jupyter_services_desc="${JUPYTER_SERVICES_DESC}" \
@@ -1112,11 +1127,17 @@ ARG EMULATE_FQDN
 ARG ENABLE_SELF_SIGNED_CERTS
 ARG ENABLE_OPENID
 ARG WITH_PY3
+ARG PREFER_PYTHON3
 ARG ENABLE_LOGROTATE
 ARG LOGROTATE_MIGRID
 ARG TRAC_ADMIN_PATH
 ARG TRAC_INI_PATH
 ARG ENABLE_GDP
+ARG WITH_GIT
+ARG MIG_GIT_BRANCH
+ARG ENABLE_QUOTA
+ARG QUOTA_BACKEND
+ARG QUOTA_LUSTRE_VERSION
 
 # Prepare oiddiscover for httpd
 RUN cd $MIG_ROOT/mig \
@@ -1269,6 +1290,45 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       fi; \
     fi;
 
+# Install pylustrequota
+# NOTE: Requires py3 and git-experimental
+RUN if [ "${ENABLE_QUOTA}" = "True" ] \
+            && [ "${PREFER_PYTHON3}" = "True" ] \
+            && [ "${WITH_GIT}" = "True" ] \
+            && [ "${MIG_GIT_BRANCH}" = "experimental" ]; then \
+        if [ "${QUOTA_BACKEND}" = "lustre" ] \
+            || [ "${QUOTA_BACKEND}" = "lustre-gocryptfs" ]; then \
+            echo "install pylustrequota" \
+            && dnf update -y \
+            && dnf --enablerepo=crb install -y \
+            python3-devel.x86_64 \
+            libtool.x86_64 \
+            kernel-devel.x86_64 \
+            kernel-abi-stablelists \
+            flex.x86_64 \
+            bison.x86_64 \
+            keyutils-libs-devel.x86_64 \
+            libmount-devel.x86_64 \
+            libnl3-devel.x86_64 \
+            libyaml-devel \
+            krb5-devel.x86_64 \
+            && cd ${MIG_ROOT}/mig/src/pylustrequota \
+            && git clone git://git.whamcloud.com/fs/lustre-release.git \
+            && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release \
+            && git checkout ${QUOTA_LUSTRE_VERSION} \
+            && sh ./autogen.sh \
+            && ./configure --disable-server --enable-quota --enable-utils --enable-gss \
+            && make undef.h \
+            && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release/libcfs/libcfs \
+            && make libcfs.la \
+            && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release/lnet/utils/lnetconfig \
+            && make liblnetconfig.la \
+            && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release/lustre/utils \
+            && make liblustreapi.la \
+            && cd ${MIG_ROOT}/mig/src/pylustrequota \
+            && python3 setup.py install; \
+        fi; \
+    fi;
 #------------------------- next stage -----------------------------#
 FROM --platform=linux/$ARCH setup_mig_configs as start_mig
 ARG DOMAIN
