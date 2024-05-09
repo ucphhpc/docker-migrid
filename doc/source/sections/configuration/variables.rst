@@ -448,10 +448,10 @@ Variables
    * - QUOTA_LUSTRE_BASE
      - "/dev/null"
      - Path to MiG lustre base containing 'user_home', 'vgrid_home' and 'vgrid_files_writable'. If using lustre-gocryptfs then lustre base is the encrypted base path.
-   * - QUOTA_GOCRYPYFS_XRAY
+   * - QUOTA_GOCRYPTFS_XRAY
      - "/dev/null"
      - If data is encrypted with gocryptfs then
      quotas are set on the encrypted data paths. gocryptfs-xray is needed to resolve the encrypted data paths from the decrypted MiG data paths.
-   * - QUOTA_GOCRYPYFS_SOCK
+   * - QUOTA_GOCRYPTFS_SOCK
      - "/dev/null"
      - A gocryptfs socket is needed by gocryptfs-xray to resolve encoded data paths from MiG data paths.
