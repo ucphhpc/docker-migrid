@@ -1060,7 +1060,7 @@ RUN ./generateconfs.py --source=. \
     --enable_jupyter=${ENABLE_JUPYTER} --enable_migadmin=${ENABLE_MIGADMIN} \
     --enable_gdp=${ENABLE_GDP} --gdp_email_notify=${GDP_EMAIL_NOTIFY} \
     --gdp_id_scramble=${GDP_ID_SCRAMBLE} --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
-    --enable_quota=${ENABLE_QUOTA} --quota_backend=${QUOTA_BACKEND} \
+    --enable_quota=${ENABLE_QUOTA} --quota_backend="${QUOTA_BACKEND}" \
     --quota_user_limit=${QUOTA_USER_LIMIT} --quota_vgrid_limit=${QUOTA_VGRID_LIMIT} \
     --password_policy=${MIG_PASSWORD_POLICY} \
     --jupyter_services="${JUPYTER_SERVICES}" \
