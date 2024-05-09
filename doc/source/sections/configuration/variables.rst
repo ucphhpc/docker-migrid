@@ -445,10 +445,10 @@ Variables
    * - QUOTA_LUSTRE_VERSION
      - 2.15.4
      - The MiG lustre quota helper depends on the lustre source code. The version number should be aligned with the lustre client version used when mounting lustre. First lustre version that supports quotas is 2.15.4
-   * - QUOTA_GOCRYPYFS_XRAY
+   * - QUOTA_GOCRYPTFS_XRAY
      - "/dev/null"
      - If data is encrypted with gocryptsfs then 
      quotas are set on the encrypted data paths. gocryptfs-xray is needed to resolve the encrypted data paths from the decrypted MiG data paths.
-   * - QUOTA_GOCRYPYFS_SOCK
+   * - QUOTA_GOCRYPTFS_SOCK
      - "/dev/null"
      - A gocryptfs socket is needed by gocryptfs-xray to resolve encoded data paths from MiG data paths.
