@@ -543,6 +543,9 @@ RUN useradd -u $UID -g $GID -ms /bin/bash $USER
 ENV MIG_ROOT=/home/$USER
 ENV WEB_DIR=/etc/httpd
 ENV CERT_DIR=$WEB_DIR/MiG-certificates
+# Make sure pip has a valid cert chain to avoid cert errors on pypi repo, etc.
+# https://stackoverflow.com/questions/25981703/pip-install-fails-with-connection-error-ssl-certificate-verify-failed-certi
+ENV PIP_CERT=/etc/ssl/certs/ca-bundle.crt
 
 USER root
 
@@ -668,13 +671,6 @@ ARG TRAC_ADMIN_PATH
 
 # NOTE: Switch back to root for system-wide pip install here
 USER root
-
-# Upgrade pip2, required by cryptography - pip-21+ dropped python2 support, however
-RUN python2 -m pip install -U 'pip<21'
-# Upgrade pip3, required by cryptography - pip-22+ dropped py3.6 support, however
-RUN if [ "${WITH_PY3}" = "True" ]; then \
-      python3 -m pip install -U 'pip<22'; \
-    fi;
 
 # Prepare py2 dependencies no longer in yum or just outdated there
 
