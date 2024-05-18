@@ -669,6 +669,13 @@ ARG TRAC_ADMIN_PATH
 # NOTE: Switch back to root for system-wide pip install here
 USER root
 
+# Upgrade pip2, required by cryptography - pip-21+ dropped python2 support, however
+RUN python2 -m pip install -U 'pip<21'
+# Upgrade pip3, required by cryptography - pip-22+ dropped py3.6 support, however
+RUN if [ "${WITH_PY3}" = "True" ]; then \
+      python3 -m pip install -U 'pip<22'; \
+    fi;
+
 # Prepare py2 dependencies no longer in yum or just outdated there
 
 # NOTE: use jsonrpclib and pysendfile from yum for py2 here but for py3 from pip
