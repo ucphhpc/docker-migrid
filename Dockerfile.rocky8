@@ -154,6 +154,7 @@ ARG EXT_OIDC_PUBLIC_KEY_FILES=""
 ARG EXT_OIDC_ID_TOKEN_ENCRYPTED_RESPONSE_ALG=""
 ARG EXT_OIDC_ID_TOKEN_ENCRYPTED_RESPONSE_ENC=""
 ARG EXT_OIDC_REWRITE_COOKIE=""
+ARG EXT_OIDC_TITLE=""
 ARG DEFAULT_MENU=
 ARG USER_MENU=jupyter
 # TODO: implement support for CA args
@@ -1007,6 +1008,7 @@ ARG EXT_OIDC_PUBLIC_KEY_FILES
 ARG EXT_OIDC_ID_TOKEN_ENCRYPTED_RESPONSE_ALG
 ARG EXT_OIDC_ID_TOKEN_ENCRYPTED_RESPONSE_ENC
 ARG EXT_OIDC_REWRITE_COOKIE
+ARG EXT_OIDC_TITLE
 ARG DEFAULT_MENU
 ARG USER_MENU
 #ARG CA_FQDN
@@ -1153,6 +1155,7 @@ RUN ./generateconfs.py --source=. \
     --ext_oidc_id_token_encrypted_response_alg=${EXT_OIDC_ID_TOKEN_ENCRYPTED_RESPONSE_ALG} \
     --ext_oidc_id_token_encrypted_response_enc=${EXT_OIDC_ID_TOKEN_ENCRYPTED_RESPONSE_ENC} \
     --ext_oidc_rewrite_cookie="${EXT_OIDC_REWRITE_COOKIE}" \
+    --ext_oidc_title="${EXT_OIDC_TITLE}" \
     --enable_openid=${ENABLE_OPENID} --enable_wsgi=True \
     --enable_sftp=${ENABLE_SFTP} --enable_sftp_subsys=${ENABLE_SFTP_SUBSYS} \
     --enable_davs=${ENABLE_DAVS} --enable_ftps=${ENABLE_FTPS} \
