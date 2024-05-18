@@ -278,7 +278,6 @@ ARG UPGRADE_MOD_AUTH_OPENIDC
 ARG UPGRADE_PARAMIKO
 ARG WITH_PY3
 ARG PREFER_PYTHON3
-ARG TRAC_ADMIN_PATH
 ARG UID
 ARG GID
 
@@ -395,27 +394,6 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       && rm -fr /var/cache/dnf; \
     else \
       echo "no py3 deps"; \
-    fi;
-
-RUN if [ -n "${TRAC_ADMIN_PATH}" ]; then \
-      echo "install Trac and plugins" \
-      && pip2 install Trac TracMercurial TracWikiPrint TracGraphviz TracFullBlog TracWikiCssPlugin; \
-      if [ "${WITH_PY3}" = "True" ]; then \
-          pip3 install Trac TracWikiPrint TracGraphviz TracFullBlog TracWikiCssPlugin \
-          # IMPORTANT: Mercurial plugin is required for our repos and only recent
-          #            stable releases support current python and Trac versions.
-          #            We need 1.0.0.11+ for the default Python 3 and Trac-1.6.
-          && pip3 install 'TracMercurial>=1.0.0.11' \
-          # NOTE: these plugins would be nice but have gone stale and only support
-          #       older Trac versions.
-          #&& pip3 install TracStats TracMasterTickets TracDiscussion TracDownloads TracWysiwyg \
-          #&& pip3 install https://trac-hacks.org/svn/tracwysiwygplugin/0.12
-          # NOTE: install more recent dev versions of those with Trac-1.6+ support
-          # latest tag https://github.com/trac-hacks/tracstats/releases/tag/v0.6.1 is pre 1.6
-          && pip3 install https://github.com/trac-hacks/tracstats/archive/refs/heads/master.zip ; \
-      fi; \
-    else \
-      echo "no Trac deps"; \
     fi;
 
 RUN if [ "${PREFER_PYTHON3}" = "True" ]; then \
@@ -706,6 +684,7 @@ ARG DOMAIN
 ARG WITH_PY3
 ARG MODERN_WSGIDAV
 ARG UPGRADE_PARAMIKO
+ARG TRAC_ADMIN_PATH
 
 # NOTE: Switch back to root for system-wide pip install here
 USER root
@@ -833,6 +812,27 @@ RUN pip2 install 'email-validator<1.3.0'
 #RUN if [ "${WITH_PY3}" = "True" ]; then \
 #      pip3 install --prefix=$(python3-config --prefix) email-validator; \
 #    fi;
+
+RUN if [ -n "${TRAC_ADMIN_PATH}" ]; then \
+      echo "install Trac and plugins" \
+      && pip2 install Trac TracMercurial TracWikiPrint TracGraphviz TracFullBlog TracWikiCssPlugin; \
+      if [ "${WITH_PY3}" = "True" ]; then \
+          pip3 install Trac TracWikiPrint TracGraphviz TracFullBlog TracWikiCssPlugin \
+          # IMPORTANT: Mercurial plugin is required for our repos and only recent
+          #            stable releases support current python and Trac versions.
+          #            We need 1.0.0.11+ for the default Python 3 and Trac-1.6.
+          && pip3 install 'TracMercurial>=1.0.0.11' \
+          # NOTE: these plugins would be nice but have gone stale and only support
+          #       older Trac versions.
+          #&& pip3 install TracStats TracMasterTickets TracDiscussion TracDownloads TracWysiwyg \
+          #&& pip3 install https://trac-hacks.org/svn/tracwysiwygplugin/0.12
+          # NOTE: install more recent dev versions of those with Trac-1.6+ support
+          # latest tag https://github.com/trac-hacks/tracstats/releases/tag/v0.6.1 is pre 1.6
+          && pip3 install https://github.com/trac-hacks/tracstats/archive/refs/heads/master.zip ; \
+      fi; \
+    else \
+      echo "no Trac deps"; \
+    fi;
 
 # Modules required for workflows
 # NOTE: nbformat-5.0, nbconvert-6.0 and papermill-2.0 dropped python2 support
