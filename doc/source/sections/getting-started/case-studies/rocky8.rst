@@ -286,7 +286,7 @@ So we properly protect them with::
     [root@bench 4k]# chmod 400 key*.pem
 
 
-We downloaded WAYF's certificate and saved it in
+We got the corresponding certificate from WAYF and saved it in
 `/etc/httpd/MiG-certificates/wayf.dk/wayf-idp.pem`
 
 After handling the key and auth service setup we configured our site
