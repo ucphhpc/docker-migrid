@@ -227,3 +227,131 @@ Build and install the Lustre client::
   sudo lustre_rmmod
   sudo service lnet start
   sudo systemctl enable lnet
+
+
+WAYF OpenID Connect Sign Up and Log In
+--------------------------------------
+By default the site will use only the locally managed user database
+with OpenID 2.0 login through the built-in grid_openid service. One
+can configure additional authentication methods like X509 user
+certificates or OpenID 2.0 or OpenID Connect from external ID
+providers. One such international ID provider with OpenID Connect
+access is WAYF (https://www.wayf.dk/). In order to access it for
+authentication purposes it is necessary to get in touch with the
+WAYF admins and exchange public keys / certificates for the host
+authentication involved. This includes a bit of configuration on their
+PHPH self-service interface (https://phph.wayf.dk/).
+
+One preparation step is to create a private key and a self-signed
+certificate e.g. with `openssl`::
+
+    [root@bench /]# mkdir -p /etc/httpd/MiG-certificates/wayf.dk/4k
+    [root@bench /]# cd /etc/httpd/MiG-certificates/wayf.dk/4k
+    [root@bench 4k]# openssl req -x509 -newkey rsa:4096 -keyout key.pem \
+                                 -out cert.pem -sha256 -days 3650
+    Generating a 4096 bit RSA private key
+    ....................................................................++
+    ........................++
+    writing new private key to 'key.pem'
+    Enter PEM pass phrase:
+    Verifying - Enter PEM pass phrase:
+    -----
+    You are about to be asked to enter information that will be incorporated
+    into your certificate request.
+    What you are about to enter is what is called a Distinguished Name or a DN.
+    There are quite a few fields but you can leave some blank
+    For some fields there will be a default value,
+    If you enter '.', the field will be left blank.
+    -----
+    Country Name (2 letter code) [XX]:DK
+    State or Province Name (full name) []:
+    Locality Name (eg, city) [Default City]:Copenhagen
+    Organization Name (eg, company) [Default Company Ltd]:KU
+    Organizational Unit Name (eg, section) []:Science HPC Center
+    Common Name (eg, your name or your server's hostname) []:bench-wayf.erda.dk
+    Email Address []:
+    [root@bench 4k]#
+
+
+For Apache we may not want to enter passphrase to launch the service.
+A key without passphrase can be extracted with::
+
+    openssl rsa -in /etc/httpd/MiG-certificates/wayf.dk/4k/key.pem \
+                -out /etc/httpd/MiG-certificates/wayf.dk/4k/key-nopw.pem
+
+
+Such keys should of course not be generally readable.
+So we properly protect them with::
+
+    [root@bench 4k]# chmod 400 key*.pem
+
+
+We downloaded WAYF's certificate and saved it in
+`/etc/httpd/MiG-certificates/wayf.dk/wayf-idp.pem`
+
+After handling the key and auth service setup we configured our site
+to allow the WAYF OpenID Connect service as a valid ID provider for
+users wanting to access our site as explained
+below. Some of the docker-migrid variables needed for the purpose were
+added in May 2024. It is tested to work with docker-migrid from late
+May and a recent `migrid-sync` version.
+
+
+In our `.env` file we use these WAYF related variables::
+
+  EXTOIDC_DOMAIN=bench-wayf.erda.dk
+  EXT_OIDC_PROVIDER_META_URL="https://${PUBLIC_DOMAIN}/.well-known/wayf-openid-configuration"
+  EXT_OIDC_TITLE="WAYF"
+  EXT_OIDC_CLIENT_NAME=""
+  EXT_OIDC_CLIENT_ID="http://erda.dk"
+  EXT_OIDC_SCOPE=""
+  EXT_OIDC_REMOTE_USER_CLAIM=sub
+  EXT_OIDC_PASS_CLAIM_AS="both"
+  EXT_OIDC_PKCE_METHOD=S256
+  EXT_OIDC_PROVIDER_ISSUER="https://wayf.wayf.dk"
+  EXT_OIDC_PROVIDER_AUTHORIZATION_ENDPOINT="https://wayf.wayf.dk/saml2/idp/SSOService2.php"
+  EXT_OIDC_PROVIDER_TOKEN_ENDPOINT="https://wayf.wayf.dk/token"
+  EXT_OIDC_PROVIDER_USER_INFO_ENDPOINT="https://wayf.wayf.dk/token"
+  EXT_OIDC_PROVIDER_TOKEN_ENDPOINT_AUTH=none
+  EXT_OIDC_USER_INFO_TOKEN_METHOD=post_param
+  EXT_OIDC_USER_INFO_SIGNED_RESPONSE_ALG=RS256
+  EXT_OIDC_COOKIE_SAME_SITE="Off"
+  EXT_OIDC_PASS_COOKIES="wayfid"
+  EXT_OIDC_RESPONSE_MODE=form_post
+  EXT_OIDC_PROVIDER_VERIFY_CERT_FILES="/etc/httpd/MiG-certificates/wayf.dk/wayf-idp.pem"
+  EXT_OIDC_PRIVATE_KEY_FILES="wayf#/etc/httpd/MiG-certificates/wayf.dk/4k/key-nopw.pem"
+  EXT_OIDC_PUBLIC_KEY_FILES="wayf#/etc/httpd/MiG-certificates/wayf.dk/4k/cert.pem"
+  EXT_OIDC_ID_TOKEN_ENCRYPTED_RESPONSE_ALG=RSA-OAEP
+  EXT_OIDC_ID_TOKEN_ENCRYPTED_RESPONSE_ENC=A256GCM
+  EXT_OIDC_REWRITE_COOKIE="wayfid:wayf-qa:.erda.dk:0:/:true:true"
+  EXTOIDC_HTTPS_PORT=443
+  SIGNUP_METHODS="migoid extcert extoid extoidc"
+  LOGIN_METHODS="migoid extcert extoid extoidc"
+  AUTO_ADD_OIDC_USER=True
+
+Please note that there are a few remarks to add about the variable values.
+
+First of all the `EXT_OIDC_CLIENT_ID` is a value negotiated with
+WAYF. You'll need your own one to map your site(s) to your WAYF
+(self-service) setup. The same applies for the site suffix part of the
+`EXT_OIDC_REWRITE_COOKIE` value, where you should replace `.erda.dk`
+with your configured domain.
+
+Regarding the key/cert negotiation we have the three CERT and KEY
+variables to point to the WAYF certificate plus our own private key
+and certificate. The former is `EXT_OIDC_PROVIDER_VERIFY_CERT_FILES` and
+the latter is `EXT_OIDC_PRIVATE_KEY_FILES` and
+`EXT_OIDC_PUBLIC_KEY_FILES`.
+
+The `EXT_OIDC_PROVIDER_META_URL` value is used to point out a OpenID
+Connect specific discovery URL where the service optionally presents
+all available settings and parameters. At the time of writing we did
+not have such a service from WAYF, so in order to get a more
+straight-forward integration we added a mock one in the form of a
+simple json file served from our own site.
+You should either make your own copy based on data from WAYF or use
+any future discovery service they add.
+
+Finally you should decide on a site basis if you want automatic
+creation of authenticated users or not with the `AUTO_ADD_OIDC_USER`
+variable.
