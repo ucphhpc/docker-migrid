@@ -36,8 +36,13 @@ export DOCKER_COMPOSE_SHARED_HEADER
 .ONESHELL:
 
 ifeq ("$(wildcard .env)",".env")
-include .env
+	include .env
 endif
+# Full dockerclean needs CONTAINER_TAG defined
+ifeq ("CONTAINER_TAG","")
+	CONTAINER_TAG=":${MIG_GIT_BRANCH}"
+endif
+
 
 all: init dockerbuild
 
