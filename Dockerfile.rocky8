@@ -1388,6 +1388,7 @@ RUN update-ca-trust force-enable \
 RUN sed -i -e 's/^module(load="imjournal"/#module(load="imjournal"/g' \
 	-e 's/       UsePid="system"/#       UsePid="system"/g' \
         -e 's/       StateFile="imjournal.state"/#       StateFile="imjournal.state"/g' \
+        -e 's/       FileCreateMode="0644" # Set the access permissions for the state file/#       FileCreateMode="0644" # Set the access permissions for the state file/g' \
 	-e 's/SysSock.Use="off"/SysSock.Use="on"/g' /etc/rsyslog.conf
 
 # Enable GDP log 
