@@ -93,11 +93,39 @@ initcomposevars:
 	@grep -v '\(^#.*\|^$$\)' .env >> docker-compose_shared.yml
 	@sed -E -i 's!^([^=]*)=.*!        - \1=\$$\{\1\}!' docker-compose_shared.yml
 
-up:	initcomposevars
-	${DOCKER_COMPOSE} up -d
+initservices:
+	@ENABLED_SERVICES="migrid"
+	@for service in $$(${DOCKER_COMPOSE} config --services 2>/dev/null); do
+		@if [[ "$$service" == "migrid-openid" \
+				&& "${ENABLE_OPENID}" == "True" ]]; then
+			@ENABLED_SERVICES+=" $$service"
+		@fi
+		@if [[ "$$service" == "migrid-sftp" ]]; then
+				@if [[ "${ENABLE_SFTP}" == "True" \
+						|| "${ENABLE_SFTP_SUBSYS}" == "True" ]]; then
+					@ENABLED_SERVICES+=" $$service"
+				@fi
+		@fi
+		@if [[ "$$service" == "migrid-ftps" \
+				&& "${ENABLE_FTPS}" == "True" ]]; then
+			@ENABLED_SERVICES+=" $$service"
+		@fi
+		@if [[ "$$service" == "migrid-webdavs" \
+				&& "${ENABLE_DAVS}" == "True" ]]; then
+			@ENABLED_SERVICES+=" $$service"
+		@fi
+		@if [[ "$$service" == "migrid-lustre-quota" \
+				&& "${ENABLE_QUOTA}" == "True" ]]; then
+			@ENABLED_SERVICES+=" $$service"
+		@fi
+	@done;
+	@echo $$ENABLED_SERVICES > ./.enabled_services
+
+up:	initcomposevars initservices
+	${DOCKER_COMPOSE} up $(file < ./.enabled_services) -d
 
 down:	initcomposevars
-	${DOCKER_COMPOSE} down
+	${DOCKER_COMPOSE} down $(file < ./.enabled_services)
 
 dockerbuild: init
 	${DOCKER_COMPOSE} build $(ARGS)
