@@ -129,7 +129,10 @@ up:	initcomposevars initservices
 	${DOCKER_COMPOSE} up -d $(file < ./.enabled_services)
 
 down:	initcomposevars
-	${DOCKER_COMPOSE} down $(file < ./.enabled_services)
+	# NOTE: To surpress podman warnings about missing containers use:
+	# ${DOCKER_COMPOSE} down $(file < ./.enabled_services)
+	# NOTE: 'docker-compose down' doesn't support a list of services
+	${DOCKER_COMPOSE} down
 
 dockerbuild: init
 	${DOCKER_COMPOSE} build $(ARGS)
