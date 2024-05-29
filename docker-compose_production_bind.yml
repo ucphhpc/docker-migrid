@@ -289,6 +289,46 @@ services:
         target: /home/mig/state/mig_system_run
     command: /app/docker-entry.sh -k
 
+  migrid-lustre-quota:
+    container_name: migrid-lustre-quota
+    image: ucphhpc/migrid${CONTAINER_TAG}
+    network_mode: "host"
+    environment:
+      TZ: ${TZ}
+    depends_on:
+      - migrid
+    cap_add:
+      - ALL
+    volumes:
+      - type: bind
+        source: ${QUOTA_LUSTRE_BASE}
+        target: /lustre/${DOMAIN}
+      - type: bind
+        source: ${QUOTA_GOCRYPYFS_XRAY}
+        target: /usr/local/bin/gocryptfs-xray
+      - type: bind
+        source: ${QUOTA_GOCRYPYFS_SOCK}
+        target: /var/run/gocryptfs.${DOMAIN}.sock
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: state
+        target: /home/mig/state
+      - type: volume
+        source: user_home
+        target: /home/mig/state/user_home
+      - type: volume
+        source: vgrid_home
+        target: /home/mig/state/vgrid_home
+      - type: volume
+        source: vgrid_files_writable
+        target: /home/mig/state/vgrid_files_writable
+    command: /bin/bash -c \
+      '[[ ! "${QUOTA_BACKEND}" =~ ^lustre.*$ ]]
+      && exit 0
+      || miglustrequota.py -c /home/mig/mig/server/MiGserver.conf'
+
 # NOTE: not used in stand-alone production mode
 #  nginx-proxy:
 #    image: jwilder/nginx-proxy
