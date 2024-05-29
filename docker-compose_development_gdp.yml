@@ -353,10 +353,7 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-    command: /bin/bash -c \
-      '[[ ! "${QUOTA_BACKEND}" =~ ^lustre.*$ ]]
-      && exit 0
-      || miglustrequota.py -c /home/mig/mig/server/MiGserver.conf'
+    command: miglustrequota.py -c /home/mig/mig/server/MiGserver.conf
 
   nginx-proxy:
     image: jwilder/nginx-proxy
