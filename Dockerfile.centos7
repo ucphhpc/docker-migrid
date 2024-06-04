@@ -280,6 +280,10 @@ ARG PREFER_PYTHON3
 ARG UID
 ARG GID
 
+# Make sure pip has a valid cert chain to avoid cert errors on pypi repo, etc.
+# https://stackoverflow.com/questions/25981703/pip-install-fails-with-connection-error-ssl-certificate-verify-failed-certi
+ENV PIP_CERT=/etc/ssl/certs/ca-bundle.crt
+
 WORKDIR /tmp
 
 # Centos image default yum configs prevent docs installation
@@ -543,9 +547,6 @@ RUN useradd -u $UID -g $GID -ms /bin/bash $USER
 ENV MIG_ROOT=/home/$USER
 ENV WEB_DIR=/etc/httpd
 ENV CERT_DIR=$WEB_DIR/MiG-certificates
-# Make sure pip has a valid cert chain to avoid cert errors on pypi repo, etc.
-# https://stackoverflow.com/questions/25981703/pip-install-fails-with-connection-error-ssl-certificate-verify-failed-certi
-ENV PIP_CERT=/etc/ssl/certs/ca-bundle.crt
 
 USER root
 
