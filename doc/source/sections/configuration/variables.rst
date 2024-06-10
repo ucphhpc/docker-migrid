@@ -367,6 +367,12 @@ Variables
    * - AUTO_ADD_OIDC_USER
      - False
      - Whether new registrations via OpenID Connect should be automatically be activated or wait for admin approval first.
+   * - AUTO_ADD_FILTER_FIELDS
+     -
+     - User ID fields to prefilter during sign up in order to remove or replace any exotic unsupported characters e.g. in full names. Default is empty to disable all such filtering, but the variable can be set to `full_name` to filter the given name of users with the method given in `AUTO_ADD_FILTER_METHOD`.
+   * - AUTO_ADD_FILTER_METHOD
+     - skip
+     - Which method to prefilter any user ID fields configured in `AUTO_ADD_FILTER_FIELDS` with during sign up. If field filters are set (see above) the default `skip` filter simply throws away any such unsupported characters during sign up. Otherwise those characters will result in an input validation error in that process. Better filter methods are in development and one can try e.g. hexlify as as rudimentary reversible filter to replace such unsupported characters with one or more corresponding hex codes.
    * - CERT_VALID_DAYS
      - 365
      - How long cert based user accounts should kept as active without login or renewal.
