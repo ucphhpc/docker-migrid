@@ -17,6 +17,14 @@ else
 endif
 $(echo ${DOCKER_COMPOSE} >/dev/null)
 
+ifeq ("$(wildcard .env)",".env")
+	include .env
+endif
+# Full dockerclean needs CONTAINER_TAG defined
+ifeq ($(CONTAINER_TAG),)
+	CONTAINER_TAG = $(shell egrep '^ARG MIG_GIT_BRANCH=' Dockerfile | sed 's/.*=/:/g')
+endif
+
 define DOCKER_COMPOSE_SHARED_HEADER
 services:
   migrid-shared:
@@ -34,14 +42,6 @@ export DOCKER_COMPOSE_SHARED_HEADER
 .PHONY: test-doc
 
 .ONESHELL:
-
-ifeq ("$(wildcard .env)",".env")
-	include .env
-endif
-# Full dockerclean needs CONTAINER_TAG defined
-ifeq ("CONTAINER_TAG","")
-	CONTAINER_TAG=":${MIG_GIT_BRANCH}"
-endif
 
 
 all: init dockerbuild
@@ -88,7 +88,7 @@ initdirs:
 
 initcomposevars:
 	@echo "creating env variable map in docker-compose_shared.yml"
-	@[ -f .env ] || echo "ERROR: no .env file found. Run 'make init' first."
+	@[ -r .env ] || echo "ERROR: no .env file found. Run 'make init' first."
 	@echo "$$DOCKER_COMPOSE_SHARED_HEADER" > docker-compose_shared.yml
 	@grep -v '\(^#.*\|^$$\)' .env >> docker-compose_shared.yml
 	@sed -E -i 's!^([^=]*)=.*!        - \1=\$$\{\1\}!' docker-compose_shared.yml
