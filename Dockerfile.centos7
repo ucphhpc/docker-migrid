@@ -1246,8 +1246,7 @@ ARG QUOTA_BACKEND
 ARG QUOTA_LUSTRE_VERSION
 
 # Prepare oiddiscover for httpd
-RUN cd $MIG_ROOT/mig \
-    && python2 shared/httpsclient.py | grep -A 80 "xml version" \
+RUN cd $MIG_ROOT && python2 mig/server/genoiddiscovery.py \
     > $MIG_ROOT/state/wwwpublic/oiddiscover.xml
 
 USER root
