@@ -333,6 +333,7 @@ RUN dnf update -y \
     openssh-server \
     openssh-clients \
     rsyslog \
+    rsyslog-gnutls \
     lsof \
     python2-pip \
     python2-devel \

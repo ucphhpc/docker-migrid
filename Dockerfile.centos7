@@ -327,6 +327,7 @@ RUN yum update -y \
     openssh-server \
     openssh-clients \
     rsyslog \
+    rsyslog-gnutls \
     lsof \
     python-pip \
     python-devel \

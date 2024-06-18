@@ -330,6 +330,7 @@ RUN dnf update -y \
     openssh-server \
     openssh-clients \
     rsyslog \
+    rsyslog-gnutls \
     lsof \
     # NOTE: python2 support is gone on rocky9+
     # NOTE: generally install cracklib from pip as yum/dnf doesn't have it
