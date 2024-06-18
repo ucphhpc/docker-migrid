@@ -391,12 +391,10 @@ RUN if [ "${PREFER_PYTHON3}" = "True" ]; then \
 
 
 # Install GDP dependencies
-# TODO: does postfix "just work" and should it perhaps always be installed?
 RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       echo "install GDP deps" \
       && dnf update -y \
       && dnf install -y \
-      postfix \
       # NOTE: python2 support is gone on rocky9+
       xorg-x11-server-Xvfb \
       # NOTE: wkhtmltopdf not yet build for Rocky9 
