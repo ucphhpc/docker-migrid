@@ -3,10 +3,14 @@ Rocky 8 Setup
 
 Goal
 ----
-We needed a full-blown setup for running some SSHFS performance benchmarks on an
-internet host and decided to do so on Rocky 8.5, which comes with a number of
-throughput and crypto performance optimizations compared to our usual CentOS 7
-platforms.
+We needed a full-blown setup for running some SFTP/SSHFS performance
+benchmarks on an internet host and decided to do so on Rocky 8, which
+comes with a number of throughput and crypto performance optimizations
+compared to our legacy CentOS 7 platforms.
+
+In the meantime we have added support for Rocky 9 as well and intend
+to go with that distro for our own sites. So the use of 8 here is
+mainly historical and not a specific limitation.
 
 Overview
 --------
@@ -329,6 +333,16 @@ In our `.env` file we use these WAYF related variables::
   LOGIN_METHODS="migoid extcert extoid extoidc"
   AUTO_ADD_OIDC_USER=True
 
+After building and launching the containers WAYF access is available
+through the `login` and `signup` backends on the `SID_DOMAIN`. In this
+case:
+
+https://bench-sid.erda.dk/cgi-sid/signup.py?show=extoidc
+
+and
+
+https://bench-sid.erda.dk/cgi-sid/login.py?show=extoidc
+
 Please note that there are a few remarks to add about the variable values.
 
 First of all the `EXT_OIDC_CLIENT_ID` is a value negotiated with
@@ -353,5 +367,9 @@ You should either make your own copy based on data from WAYF or use
 any future discovery service they add.
 
 Finally you should decide on a site basis if you want automatic
-creation of authenticated users or not with the `AUTO_ADD_OIDC_USER`
-variable.
+creation of authenticated users or not with the `AUTO_ADD_OID_USER`
+and `AUTO_ADD_OIDC_USER` variables. The former used to be shared for
+both OpenID 2.0 and OpenID Connect sign up attempts, but to increase
+control it was split up with the latter added. Please note that you
+may need a version released in July 2024 or later for the split up to
+fully take effect.
