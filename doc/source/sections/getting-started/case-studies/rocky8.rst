@@ -9,7 +9,7 @@ comes with a number of throughput and crypto performance optimizations
 compared to our legacy CentOS 7 platforms.
 
 In the meantime we have added support for Rocky 9 as well and intend
-to go with that distro for our own sites. So the use of 8 here is
+to go with that distribution for our own sites. So the use of 8 here is
 mainly historical and not a specific limitation.
 
 Overview
