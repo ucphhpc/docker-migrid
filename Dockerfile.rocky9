@@ -1119,6 +1119,10 @@ RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/index.html $MIG_ROOT/state/user_home/ \
     && cp $MIG_ROOT/mig/images/site-conf-${EMULATE_FQDN}.js $MIG_ROOT/mig/images/site-conf.js
 
+# Prepare oiddiscover for httpd
+RUN cd $MIG_ROOT && python mig/server/genoiddiscovery.py \
+    > $MIG_ROOT/state/wwwpublic/oiddiscover.xml
+
 
 #------------------------- next stage -----------------------------#
 FROM --platform=linux/$ARCH install_mig as setup_mig_configs
@@ -1146,10 +1150,6 @@ ARG MIG_GIT_BRANCH
 ARG ENABLE_QUOTA
 ARG QUOTA_BACKEND
 ARG QUOTA_LUSTRE_VERSION
-
-# Prepare oiddiscover for httpd
-RUN cd $MIG_ROOT && python mig/server/genoiddiscovery.py \
-    > $MIG_ROOT/state/wwwpublic/oiddiscover.xml
 
 USER root
 
