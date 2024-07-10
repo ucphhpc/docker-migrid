@@ -379,6 +379,6 @@ limit which such externally authenticated users are actually permitted to use
 this sign up. The variable contains a space-separated list of colon-separated
 pairs, here each pair is as user field name and a regular expression to require
 matched for the user fields. By default it is set to `distinguished_name:.*`,
-which will match *any* user ID. To only let authenticated users with and
-`@yourdomain.org` email address sign up without operator interaction it can be
-set to `email:.+@yourdomain.org`.
+which will match *any* user ID. To only let authenticated users with an
+`@yourdomain.org` email address and `Staff` role sign up without operator
+interaction it can be set to `email:.+@yourdomain\.org$ role:^Staff$`.
