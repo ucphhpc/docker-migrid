@@ -139,6 +139,7 @@ ARG AUTO_ADD_OID_USER=False
 ARG AUTO_ADD_OIDC_USER=False
 ARG AUTO_ADD_FILTER_FIELDS=
 ARG AUTO_ADD_FILTER_METHOD=
+ARG AUTO_ADD_USER_PERMIT="distinguished_name:.*"
 ARG CERT_VALID_DAYS=365
 ARG OID_VALID_DAYS=365
 ARG GENERIC_VALID_DAYS=365
@@ -997,6 +998,7 @@ ARG AUTO_ADD_OID_USER
 ARG AUTO_ADD_OIDC_USER
 ARG AUTO_ADD_FILTER_FIELDS
 ARG AUTO_ADD_FILTER_METHOD
+ARG AUTO_ADD_USER_PERMIT
 ARG CERT_VALID_DAYS
 ARG OID_VALID_DAYS
 ARG GENERIC_VALID_DAYS
@@ -1216,6 +1218,7 @@ RUN python2 ./generateconfs.py --source=. \
     --auto_add_oidc_user=${AUTO_ADD_OIDC_USER} \
     --auto_add_filter_fields="${AUTO_ADD_FILTER_FIELDS}" \
     --auto_add_filter_method=${AUTO_ADD_FILTER_METHOD} \
+    --auto_add_user_permit="${AUTO_ADD_USER_PERMIT}" \
     --cert_valid_days=${CERT_VALID_DAYS} --oid_valid_days=${OID_VALID_DAYS} \
     --generic_valid_days=${GENERIC_VALID_DAYS} \
     --default_menu="${DEFAULT_MENU}" --user_menu="${USER_MENU}" \

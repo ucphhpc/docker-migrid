@@ -379,6 +379,9 @@ Variables
    * - AUTO_ADD_FILTER_METHOD
      - skip
      - Which method to prefilter any user ID fields configured in `AUTO_ADD_FILTER_FIELDS` with during sign up. If field filters are set (see above) the default `skip` filter simply throws away any such unsupported characters during sign up. Otherwise those characters will result in an input validation error in that process. Better filter methods are in development and one can try e.g. hexlify as as rudimentary reversible filter to replace such unsupported characters with one or more corresponding hex codes.
+   * - AUTO_ADD_USER_PERMIT
+     - distinguished_name:.*
+     - Optional limit on users who may sign up through autocreate without operator interaction. Defaults to allow ANY distinguished name if unset but only for auth methods explicitly enabled with auto_add_X_user.
    * - CERT_VALID_DAYS
      - 365
      - How long cert based user accounts should kept as active without login or renewal.
