@@ -340,6 +340,12 @@ Variables
    * - UPGRADE_MOD_AUTH_OPENIDC
      - False
      - Upgrade the default Apache mod auth OpenIDC to latest supported one during build 
+   * - UPGRADE_OIDC_AUTH_MOD_SRC
+     - 
+     - Optional custom source for the Apache mod auth OpenIDC package if UPGRADE_MOD_AUTH_OPENIDC is requested 
+   * - UPGRADE_OIDC_CJOSE_SRC
+     - 
+     - Optional custom source for the cjose OpenIDC dependency package if UPGRADE_MOD_AUTH_OPENIDC is requested 
    * - UPGRADE_PARAMIKO
      - False
      - Upgrade the default Paramiko version to latest supported one during build 

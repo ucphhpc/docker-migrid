@@ -120,7 +120,11 @@ ARG ENABLE_LOGROTATE="False"
 # TODO: logrotate conf needs to be adjusted to the manual docker service launch 
 #ARG LOGROTATE_MIGRID="True"
 ARG LOGROTATE_MIGRID="False"
+# NOTE: mod auth openidc may be outdated in OS repo - allow optional upgrade
 ARG UPGRADE_MOD_AUTH_OPENIDC=False
+# NOTE: source for optional mod auth openidc upgrade - upstream release if left unset
+ARG UPGRADE_OIDC_CJOSE_SRC=""
+ARG UPGRADE_OIDC_AUTH_MOD_SRC=""
 ARG UPGRADE_PARAMIKO=False
 ARG PUBKEY_FROM_DNS=False
 # NOTE: python2 support is gone on rocky9+
@@ -276,6 +280,8 @@ ARG WILDCARD_DOMAIN
 ARG ENABLE_GDP
 ARG ENABLE_SELF_SIGNED_CERTS
 ARG UPGRADE_MOD_AUTH_OPENIDC
+ARG UPGRADE_OIDC_CJOSE_SRC
+ARG UPGRADE_OIDC_AUTH_MOD_SRC
 ARG UPGRADE_PARAMIKO
 ARG WITH_PY3
 ARG PREFER_PYTHON3
@@ -478,17 +484,27 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
 # Version 2.4.12.1+ is needed to support the OIDCPassClaimsAs encoding setting in apache conf
 RUN echo "UPGRADE_MOD_AUTH_OPENIDC: $UPGRADE_MOD_AUTH_OPENIDC"
 RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
-	echo "upgrading mod_auth_openidc from upstream centos7 rpm" \
-	&& dnf update -y \
+        if [ -z "${UPGRADE_OIDC_AUTH_MOD_SRC}" ]; then \
+		echo "upgrading mod_auth_openidc from upstream release package"; \
+		UPGRADE_OIDC_AUTH_MOD_SRC="https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.15.7/mod_auth_openidc-2.4.15.7-1.el9.x86_64.rpm"; \
+	else \
+		echo "upgrading mod_auth_openidc from ${UPGRADE_OIDC_AUTH_MOD_SRC}"; \
+	fi; \ 
+        if [ -z "${UPGRADE_OIDC_CJOSE_SRC}" ]; then \
+		# NOTE: recent cjose is already included in rocky8+
+		echo "installing cjose dependency from OS package"; \
+		UPGRADE_OIDC_CJOSE_SRC="cjose"; \
+	else \
+		echo "upgrading cjose from ${UPGRADE_OIDC_CJOSE_SRC}"; \
+	fi; \
+	dnf update -y \
 	# IMPORTANT: fail hard if any of these installs don't succeed e.g. due
 	#            to missing upstream packages to avoid silent errors later.
 	&& dnf install -y jansson-devel \
-	# NOTE: recent cjose is already included in rocky8+
 	&& dnf install -y \
-		cjose \
-                #https://github.com/OpenIDC/cjose/releases/download/v0.6.2.2/cjose-0.6.2.2-1.el9.x86_64.rpm \
+		"${UPGRADE_OIDC_CJOSE_SRC}" \
 	&& dnf install -y \
-                https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.15.7/mod_auth_openidc-2.4.15.7-1.el9.x86_64.rpm \
+		"${UPGRADE_OIDC_AUTH_MOD_SRC}" \
 	&& dnf clean all \
 	&& rm -fr /var/cache/dnf; \
 	if [ $? -ne 0 ]; then \
