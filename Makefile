@@ -13,7 +13,7 @@ DOCKER = $(shell which docker || which podman)
 ifeq (, $(shell ${DOCKER} help|grep compose))
 	DOCKER_COMPOSE = $(shell which docker-compose || which podman-compose)
 else
-	DOCKER_COMPOSE = docker compose
+	DOCKER_COMPOSE = ${DOCKER} compose
 endif
 $(echo ${DOCKER_COMPOSE} >/dev/null)
 
