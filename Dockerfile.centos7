@@ -163,10 +163,9 @@ ARG EXT_OIDC_REWRITE_COOKIE=""
 ARG EXT_OIDC_TITLE=""
 ARG DEFAULT_MENU=
 ARG USER_MENU=jupyter
-# TODO: implement support for CA args
-#ARG CA_FQDN=""
-#ARG CA_SMTP=""
-#ARG CA_USER=""
+ARG CA_FQDN=""
+ARG CA_SMTP="localhost"
+ARG CA_USER="mig-ca"
 ARG FTPS_PASV_PORTS="8100:8400"
 ARG STATUS_SYSTEM_MATCH="ANY"
 ARG SECSCAN_ADDR=""
@@ -1022,9 +1021,9 @@ ARG EXT_OIDC_REWRITE_COOKIE
 ARG EXT_OIDC_TITLE
 ARG DEFAULT_MENU
 ARG USER_MENU
-#ARG CA_FQDN
-#ARG CA_SMTP
-#ARG CA_USER
+ARG CA_FQDN
+ARG CA_SMTP
+ARG CA_USER
 ARG FTPS_PASV_PORTS
 ARG STATUS_SYSTEM_MATCH
 ARG SECSCAN_ADDR
@@ -1222,7 +1221,7 @@ RUN python2 ./generateconfs.py --source=. \
     --cert_valid_days=${CERT_VALID_DAYS} --oid_valid_days=${OID_VALID_DAYS} \
     --generic_valid_days=${GENERIC_VALID_DAYS} \
     --default_menu="${DEFAULT_MENU}" --user_menu="${USER_MENU}" \
-    #--ca_fqdn=${CA_FQDN} --ca_smtp=${CA_SMTP} --ca_user=${CA_USER} \
+    --ca_fqdn=${CA_FQDN} --ca_smtp=${CA_SMTP} --ca_user=${CA_USER} \
     --status_system_match=="${STATUS_SYSTEM_MATCH}" \
     --secscan_addr="${SECSCAN_ADDR}" \
     #--notify_protocols="${NOTIFY_PROTOCOLS}" \
