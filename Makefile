@@ -1,8 +1,9 @@
 PACKAGE_NAME=$(shell basename $$(pwd))
 PACKAGE_NAME_FORMATTED=$(subst -,_,$(PACKAGE_NAME))
 IMAGE=migrid
-OWNER ?= ucphhpc
+OWNER?=ucphhpc
 SHELL=/bin/bash
+BUILD_ARGS=
 
 # Enable that the builder should use buildkit
 # https://docs.docker.com/develop/develop-images/build_enhancements/
@@ -20,6 +21,13 @@ $(echo ${DOCKER_COMPOSE} >/dev/null)
 ifeq ("$(wildcard .env)",".env")
 	include .env
 endif
+
+# If the CONTAINER_REGISTRY is not set/found in the .env file
+# then default to docker.io
+ifeq ($(CONTAINER_REGISTRY),)
+	CONTAINER_REGISTRY = docker.io
+endif
+
 # Full dockerclean needs CONTAINER_TAG defined
 ifeq ($(CONTAINER_TAG),)
 	CONTAINER_TAG = $(shell egrep '^ARG MIG_GIT_BRANCH=' Dockerfile | sed 's/.*=/:/g')
@@ -28,7 +36,7 @@ endif
 define DOCKER_COMPOSE_SHARED_HEADER
 services:
   migrid-shared:
-    image: ucphhpc/migrid$${CONTAINER_TAG}
+    image: $${CONTAINER_REGISTRY}/ucphhpc/migrid$${CONTAINER_TAG}
     build:
       context: ./
       dockerfile: Dockerfile
@@ -100,12 +108,12 @@ down:	initcomposevars
 	${DOCKER_COMPOSE} down
 
 dockerbuild: init
-	${DOCKER_COMPOSE} build $(ARGS)
+	${DOCKER_COMPOSE} build ${BUILD_ARGS}
 
 dockerclean: initcomposevars
 	# remove latest image and dangling cache entries
 	${DOCKER_COMPOSE} down || true
-	${DOCKER} rmi -f $(OWNER)/$(IMAGE)${CONTAINER_TAG}
+	${DOCKER} rmi -f ${CONTAINER_REGISTRY}/$(OWNER)/$(IMAGE)${CONTAINER_TAG}
 	# remove dangling images and build cache
 	${DOCKER} image prune -f
 	${DOCKER} builder prune -f || true
@@ -114,7 +122,7 @@ logs:	initcomposevars
 	${DOCKER_COMPOSE} logs
 
 dockerpush:
-	${DOCKER} push $(OWNER)/$(IMAGE)${CONTAINER_TAG}
+	${DOCKER} push ${CONTAINER_REGISTRY}/$(OWNER)/$(IMAGE)${CONTAINER_TAG}
 
 dockervolumeclean:
 	@if [ "$$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*')" != "" ]; then \

@@ -19,6 +19,9 @@ Variables
    * - Variable
      - Default
      - Notes
+   * - CONTAINER_REGISTRY
+     - docker.io
+     - The upstream container image registry to use when deploying/pushing the Docker MiGrid Stack.
    * - CONTAINER_TAG
      - ${MIG_GIT_BRANCH}
      - The Docker tag used for the MiGrid image that is created. This might either be a Git tag, a MiGrid version or a arbitrary name.

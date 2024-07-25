@@ -4,7 +4,7 @@ version: '3.7'
 services:
 # NOTE: not used in stand-alone mode
 #  devdns:
-#    image: ruudud/devdns
+#    image: ${CONTAINER_REGISTRY}/ruudud/devdns
 #    container_name: devdns
 #    ports:
 #        - "127.0.0.1:53:53/udp"
@@ -22,7 +22,7 @@ services:
   #       while lustre is mounted.
   migrid-volume-init:
     container_name: migrid-volume-init
-    image: ucphhpc/migrid${CONTAINER_TAG}
+    image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
     network_mode: "host"
     extends:
       file: docker-compose_shared.yml
@@ -69,7 +69,7 @@ services:
 
   migrid:
     container_name: migrid
-    image: ucphhpc/migrid${CONTAINER_TAG}
+    image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
     network_mode: "host"
     extends:
       file: docker-compose_shared.yml
@@ -122,7 +122,7 @@ services:
   # Multiple containers with individual daemons not provided by base migrid
   migrid-openid:
     container_name: migrid-openid
-    image: ucphhpc/migrid${CONTAINER_TAG}
+    image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
     network_mode: "host"
     environment:
       TZ: ${TZ}
@@ -161,7 +161,7 @@ services:
 
   migrid-sftp:
     container_name: migrid-sftp
-    image: ucphhpc/migrid${CONTAINER_TAG}
+    image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
     network_mode: "host"
     environment:
       TZ: ${TZ}
@@ -205,7 +205,7 @@ services:
 
   migrid-ftps:
     container_name: migrid-ftps
-    image: ucphhpc/migrid${CONTAINER_TAG}
+    image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
     network_mode: "host"
     environment:
       TZ: ${TZ}
@@ -248,7 +248,7 @@ services:
 
   migrid-webdavs:
     container_name: migrid-webdavs
-    image: ucphhpc/migrid${CONTAINER_TAG}
+    image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
     network_mode: "host"
     environment:
       TZ: ${TZ}
@@ -291,7 +291,7 @@ services:
 
 # NOTE: not used in stand-alone production mode
 #  nginx-proxy:
-#    image: jwilder/nginx-proxy
+#    image: ${CONTAINER_REGISTRY}/jwilder/nginx-proxy
 #    container_name: nginx-proxy
 #    network_mode: "host"
 #    # TODO: can we add an httpd health check and switch to wait for condition
