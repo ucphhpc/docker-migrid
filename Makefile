@@ -121,7 +121,20 @@ dockerclean: initcomposevars
 logs:	initcomposevars
 	${DOCKER_COMPOSE} logs
 
-dockerpush:
+
+dockerpushwarning:
+	@if [ "${CONTAINER_REGISTRY}" == "docker.io" ]; then \
+		echo
+		echo "*** WARNING ***"
+		echo "*** Pushing to docker.io ***"
+		echo "*** This will make the $(OWNER)/$(IMAGE)${CONTAINER_TAG} image publicly available ***"
+		echo "*** Any secrets in the $(OWNER)/$(IMAGE)${CONTAINER_TAG} image, such as passwords/salts set via environment variables/file(s), will be exposed ***"
+		echo "*** Make sure that the $(OWNER)/$(IMAGE)${CONTAINER_TAG} image does not contain any such secrets before proceeding ***"
+		echo
+		echo "Are you sure you want to push $(OWNER)/$(IMAGE)${CONTAINER_TAG} to ${CONTAINER_REGISTRY}? [y/N]" && read ans && [ $${ans:-N} = y ]; \
+	fi
+
+dockerpush: dockerpushwarning
 	${DOCKER} push ${CONTAINER_REGISTRY}/$(OWNER)/$(IMAGE)${CONTAINER_TAG}
 
 dockervolumeclean:
