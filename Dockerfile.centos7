@@ -212,7 +212,7 @@ ARG JUPYTER_SERVICES=""
 ARG JUPYTER_SERVICES_DESC="{}"
 
 #------------------------- first stage -----------------------------#
-FROM --platform=linux/$ARCH centos:7 as init
+FROM --platform=linux/$ARCH centos:7 AS init
 ARG UID
 ARG GID
 ARG DOMAIN
@@ -273,7 +273,7 @@ RUN echo "Enable python3 support: $WITH_PY3"
 #RUN echo "Enable git checkout: $WITH_GIT"
 
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH init as base
+FROM --platform=linux/$ARCH init AS base
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG ENABLE_GDP
@@ -580,7 +580,7 @@ RUN mkdir -p $CERT_DIR/MiG/${WILDCARD_DOMAIN} \
 
 #------------------------- next stage -----------------------------#
 # Certs and keys
-FROM --platform=linux/$ARCH base as setup_security
+FROM --platform=linux/$ARCH base AS setup_security
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG PUBLIC_DOMAIN
@@ -687,7 +687,7 @@ WORKDIR $MIG_ROOT
 USER $USER
 
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH setup_security as mig_dependencies
+FROM --platform=linux/$ARCH setup_security AS mig_dependencies
 ARG DOMAIN
 ARG WITH_PY3
 ARG MODERN_WSGIDAV
@@ -849,7 +849,7 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
     fi;
 
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH mig_dependencies as download_mig
+FROM --platform=linux/$ARCH mig_dependencies AS download_mig
 LABEL MIGRID=true
 ARG DOMAIN
 ARG MIG_SVN_REPO
@@ -892,7 +892,7 @@ RUN if [ "${PREFER_PYTHON3}" = "True" -o "${MODERN_WSGIDAV}" = "True" ]; then \
 
 
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH download_mig as install_mig
+FROM --platform=linux/$ARCH download_mig AS install_mig
 ARG DOMAIN
 ARG PUBLIC_DOMAIN
 ARG MIGCERT_DOMAIN
@@ -1247,7 +1247,7 @@ RUN cd $MIG_ROOT && python2 mig/server/genoiddiscovery.py \
 
 
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH install_mig as setup_mig_configs
+FROM --platform=linux/$ARCH install_mig AS setup_mig_configs
 ARG DOMAIN
 ARG PUBLIC_DOMAIN
 ARG MIGCERT_DOMAIN
@@ -1459,7 +1459,7 @@ RUN if [ "${ENABLE_QUOTA}" = "True" ] \
         fi; \
     fi;
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH setup_mig_configs as start_mig
+FROM --platform=linux/$ARCH setup_mig_configs AS start_mig
 ARG DOMAIN
 
 # Reap defuncted/orphaned processes
