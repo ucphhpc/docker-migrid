@@ -745,10 +745,13 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
 
 # NOTE: openstackclient is unavailable in dnf here so always install with pip
 # NOTE: openstackclient dropped support for python2.7 in 5.x and python3.6 in 6.x
+# NOTE: we need to force preservation of the distro PyYAML package
+# NOTE: openstacksdk-2.x may have introduced unresolvable 'platform' deps on old python
 RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
-      pip2 install 'python-openstackclient<5.0'; \
+      # TODO: unravel the dependency hell openstack is on py2 or install from repo
+      #pip2 install PyYAML==3.13 'openstacksdk<2.0' 'python-openstackclient<6.0'; \
       if [ "${WITH_PY3}" = "True" ]; then \
-        pip3 install 'python-openstackclient<6.0'; \
+        pip3 install PyYAML==3.13 'python-openstackclient<6.0'; \
       fi; \
     fi;
 
