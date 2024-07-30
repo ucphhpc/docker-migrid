@@ -746,11 +746,13 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
 # NOTE: openstackclient dropped support for python2.7 in 5.x and python3.6 in 6.x
 # NOTE: we need to force preservation of the distro PyYAML package
 # NOTE: the rocky8 and centos7 python builds differ for some reason!
+# NOTE: we need to upgrade PyYAML to at least 3.12 for openstack deps on py2
+# NOTE: openstacksdk-1.5 may have introduced typing conflicts here
 # NOTE: keystoneauth1-4.x introduced unresolvable 'pbr' deps on py2 here
 RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
-      pip2 install PyYAML==3.13 'keystoneauth1<4' 'python-openstackclient<5'; \
+      pip2 install PyYAML==3.13 'openstacksdk<1.5' 'keystoneauth1<4' 'python-openstackclient<5'; \
       if [ "${WITH_PY3}" = "True" ]; then \
-        pip3 install PyYAML==3.13 'python-openstackclient<6'; \
+        pip3 install PyYAML==3.13 'openstacksdk<1.5' 'python-openstackclient<6'; \
       fi; \
     fi;
 
