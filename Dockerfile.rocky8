@@ -758,9 +758,12 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
 # NOTE: openstackclient is unavailable in dnf here so always install with pip
 # NOTE: openstackclient dropped support for python2.7 in 5.x and python3.6 in 6.x
 # NOTE: we need to force preservation of the distro PyYAML package
-# NOTE: openstacksdk-2.x may have introduced unresolvable 'platform' deps on old python
+# NOTE: the rocky8 and centos7 python builds differ for some reason!
+# NOTE: openstacksdk-2.x may have introduced unresolvable 'platform' deps here
+# NOTE: cinderclient-6.x introduced python-requests conflict on py2 here
 RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
-      pip2 install PyYAML==3.12 'openstacksdk<2' 'python-cinderclient<6' 'python-openstackclient<5'; \
+      pip2 install PyYAML==3.12 'openstacksdk<2' 'python-cinderclient<6' \
+                   'python-openstackclient<5'; \
       if [ "${WITH_PY3}" = "True" ]; then \
         pip3 install PyYAML==3.12 'openstacksdk<2' 'python-openstackclient<6'; \
       fi; \
