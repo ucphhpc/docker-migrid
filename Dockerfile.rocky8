@@ -99,7 +99,7 @@ ARG ENABLE_RESOURCES=True
 ARG ENABLE_EVENTS=True
 ARG ENABLE_GRAVATARS=True
 ARG ENABLE_SITESTATUS=True
-ARG STATUS_SYSTEM_MATCH=ANY
+ARG STATUS_SYSTEM_MATCH="ANY"
 ARG ENABLE_FREEZE=False
 ARG ENABLE_CRACKLIB=True
 ARG ENABLE_IMNOTIFY=False
@@ -174,7 +174,6 @@ ARG CA_FQDN=""
 ARG CA_SMTP="localhost"
 ARG CA_USER="mig-ca"
 ARG FTPS_PASV_PORTS="8100:8400"
-ARG STATUS_SYSTEM_MATCH="ANY"
 ARG SECSCAN_ADDR=""
 # TODO: expose and enable notify protocols
 #ARG NOTIFY_PROTOCOLS="email"
@@ -1069,7 +1068,6 @@ ARG CA_FQDN
 ARG CA_SMTP
 ARG CA_USER
 ARG FTPS_PASV_PORTS
-ARG STATUS_SYSTEM_MATCH
 ARG SECSCAN_ADDR
 #ARG NOTIFY_PROTOCOLS
 ARG IMNOTIFY_ADDRESS
@@ -1270,7 +1268,6 @@ RUN ./generateconfs.py --source=. \
     --generic_valid_days=${GENERIC_VALID_DAYS} \
     --default_menu="${DEFAULT_MENU}" --user_menu="${USER_MENU}" \
     --ca_fqdn=${CA_FQDN} --ca_smtp=${CA_SMTP} --ca_user=${CA_USER} \
-    --status_system_match=="${STATUS_SYSTEM_MATCH}" \
     --secscan_addr="${SECSCAN_ADDR}" \
     #--notify_protocols="${NOTIFY_PROTOCOLS}" \
     --imnotify_address=${IMNOTIFY_ADDRESS} --imnotify_channel=${IMNOTIFY_CHANNEL} \
