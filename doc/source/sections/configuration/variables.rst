@@ -262,6 +262,12 @@ Variables
    * - ENABLE_SEAFILE
      - False
      - Enable the built-in Seafile integration for file synchronization. Requires a stand-alone Seafile instance.
+   * - SEAFILE_FQDN
+     - 
+     - FQDN of host where any enabled Seafile service instance is running
+   * - SEAFILE_RO_ACCESS
+     - False
+     - Toggles integrated read-only access to any locally hosted Seafile instance.
    * - ENABLE_SANDBOXES
      - False
      - Enable the built-in sandbox resource feature for grid jobs
@@ -277,6 +283,15 @@ Variables
    * - ENABLE_RESOURCES
      - True
      - Enable the built-in grid execution resource feature
+   * - ENABLE_GRAVATARS
+     - True
+     - Enables optional gravatar integration on user profiles of registered users
+   * - ENABLE_SITESTATUS
+     - True
+     - Enable the built-in site status through the pop-up in the bottom right corner based on events authored in state/wwwpublic/status-events.json .
+   * - STATUS_SYSTEM_MATCH
+     - ANY
+     - Events from status-events.json to show in site status pop-up
    * - ENABLE_EVENTS
      - True
      - Enable the built-in file system event triggers feature with inotify
@@ -304,6 +319,9 @@ Variables
    * - ENABLE_JUPYTER
      - True
      - Enable the built-in Jupyter integration - requires stand-alone Jupyter nodes
+   * - ENABLE_CLOUD
+     - False
+     - Enable the built-in OpenStack integration for per-user cloud VMs. Requires a stand-alone OpenStack cloud.
    * - ENABLE_MIGADMIN
      - False
      - Enable the built-in Server Admin feature for web based management of external user, log inspection, etc.
