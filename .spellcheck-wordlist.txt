@@ -319,3 +319,12 @@ py
 autocreate
 cjose
 SRC
+RO
+GRAVATARS
+gravatars
+grvatar
+SITESTATUS
+sitestatus
+wwwpublic
+OpenStack
+VMs
