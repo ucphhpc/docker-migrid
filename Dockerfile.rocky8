@@ -756,10 +756,11 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
     fi;
 
 # NOTE: openstackclient is unavailable in dnf here so always install with pip
+# NOTE: openstackclient dropped support for python2.7 in 5.x and python3.6 in 6.x
 RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
-      pip2 install python-openstackclient; \
+      pip2 install 'python-openstackclient<5.0'; \
       if [ "${WITH_PY3}" = "True" ]; then \
-        pip3 install python-openstackclient; \
+        pip3 install 'python-openstackclient<6.0'; \
       fi; \
     fi;
 
