@@ -760,10 +760,9 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
 # NOTE: we need to force preservation of the distro PyYAML package
 # NOTE: openstacksdk-2.x may have introduced unresolvable 'platform' deps on old python
 RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
-      # TODO: unravel the dependency hell openstack is on py2 or install from repo
-      #pip2 install PyYAML==3.12 'openstacksdk<2.0' 'python-openstackclient<4.0'; \
+      pip2 install PyYAML==3.12 'openstacksdk<2' 'python-cinderclient<6' 'python-openstackclient<5'; \
       if [ "${WITH_PY3}" = "True" ]; then \
-        pip3 install PyYAML==3.12 'openstacksdk<2.0' 'python-openstackclient<6.0'; \
+        pip3 install PyYAML==3.12 'openstacksdk<2' 'python-openstackclient<6'; \
       fi; \
     fi;
 
