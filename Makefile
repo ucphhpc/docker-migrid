@@ -96,7 +96,7 @@ initcomposevars:
 initservices:
 	@ENABLED_SERVICES="migrid"
 	@for service in $$(${DOCKER_COMPOSE} config --services 2>/dev/null); do
-		# NOTE: Enable alle non-migrid services found in docker-compose file
+		# NOTE: Enable all non-migrid services found in docker-compose file
 		@if [[ "$${service:0:6}" != "migrid" ]]; then
 			@ENABLED_SERVICES+=" $$service"
 		@fi
@@ -129,7 +129,7 @@ up:	initcomposevars initservices
 	${DOCKER_COMPOSE} up -d $(file < ./.enabled_services)
 
 down:	initcomposevars
-	# NOTE: To surpress podman warnings about missing containers use:
+	# NOTE: To suppress podman warnings about missing containers use:
 	# ${DOCKER_COMPOSE} down $(file < ./.enabled_services)
 	# NOTE: 'docker-compose down' doesn't support a list of services
 	${DOCKER_COMPOSE} down
