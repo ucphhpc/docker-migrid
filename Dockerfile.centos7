@@ -1378,6 +1378,12 @@ RUN ln -s index-${DOMAIN}.html $MIG_ROOT/state/wwwpublic/index.html && \
     ln -s support-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/support-snippet.html && \
     ln -s tips-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/tips-snippet.html && \
     ln -s terms-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/terms-snippet.html && \
+    # Make an empty template for status popup and status page to use.
+    # For inspiration on how to use it please refer to the samples at
+    # https://github.com/ucphhpc/migrid-ucph-sites/tree/main/state/wwwpublic
+    echo '[]' > $MIG_ROOT/state/wwwpublic/status-events-${DOMAIN}.json && \
+    ln -s status-events-${DOMAIN}.json $MIG_ROOT/state/wwwpublic/status-events.json && \
+    ln -s status-dynamic.html $MIG_ROOT/state/wwwpublic/status.html && \
     chown -R $USER:$GROUP $MIG_ROOT/state/wwwpublic/*.html
 
 # TODO: improve this hard-coded translation
