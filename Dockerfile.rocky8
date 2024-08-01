@@ -466,34 +466,33 @@ RUN pip2 install mod_wsgi && \
 RUN echo "BUILD_MOD_AUTH_OPENID: $BUILD_MOD_AUTH_OPENID"
 RUN echo "ENABLE_SELF_SIGNED_CERTS: $ENABLE_SELF_SIGNED_CERTS"
 RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" -o "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
-	echo "building mod_auth_openid from centos7 source rpm" \
-	&& dnf update -y \
-	&& dnf install -y gcc-c++ \
-		rpm-build \
-		mock \
-		make \
-		autoconf \
-		automake \
-		httpd-devel \
-		libcurl-devel \
-		libtidy-devel \
-		pcre-devel \
-		openssl-devel \
-		libtool \
-		sqlite-devel \
-		boost-devel \
-		libxslt \
-		expat-devel \
-		tidy-devel \
-		libuuid-devel \
-		&& dnf clean all \
-		&& rm -fr /var/cache/dnf \
-        #&& rpm -e --nodeps libopkele \
+        echo "building mod_auth_openid from centos7 source rpm" \
+        && dnf update -y \
+        && dnf install -y gcc-c++ \
+            rpm-build \
+            mock \
+            make \
+            autoconf \
+            automake \
+            httpd-devel \
+            libcurl-devel \
+            libtidy-devel \
+            pcre-devel \
+            openssl-devel \
+            libtool \
+            sqlite-devel \
+            boost-devel \
+            libxslt \
+            expat-devel \
+            tidy-devel \
+            libuuid-devel \
+        && dnf clean all \
+        && rm -fr /var/cache/dnf \
         # NOTE: add EPEL CentOS 7 repos here but completely disabled
-	&& cat /etc/yum.repos.d/epel.repo | \
-		sed 's/\[epel/\[epel7/g;s/8/7/g;s/enabled=1/enabled=0/g' \
-		> /etc/yum.repos.d/epel7.repo \
-	&& echo "build libopkele from centos7 source rpm" \
+        && cat /etc/yum.repos.d/epel.repo | \
+                sed 's/\[epel/\[epel7/g;s/8/7/g;s/enabled=1/enabled=0/g' \
+                > /etc/yum.repos.d/epel7.repo \
+        && echo "build libopkele from centos7 source rpm" \
         # NOTE: avoid hard-coded version using yumdownloader from yum-utils
         && yumdownloader -y --enablerepo=epel7-source --source --resolve --destdir /root/rpmbuild/SRPMS libopkele \
         && rpm -ivh /root/rpmbuild/SRPMS/libopkele-*.src.rpm \
@@ -508,7 +507,7 @@ RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" -o "$ENABLE_SELF_SIGNED_CERTS" = "Tru
         # Disable Apache OpenID ssl-certificate verification if self-signed
         # (recompile libopkele with --disable-ssl-verify-host --disable-ssl-verify-peer)
         && if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
-	      echo "Re-building libopkele with ssl verification disabled"; \
+              echo "Re-building libopkele with ssl verification disabled"; \
               sed -i 's/^%configure$/%configure --disable-ssl-verify-host --disable-ssl-verify-peer/g' /root/rpmbuild/SPECS/libopkele.spec; fi \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
         && rm -f /root/rpmbuild/RPMS/*/libopkele-*debug*.rpm \
