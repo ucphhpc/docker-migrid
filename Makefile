@@ -1,3 +1,9 @@
+.PHONY: all init initservices initbuild initdirs initcomposevars clean warning
+.PHONY: dockerclean dockervolumeclean distclean stateclean dockerbuild dockerpush
+.PHONY: up stop down
+.PHONY: test-doc
+.ONESHELL:
+
 PACKAGE_NAME=$(shell basename $$(pwd))
 PACKAGE_NAME_FORMATTED=$(subst -,_,$(PACKAGE_NAME))
 IMAGE=migrid
@@ -43,13 +49,6 @@ services:
       args:
 endef
 export DOCKER_COMPOSE_SHARED_HEADER
-
-.PHONY: all init initbuild initdirs initcomposevars clean warning
-.PHONY: dockerclean dockervolumeclean distclean stateclean dockerbuild dockerpush
-.PHONY: up stop down
-.PHONY: test-doc
-
-.ONESHELL:
 
 
 all: init dockerbuild
