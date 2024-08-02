@@ -23,6 +23,21 @@ else
 endif
 $(echo ${DOCKER_COMPOSE} >/dev/null)
 
+ifeq ("$(wildcard .env)",".env")
+	include .env
+endif
+
+# If the CONTAINER_REGISTRY is not set/found in the .env file
+# then default to docker.io
+ifeq ($(CONTAINER_REGISTRY),)
+	CONTAINER_REGISTRY = docker.io
+endif
+
+# Full dockerclean needs CONTAINER_TAG defined
+ifeq ($(CONTAINER_TAG),)
+	CONTAINER_TAG = $(shell egrep '^ARG MIG_GIT_BRANCH=' Dockerfile | sed 's/.*=/:/g')
+endif
+
 define DOCKER_COMPOSE_SHARED_HEADER
 services:
   migrid-shared:
@@ -33,16 +48,6 @@ services:
       args:
 endef
 export DOCKER_COMPOSE_SHARED_HEADER
-
-ifeq ("$(wildcard .env)",".env")
-	include .env
-endif
-
-# Full dockerclean needs CONTAINER_TAG defined
-ifeq ("CONTAINER_TAG","")
-	CONTAINER_TAG = $(shell egrep '^ARG MIG_GIT_BRANCH=' Dockerfile | sed 's/.*=/:/g')
-endif
-
 
 all: init dockerbuild
 
