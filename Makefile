@@ -4,7 +4,7 @@
 .PHONY: test-doc
 .ONESHELL:
 
-PACKAGE_NAME=docker-migrid
+PACKAGE_NAME=$(shell basename $$(pwd))
 PACKAGE_NAME_FORMATTED=$(subst -,_,$(PACKAGE_NAME))
 IMAGE=migrid
 OWNER ?= ucphhpc
