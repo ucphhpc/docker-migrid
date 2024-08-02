@@ -40,7 +40,7 @@ endif
 
 # Full dockerclean needs CONTAINER_TAG defined
 ifeq ("CONTAINER_TAG","")
-	CONTAINER_TAG=":${MIG_GIT_BRANCH}"
+	CONTAINER_TAG = $(shell egrep '^ARG MIG_GIT_BRANCH=' Dockerfile | sed 's/.*=/:/g')
 endif
 
 
