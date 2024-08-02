@@ -288,6 +288,9 @@ XRAY
 dev
 Filesystem
 filesystem
+Prefilter
+prefilter
+hexlify
 PHPH
 phph
 WAYF
@@ -311,3 +314,17 @@ qa
 SAML
 saml
 wayfid
+cgi
+py
+autocreate
+cjose
+SRC
+RO
+GRAVATARS
+gravatars
+gravatar
+SITESTATUS
+sitestatus
+wwwpublic
+OpenStack
+VMs

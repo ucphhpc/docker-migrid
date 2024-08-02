@@ -3,7 +3,7 @@ version: '3.7'
 
 services:
   devmail:
-    image: mwader/postfix-relay
+    image: ${CONTAINER_REGISTRY}/mwader/postfix-relay
     container_name: devmail
     depends_on:
       - devdns
@@ -17,7 +17,7 @@ services:
           - mail.migrid.test
 
   devdns:
-    image: ruudud/devdns
+    image: ${CONTAINER_REGISTRY}/ruudud/devdns
     container_name: devdns
     ports:
         - "127.0.0.1:53:53/udp"
@@ -32,7 +32,7 @@ services:
   #       subdirs from e.g. the state volume in the service containers.
   migrid-volume-init:
     container_name: migrid-volume-init
-    image: ucphhpc/migrid${CONTAINER_TAG}
+    image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
     extends:
       file: docker-compose_shared.yml
       service: migrid-shared
@@ -78,7 +78,7 @@ services:
 
   migrid:
     container_name: migrid
-    image: ucphhpc/migrid${CONTAINER_TAG}
+    image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
     extends:
       file: docker-compose_shared.yml
       service: migrid-shared
@@ -147,7 +147,7 @@ services:
   # Multiple containers with individual daemons not provided by base migrid
   migrid-openid:
     container_name: migrid-openid
-    image: ucphhpc/migrid${CONTAINER_TAG}
+    image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -189,7 +189,7 @@ services:
 
   migrid-sftp:
     container_name: migrid-sftp
-    image: ucphhpc/migrid${CONTAINER_TAG}
+    image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -236,7 +236,7 @@ services:
 
   migrid-ftps:
     container_name: migrid-ftps
-    image: ucphhpc/migrid${CONTAINER_TAG}
+    image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -283,7 +283,7 @@ services:
 
   migrid-webdavs:
     container_name: migrid-webdavs
-    image: ucphhpc/migrid${CONTAINER_TAG}
+    image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -328,7 +328,9 @@ services:
     command: /app/docker-entry.sh
 
   nginx-proxy:
-    image: jwilder/nginx-proxy
+    image: ${CONTAINER_REGISTRY}/jwilder/nginx-proxy
+    environment:
+      TZ: ${TZ}
     container_name: nginx-proxy
     # TODO: can we add an httpd health check and switch to wait for condition
     #       service_healthy to avoid the storm of initial avoid nginx errors

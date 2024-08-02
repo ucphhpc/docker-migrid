@@ -7,8 +7,9 @@
 PACKAGE_NAME=$(shell basename $$(pwd))
 PACKAGE_NAME_FORMATTED=$(subst -,_,$(PACKAGE_NAME))
 IMAGE=migrid
-OWNER ?= ucphhpc
+OWNER?=ucphhpc
 SHELL=/bin/bash
+BUILD_ARGS=
 
 # Enable that the builder should use buildkit
 # https://docs.docker.com/develop/develop-images/build_enhancements/
@@ -19,7 +20,7 @@ DOCKER = $(shell which docker 2>/dev/null || which podman 2>/dev/null)
 ifeq (, $(${DOCKER} help|grep compose))
 	DOCKER_COMPOSE = $(shell which docker-compose 2>/dev/null || which podman-compose 2>/dev/null)
 else
-	DOCKER_COMPOSE = docker compose
+	DOCKER_COMPOSE = ${DOCKER} compose
 endif
 $(echo ${DOCKER_COMPOSE} >/dev/null)
 
@@ -41,7 +42,7 @@ endif
 define DOCKER_COMPOSE_SHARED_HEADER
 services:
   migrid-shared:
-    image: ucphhpc/migrid$${CONTAINER_TAG}
+    image: $${CONTAINER_REGISTRY}/ucphhpc/migrid$${CONTAINER_TAG}
     build:
       context: ./
       dockerfile: Dockerfile
@@ -94,7 +95,7 @@ initdirs:
 
 initcomposevars:
 	@echo "creating env variable map in docker-compose_shared.yml"
-	@[ -f .env ] || echo "ERROR: no .env file found. Run 'make init' first."
+	@[ -r .env ] || echo "ERROR: no .env file found. Run 'make init' first."
 	@echo "$$DOCKER_COMPOSE_SHARED_HEADER" > docker-compose_shared.yml
 	@grep -v '\(^#.*\|^$$\)' .env >> docker-compose_shared.yml
 	@sed -E -i 's!^([^=]*)=.*!        - \1=\$$\{\1\}!' docker-compose_shared.yml
@@ -141,12 +142,12 @@ down:	initcomposevars
 	${DOCKER_COMPOSE} down
 
 dockerbuild: init
-	${DOCKER_COMPOSE} build $(ARGS)
+	${DOCKER_COMPOSE} build ${BUILD_ARGS}
 
 dockerclean: initcomposevars
 	# remove latest image and dangling cache entries
 	${DOCKER_COMPOSE} down || true
-	${DOCKER} rmi -f $(OWNER)/$(IMAGE)${CONTAINER_TAG}
+	${DOCKER} rmi -f ${CONTAINER_REGISTRY}/$(OWNER)/$(IMAGE)${CONTAINER_TAG}
 	# remove dangling images and build cache
 	${DOCKER} image prune -f
 	${DOCKER} builder prune -f || true
@@ -154,8 +155,21 @@ dockerclean: initcomposevars
 logs:	initcomposevars
 	${DOCKER_COMPOSE} logs
 
-dockerpush:
-	${DOCKER} push $(OWNER)/$(IMAGE)${CONTAINER_TAG}
+
+dockerpushwarning:
+	@if [ "${CONTAINER_REGISTRY}" == "docker.io" ]; then \
+		echo
+		echo "*** WARNING ***"
+		echo "*** Pushing to docker.io ***"
+		echo "*** This will make the $(OWNER)/$(IMAGE)${CONTAINER_TAG} image publicly available ***"
+		echo "*** Any secrets in the $(OWNER)/$(IMAGE)${CONTAINER_TAG} image, such as passwords/salts set via environment variables/file(s), will be exposed ***"
+		echo "*** Make sure that the $(OWNER)/$(IMAGE)${CONTAINER_TAG} image does not contain any such secrets before proceeding ***"
+		echo
+		echo "Are you sure you want to push $(OWNER)/$(IMAGE)${CONTAINER_TAG} to ${CONTAINER_REGISTRY}? [y/N]" && read ans && [ $${ans:-N} = y ]; \
+	fi
+
+dockerpush: dockerpushwarning
+	${DOCKER} push ${CONTAINER_REGISTRY}/$(OWNER)/$(IMAGE)${CONTAINER_TAG}
 
 dockervolumeclean:
 	@if [ "$$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*')" != "" ]; then \

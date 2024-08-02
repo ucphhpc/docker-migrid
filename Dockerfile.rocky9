@@ -90,12 +90,17 @@ ARG ENABLE_SHARELINKS=True
 ARG ENABLE_TRANSFERS=True
 ARG ENABLE_DUPLICATI=True
 ARG ENABLE_SEAFILE=False
+ARG SEAFILE_FQDN=
+ARG SEAFILE_RO_ACCESS=False
 ARG ENABLE_SANDBOXES=False
 ARG ENABLE_VMACHINES=False
 ARG ENABLE_CRONTAB=True
 ARG ENABLE_JOBS=True
 ARG ENABLE_RESOURCES=True
 ARG ENABLE_EVENTS=True
+ARG ENABLE_GRAVATARS=True
+ARG ENABLE_SITESTATUS=True
+ARG STATUS_SYSTEM_MATCH="ANY"
 ARG ENABLE_FREEZE=False
 ARG ENABLE_CRACKLIB=True
 ARG ENABLE_IMNOTIFY=False
@@ -104,6 +109,7 @@ ARG ENABLE_PREVIEW=False
 ARG ENABLE_WORKFLOWS=False
 ARG ENABLE_VERIFY_CERTS=True
 ARG ENABLE_JUPYTER=True
+ARG ENABLE_CLOUD=False
 ARG ENABLE_MIGADMIN=False
 ARG ENABLE_GDP=False
 ARG ENABLE_TWOFACTOR=True
@@ -120,7 +126,11 @@ ARG ENABLE_LOGROTATE="False"
 # TODO: logrotate conf needs to be adjusted to the manual docker service launch 
 #ARG LOGROTATE_MIGRID="True"
 ARG LOGROTATE_MIGRID="False"
+# NOTE: mod auth openidc may be outdated in OS repo - allow optional upgrade
 ARG UPGRADE_MOD_AUTH_OPENIDC=False
+# NOTE: source for optional mod auth openidc upgrade - upstream release if left unset
+ARG UPGRADE_OIDC_CJOSE_SRC=""
+ARG UPGRADE_OIDC_AUTH_MOD_SRC=""
 ARG UPGRADE_PARAMIKO=False
 ARG PUBKEY_FROM_DNS=False
 # NOTE: python2 support is gone on rocky9+
@@ -129,11 +139,14 @@ ARG PREFER_PYTHON3=True
 ARG SIGNUP_METHODS=migoid
 ARG LOGIN_METHODS=migoid
 ARG USER_INTERFACES=V3
-# TODO: implement support for new user default UI arg
+# TODO: expose and enable new user default UI
 #ARG NEW_USER_DEFAULT_UI=V3
 ARG AUTO_ADD_CERT_USER=False
 ARG AUTO_ADD_OID_USER=False
 ARG AUTO_ADD_OIDC_USER=False
+ARG AUTO_ADD_FILTER_FIELDS=
+ARG AUTO_ADD_FILTER_METHOD=
+ARG AUTO_ADD_USER_PERMIT="distinguished_name:.*"
 ARG CERT_VALID_DAYS=365
 ARG OID_VALID_DAYS=365
 ARG GENERIC_VALID_DAYS=365
@@ -157,14 +170,12 @@ ARG EXT_OIDC_REWRITE_COOKIE=""
 ARG EXT_OIDC_TITLE=""
 ARG DEFAULT_MENU=
 ARG USER_MENU=jupyter
-# TODO: implement support for CA args
-#ARG CA_FQDN=""
-#ARG CA_SMTP=""
-#ARG CA_USER=""
+ARG CA_FQDN=""
+ARG CA_SMTP="localhost"
+ARG CA_USER="mig-ca"
 ARG FTPS_PASV_PORTS="8100:8400"
-ARG STATUS_SYSTEM_MATCH="ANY"
 ARG SECSCAN_ADDR=""
-# TODO: implement support for notify protos
+# TODO: expose and enable notify protocols
 #ARG NOTIFY_PROTOCOLS="email"
 ARG IMNOTIFY_ADDRESS=""
 ARG IMNOTIFY_CHANNEL=""
@@ -172,13 +183,13 @@ ARG IMNOTIFY_USERNAME=""
 ARG IMNOTIFY_PASSWD=""
 ARG EXTERNAL_DOC="https://sourceforge.net/p/migrid/wiki"
 ARG IO_ACCOUNT_EXPIRE="False"
-# TODO: implement support for these UI vars
+# TODO: expose and enable these UI vars
 #ARG PEERS_NOTICE=""
 #ARG LOGO_CENTER=""
 #ARG SUPPORT_TEXT=""
 #ARG PRIVACY_TEXT=""
-#ARG DATASAFETY_LINK=""
-#ARG DATASAFETY_TEXT=""
+ARG DATASAFETY_LINK=""
+ARG DATASAFETY_TEXT=""
 # NOTE: no python2 here and we already get 4.3+ for python3
 ARG MODERN_WSGIDAV=False
 ARG WITH_GIT=False
@@ -207,7 +218,7 @@ ARG JUPYTER_SERVICES=""
 ARG JUPYTER_SERVICES_DESC="{}"
 
 #------------------------- first stage -----------------------------#
-FROM --platform=linux/$ARCH rockylinux:9 as init
+FROM --platform=linux/$ARCH rockylinux:9 AS init
 ARG UID
 ARG GID
 ARG DOMAIN
@@ -274,7 +285,10 @@ ARG WILDCARD_DOMAIN
 ARG ENABLE_GDP
 ARG ENABLE_SELF_SIGNED_CERTS
 ARG UPGRADE_MOD_AUTH_OPENIDC
+ARG UPGRADE_OIDC_CJOSE_SRC
+ARG UPGRADE_OIDC_AUTH_MOD_SRC
 ARG UPGRADE_PARAMIKO
+ARG ENABLE_CLOUD
 ARG WITH_PY3
 ARG PREFER_PYTHON3
 ARG UID
@@ -328,6 +342,7 @@ RUN dnf update -y \
     openssh-server \
     openssh-clients \
     rsyslog \
+    rsyslog-gnutls \
     lsof \
     # NOTE: python2 support is gone on rocky9+
     # NOTE: generally install cracklib from pip as yum/dnf doesn't have it
@@ -373,7 +388,9 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       && patch -p 0 /usr/lib/python3.9/site-packages/openid/server/server.py < /tmp/python3-openid-assoc_handle.patch.diff \
       && rm -f /tmp/python3-openid-assoc_handle.patch.diff \
       # NOTE: only install default paramiko if upgrade not requested
-      && [ "${UPGRADE_PARAMIKO}" = True ] || dnf install -y python3-paramiko \
+      && [ "${UPGRADE_PARAMIKO}" = "True" ] || dnf install -y python3-paramiko \
+      # NOTE: only install default openstack client if upgrade not requested
+      && [ "${ENABLE_CLOUD}" != "True" ] || dnf install -y python3-openstackclient \
       && dnf clean all \
       && rm -fr /var/cache/dnf; \
     else \
@@ -389,12 +406,10 @@ RUN if [ "${PREFER_PYTHON3}" = "True" ]; then \
 
 
 # Install GDP dependencies
-# TODO: does postfix "just work" and should it perhaps always be installed?
 RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       echo "install GDP deps" \
       && dnf update -y \
       && dnf install -y \
-      postfix \
       # NOTE: python2 support is gone on rocky9+
       xorg-x11-server-Xvfb \
       # NOTE: wkhtmltopdf not yet build for Rocky9 
@@ -415,7 +430,8 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
 
 # Build Apache OpenID (provided by epel for centos7) 
 RUN if [ "$ENABLE_OPENID" = "True" ]; then \
-        echo "Install mod_auth_openid" \
+        echo "building mod_auth_openid from centos7 source rpm" \
+        && dnf update -y \
         && dnf install -y gcc-c++ \
             rpm-build \
             mock \
@@ -434,39 +450,44 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
             expat-devel \
             tidy-devel \
             libuuid-devel \
-        && echo "Switch to epel for centos7" \ 
-        && dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm \
-        && echo "install libopkele centos7 source rpm" \
-        && yumdownloader -y --source --destdir /root/rpmbuild/SRPMS libopkele \
+        && dnf clean all \
+        && rm -fr /var/cache/dnf \
+        # NOTE: add EPEL CentOS 7 repos here but completely disabled
+        # NOTE: rocky9 switched from explicit version to variable expansion
+        #      as in 9 - > $releasever
+        && cat /etc/yum.repos.d/epel.repo | \
+                sed 's/\[epel/\[epel7/g;s/\$releasever/7/g;s/enabled=1/enabled=0/g' \
+                > /etc/yum.repos.d/epel7.repo \
+        && echo "build libopkele from centos7 source rpm" \
+        # NOTE: avoid hard-coded version using yumdownloader from yum-utils
+        && yumdownloader -y --enablerepo=epel7-source --source --resolve --destdir /root/rpmbuild/SRPMS libopkele \
         && rpm -ivh /root/rpmbuild/SRPMS/libopkele-*.src.rpm \
-        && echo "pull more recent gcc4.9 patch from Debian on rocky8 (local copy in patches)" \
+        # Optionally pull more recent gcc4.9 patch from Debian on rocky8+ (local copy in patches)
         && wget -O /root/rpmbuild/SOURCES/fix-ftbfs-gcc4.9.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-ftbfs-gcc4.9.diff \
-        && echo "Pull the more recent required OpenSSL-1.1 patch from Debian on rocky8 (local copy in patches)" \
+        # Pull the more recent required OpenSSL-1.1 patch from Debian on rocky8+ (local copy in patches)
         && wget -O /root/rpmbuild/SOURCES/fix-openssl-1.1.0.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-openssl-1.1.0.diff \
-        && echo "Pull patch from own repo to rpmbuild with Debian patches on rocky8 (local copy in patches)" \
+        # Pull patch from own repo to rpmbuild with Debian patches on rocky8+ (local copy in patches)
         && wget -O /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff https://github.com/ucphhpc/docker-migrid/raw/master/patches/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff \
         && cd /root && patch -p 0 < /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff && cd - \
-        && echo "build patched libopkele" \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
         && rm -f /root/rpmbuild/RPMS/*/libopkele-*debug*.rpm \
-        && dnf erase -y 'libopkele-*' \
-        && echo "install  patched libopkele" \
+        #&& dnf erase -y 'libopkele-*' \
         && dnf install -y /root/rpmbuild/RPMS/*/libopkele-*.rpm \
         && echo "install mod_auth_openid centos7 source rpm" \
-        && yumdownloader -y --source --destdir /root/rpmbuild/SRPMS mod_auth_openid \
+        #&& rpm -e --nodeps mod_auth_openid \
+        # NOTE: avoid hard-coded version using yumdownloader from yum-utils
+        && yumdownloader -y --enablerepo=epel7-source --source --resolve --destdir /root/rpmbuild/SRPMS mod_auth_openid \
         && rpm -ivh /root/rpmbuild/SRPMS/mod_auth_openid-*.src.rpm \
         && echo "build mod_auth_openid centos7 source rpm" \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/mod_auth_openid.spec \
         && rm -f /root/rpmbuild/RPMS/*/mod_auth_openid-*debug*.rpm \
         && echo "install the rebuilt mod_auth_openid rpm" \
-        && dnf erase -y 'mod_auth_openid-*' \
+        #&& dnf erase -y 'mod_auth_openid-*' \
         && dnf install -y /root/rpmbuild/RPMS/*/mod_auth_openid-*.rpm \
         && echo "cleaning up after rebuilding and installing mod_auth_openid rpm" \
         && rm -rf /root/rpmbuild \
         && dnf clean all \
-        && rm -fr /var/cache/dnf \
-        && echo "Switch back to epel for rocky9" \
-        && dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm ; \
+        && rm -fr /var/cache/dnf; \
     fi;
 
 
@@ -477,17 +498,27 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
 # Version 2.4.12.1+ is needed to support the OIDCPassClaimsAs encoding setting in apache conf
 RUN echo "UPGRADE_MOD_AUTH_OPENIDC: $UPGRADE_MOD_AUTH_OPENIDC"
 RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
-	echo "upgrading mod_auth_openidc from upstream centos7 rpm" \
-	&& dnf update -y \
+        if [ -z "${UPGRADE_OIDC_AUTH_MOD_SRC}" ]; then \
+		echo "upgrading mod_auth_openidc from upstream release package"; \
+		UPGRADE_OIDC_AUTH_MOD_SRC="https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.15.7/mod_auth_openidc-2.4.15.7-1.el9.x86_64.rpm"; \
+	else \
+		echo "upgrading mod_auth_openidc from ${UPGRADE_OIDC_AUTH_MOD_SRC}"; \
+	fi; \ 
+        if [ -z "${UPGRADE_OIDC_CJOSE_SRC}" ]; then \
+		# NOTE: recent cjose is already included in rocky8+
+		echo "installing cjose dependency from OS package"; \
+		UPGRADE_OIDC_CJOSE_SRC="cjose"; \
+	else \
+		echo "upgrading cjose from ${UPGRADE_OIDC_CJOSE_SRC}"; \
+	fi; \
+	dnf update -y \
 	# IMPORTANT: fail hard if any of these installs don't succeed e.g. due
 	#            to missing upstream packages to avoid silent errors later.
 	&& dnf install -y jansson-devel \
-	# NOTE: recent cjose is already included in rocky8+
 	&& dnf install -y \
-		cjose \
-                #https://github.com/OpenIDC/cjose/releases/download/v0.6.2.2/cjose-0.6.2.2-1.el9.x86_64.rpm \
+		"${UPGRADE_OIDC_CJOSE_SRC}" \
 	&& dnf install -y \
-                https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.15.7/mod_auth_openidc-2.4.15.7-1.el9.x86_64.rpm \
+		"${UPGRADE_OIDC_AUTH_MOD_SRC}" \
 	&& dnf clean all \
 	&& rm -fr /var/cache/dnf; \
 	if [ $? -ne 0 ]; then \
@@ -527,7 +558,7 @@ RUN mkdir -p $CERT_DIR/MiG/${WILDCARD_DOMAIN} \
 
 #------------------------- next stage -----------------------------#
 # Certs and keys
-FROM --platform=linux/$ARCH base as setup_security
+FROM --platform=linux/$ARCH base AS setup_security
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG PUBLIC_DOMAIN
@@ -632,11 +663,12 @@ WORKDIR $MIG_ROOT
 USER $USER
 
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH setup_security as mig_dependencies
+FROM --platform=linux/$ARCH setup_security AS mig_dependencies
 ARG DOMAIN
 ARG WITH_PY3
 ARG MODERN_WSGIDAV
 ARG UPGRADE_PARAMIKO
+ARG ENABLE_CLOUD
 ARG TRAC_ADMIN_PATH
 
 # NOTE: Switch back to root for system-wide pip install here
@@ -665,6 +697,13 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
         pip3 install --prefix=$(python3-config --prefix) paramiko; \
       fi; \
     fi;
+
+# NOTE: openstackclient is available in dnf here
+#RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
+#      if [ "${WITH_PY3}" = "True" ]; then \
+#        pip3 install python-openstackclient; \
+#      fi; \
+#    fi;
 
 # OpenID support in python (python-openid2 for py3) - use alternative from dnf 
 #RUN pip3 install python-openid2;
@@ -747,7 +786,7 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
     fi;
 
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH mig_dependencies as download_mig
+FROM --platform=linux/$ARCH mig_dependencies AS download_mig
 LABEL MIGRID=true
 ARG DOMAIN
 ARG MIG_SVN_REPO
@@ -785,7 +824,7 @@ RUN rm -f ${MIG_ROOT}/mig/server/grid_webdavs.py ; \
 
 
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH download_mig as install_mig
+FROM --platform=linux/$ARCH download_mig AS install_mig
 ARG DOMAIN
 ARG PUBLIC_DOMAIN
 ARG MIGCERT_DOMAIN
@@ -855,12 +894,17 @@ ARG ENABLE_SHARELINKS
 ARG ENABLE_TRANSFERS
 ARG ENABLE_DUPLICATI
 ARG ENABLE_SEAFILE
+ARG SEAFILE_FQDN
+ARG SEAFILE_RO_ACCESS
 ARG ENABLE_SANDBOXES
 ARG ENABLE_VMACHINES
 ARG ENABLE_CRONTAB
 ARG ENABLE_JOBS
 ARG ENABLE_RESOURCES
 ARG ENABLE_EVENTS
+ARG ENABLE_GRAVATARS
+ARG ENABLE_SITESTATUS
+ARG STATUS_SYSTEM_MATCH
 ARG ENABLE_FREEZE
 ARG ENABLE_CRACKLIB
 ARG ENABLE_IMNOTIFY
@@ -869,6 +913,7 @@ ARG ENABLE_PREVIEW
 ARG ENABLE_WORKFLOWS
 ARG ENABLE_VERIFY_CERTS
 ARG ENABLE_JUPYTER
+ARG ENABLE_CLOUD
 ARG ENABLE_MIGADMIN
 ARG ENABLE_GDP
 ARG ENABLE_TWOFACTOR
@@ -888,6 +933,9 @@ ARG USER_INTERFACES
 ARG AUTO_ADD_CERT_USER
 ARG AUTO_ADD_OID_USER
 ARG AUTO_ADD_OIDC_USER
+ARG AUTO_ADD_FILTER_FIELDS
+ARG AUTO_ADD_FILTER_METHOD
+ARG AUTO_ADD_USER_PERMIT
 ARG CERT_VALID_DAYS
 ARG OID_VALID_DAYS
 ARG GENERIC_VALID_DAYS
@@ -911,11 +959,10 @@ ARG EXT_OIDC_REWRITE_COOKIE
 ARG EXT_OIDC_TITLE
 ARG DEFAULT_MENU
 ARG USER_MENU
-#ARG CA_FQDN
-#ARG CA_SMTP
-#ARG CA_USER
+ARG CA_FQDN
+ARG CA_SMTP
+ARG CA_USER
 ARG FTPS_PASV_PORTS
-ARG STATUS_SYSTEM_MATCH
 ARG SECSCAN_ADDR
 #ARG NOTIFY_PROTOCOLS
 ARG IMNOTIFY_ADDRESS
@@ -928,8 +975,8 @@ ARG IO_ACCOUNT_EXPIRE
 #ARG LOGO_CENTER
 #ARG SUPPORT_TEXT
 #ARG PRIVACY_TEXT
-#ARG DATASAFETY_LINK
-#ARG DATASAFETY_TEXT
+ARG DATASAFETY_LINK
+ARG DATASAFETY_TEXT
 ARG JUPYTER_SERVICES
 ARG JUPYTER_SERVICES_DESC
 ARG OPENSSH_VERSION
@@ -1047,9 +1094,12 @@ RUN ./generateconfs.py --source=. \
     --enable_davs=${ENABLE_DAVS} --enable_ftps=${ENABLE_FTPS} \
     --enable_sharelinks=${ENABLE_SHARELINKS} --enable_transfers=${ENABLE_TRANSFERS} \
     --enable_duplicati=${ENABLE_DUPLICATI} --enable_seafile=${ENABLE_SEAFILE} \
+    --seafile_fqdn=${SEAFILE_FQDN} --seafile_ro_access=${SEAFILE_RO_ACCESS} \
     --enable_sandboxes=${ENABLE_SANDBOXES} --enable_vmachines=${ENABLE_VMACHINES} \
     --enable_crontab=${ENABLE_CRONTAB} --enable_jobs=${ENABLE_JOBS} \
     --enable_resources=${ENABLE_RESOURCES} --enable_events=${ENABLE_EVENTS} \
+    --enable_gravatars=${ENABLE_GRAVATARS} --enable_sitestatus=${ENABLE_SITESTATUS} \
+    --status_system_match="${STATUS_SYSTEM_MATCH}" \
     --enable_freeze=${ENABLE_FREEZE} --enable_imnotify=${ENABLE_IMNOTIFY} \
     --enable_cracklib=${ENABLE_CRACKLIB} --enable_twofactor=${ENABLE_TWOFACTOR} \
     --enable_twofactor_strict_address=${ENABLE_TWOFACTOR_STRICT_ADDRESS} \
@@ -1060,7 +1110,8 @@ RUN ./generateconfs.py --source=. \
     --enable_notify=${ENABLE_NOTIFY} --enable_preview=${ENABLE_PREVIEW} \
     --enable_workflows=${ENABLE_WORKFLOWS} --enable_hsts=True \
     --enable_vhost_certs=True --enable_verify_certs=${ENABLE_VERIFY_CERTS} \
-    --enable_jupyter=${ENABLE_JUPYTER} --enable_migadmin=${ENABLE_MIGADMIN} \
+    --enable_jupyter=${ENABLE_JUPYTER} --enable_cloud=${ENABLE_CLOUD} \
+    --enable_migadmin=${ENABLE_MIGADMIN} \
     --enable_gdp=${ENABLE_GDP} --gdp_email_notify=${GDP_EMAIL_NOTIFY} \
     --gdp_id_scramble=${GDP_ID_SCRAMBLE} --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
     --enable_quota=${ENABLE_QUOTA} --quota_backend="${QUOTA_BACKEND}" \
@@ -1091,11 +1142,13 @@ RUN ./generateconfs.py --source=. \
     --auto_add_cert_user=${AUTO_ADD_CERT_USER} \
     --auto_add_oid_user=${AUTO_ADD_OID_USER} \
     --auto_add_oidc_user=${AUTO_ADD_OIDC_USER} \
+    --auto_add_filter_fields="${AUTO_ADD_FILTER_FIELDS}" \
+    --auto_add_filter_method=${AUTO_ADD_FILTER_METHOD} \
+    --auto_add_user_permit="${AUTO_ADD_USER_PERMIT}" \
     --cert_valid_days=${CERT_VALID_DAYS} --oid_valid_days=${OID_VALID_DAYS} \
     --generic_valid_days=${GENERIC_VALID_DAYS} \
     --default_menu="${DEFAULT_MENU}" --user_menu="${USER_MENU}" \
-    #--ca_fqdn=${CA_FQDN} --ca_smtp=${CA_SMTP} --ca_user=${CA_USER} \
-    --status_system_match=="${STATUS_SYSTEM_MATCH}" \
+    --ca_fqdn=${CA_FQDN} --ca_smtp=${CA_SMTP} --ca_user=${CA_USER} \
     --secscan_addr="${SECSCAN_ADDR}" \
     #--notify_protocols="${NOTIFY_PROTOCOLS}" \
     --imnotify_address=${IMNOTIFY_ADDRESS} --imnotify_channel=${IMNOTIFY_CHANNEL} \
@@ -1103,7 +1156,7 @@ RUN ./generateconfs.py --source=. \
     --external_doc=${EXTERNAL_DOC} \
     #--peers_notice="${PEERS_NOTICE}" --logo_center="${LOGO_CENTER}" \
     #--support-text="${SUPPORT_TEXT}" --privacy_text="${PRIVACY_TEXT}" \
-    #--datasafety_link="${DATASAFETY_LINK}" --datasafety_text="${DATASAFETY_TEXT}" \
+    --datasafety_link="${DATASAFETY_LINK}" --datasafety_text="${DATASAFETY_TEXT}" \
     --extra_userpage_scripts="${EXTRA_USERPAGE_SCRIPTS}" \
     --extra_userpage_styles="${EXTRA_USERPAGE_STYLES}" \
     --sftp_max_sessions=${SFTP_MAX_SESSIONS} \
@@ -1114,9 +1167,13 @@ RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/index.html $MIG_ROOT/state/user_home/ \
     && cp $MIG_ROOT/mig/images/site-conf-${EMULATE_FQDN}.js $MIG_ROOT/mig/images/site-conf.js
 
+# Prepare oiddiscover for httpd
+RUN cd $MIG_ROOT && python mig/server/genoiddiscovery.py \
+    > $MIG_ROOT/state/wwwpublic/oiddiscover.xml
+
 
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH install_mig as setup_mig_configs
+FROM --platform=linux/$ARCH install_mig AS setup_mig_configs
 ARG DOMAIN
 ARG PUBLIC_DOMAIN
 ARG MIGCERT_DOMAIN
@@ -1141,11 +1198,6 @@ ARG MIG_GIT_BRANCH
 ARG ENABLE_QUOTA
 ARG QUOTA_BACKEND
 ARG QUOTA_LUSTRE_VERSION
-
-# Prepare oiddiscover for httpd
-RUN cd $MIG_ROOT/mig \
-    && python shared/httpsclient.py | grep -A 80 "xml version" \
-    > $MIG_ROOT/state/wwwpublic/oiddiscover.xml
 
 USER root
 
@@ -1221,6 +1273,12 @@ RUN ln -s index-${DOMAIN}.html $MIG_ROOT/state/wwwpublic/index.html && \
     ln -s support-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/support-snippet.html && \
     ln -s tips-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/tips-snippet.html && \
     ln -s terms-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/terms-snippet.html && \
+    # Make an empty template for status popup and status page to use.
+    # For inspiration on how to use it please refer to the samples at
+    # https://github.com/ucphhpc/migrid-ucph-sites/tree/main/state/wwwpublic
+    echo '[]' > $MIG_ROOT/state/wwwpublic/status-events-${DOMAIN}.json && \
+    ln -s status-events-${DOMAIN}.json $MIG_ROOT/state/wwwpublic/status-events.json && \
+    ln -s status-dynamic.html $MIG_ROOT/state/wwwpublic/status.html && \
     chown -R $USER:$GROUP $MIG_ROOT/state/wwwpublic/*.html
 
 # TODO: improve this hard-coded translation
@@ -1289,7 +1347,6 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
                 /etc/rsyslog.conf ; \
         echo "" >> /etc/rsyslog.conf ; \
         echo "# MiG GDP messages" >> /etc/rsyslog.conf ; \
-        echo "local0.*               /var/log/mig/gdp.log" >> /etc/rsyslog.conf ; \
         echo "local0.*               ${GDP_LOG_PATH}" >> /etc/rsyslog.conf ; \
       fi; \
     fi;
@@ -1334,7 +1391,7 @@ RUN if [ "${ENABLE_QUOTA}" = "True" ] \
         fi; \
     fi;
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH setup_mig_configs as start_mig
+FROM --platform=linux/$ARCH setup_mig_configs AS start_mig
 ARG DOMAIN
 
 # Reap defuncted/orphaned processes

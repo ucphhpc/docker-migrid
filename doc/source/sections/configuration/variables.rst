@@ -19,6 +19,9 @@ Variables
    * - Variable
      - Default
      - Notes
+   * - CONTAINER_REGISTRY
+     - docker.io
+     - The upstream container image registry to use when deploying/pushing the Docker MiGrid Stack.
    * - CONTAINER_TAG
      - ${MIG_GIT_BRANCH}
      - The Docker tag used for the MiGrid image that is created. This might either be a Git tag, a MiGrid version or a arbitrary name.
@@ -259,6 +262,12 @@ Variables
    * - ENABLE_SEAFILE
      - False
      - Enable the built-in Seafile integration for file synchronization. Requires a stand-alone Seafile instance.
+   * - SEAFILE_FQDN
+     - 
+     - FQDN of host where any enabled Seafile service instance is running
+   * - SEAFILE_RO_ACCESS
+     - False
+     - Toggles integrated read-only access to any locally hosted Seafile instance.
    * - ENABLE_SANDBOXES
      - False
      - Enable the built-in sandbox resource feature for grid jobs
@@ -274,6 +283,15 @@ Variables
    * - ENABLE_RESOURCES
      - True
      - Enable the built-in grid execution resource feature
+   * - ENABLE_GRAVATARS
+     - True
+     - Enables optional gravatar integration on user profiles of registered users
+   * - ENABLE_SITESTATUS
+     - True
+     - Enable the built-in site status through the pop-up in the bottom right corner based on events authored in state/wwwpublic/status-events.json .
+   * - STATUS_SYSTEM_MATCH
+     - ANY
+     - Events from status-events.json to show in site status pop-up
    * - ENABLE_EVENTS
      - True
      - Enable the built-in file system event triggers feature with inotify
@@ -301,6 +319,9 @@ Variables
    * - ENABLE_JUPYTER
      - True
      - Enable the built-in Jupyter integration - requires stand-alone Jupyter nodes
+   * - ENABLE_CLOUD
+     - False
+     - Enable the built-in OpenStack integration for per-user cloud VMs. Requires a stand-alone OpenStack cloud.
    * - ENABLE_MIGADMIN
      - False
      - Enable the built-in Server Admin feature for web based management of external user, log inspection, etc.
@@ -340,6 +361,12 @@ Variables
    * - UPGRADE_MOD_AUTH_OPENIDC
      - False
      - Upgrade the default Apache mod auth OpenIDC to latest supported one during build 
+   * - UPGRADE_OIDC_AUTH_MOD_SRC
+     - 
+     - Optional custom source for the Apache mod auth OpenIDC package if UPGRADE_MOD_AUTH_OPENIDC is requested 
+   * - UPGRADE_OIDC_CJOSE_SRC
+     - 
+     - Optional custom source for the cjose OpenIDC dependency package if UPGRADE_MOD_AUTH_OPENIDC is requested 
    * - UPGRADE_PARAMIKO
      - False
      - Upgrade the default Paramiko version to latest supported one during build 
@@ -367,6 +394,15 @@ Variables
    * - AUTO_ADD_OIDC_USER
      - False
      - Whether new registrations via OpenID Connect should be automatically be activated or wait for admin approval first.
+   * - AUTO_ADD_FILTER_FIELDS
+     -
+     - User ID fields to prefilter during sign up in order to remove or replace any exotic unsupported characters e.g. in full names. Default is empty to disable all such filtering, but the variable can be set to `full_name` to filter the given name of users with the method given in `AUTO_ADD_FILTER_METHOD`.
+   * - AUTO_ADD_FILTER_METHOD
+     - skip
+     - Which method to prefilter any user ID fields configured in `AUTO_ADD_FILTER_FIELDS` with during sign up. If field filters are set (see above) the default `skip` filter simply throws away any such unsupported characters during sign up. Otherwise those characters will result in an input validation error in that process. Better filter methods are in development and one can try e.g. hexlify as as rudimentary reversible filter to replace such unsupported characters with one or more corresponding hex codes.
+   * - AUTO_ADD_USER_PERMIT
+     - distinguished_name:.*
+     - Optional limit on users who may sign up through autocreate without operator interaction. Defaults to allow ANY distinguished name if unset but only for auth methods explicitly enabled with auto_add_X_user.
    * - CERT_VALID_DAYS
      - 365
      - How long cert based user accounts should kept as active without login or renewal.
