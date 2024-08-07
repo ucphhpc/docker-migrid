@@ -10,6 +10,7 @@ IMAGE=migrid
 OWNER?=ucphhpc
 SHELL=/bin/bash
 BUILD_ARGS=
+DETACH?=-d
 
 # Enable that the builder should use buildkit
 # https://docs.docker.com/develop/develop-images/build_enhancements/
@@ -17,7 +18,7 @@ DOCKER_BUILDKIT=1
 # NOTE: dynamic lookup with docker as default and fallback to podman
 DOCKER = $(shell which docker 2>/dev/null || which podman 2>/dev/null)
 # if docker compose plugin is not available, try old docker-compose/podman-compose
-ifeq (, $(${DOCKER} help|grep compose))
+ifeq (, $(shell ${DOCKER} help|grep compose))
 	DOCKER_COMPOSE = $(shell which docker-compose 2>/dev/null || which podman-compose 2>/dev/null)
 else
 	DOCKER_COMPOSE = ${DOCKER} compose
@@ -133,7 +134,7 @@ initservices:
 	@echo $$ENABLED_SERVICES > ./.enabled_services
 
 up:	initcomposevars initservices
-	${DOCKER_COMPOSE} up -d $(file < ./.enabled_services)
+	${DOCKER_COMPOSE} up ${DETACH} $(file < ./.enabled_services)
 
 down:	initcomposevars
 	# NOTE: To suppress podman warnings about missing containers use:

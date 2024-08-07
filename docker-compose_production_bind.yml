@@ -304,13 +304,13 @@ services:
       - SYS_ADMIN
     volumes:
       - type: bind
-        source: ${QUOTA_LUSTRE_BASE}
+        source: ${QUOTA_LUSTRE_BASE:-/dev/null}
         target: /lustre/${DOMAIN}
       - type: bind
-        source: ${QUOTA_GOCRYPTFS_XRAY}
+        source: ${QUOTA_GOCRYPTFS_XRAY:-/dev/null}
         target: /usr/local/bin/gocryptfs-xray
       - type: bind
-        source: ${QUOTA_GOCRYPTFS_SOCK}
+        source: ${QUOTA_GOCRYPTFS_SOCK:-/dev/null}
         target: /var/run/gocryptfs.${DOMAIN}.sock
       - type: volume
         source: mig
