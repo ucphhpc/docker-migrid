@@ -134,7 +134,7 @@ initservices:
 	@echo $$ENABLED_SERVICES > ./.enabled_services
 
 up:	initcomposevars initservices
-	${DOCKER_COMPOSE} up ${DETACH} $(file < ./.enabled_services)
+	${DOCKER_COMPOSE} up ${DETACH} $(shell head -n1 .enabled_services)
 
 down:	initcomposevars
 	# NOTE: To suppress podman warnings about missing containers use:
