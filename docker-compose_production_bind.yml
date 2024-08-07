@@ -163,6 +163,9 @@ services:
     container_name: migrid-sftp
     image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
     network_mode: "host"
+    # NOTE: sshd requires capability to write audit log on login attempts
+    cap_add:
+      - AUDIT_WRITE
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
