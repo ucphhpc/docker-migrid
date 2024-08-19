@@ -1181,7 +1181,7 @@ RUN cd $MIG_ROOT && python mig/server/genoiddiscovery.py \
 RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
         mkdir -p ${MIG_ROOT}/.config/openstack/ ; \
         ln -s ../../state/secrets/${CLOUD_ACCESS:-cloud-access.yaml} \
-              ${MIG_ROOT}/.config/openstack/ ; \
+              ${MIG_ROOT}/.config/openstack/clouds.yaml ; \
         mkdir -p ${MIG_ROOT}/.ssh ; chmod 0750 ${MIG_ROOT}/.ssh ; \
         ln -s ../state/secrets/${CLOUD_JUMPHOST_KEY:-cloud-jumphost-key} \
               ${MIG_ROOT}/.ssh/ ; \
