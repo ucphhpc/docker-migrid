@@ -1287,21 +1287,22 @@ RUN cd $MIG_ROOT && python2 mig/server/genoiddiscovery.py \
 
 # link relevant cloud access helpers into default locations if ENABLE_CLOUD is set here
 # IMPORTANT: the actual cloud access tokens/keys should NEVER enter repos etc.
+# NOTE: openstack client expects details in fixed cloud.yaml file.
 RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
-        mkdir -p ${MIG_ROOT}/.config/openstack/ ; \
-        ln -s ../../state/secrets/${CLOUD_ACCESS:-cloud-access.yaml} \
-              ${MIG_ROOT}/.config/openstack/clouds.yaml ; \
-        mkdir -p ${MIG_ROOT}/.ssh ; chmod 0750 ${MIG_ROOT}/.ssh ; \
-        ln -s ../state/secrets/${CLOUD_JUMPHOST_KEY:-cloud-jumphost-key} \
-              ${MIG_ROOT}/.ssh/ ; \
+        cd $MIG_ROOT ; mkdir -m 0750 -p .config/openstack .ssh ; \
+        [ -n "${CLOUD_ACCESS}" ] || CLOUD_ACCESS="cloud-access.yaml" ; \
+        ln -s ../../state/secrets/${CLOUD_ACCESS} .config/openstack/clouds.yaml ; \
+        [ -n "${CLOUD_JUMPHOST_KEY}" ] || CLOUD_JUMPHOST_KEY="cloud-jumphost-key" ; \ 
+        ln -s ../state/secrets/${CLOUD_JUMPHOST_KEY} .ssh/${CLOUD_JUMPHOST_KEY} ; \
     fi;
 
 # link relevant py trac ini into default location if no TRAC_INI_PATH is set here
 RUN if [ -n "${TRAC_ADMIN_PATH}" -a -z "${TRAC_INI_PATH}" ]; then \
+        cd $MIG_ROOT ; \
         if [ "${PREFER_PYTHON3}" = "True" ]; then \
-            ln -s ${MIG_ROOT}/mig/server/trac-py3.ini ${MIG_ROOT}/mig/server/trac.ini; \
+            ln -s trac-py3.ini mig/server/trac.ini; \
         else \
-            ln -s ${MIG_ROOT}/mig/server/trac-py2.ini ${MIG_ROOT}/mig/server/trac.ini; \
+            ln -s trac-py2.ini mig/server/trac.ini; \
         fi; \
     fi;
 
@@ -1324,8 +1325,6 @@ ARG WITH_PY3
 ARG PREFER_PYTHON3
 ARG ENABLE_LOGROTATE
 ARG LOGROTATE_MIGRID
-ARG TRAC_ADMIN_PATH
-ARG TRAC_INI_PATH
 ARG ENABLE_GDP
 ARG WITH_GIT
 ARG MIG_GIT_BRANCH
