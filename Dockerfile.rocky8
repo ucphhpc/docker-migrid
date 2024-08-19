@@ -109,6 +109,8 @@ ARG ENABLE_WORKFLOWS=False
 ARG ENABLE_VERIFY_CERTS=True
 ARG ENABLE_JUPYTER=True
 ARG ENABLE_CLOUD=False
+ARG CLOUD_ACCESS=cloud-access.yaml
+ARG CLOUD_JUMPHOST_KEY=cloud-jumphost-key
 ARG ENABLE_MIGADMIN=False
 ARG ENABLE_GDP=False
 ARG ENABLE_TWOFACTOR=True
@@ -1229,6 +1231,7 @@ RUN ./generateconfs.py --source=. \
     --enable_workflows=${ENABLE_WORKFLOWS} --enable_hsts=True \
     --enable_vhost_certs=True --enable_verify_certs=${ENABLE_VERIFY_CERTS} \
     --enable_jupyter=${ENABLE_JUPYTER} --enable_cloud=${ENABLE_CLOUD} \
+    # TODO: expose additional cloud conf including jumphost key and use here
     --enable_migadmin=${ENABLE_MIGADMIN} \
     --enable_gdp=${ENABLE_GDP} --gdp_email_notify=${GDP_EMAIL_NOTIFY} \
     --gdp_id_scramble=${GDP_ID_SCRAMBLE} --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
@@ -1313,6 +1316,9 @@ ARG TRAC_INI_PATH
 ARG ENABLE_GDP
 ARG WITH_GIT
 ARG MIG_GIT_BRANCH
+ARG ENABLE_CLOUD
+ARG CLOUD_ACCESS
+ARG CLOUD_JUMPHOST_KEY
 ARG ENABLE_QUOTA
 ARG QUOTA_BACKEND
 ARG QUOTA_LUSTRE_VERSION
@@ -1404,6 +1410,17 @@ RUN ln -s index-${DOMAIN}.html $MIG_ROOT/state/wwwpublic/index.html && \
 # TODO: improve this hard-coded translation
 # Replace index.html redirects to instance domains
 RUN sed -i -e "s@https://ext\.${EMULATE_FQDN}@https://${MIGOID_DOMAIN}@g;s@https://oid\.${EMULATE_FQDN}@https://${EXTOID_DOMAIN}@g;s@https://${EMULATE_FQDN}@https://${EXTOID_DOMAIN}@g;s@https://cert\.${EMULATE_FQDN}@https://${EXTCERT_DOMAIN}@g;s@https://sid\.${EMULATE_FQDN}@https://${SID_DOMAIN}@g" $MIG_ROOT/state/wwwpublic/index-${DOMAIN}.html
+
+# link relevant cloud access helpers into default locations if ENABLE_CLOUD is set here
+# IMPORTANT: the actual cloud access tokens/keys should NEVER enter repos etc.
+RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
+        mkdir -p ${MIG_ROOT}/.config/openstack/ ; \
+        ln -s ../../state/secrets/${CLOUD_ACCESS:-cloud-access.yaml} \
+              ${MIG_ROOT}/.config/openstack/ ; \
+        mkdir -p ${MIG_ROOT}/.ssh ; chmod 0750 ${MIG_ROOT}/.ssh ; \
+        ln -s ../state/secrets/${CLOUD_JUMPHOST_KEY:-cloud-jumphost-key} \
+              ${MIG_ROOT}/.ssh/ ; \
+    fi;
 
 # link relevant py trac ini into default location if no TRAC_INI_PATH is set here
 RUN if [ -n "${TRAC_ADMIN_PATH}" -a -z "${TRAC_INI_PATH}" ]; then \
