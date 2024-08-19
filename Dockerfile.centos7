@@ -1011,6 +1011,8 @@ ARG ENABLE_WORKFLOWS
 ARG ENABLE_VERIFY_CERTS
 ARG ENABLE_JUPYTER
 ARG ENABLE_CLOUD
+ARG CLOUD_ACCESS
+ARG CLOUD_JUMPHOST_KEY
 ARG ENABLE_MIGADMIN
 ARG ENABLE_GDP
 ARG ENABLE_TWOFACTOR
@@ -1283,6 +1285,26 @@ RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
 RUN cd $MIG_ROOT && python2 mig/server/genoiddiscovery.py \
     > $MIG_ROOT/state/wwwpublic/oiddiscover.xml
 
+# link relevant cloud access helpers into default locations if ENABLE_CLOUD is set here
+# IMPORTANT: the actual cloud access tokens/keys should NEVER enter repos etc.
+RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
+        mkdir -p ${MIG_ROOT}/.config/openstack/ ; \
+        ln -s ../../state/secrets/${CLOUD_ACCESS:-cloud-access.yaml} \
+              ${MIG_ROOT}/.config/openstack/ ; \
+        mkdir -p ${MIG_ROOT}/.ssh ; chmod 0750 ${MIG_ROOT}/.ssh ; \
+        ln -s ../state/secrets/${CLOUD_JUMPHOST_KEY:-cloud-jumphost-key} \
+              ${MIG_ROOT}/.ssh/ ; \
+    fi;
+
+# link relevant py trac ini into default location if no TRAC_INI_PATH is set here
+RUN if [ -n "${TRAC_ADMIN_PATH}" -a -z "${TRAC_INI_PATH}" ]; then \
+        if [ "${PREFER_PYTHON3}" = "True" ]; then \
+            ln -s ${MIG_ROOT}/mig/server/trac-py3.ini ${MIG_ROOT}/mig/server/trac.ini; \
+        else \
+            ln -s ${MIG_ROOT}/mig/server/trac-py2.ini ${MIG_ROOT}/mig/server/trac.ini; \
+        fi; \
+    fi;
+
 
 #------------------------- next stage -----------------------------#
 FROM --platform=linux/$ARCH install_mig AS setup_mig_configs
@@ -1307,9 +1329,6 @@ ARG TRAC_INI_PATH
 ARG ENABLE_GDP
 ARG WITH_GIT
 ARG MIG_GIT_BRANCH
-ARG ENABLE_CLOUD
-ARG CLOUD_ACCESS
-ARG CLOUD_JUMPHOST_KEY
 ARG ENABLE_QUOTA
 ARG QUOTA_BACKEND
 ARG QUOTA_LUSTRE_VERSION
@@ -1395,26 +1414,6 @@ RUN ln -s index-${DOMAIN}.html $MIG_ROOT/state/wwwpublic/index.html && \
 # TODO: improve this hard-coded translation
 # Replace index.html redirects to instance domains
 RUN sed -i -e "s@https://ext\.${EMULATE_FQDN}@https://${MIGOID_DOMAIN}@g;s@https://oid\.${EMULATE_FQDN}@https://${EXTOID_DOMAIN}@g;s@https://${EMULATE_FQDN}@https://${EXTOID_DOMAIN}@g;s@https://cert\.${EMULATE_FQDN}@https://${EXTCERT_DOMAIN}@g;s@https://sid\.${EMULATE_FQDN}@https://${SID_DOMAIN}@g" $MIG_ROOT/state/wwwpublic/index-${DOMAIN}.html
-
-# link relevant cloud access helpers into default locations if ENABLE_CLOUD is set here
-# IMPORTANT: the actual cloud access tokens/keys should NEVER enter repos etc.
-RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
-        mkdir -p ${MIG_ROOT}/.config/openstack/ ; \
-        ln -s ../../state/secrets/${CLOUD_ACCESS:-cloud-access.yaml} \
-              ${MIG_ROOT}/.config/openstack/ ; \
-        mkdir -p ${MIG_ROOT}/.ssh ; chmod 0750 ${MIG_ROOT}/.ssh ; \
-        ln -s ../state/secrets/${CLOUD_JUMPHOST_KEY:-cloud-jumphost-key} \
-              ${MIG_ROOT}/.ssh/ ; \
-    fi;
-
-# link relevant py trac ini into default location if no TRAC_INI_PATH is set here
-RUN if [ -n "${TRAC_ADMIN_PATH}" -a -z "${TRAC_INI_PATH}" ]; then \
-        if [ "${PREFER_PYTHON3}" = "True" ]; then \
-            ln -s ${MIG_ROOT}/mig/server/trac-py3.ini ${MIG_ROOT}/mig/server/trac.ini; \
-        else \
-            ln -s ${MIG_ROOT}/mig/server/trac-py2.ini ${MIG_ROOT}/mig/server/trac.ini; \
-        fi; \
-    fi;
 
 # State clean services
 RUN chmod 755 generated-confs/{migstateclean,migerrors} \
