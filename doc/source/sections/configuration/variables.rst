@@ -24,10 +24,10 @@ Variables
      - The upstream container image registry to use when deploying/pushing the Docker MiGrid Stack.
    * - CONTAINER_TAG
      - ${MIG_GIT_BRANCH}
-     - The Docker tag used for the MiGrid image that is created. This might either be a Git tag, a MiGrid version or a arbitrary name.
-   * - FTPS_PASSIVE_PORTS
+     - The Docker tag used for the MiGrid image that is created. This might either be a Git tag, a MiGrid version or an arbitrary name.
+   * - FTPS_PASV_PORTS
      - 8100-8399
-     - The port range for FTPS passive ports used for data transmission.
+     - The port range for FTPS passive ports used for data transmission. Typically requires matching firewall opening.
    * - ENABLE_LOGROTATE
      - False
      - Whether or not the logrotate cron job should be started inside the containers. Be aware that the cron daemon itself might be started through the #RUN_SERVICES variable in the docker-entry.sh.
@@ -36,10 +36,10 @@ Variables
      - Add explicit logrotate of migrid log files inside the container
    * - MIG_TEST_USER
      - test@external.domain
-     - The username of the test user. Used by the development environments for tests.
+     - The username of the optional test user. Used by the development environments for tests.
    * - MIG_TEST_USER_PASSWORD
      - TestPw0rd
-     - The password for the test user. Used by the development environments for tests.
+     - The password for the optional test user. Used by the development environments for tests.
    * - SMTP_SERVER
      - localhost
      - The MTA that is used to submit mails from migrid. Can be a hostname or an IP.
@@ -193,6 +193,9 @@ Variables
    * - MIG_GIT_REV
      - HEAD
      - The Git revision which should be used when migrid source code is pulled.
+   * - SUPPORT_EMAIL
+     - mig
+     - The email address to point users to for various support purposes in the migrid user pages
    * - ADMIN_EMAIL
      - mig
      - The email address to send various internal status and account request emails to from the migrid stack
@@ -217,6 +220,9 @@ Variables
    * - EXT_OID_TITLE
      - External
      - Title or label for the intended audience of the external OpenID 2.0 service
+   * - EXT_OIDC_TITLE
+     - External
+     - Title or label for the intended audience of the external OpenID Connect service
    * - PEERS_PERMIT
      - "distinguished_name:.*"
      - A regex-filter to define which users can act as Peers in external user approval. Applied to user database entries.
@@ -226,6 +232,25 @@ Variables
    * - VGRID_MANAGERS
      - "distinguished_name:.*"
      - A regex-filter to define which users can manage existing VGrids / Workgroups / Projects when assigned ownership. Applied to user database entries.
+   * - DEFAULT_VGRID_LINKS
+     - "files web"
+     - Optional specification of the feature links to always show along with entries on the VGrids page. Please refer to ADVANCED_VGRID_LINKS for further values.
+   * - ADVANCED_VGRID_LINKS
+     - "files web scm tracker workflows monitor"
+     - Optional specification of the feature links to show along with entries on the VGrids page if user chose the advanced option on Settings page . Please refer to DEFAULT_VGRID_LINKS for the related defaults values.
+   * - HG_PATH
+     - /usr/bin/hg
+     - Location of the Mercurial SCM binary in the container if VGrids should have an SCM associated automatically. It currently requires user certificates to actually interact with these SCMs.
+   * - HGWEB_SCRIPTS
+     - /usr/share/doc/mercurial
+     - Location of the Mercurial SCM web helpers in the container if VGrids should have an SCM associated automatically. It currently requires user certificates to actually interact with these SCMs.
+   * - TRAC_ADMIN_PATH
+     - 
+     - Location of the Trac admin binary in the container if VGrids should have a Trac issue tracker and wiki instance associated automatically. May make the VGrid creation relatively slow.
+   * - TRAC_INI_PATH
+     - 
+     - Location of the Trac ini configuration in the container if VGrids should have a Trac issue tracker and wiki instance associated automatically. May make the VGrid creation relatively slow.
+
    * - EMULATE_FLAVOR
      - migrid
      - Which web design and site to use as a basis when generating the instance web pages
@@ -322,9 +347,18 @@ Variables
    * - ENABLE_CLOUD
      - False
      - Enable the built-in OpenStack integration for per-user cloud VMs. Requires a stand-alone OpenStack cloud.
+   * - CLOUD_ACCESS
+     - cloud-access.yaml
+     - The name of the cloud access conf file to use if the optional cloud integration is enabled (ENABLE_CLOUD).
+   * - CLOUD_JUMPHOST_KEY
+     - cloud-jumphost-key
+     - The name of the cloud jumphost ssh key file to use for managing user ssh keys on the cloud jumphost if the optional cloud integration is enabled (ENABLE_CLOUD).
    * - ENABLE_MIGADMIN
      - False
      - Enable the built-in Server Admin feature for web based management of external user, log inspection, etc.
+   * - ENABLE_QUOTA
+     - False
+     - Enable additional quota integration in the user pages if fundamentally enabled with the QUOTA_X variables.
    * - ENABLE_GDP
      - False
      - Enable GDP mode for sensitive data with a lot of restrictions on access and logging
@@ -418,9 +452,33 @@ Variables
    * - USER_MENU
      - jupyter
      - The menu entries in the webinterface that can be activated by the users from Home
+   * - CA_FQDN
+     - 
+     - The FQDN of an optional local Certificate Authority host for signing user certificates that can be used for site authentication. This requires a local stand-alone service and a just integrates the sign up and login flow if one is available.
+   * - CA_SMTP
+     - 
+     - The mail server (SMTP) to use for sending out email related to the user certificates for the optional local Certificate Authority host (CA_FQDN).
+   * - CA_USER
+     - 
+     - The user account used to create and sign user certificates for the optional local Certificate Authority host (CA_FQDN).
+   * - SECSCAN_ADDR
+     - 
+     - Optional list of local security scanner addresses to reduce log monitoring verbosity for.
+   * - EXTERNAL_DOC
+     - "https://sourceforge.net/p/migrid/wiki"
+     - Optional URL pointing users to additional information about the underlying migrid software.
    * - WITH_PY3
      - False
      - Build container with python3 support and libraries
+   * - IO_ACCOUNT_EXPIRE
+     - False
+     - Whether enabled SFTP/FTPS/WebDAVS account access should automatically expire for accounts that haven't been created/renewed or accessed on web for a long time (30 days by default). Useful to make sure any stale accounts are not left around for crackers to access e.g. by brute-force password guessing. The expired service access is automatically reopened if/when user reactivates main account.
+   * - DATASAFETY_LINK
+     -
+     - Optional link to further details about site data safety gurantees integrated on the Files page.
+   * - DATASAFETY_TEXT
+     -
+     - Optional text about site data safety gurantees integrated on the Files page.
    * - MODERN_WSGIDAV
      - False
      - Whether the WebDAVS service should use the tried and tested wsgidav 1.3 or upgrade to a more modern version.
@@ -463,6 +521,15 @@ Variables
    * - GDP_PATH_SCRAMBLE
      - safe_encrypt
      - Which method to use for scrambling potentially sensitive path and filenames in the gdp.log associated with GDP sites. Uses Fernet encryption by default to allow logs to be forwarded to less restrictive remote log environments without disclosing actual metadata from the user data.
+   * - SFTP_MAX_SESSIONS
+     - 32
+     - An optional limit to the number of concurrent SFTP sessions for any user or sharelink. Set to -1 to leave unlimited but beware that more concurrency than the default likely won't improve throughput significantly and quickly just deplete system resources.
+   * - WSGI_PROCS
+     - 25
+     - The number of WSGI processes started in the Apache service to handle incoming user web requests. Increase to allow handling more concurrent users if needed but at the cost of higher system resource requirements.
+   * - APACHE_WORKER_PROCS
+     - 256
+     - The number of worker processes started in the Apache service to handle all incoming web requests.Increase to allow handling more concurrent clients if needed but at the cost of higher system resource requirements.
    * - JUPYTER_SERVICES
      - ""
      - Where the optional external Jupyter nodes can be reached
