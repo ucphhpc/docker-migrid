@@ -26,8 +26,8 @@ Variables
      - ${MIG_GIT_BRANCH}
      - The Docker tag used for the MiGrid image that is created. This might either be a Git tag, a MiGrid version or an arbitrary name.
    * - FTPS_PASV_PORTS
-     - 8100-8399
-     - The port range for FTPS passive ports used for data transmission. Typically requires matching firewall opening.
+     - 8100:8399
+     - The port range for FTPS passive ports used for data transmission. Specified as a colon-separated start and end port. Typically requires matching firewall opening.
    * - ENABLE_LOGROTATE
      - False
      - Whether or not the logrotate cron job should be started inside the containers. Be aware that the cron daemon itself might be started through the #RUN_SERVICES variable in the docker-entry.sh.
