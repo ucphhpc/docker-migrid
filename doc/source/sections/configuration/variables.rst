@@ -475,10 +475,10 @@ Variables
      - Whether enabled SFTP/FTPS/WebDAVS account access should automatically expire for accounts that haven't been created/renewed or accessed on web for a long time (30 days by default). Useful to make sure any stale accounts are not left around for crackers to access e.g. by brute-force password guessing. The expired service access is automatically reopened if/when user reactivates main account.
    * - DATASAFETY_LINK
      -
-     - Optional link to further details about site data safety gurantees integrated on the Files page.
+     - Optional link to further details about site data safety guaranties integrated on the Files page.
    * - DATASAFETY_TEXT
      -
-     - Optional text about site data safety gurantees integrated on the Files page.
+     - Optional text about site data safety guaranties integrated on the Files page.
    * - MODERN_WSGIDAV
      - False
      - Whether the WebDAVS service should use the tried and tested wsgidav 1.3 or upgrade to a more modern version.
