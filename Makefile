@@ -1,7 +1,7 @@
 .PHONY: all init initservices initbuild initdirs initcomposevars clean warning
 .PHONY: dockerclean dockervolumeclean distclean stateclean dockerbuild dockerpush
 .PHONY: up stop down
-.PHONY: test-doc
+.PHONY: test-doc test-doc-full
 .ONESHELL:
 
 PACKAGE_NAME=$(shell basename $$(pwd))
@@ -206,9 +206,24 @@ warning:
 	@echo
 	@echo "Are you sure? [y/N]" && read ans && [ $${ans:-N} = y ]
 
+# Test that all defined env variables are properly documented
 test-doc:
 	@shopt -s extglob; \
 	for i in $$( grep -hv '\(^#.*\|^$$\)' !(migrid-httpd).env | sed -E 's!^([^=]*)=.*$$!\1!g' | sort | uniq ) ; do \
+		grep -q "$$i" doc/source/sections/configuration/variables.rst \
+		|| missing+=( "$$i" ) ; \
+	done; \
+	[ "$${#missing[@]}" != "0" ] && echo "ERROR: Missing documentation in doc/source/sections/configuration/variables.rst for:" \
+	&& for i in $${missing[@]}; do \
+		echo "  $$i"; \
+	done && exit 1 \
+	|| echo "OK: found all environment variables in documentation" && exit 0
+
+# Internal helper to check if any of the Dockerfile ARGs should perhaps be
+# added in env and then documented as per the test-doc target.
+test-doc-full:
+	@shopt -s extglob; \
+	for i in $$( grep -E '^ARG [^=]+=' Dockerfile.* | sed -E 's!^Dockerfile\..+:ARG ([^=]+)=.*$$!\1!g'| grep -E -v "^(ARCH|TINI_VERSION)$$"  | sort | uniq ) ; do \
 		grep -q "$$i" doc/source/sections/configuration/variables.rst \
 		|| missing+=( "$$i" ) ; \
 	done; \
