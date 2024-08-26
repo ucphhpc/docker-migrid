@@ -1275,6 +1275,7 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
 RUN mkdir -p $WEB_DIR/conf.extras.d/ \
     && cp generated-confs/MiG-jupyter-def.conf $WEB_DIR/conf.extras.d \
     && cp generated-confs/MiG-jupyter-openid.conf $WEB_DIR/conf.extras.d \
+    && cp generated-confs/MiG-jupyter-oidc.conf $WEB_DIR/conf.extras.d \
     && cp generated-confs/MiG-jupyter-proxy.conf $WEB_DIR/conf.extras.d \
     && cp generated-confs/MiG-jupyter-rewrite.conf $WEB_DIR/conf.extras.d
 
