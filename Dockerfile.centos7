@@ -217,6 +217,9 @@ ARG QUOTA_GOCRYPTFS_SOCK="/dev/null"
 # Jupyter Arguments
 ARG JUPYTER_SERVICES=""
 ARG JUPYTER_SERVICES_DESC="{}"
+# Cloud Arguments
+ARG CLOUD_SERVICES=""
+ARG CLOUD_SERVICES_DESC="{}"
 
 #------------------------- first stage -----------------------------#
 FROM --platform=linux/$ARCH centos:7 AS init
@@ -258,6 +261,7 @@ ARG OPENID_PORT
 #ARG EMULATE_FQDN
 ARG WITH_PY3
 ARG JUPYTER_SERVICES
+ARG CLOUD_SERVICES
 #ARG WITH_GIT
 
 RUN echo "UID and GID: $UID $GID"
@@ -277,6 +281,7 @@ RUN echo "Ports: " "${PUBLIC_HTTP_PORT} ${PUBLIC_HTTPS_PORT}" \
 #RUN echo "Emulate FQDN: $EMULATE_FQDN"
 RUN echo "Enable python3 support: $WITH_PY3"
 #RUN echo "Designated jupyter services: $JUPYTER_SERVICES"
+#RUN echo "Designated cloud services: $CLOUD_SERVICES"
 #RUN echo "Enable git checkout: $WITH_GIT"
 
 #------------------------- next stage -----------------------------#
@@ -1078,6 +1083,8 @@ ARG DATASAFETY_LINK
 ARG DATASAFETY_TEXT
 ARG JUPYTER_SERVICES
 ARG JUPYTER_SERVICES_DESC
+ARG CLOUD_SERVICES
+ARG CLOUD_SERVICES_DESC
 ARG OPENSSH_VERSION
 ARG DIGEST_SALT
 ARG CRYPTO_SALT
@@ -1119,6 +1126,8 @@ WORKDIR $MIG_ROOT/mig/install
 
 RUN echo "Designated jupyter services: ${JUPYTER_SERVICES}"
 RUN echo "Designated jupyter services descriptions: ${JUPYTER_SERVICES_DESC}"
+RUN echo "Designated cloud services: ${CLOUD_SERVICES}"
+RUN echo "Designated cloud services descriptions: ${CLOUD_SERVICES_DESC}"
 
 # NOTE: we need the ~/.local/ wrapper here because update-alternatives breaks yum, etc.
 RUN mkdir -p ${MIG_ROOT}/.local/bin; \
@@ -1233,6 +1242,8 @@ RUN python2 ./generateconfs.py --source=. \
     --password_policy=${MIG_PASSWORD_POLICY} \
     --jupyter_services="${JUPYTER_SERVICES}" \
     --jupyter_services_desc="${JUPYTER_SERVICES_DESC}" \
+    --cloud_services="${CLOUD_SERVICES}" \
+    --cloud_services_desc="${CLOUD_SERVICES_DESC}" \
     --prefer_python3=${PREFER_PYTHON3} \
     --user_clause=User --group_clause=Group \
     --listen_clause='#Listen' \
