@@ -536,6 +536,12 @@ Variables
    * - JUPYTER_SERVICES_DESC
      - "{}"
      - A text to describe the optional external Jupyter nodes
+   * - CLOUD_SERVICES
+     - ""
+     - Where the optional external OpenStack cloud can be reached
+   * - CLOUD_SERVICES_DESC
+     - "{}"
+     - A text to describe the optional external OpenStack cloud nodes
    * - QUOTA_BACKEND
      - ""
      - Filesystem backend used to set quotas and fetch data usage. Supported backends: 'lustre' and 'lustre-gocryptfs'
