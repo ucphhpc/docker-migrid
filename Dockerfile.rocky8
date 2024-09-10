@@ -814,7 +814,7 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
 
 # Modules required by grid_ftps
 # NOTE: relies on pyOpenSSL and Cryptography from yum/dnf for now
-RUN pip2 install pyftpdlib
+RUN pip2 install 'pyftpdlib<2.0'
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install pyftpdlib; \
     fi;
