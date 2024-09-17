@@ -323,6 +323,9 @@ Variables
    * - ENABLE_FREEZE
      - False
      - Enable the built-in frozen archives feature for write-protecting and publishing user data.
+   * - PERMANENT_FREEZE
+     - 
+     - Flavors of frozen archives to write-protect when user selects finalize.
    * - ENABLE_CRACKLIB
      - True
      - Enable the built-in cracklib password checking integration on user-supplied passwords
