@@ -271,6 +271,7 @@ MACOSX
 nitty
 preconfigured
 advertize
+advertizes
 advertized
 virtualized
 analytics
@@ -350,3 +351,4 @@ WSGI
 wsgi
 PROCS
 procs
+WWWSERVE
