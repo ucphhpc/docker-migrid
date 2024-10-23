@@ -131,14 +131,14 @@ initservices:
 			@ENABLED_SERVICES+=" $$service"
 		@fi
 	@done;
-	@echo $$ENABLED_SERVICES > ./.enabled_services
+	@echo $$ENABLED_SERVICES > ./.migrid_enabled_services
 
 up:	initcomposevars initservices
-	${DOCKER_COMPOSE} up ${DETACH} $(shell head -n1 .enabled_services)
+	${DOCKER_COMPOSE} up ${DETACH} $(shell head -n1 .migrid_enabled_services)
 
 down:	initcomposevars
 	# NOTE: To suppress podman warnings about missing containers use:
-	# ${DOCKER_COMPOSE} down $(file < ./.enabled_services)
+	# ${DOCKER_COMPOSE} down $(file < ./.migrid_enabled_services)
 	# NOTE: 'docker-compose down' doesn't support a list of services
 	${DOCKER_COMPOSE} down
 

@@ -204,6 +204,8 @@ ARG EXTRA_USERPAGE_STYLES=""
 ARG GDP_EMAIL_NOTIFY=True
 ARG GDP_ID_SCRAMBLE=safe_hash
 ARG GDP_PATH_SCRAMBLE=safe_encrypt
+ARG STORAGE_PROTOCOLS=AUTO
+ARG WWWSERVE_MAX_BYTES=-1
 ARG SFTP_MAX_SESSIONS=32
 ARG WSGI_PROCS=25
 ARG APACHE_WORKER_PROCS=256
@@ -1096,6 +1098,8 @@ ARG EXTRA_USERPAGE_STYLES
 ARG GDP_EMAIL_NOTIFY
 ARG GDP_ID_SCRAMBLE
 ARG GDP_PATH_SCRAMBLE
+ARG STORAGE_PROTOCOLS
+ARG WWWSERVE_MAX_BYTES
 ARG SFTP_MAX_SESSIONS
 ARG WSGI_PROCS
 ARG APACHE_WORKER_PROCS
@@ -1241,6 +1245,8 @@ RUN python2 ./generateconfs.py --source=. \
     --gdp_id_scramble=${GDP_ID_SCRAMBLE} --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
     --enable_quota=${ENABLE_QUOTA} --quota_backend="${QUOTA_BACKEND}" \
     --quota_user_limit=${QUOTA_USER_LIMIT} --quota_vgrid_limit=${QUOTA_VGRID_LIMIT} \
+    --storage_protocols="${STORAGE_PROTOCOLS}" \
+    --wwwserve_max_bytes=${WWWSERVE_MAX_BYTES} \
     --password_policy=${MIG_PASSWORD_POLICY} \
     --jupyter_services="${JUPYTER_SERVICES}" \
     --jupyter_services_desc="${JUPYTER_SERVICES_DESC}" \
@@ -1447,10 +1453,10 @@ RUN cp generated-confs/migrid-init.d-rh /etc/init.d/migrid
 WORKDIR $MIG_ROOT
 
 # Prepare default conf.d
-RUN mv $WEB_DIR/conf.d/autoindex.conf $WEB_DIR/conf.d/autoindex.conf.centos \
-    && mv $WEB_DIR/conf.d/ssl.conf $WEB_DIR/conf.d/ssl.conf.centos \
-    && mv $WEB_DIR/conf.d/userdir.conf $WEB_DIR/conf.d/userdir.conf.centos \
-    && mv $WEB_DIR/conf.d/welcome.conf $WEB_DIR/conf.d/welcome.conf.centos
+RUN mv $WEB_DIR/conf.d/autoindex.conf $WEB_DIR/conf.d/autoindex.conf.disabled \
+    && mv $WEB_DIR/conf.d/ssl.conf $WEB_DIR/conf.d/ssl.conf.disabled \
+    && mv $WEB_DIR/conf.d/userdir.conf $WEB_DIR/conf.d/userdir.conf.disabled \
+    && mv $WEB_DIR/conf.d/welcome.conf $WEB_DIR/conf.d/welcome.conf.disabled
 
 # Add generated certificate to trust store
 RUN update-ca-trust force-enable \

@@ -524,6 +524,12 @@ Variables
    * - GDP_PATH_SCRAMBLE
      - safe_encrypt
      - Which method to use for scrambling potentially sensitive path and filenames in the gdp.log associated with GDP sites. Uses Fernet encryption by default to allow logs to be forwarded to less restrictive remote log environments without disclosing actual metadata from the user data.
+   * - STORAGE_PROTOCOLS
+     - AUTO
+     - Efficient storage access protocols available on this site. A space-separated list of one or more of sftp, ftps and webdavs. Default (AUTO) automatically detects and advertizes all enabled services.
+   * - WWWSERVE_MAX_BYTES
+     - -1
+     - An optional limit to the number of bytes that is allowed to be memory-streamed through the web backends like cat.py, which is used to serve some or all downloads on the Files page. In particular it is used to serve ALL downloads on Files when in GDP mode but only small files otherwise. Set/leave to default of -1 or any other negative value to allow unlimited file size downloads, but beware that the memory streaming will eat up memory similar to file sizes. So sufficiently big files can temporarily deplete system memory. Setting the value to a fraction of the available system memory may therefore make sense.
    * - SFTP_MAX_SESSIONS
      - 32
      - An optional limit to the number of concurrent SFTP sessions for any user or sharelink. Set to -1 to leave unlimited but beware that more concurrency than the default likely won't improve throughput significantly and quickly just deplete system resources.
