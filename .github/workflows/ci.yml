@@ -52,8 +52,11 @@ jobs:
           make init
           echo "# NOTE: use absolute paths to current dir to get docker bind mounts to work" > ci.env
           echo "DOCKER_MIGRID_ROOT=$PWD" >> ci.env
+          echo "# NOTE: force python3 at experimental branch for a modern runtime" >> ci.env
+          echo "PREFER_PYTHON3=True" >> ci.env
+          echo "MIG_GIT_BRANCH=experimental" >> ci.env
           echo "" >> ci.env
-          grep -E -v "DOCKER_MIGRID_ROOT=" .env >> ci.env
+          grep -E -v "^(DOCKER_MIGRID_ROOT|PREFER_PYTHON3|MIG_GIT_BRANCH)=" .env >> ci.env
           rm -f .env
           mv ci.env .env
           make dockerbuild
