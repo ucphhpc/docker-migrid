@@ -7,9 +7,9 @@ docker-migrid
     :alt: Documentation Status
 |docsbadge|
 
-[![Continuous Integration](https://github.com/ucphhpc/docker-migrid/actions/workflows/ci.yml/badge.svg)](https://github.com/ucphhpc/docker-migrid/actions/workflows/ci.yml)
+![Continuous Integration](https://github.com/ucphhpc/docker-migrid/actions/workflows/ci.yml/badge.svg)](https://github.com/ucphhpc/docker-migrid/actions/workflows/ci.yml)
 
-[![Continuous Integration - Legacy](https://github.com/ucphhpc/docker-migrid/actions/workflows/ci-legacy.yml/badge.svg)](https://github.com/ucphhpc/docker-migrid/actions/workflows/ci-legacy.yml)
+![Continuous Integration - Legacy](https://github.com/ucphhpc/docker-migrid/actions/workflows/ci-legacy.yml/badge.svg)](https://github.com/ucphhpc/docker-migrid/actions/workflows/ci-legacy.yml)
 
 A containerized version of the middleware `Minimum Intrusion Grid (MiG) <https://sourceforge.net/projects/migrid/>`_ system.
 Code also available on Github in the `migrid-sync <https://github.com/ucphhpc/migrid-sync>`_ repo.
