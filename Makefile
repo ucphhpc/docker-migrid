@@ -60,9 +60,9 @@ init:	initbuild initdirs initcomposevars
 initbuild:
 ifeq (,$(wildcard ./Dockerfile))
 	@echo
-	@echo "*** No Dockerfile selected - defaulting to centos7 ***"
+	@echo "*** No Dockerfile selected - defaulting to rocky9 ***"
 	@echo
-	ln -s Dockerfile.centos7 Dockerfile
+	ln -s Dockerfile.rocky9 Dockerfile
 	@sleep 2
 endif
 ifeq (,$(wildcard ./.env))
@@ -197,7 +197,7 @@ distclean: stateclean clean dockerclean dockervolumeclean
 	rm -rf ./log
 	# NOTE: certs remove in clean is conditional - always remove it here
 	rm -fr ./certs
-	rm -f .env docker-compose.yml
+	rm -f .env docker-compose.yml Dockerfile
 
 warning:
 	@echo
