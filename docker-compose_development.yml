@@ -7,6 +7,7 @@ services:
     container_name: devmail
     depends_on:
       - devdns
+    # TODO: is host port expose needed or should we use a docker-network?
     ports:
       - "127.0.0.1:${SMTP_LISTEN_PORT}:25"
     environment:
