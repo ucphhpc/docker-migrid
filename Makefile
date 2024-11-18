@@ -87,6 +87,9 @@ initdirs:
 	mkdir -p httpd
 	mkdir -p mig
 	mkdir -p state
+	mkdir -p volatile
+	mkdir -p volatile/mig_system_run
+	mkdir -p volatile/openid_store
 	mkdir -p log/migrid
 	mkdir -p log/migrid-io
 	mkdir -p log/migrid-openid
@@ -187,7 +190,7 @@ clean:
 	[ -L ./certs ] || [ -f ./certs/.persistent ] || rm -fr ./certs
 
 stateclean: warning
-	rm -rf ./state
+	rm -rf ./state ./volatile
 
 # IMPORTANT: this target is meant to reset the dir to a pristine checkout
 #            and thus runs full clean up of even the state dir with user data
