@@ -101,6 +101,43 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migrid-log
+        target: /home/mig/state/log
+      - type: volume
+        source: secrets
+        target: /home/mig/state/secrets
+      # NOTE: these wwwpublic helpers are only needed in apache
+      - type: volume
+        source: wwwpublic-archives
+        target: /home/mig/state/wwwpublic/archives
+      - type: volume
+        source: wwwpublic-vgrids
+        target: /home/mig/state/wwwpublic/vgrids
+      - type: volume
+        source: user_home
+        target: /home/mig/state/user_home
+      - type: volume
+        source: user_settings
+        target: /home/mig/state/user_settings
+      - type: volume
+        source: user_db_home
+        target: /home/mig/state/user_db_home
+      - type: volume
+        source: vgrid_home
+        target: /home/mig/state/vgrid_home
+      - type: volume
+        source: vgrid_private_base
+        target: /home/mig/state/vgrid_private_base
+      - type: volume
+        source: vgrid_public_base
+        target: /home/mig/state/vgrid_public_base
+      - type: volume
+        source: vgrid_files_home
+        target: /home/mig/state/vgrid_files_home
+      - type: volume
+        source: vgrid_files_writable
+        target: /home/mig/state/vgrid_files_writable
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: bind
         source: ${VGRID_FILES_WRITABLE}
@@ -152,6 +189,43 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migrid-log
+        target: /home/mig/state/log
+      - type: volume
+        source: secrets
+        target: /home/mig/state/secrets
+      # NOTE: these wwwpublic helpers are only needed in apache
+      #- type: volume
+      #  source: wwwpublic-archives
+      #  target: /home/mig/state/wwwpublic/archives
+      #- type: volume
+      #  source: wwwpublic-vgrids
+      #  target: /home/mig/state/wwwpublic/vgrids
+      - type: volume
+        source: user_home
+        target: /home/mig/state/user_home
+      - type: volume
+        source: user_settings
+        target: /home/mig/state/user_settings
+      - type: volume
+        source: user_db_home
+        target: /home/mig/state/user_db_home
+      - type: volume
+        source: vgrid_home
+        target: /home/mig/state/vgrid_home
+      - type: volume
+        source: vgrid_private_base
+        target: /home/mig/state/vgrid_private_base
+      - type: volume
+        source: vgrid_public_base
+        target: /home/mig/state/vgrid_public_base
+      - type: volume
+        source: vgrid_files_home
+        target: /home/mig/state/vgrid_files_home
+      - type: volume
+        source: vgrid_files_writable
+        target: /home/mig/state/vgrid_files_writable
       # NOTE: we don't need read-only vgrids/workgroups in the openid container
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
       - type: bind
@@ -195,6 +269,43 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migrid-log
+        target: /home/mig/state/log
+      - type: volume
+        source: secrets
+        target: /home/mig/state/secrets
+      # NOTE: these wwwpublic helpers are only needed in apache
+      #- type: volume
+      #  source: wwwpublic-archives
+      #  target: /home/mig/state/wwwpublic/archives
+      #- type: volume
+      #  source: wwwpublic-vgrids
+      #  target: /home/mig/state/wwwpublic/vgrids
+      - type: volume
+        source: user_home
+        target: /home/mig/state/user_home
+      - type: volume
+        source: user_settings
+        target: /home/mig/state/user_settings
+      - type: volume
+        source: user_db_home
+        target: /home/mig/state/user_db_home
+      - type: volume
+        source: vgrid_home
+        target: /home/mig/state/vgrid_home
+      - type: volume
+        source: vgrid_private_base
+        target: /home/mig/state/vgrid_private_base
+      - type: volume
+        source: vgrid_public_base
+        target: /home/mig/state/vgrid_public_base
+      - type: volume
+        source: vgrid_files_home
+        target: /home/mig/state/vgrid_files_home
+      - type: volume
+        source: vgrid_files_writable
+        target: /home/mig/state/vgrid_files_writable
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: bind
         source: ${VGRID_FILES_WRITABLE}
@@ -238,6 +349,43 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migrid-log
+        target: /home/mig/state/log
+      - type: volume
+        source: secrets
+        target: /home/mig/state/secrets
+      # NOTE: these wwwpublic helpers are only needed in apache
+      #- type: volume
+      #  source: wwwpublic-archives
+      #  target: /home/mig/state/wwwpublic/archives
+      #- type: volume
+      #  source: wwwpublic-vgrids
+      #  target: /home/mig/state/wwwpublic/vgrids
+      - type: volume
+        source: user_home
+        target: /home/mig/state/user_home
+      - type: volume
+        source: user_settings
+        target: /home/mig/state/user_settings
+      - type: volume
+        source: user_db_home
+        target: /home/mig/state/user_db_home
+      - type: volume
+        source: vgrid_home
+        target: /home/mig/state/vgrid_home
+      - type: volume
+        source: vgrid_private_base
+        target: /home/mig/state/vgrid_private_base
+      - type: volume
+        source: vgrid_public_base
+        target: /home/mig/state/vgrid_public_base
+      - type: volume
+        source: vgrid_files_home
+        target: /home/mig/state/vgrid_files_home
+      - type: volume
+        source: vgrid_files_writable
+        target: /home/mig/state/vgrid_files_writable
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: bind
         source: ${VGRID_FILES_WRITABLE}
@@ -281,6 +429,43 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migrid-log
+        target: /home/mig/state/log
+      - type: volume
+        source: secrets
+        target: /home/mig/state/secrets
+      # NOTE: these wwwpublic helpers are only needed in apache
+      #- type: volume
+      #  source: wwwpublic-archives
+      #  target: /home/mig/state/wwwpublic/archives
+      #- type: volume
+      #  source: wwwpublic-vgrids
+      #  target: /home/mig/state/wwwpublic/vgrids
+      - type: volume
+        source: user_home
+        target: /home/mig/state/user_home
+      - type: volume
+        source: user_settings
+        target: /home/mig/state/user_settings
+      - type: volume
+        source: user_db_home
+        target: /home/mig/state/user_db_home
+      - type: volume
+        source: vgrid_home
+        target: /home/mig/state/vgrid_home
+      - type: volume
+        source: vgrid_private_base
+        target: /home/mig/state/vgrid_private_base
+      - type: volume
+        source: vgrid_public_base
+        target: /home/mig/state/vgrid_public_base
+      - type: volume
+        source: vgrid_files_home
+        target: /home/mig/state/vgrid_files_home
+      - type: volume
+        source: vgrid_files_writable
+        target: /home/mig/state/vgrid_files_writable
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: bind
         source: ${VGRID_FILES_WRITABLE}
@@ -375,6 +560,94 @@ volumes:
       device: ${DOCKER_MIGRID_ROOT}/state
       o: bind
   
+  secrets:
+    # Volume used to contain the migrid secrets
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DOCKER_MIGRID_ROOT}/persistent/secrets
+      o: bind
+
+  wwwpublic-archives:
+    # Volume used to contain the migrid wwwpublic/archives
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DOCKER_MIGRID_ROOT}/persistent/wwwpublic-archives
+      o: bind
+
+  wwwpublic-vgrids:
+    # Volume used to contain the migrid wwwpublic/vgrids
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DOCKER_MIGRID_ROOT}/persistent/wwwpublic-vgrids
+      o: bind
+
+  user_home:
+    # Volume used to contain the migrid user_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DOCKER_MIGRID_ROOT}/persistent/user_home
+      o: bind
+
+  user_settings:
+    # Volume used to contain the migrid user_settings
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DOCKER_MIGRID_ROOT}/persistent/user_settings
+      o: bind
+
+  user_db_home:
+    # Volume used to contain the migrid user_db_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DOCKER_MIGRID_ROOT}/persistent/user_db_home
+      o: bind
+
+  vgrid_home:
+    # Volume used to contain the migrid vgrid_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DOCKER_MIGRID_ROOT}/persistent/vgrid_home
+      o: bind
+
+  vgrid_private_base:
+    # Volume used to contain the migrid vgrid_private_base
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DOCKER_MIGRID_ROOT}/persistent/vgrid_private_base
+      o: bind
+
+  vgrid_public_base:
+    # Volume used to contain the migrid vgrid_public_base
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DOCKER_MIGRID_ROOT}/persistent/vgrid_public_base
+      o: bind
+
+  vgrid_files_home:
+    # Volume used to contain the migrid vgrid_files_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DOCKER_MIGRID_ROOT}/persistent/vgrid_files_home
+      o: bind
+
+  vgrid_files_writable:
+    # Volume used to contain the migrid vgrid_files_writable
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DOCKER_MIGRID_ROOT}/persistent/vgrid_files_writable
+      o: bind
+
   migrid-syslog:
     # Volume used for exposing migrid container system log
     driver: local
@@ -413,4 +686,12 @@ volumes:
     driver_opts:
       type: none
       device: ${DOCKER_MIGRID_ROOT}/log/migrid-ftps
+      o: bind
+
+  migrid-log:
+    # Volume used to contain the migrid state log
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DOCKER_MIGRID_ROOT}/log/miglog
       o: bind

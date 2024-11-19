@@ -87,6 +87,26 @@ initdirs:
 	mkdir -p httpd
 	mkdir -p mig
 	mkdir -p state
+	mkdir -p volatile/mig_system_run
+	mkdir -p volatile/openid_store
+	mkdir -p persistent/freeze_home
+	mkdir -p persistent/mrsl_files
+	mkdir -p persistent/resource_home
+	mkdir -p persistent/secrets
+	mkdir -p persistent/sharelink_home
+	mkdir -p persistent/sss_home
+	mkdir -p persistent/user_db_home
+	mkdir -p persistent/user_home
+	mkdir -p persistent/user_settings
+	mkdir -p persistent/vgrid_files_home
+	mkdir -p persistent/vgrid_files_readonly
+	mkdir -p persistent/vgrid_files_writable
+	mkdir -p persistent/vgrid_home
+	mkdir -p persistent/vgrid_private_base
+	mkdir -p persistent/vgrid_public_base
+	mkdir -p persistent/wwwpublic-archives
+	mkdir -p persistent/wwwpublic-vgrids
+	mkdir -p log/miglog
 	mkdir -p log/migrid
 	mkdir -p log/migrid-io
 	mkdir -p log/migrid-openid
@@ -187,10 +207,14 @@ clean:
 	[ -L ./certs ] || [ -f ./certs/.persistent ] || rm -fr ./certs
 
 stateclean: warning
-	rm -rf ./state
+	umount ./persistent > /dev/null 2>&1 || true
+	umount ./persistent/* > /dev/null 2>&1 || true
+	umount ./volatile > /dev/null 2>&1 || true
+	umount ./volatile/* > /dev/null 2>&1 || true
+	rm -rf ./state ./volatile ./persistent
 
 # IMPORTANT: this target is meant to reset the dir to a pristine checkout
-#            and thus runs full clean up of even the state dir with user data
+#            and thus runs full clean up of even the state dirs with user data
 #            Be careful NOT to use it on production systems!
 distclean: stateclean clean dockerclean dockervolumeclean
 	rm -fr ./external-certificates
