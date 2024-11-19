@@ -1198,6 +1198,9 @@ RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/index.html $MIG_ROOT/state/user_home/ \
     && cp $MIG_ROOT/mig/images/site-conf-${EMULATE_FQDN}.js $MIG_ROOT/mig/images/site-conf.js
 
+# Add a couple of named pipes for communicating with grid_X daemons
+RUN cd $MIG_ROOT && mkfifo mig/server/server.stdin && mkfifo mig/server/notify.stdin
+
 # Prepare oiddiscover for httpd
 RUN cd $MIG_ROOT && python mig/server/genoiddiscovery.py \
     > $MIG_ROOT/state/wwwpublic/oiddiscover.xml

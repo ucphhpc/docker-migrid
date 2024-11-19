@@ -19,20 +19,22 @@ else
         rm -f /etc/timezone
         echo "$TZ" > /etc/timezone
         rm -f /etc/localtime
-        ln -s $TZPATH /etc/localtime
+        ln -s "$TZPATH" /etc/localtime
     else
         echo "ERROR: unsupported timezone $TZ ($TZPATH) - fall back to UTC"
     fi
 fi
 
 # Create any user requested
-while getopts ku:p:s:V option; do
+while getopts cku:p:s:V option; do
     case "${option}" in
+        c) CHECKCONF=1;;
         k) KEEPALIVE=1;;
         u) USERNAME=${OPTARG};;
         p) PASSWORD=${OPTARG};;
         s) SVCLOGINS=${OPTARG};;
         V) VERSIONINFO=1;;
+        *) echo "unknown option: $option";;
     esac
 done
 
@@ -56,31 +58,37 @@ if [ $VERSIONINFO -eq 1 ]; then
   echo "using ${MIGRIDVERSION}"
 fi
 
+# Run self-test if requested to ease support
+if [ $CHECKCONF -eq 1 ]; then
+  echo "Container self-test of migrid configuration"
+  su - "$USER" -c "echo 'n' | ${MIG_ROOT}/mig/server/checkconf.py"
+fi
+
 # Create a default account (Use service owner account)
 if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
     # Ensure the database is present
-    su - $USER -c "${MIG_ROOT}/mig/server/migrateusers.py"
+    su - "$USER" -c "${MIG_ROOT}/mig/server/migrateusers.py"
     # createuser.py Usage:
     # [OPTIONS] [FULL_NAME ORGANIZATION STATE COUNTRY EMAIL COMMENT PASSWORD]
     # Create with renew flag to avoid partial clean up which is particularly
     # tricky in gdp mode where project sub-users may exist.
     echo "Creating or renewing user: $USERNAME"
-    su - $USER -c "${MIG_ROOT}/mig/server/createuser.py -r 'Test User' 'Test Org' NA DK $USERNAME 'Created upon docker entry' $PASSWORD"
+    su - "$USER" -c "${MIG_ROOT}/mig/server/createuser.py -r 'Test User' 'Test Org' NA DK $USERNAME 'Created upon docker entry' $PASSWORD"
     echo "Ensure correct permissions for $USERNAME"
     # NOTE: user database moved to state since June 13th 2022
     LEGACY_DB_PATH="${MIG_ROOT}/mig/server/MiG-users.db"
     if [ -e "${LEGACY_DB_PATH}" ]; then
-        chown $USER:$USER ${LEGACY_DB_PATH}
-        chmod 644 ${LEGACY_DB_PATH}
+        chown "$USER":"$USER" "${LEGACY_DB_PATH}"
+        chmod 644 "${LEGACY_DB_PATH}"
     fi
-    chown -R $USER:$USER ${MIG_ROOT}/state
+    chown -R "$USER":"$USER" "${MIG_ROOT}/state"
     # If GDP mode skip SVCLOGINS as they have no effect (chkenabled returns 0 if enabled)
-    su - $USER -c "PYTHONPATH=${MIG_ROOT} ${MIG_ROOT}/mig/server/chkenabled.py gdp" > /dev/null
+    su - "$USER" -c "PYTHONPATH=${MIG_ROOT} ${MIG_ROOT}/mig/server/chkenabled.py gdp" > /dev/null
     GDP=$?
     if [ "$GDP" -ne 0 ]; then 
         for PROTO in ${SVCLOGINS}; do
             echo "Add $PROTO password login for $USERNAME"
-            su - $USER -c "python ${MIG_ROOT}/mig/cgi-bin/fakecgi.py ${MIG_ROOT}/mig/cgi-bin/settingsaction.py POST \"topic=${PROTO}&output_format=text&password=${PASSWORD}\" \"/C=DK/ST=NA/L=NA/O=Test Org/OU=NA/CN=Test User/emailAddress=${USERNAME}\" admin 127.0.0.1 True" | grep 'Exit code: 0 ' || \
+            su - "$USER" -c "python ${MIG_ROOT}/mig/cgi-bin/fakecgi.py ${MIG_ROOT}/mig/cgi-bin/settingsaction.py POST \"topic=${PROTO}&output_format=text&password=${PASSWORD}\" \"/C=DK/ST=NA/L=NA/O=Test Org/OU=NA/CN=Test User/emailAddress=${USERNAME}\" admin 127.0.0.1 True" | grep 'Exit code: 0 ' || \
             echo "Failed to set $PROTO password login"
         done
     fi
@@ -155,7 +163,7 @@ for svc in ${RUN_SERVICES}; do
         fi
     else
         # Start requested migrid daemons individually and detect if enabled
-        service migrid startdaemon $svc
+        service migrid startdaemon "$svc"
         status=$?
         # Returns 42 on disabled
         if [ "$status" -eq 42 ]; then
@@ -193,7 +201,7 @@ while [ ${KEEP_RUNNING} -eq 1 ]; do
             PROCNAME="$svc"
             PROCUSER=$USER
         fi
-        pgrep -U $PROCUSER -f "$PROCNAME" > /dev/null
+        pgrep -U "$PROCUSER" -f "$PROCNAME" > /dev/null
         SVC_STATUS=$?
         if [ "$SVC_STATUS" -ne 0 ]; then
             echo "$svc service failed."
