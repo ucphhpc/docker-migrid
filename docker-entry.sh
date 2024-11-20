@@ -4,6 +4,7 @@
 # specified in the provided RUN_SERVICES environment.
 # Continuously checks whether the selected services are still alive.
 
+CHECKCONF=0
 KEEPALIVE=0
 VERSIONINFO=0
 
