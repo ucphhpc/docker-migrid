@@ -102,7 +102,7 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
-        source: migrid-log
+        source: migstate-log
         target: /home/mig/state/log
       - type: volume
         source: secrets
@@ -112,8 +112,43 @@ services:
         source: wwwpublic-archives
         target: /home/mig/state/wwwpublic/archives
       - type: volume
-        source: wwwpublic-vgrids
-        target: /home/mig/state/wwwpublic/vgrids
+        source: wwwpublic-vgrid
+        target: /home/mig/state/wwwpublic/vgrid
+      # NOTE: these next helpers are only needed in migrid container
+      - type: volume
+        source: freeze_home
+        target: /home/mig/state/freeze_home
+      - type: volume
+        source: mrsl_home
+        target: /home/mig/state/mrsl_home
+      - type: volume
+        source: resource_home
+        target: /home/mig/state/resource_home
+      - type: volume
+        source: re_home
+        target: /home/mig/state/re_home
+      - type: volume
+        source: sharelink_home
+        target: /home/mig/state/sharelink_home
+      - type: volume
+        source: events_home
+        target: /home/mig/state/events_home
+      - type: volume
+        source: sitestats_home
+        target: /home/mig/state/sitestats_home
+      - type: volume
+        source: sandbox_home
+        target: /home/mig/state/sandbox_home
+      - type: volume
+        source: sss_home
+        target: /home/mig/state/sss_home
+      - type: volume
+        source: workflows_db_home
+        target: /home/mig/state/workflows_db_home
+      - type: volume
+        source: workflows_home
+        target: /home/mig/state/workflows_home
+      # NOTE: general user and vgrid data required in almost all containers
       - type: volume
         source: user_home
         target: /home/mig/state/user_home
@@ -190,7 +225,7 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
-        source: migrid-log
+        source: migstate-log
         target: /home/mig/state/log
       - type: volume
         source: secrets
@@ -200,8 +235,43 @@ services:
       #  source: wwwpublic-archives
       #  target: /home/mig/state/wwwpublic/archives
       #- type: volume
-      #  source: wwwpublic-vgrids
-      #  target: /home/mig/state/wwwpublic/vgrids
+      #  source: wwwpublic-vgrid
+      #  target: /home/mig/state/wwwpublic/vgrid
+      # NOTE: these next helpers are only needed in migrid container
+      #- type: volume
+      #  source: freeze_home
+      #  target: /home/mig/state/freeze_home
+      #- type: volume
+      #  source: mrsl_home
+      #  target: /home/mig/state/mrsl_home
+      #- type: volume
+      #  source: resource_home
+      #  target: /home/mig/state/resource_home
+      #- type: volume
+      #  source: re_home
+      #  target: /home/mig/state/re_home
+      #- type: volume
+      #  source: sharelink_home
+      #  target: /home/mig/state/sharelink_home
+      #- type: volume
+      #  source: events_home
+      #  target: /home/mig/state/events_home
+      #- type: volume
+      #  source: sitestats_home
+      #  target: /home/mig/state/sitestats_home
+      #- type: volume
+      #  source: sandbox_home
+      #  target: /home/mig/state/sandbox_home
+      #- type: volume
+      #  source: sss_home
+      #  target: /home/mig/state/sss_home
+      #- type: volume
+      #  source: workflows_db_home
+      #  target: /home/mig/state/workflows_db_home
+      #- type: volume
+      #  source: workflows_home
+      #  target: /home/mig/state/workflows_home
+      # NOTE: general user and vgrid data required in almost all containers
       - type: volume
         source: user_home
         target: /home/mig/state/user_home
@@ -270,7 +340,7 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
-        source: migrid-log
+        source: migstate-log
         target: /home/mig/state/log
       - type: volume
         source: secrets
@@ -280,8 +350,50 @@ services:
       #  source: wwwpublic-archives
       #  target: /home/mig/state/wwwpublic/archives
       #- type: volume
-      #  source: wwwpublic-vgrids
-      #  target: /home/mig/state/wwwpublic/vgrids
+      #  source: wwwpublic-vgrid
+      #  target: /home/mig/state/wwwpublic/vgrid
+      # NOTE: these wwwpublic helpers are only needed in apache
+      #- type: volume
+      #  source: wwwpublic-archives
+      #  target: /home/mig/state/wwwpublic/archives
+      #- type: volume
+      #  source: wwwpublic-vgrid
+      #  target: /home/mig/state/wwwpublic/vgrid
+      # NOTE: these next helpers are only needed in migrid container
+      #- type: volume
+      #  source: freeze_home
+      #  target: /home/mig/state/freeze_home
+      #- type: volume
+      #  source: mrsl_home
+      #  target: /home/mig/state/mrsl_home
+      #- type: volume
+      #  source: resource_home
+      #  target: /home/mig/state/resource_home
+      #- type: volume
+      #  source: re_home
+      #  target: /home/mig/state/re_home
+      #- type: volume
+      #  source: sharelink_home
+      #  target: /home/mig/state/sharelink_home
+      #- type: volume
+      #  source: events_home
+      #  target: /home/mig/state/events_home
+      #- type: volume
+      #  source: sitestats_home
+      #  target: /home/mig/state/sitestats_home
+      #- type: volume
+      #  source: sandbox_home
+      #  target: /home/mig/state/sandbox_home
+      #- type: volume
+      #  source: sss_home
+      #  target: /home/mig/state/sss_home
+      #- type: volume
+      #  source: workflows_db_home
+      #  target: /home/mig/state/workflows_db_home
+      #- type: volume
+      #  source: workflows_home
+      #  target: /home/mig/state/workflows_home
+      # NOTE: general user and vgrid data required in almost all containers
       - type: volume
         source: user_home
         target: /home/mig/state/user_home
@@ -350,7 +462,7 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
-        source: migrid-log
+        source: migstate-log
         target: /home/mig/state/log
       - type: volume
         source: secrets
@@ -360,8 +472,50 @@ services:
       #  source: wwwpublic-archives
       #  target: /home/mig/state/wwwpublic/archives
       #- type: volume
-      #  source: wwwpublic-vgrids
-      #  target: /home/mig/state/wwwpublic/vgrids
+      #  source: wwwpublic-vgrid
+      #  target: /home/mig/state/wwwpublic/vgrid
+      # NOTE: these wwwpublic helpers are only needed in apache
+      #- type: volume
+      #  source: wwwpublic-archives
+      #  target: /home/mig/state/wwwpublic/archives
+      #- type: volume
+      #  source: wwwpublic-vgrid
+      #  target: /home/mig/state/wwwpublic/vgrid
+      # NOTE: these next helpers are only needed in migrid container
+      #- type: volume
+      #  source: freeze_home
+      #  target: /home/mig/state/freeze_home
+      #- type: volume
+      #  source: mrsl_home
+      #  target: /home/mig/state/mrsl_home
+      #- type: volume
+      #  source: resource_home
+      #  target: /home/mig/state/resource_home
+      #- type: volume
+      #  source: re_home
+      #  target: /home/mig/state/re_home
+      #- type: volume
+      #  source: sharelink_home
+      #  target: /home/mig/state/sharelink_home
+      #- type: volume
+      #  source: events_home
+      #  target: /home/mig/state/events_home
+      #- type: volume
+      #  source: sitestats_home
+      #  target: /home/mig/state/sitestats_home
+      #- type: volume
+      #  source: sandbox_home
+      #  target: /home/mig/state/sandbox_home
+      #- type: volume
+      #  source: sss_home
+      #  target: /home/mig/state/sss_home
+      #- type: volume
+      #  source: workflows_db_home
+      #  target: /home/mig/state/workflows_db_home
+      #- type: volume
+      #  source: workflows_home
+      #  target: /home/mig/state/workflows_home
+      # NOTE: general user and vgrid data required in almost all containers
       - type: volume
         source: user_home
         target: /home/mig/state/user_home
@@ -430,7 +584,7 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
-        source: migrid-log
+        source: migstate-log
         target: /home/mig/state/log
       - type: volume
         source: secrets
@@ -440,8 +594,50 @@ services:
       #  source: wwwpublic-archives
       #  target: /home/mig/state/wwwpublic/archives
       #- type: volume
-      #  source: wwwpublic-vgrids
-      #  target: /home/mig/state/wwwpublic/vgrids
+      #  source: wwwpublic-vgrid
+      #  target: /home/mig/state/wwwpublic/vgrid
+      # NOTE: these wwwpublic helpers are only needed in apache
+      #- type: volume
+      #  source: wwwpublic-archives
+      #  target: /home/mig/state/wwwpublic/archives
+      #- type: volume
+      #  source: wwwpublic-vgrid
+      #  target: /home/mig/state/wwwpublic/vgrid
+      # NOTE: these next helpers are only needed in migrid container
+      #- type: volume
+      #  source: freeze_home
+      #  target: /home/mig/state/freeze_home
+      #- type: volume
+      #  source: mrsl_home
+      #  target: /home/mig/state/mrsl_home
+      #- type: volume
+      #  source: resource_home
+      #  target: /home/mig/state/resource_home
+      #- type: volume
+      #  source: re_home
+      #  target: /home/mig/state/re_home
+      #- type: volume
+      #  source: sharelink_home
+      #  target: /home/mig/state/sharelink_home
+      #- type: volume
+      #  source: events_home
+      #  target: /home/mig/state/events_home
+      #- type: volume
+      #  source: sitestats_home
+      #  target: /home/mig/state/sitestats_home
+      #- type: volume
+      #  source: sandbox_home
+      #  target: /home/mig/state/sandbox_home
+      #- type: volume
+      #  source: sss_home
+      #  target: /home/mig/state/sss_home
+      #- type: volume
+      #  source: workflows_db_home
+      #  target: /home/mig/state/workflows_db_home
+      #- type: volume
+      #  source: workflows_home
+      #  target: /home/mig/state/workflows_home
+      # NOTE: general user and vgrid data required in almost all containers
       - type: volume
         source: user_home
         target: /home/mig/state/user_home
@@ -565,7 +761,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/persistent/secrets
+      device: ${PERSISTENT_ROOT}/secrets
       o: bind
 
   wwwpublic-archives:
@@ -573,15 +769,103 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/persistent/wwwpublic-archives
+      device: ${PERSISTENT_ROOT}/wwwpublic-archives
       o: bind
 
-  wwwpublic-vgrids:
-    # Volume used to contain the migrid wwwpublic/vgrids
+  wwwpublic-vgrid:
+    # Volume used to contain the migrid wwwpublic/vgrid
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/persistent/wwwpublic-vgrids
+      device: ${PERSISTENT_ROOT}/wwwpublic-vgrid
+      o: bind
+
+  wwwpublic-download:
+    # Volume used to contain the migrid wwwpublic/download
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/wwwpublic-download
+      o: bind
+
+  freeze_home:
+    # Volume used to contain the migrid freeze_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/freeze_home
+      o: bind
+
+  mrsl_home:
+    # Volume used to contain the migrid mrsl_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/mrsl_home
+      o: bind
+
+  resource_home:
+    # Volume used to contain the migrid resource_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/resource_home
+      o: bind
+
+  re_home:
+    # Volume used to contain the migrid re_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/re_home
+      o: bind
+
+  events_home:
+    # Volume used to contain the migrid events_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/events_home
+      o: bind
+
+  sitestats_home:
+    # Volume used to contain the migrid sitestats_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/sitestats_home
+      o: bind
+
+  sandbox_home:
+    # Volume used to contain the migrid sandbox_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/sandbox_home
+      o: bind
+
+  sss_home:
+    # Volume used to contain the migrid sss_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/sss_home
+      o: bind
+
+  workflows_db_home:
+    # Volume used to contain the migrid workflows_db_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/workflows_db_home
+      o: bind
+
+  workflows_home:
+    # Volume used to contain the migrid workflows_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/workflows_home
       o: bind
 
   user_home:
@@ -589,7 +873,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/persistent/user_home
+      device: ${PERSISTENT_ROOT}/user_home
       o: bind
 
   user_settings:
@@ -597,7 +881,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/persistent/user_settings
+      device: ${PERSISTENT_ROOT}/user_settings
       o: bind
 
   user_db_home:
@@ -605,7 +889,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/persistent/user_db_home
+      device: ${PERSISTENT_ROOT}/user_db_home
       o: bind
 
   vgrid_home:
@@ -613,7 +897,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/persistent/vgrid_home
+      device: ${PERSISTENT_ROOT}/vgrid_home
       o: bind
 
   vgrid_private_base:
@@ -621,7 +905,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/persistent/vgrid_private_base
+      device: ${PERSISTENT_ROOT}/vgrid_private_base
       o: bind
 
   vgrid_public_base:
@@ -629,7 +913,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/persistent/vgrid_public_base
+      device: ${PERSISTENT_ROOT}/vgrid_public_base
       o: bind
 
   vgrid_files_home:
@@ -637,7 +921,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/persistent/vgrid_files_home
+      device: ${PERSISTENT_ROOT}/vgrid_files_home
       o: bind
 
   vgrid_files_writable:
@@ -645,7 +929,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/persistent/vgrid_files_writable
+      device: ${PERSISTENT_ROOT}/vgrid_files_writable
       o: bind
 
   migrid-syslog:
@@ -653,7 +937,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid
+      device: ${LOG_ROOT}/migrid
       o: bind
 
   migrid-openid-syslog:
@@ -661,7 +945,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-openid
+      device: ${LOG_ROOT}/migrid-openid
       o: bind
 
   migrid-sftp-syslog:
@@ -669,7 +953,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-sftp
+      device: ${LOG_ROOT}/migrid-sftp
       o: bind
 
   migrid-webdavs-syslog:
@@ -677,7 +961,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-webdavs
+      device: ${LOG_ROOT}/migrid-webdavs
       o: bind
 
   migrid-ftps-syslog:
@@ -685,13 +969,13 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-ftps
+      device: ${LOG_ROOT}/migrid-ftps
       o: bind
 
-  migrid-log:
+  migstate-log:
     # Volume used to contain the migrid state log
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/miglog
+      device: ${LOG_ROOT}/migstatelog
       o: bind

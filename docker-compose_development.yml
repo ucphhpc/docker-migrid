@@ -120,6 +120,9 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migstate-log
+        target: /home/mig/state/log
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: bind
         source: ${VGRID_FILES_WRITABLE}
@@ -177,6 +180,9 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migstate-log
+        target: /home/mig/state/log
       # NOTE: we don't need read-only vgrids/workgroups in the openid container
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
       - type: bind
@@ -220,6 +226,9 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migstate-log
+        target: /home/mig/state/log
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: bind
         source: ${VGRID_FILES_WRITABLE}
@@ -267,6 +276,9 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migstate-log
+        target: /home/mig/state/log
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: bind
         source: ${VGRID_FILES_WRITABLE}
@@ -313,6 +325,9 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: migstate-log
+        target: /home/mig/state/log
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: bind
         source: ${VGRID_FILES_WRITABLE}
@@ -390,13 +405,15 @@ volumes:
       type: none
       device: ${DOCKER_MIGRID_ROOT}/state
       o: bind
-  
+
+  # NOTE: we don't bother setting up persistent data outside state here
+
   migrid-syslog:
     # Volume used for exposing migrid container system log
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid
+      device: ${LOG_ROOT}/migrid
       o: bind
 
   migrid-openid-syslog:
@@ -404,7 +421,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-openid
+      device: ${LOG_ROOT}/migrid-openid
       o: bind
 
   migrid-sftp-syslog:
@@ -412,7 +429,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-sftp
+      device: ${LOG_ROOT}/migrid-sftp
       o: bind
 
   migrid-webdavs-syslog:
@@ -420,7 +437,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-webdavs
+      device: ${LOG_ROOT}/migrid-webdavs
       o: bind
 
   migrid-ftps-syslog:
@@ -428,5 +445,13 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-ftps
+      device: ${LOG_ROOT}/migrid-ftps
+      o: bind
+
+  migstate-log:
+    # Volume used to contain the migrid state log
+    driver: local
+    driver_opts:
+      type: none
+      device: ${LOG_ROOT}/migstatelog
       o: bind

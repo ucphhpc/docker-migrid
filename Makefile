@@ -1,5 +1,6 @@
-.PHONY: all init initservices initbuild initdirs initcomposevars clean warning
-.PHONY: dockerclean dockervolumeclean distclean stateclean dockerbuild dockerpush
+.PHONY: all init initservices initbuild initdirs initcomposevars clean
+.PHONY: distclean sitestateclean sitedataclean dockerclean dockervolumeclean
+.PHONY: wipesitestatewarning wipesitedatawarning dockerbuild dockerpush
 .PHONY: up stop down
 .PHONY: test-doc test-doc-full
 .ONESHELL:
@@ -11,6 +12,7 @@ OWNER?=ucphhpc
 SHELL=/bin/bash
 BUILD_ARGS=
 DETACH?=-d
+RUN_ARGS?=${DETACH}
 
 # Enable that the builder should use buildkit
 # https://docs.docker.com/develop/develop-images/build_enhancements/
@@ -25,9 +27,7 @@ else
 endif
 $(echo ${DOCKER_COMPOSE} >/dev/null)
 
-ifeq ("$(wildcard .env)",".env")
-	include .env
-endif
+-include .env
 
 # If the CONTAINER_REGISTRY is not set/found in the .env file
 # then default to docker.io
@@ -39,6 +39,11 @@ endif
 ifeq ($(CONTAINER_TAG),)
 	CONTAINER_TAG = $(shell egrep '^ARG MIG_GIT_BRANCH=' Dockerfile | sed 's/.*=/:/g')
 endif
+
+# Path helpers to init after loading .env
+LOG_ROOT?=log
+VOLATILE_ROOT?=volatile
+PERSISTENT_ROOT?=persistent
 
 define DOCKER_COMPOSE_SHARED_HEADER
 services:
@@ -54,65 +59,75 @@ export DOCKER_COMPOSE_SHARED_HEADER
 
 all: init dockerbuild
 
-init:	initbuild initdirs initcomposevars
+init: initbuild initdirs
 	@echo "using ${DOCKER_COMPOSE} as compose command"
 
-initbuild:
-ifeq (,$(wildcard ./Dockerfile))
+initbuild: Dockerfile .env docker-compose.yml migrid-httpd-init.sh
+	@echo "initialised environment for build"
+
+Dockerfile:
 	@echo
 	@echo "*** No Dockerfile selected - defaulting to rocky9 ***"
 	@echo
 	ln -s Dockerfile.rocky9 Dockerfile
 	@sleep 2
-endif
-ifeq (,$(wildcard ./.env))
+
+.env:
 	@echo
 	@echo "*** No deployment environment selected - defaulting to development ***"
 	@echo
 	ln -s development.env .env
 	@sleep 2
-endif
-ifeq (,$(wildcard ./docker-compose.yml))
+
+docker-compose.yml:
 	@echo
 	@echo "*** No docker-compose.yml selected - defaulting to development ***"
 	@echo
 	ln -s docker-compose_development.yml docker-compose.yml
 	@sleep 2
-endif
+
+migrid-httpd-init:
 	sed 's@#unset @unset @g;s@#export @export @g' migrid-httpd.env > migrid-httpd-init.sh
 
-initdirs:
+initdirs: initcomposevars
 	mkdir -p external-certificates
 	mkdir -p certs
 	mkdir -p httpd
 	mkdir -p mig
 	mkdir -p state
-	mkdir -p volatile/mig_system_run
-	mkdir -p volatile/openid_store
-	mkdir -p persistent/freeze_home
-	mkdir -p persistent/mrsl_files
-	mkdir -p persistent/resource_home
-	mkdir -p persistent/secrets
-	mkdir -p persistent/sharelink_home
-	mkdir -p persistent/sss_home
-	mkdir -p persistent/user_db_home
-	mkdir -p persistent/user_home
-	mkdir -p persistent/user_settings
-	mkdir -p persistent/vgrid_files_home
-	mkdir -p persistent/vgrid_files_readonly
-	mkdir -p persistent/vgrid_files_writable
-	mkdir -p persistent/vgrid_home
-	mkdir -p persistent/vgrid_private_base
-	mkdir -p persistent/vgrid_public_base
-	mkdir -p persistent/wwwpublic-archives
-	mkdir -p persistent/wwwpublic-vgrids
-	mkdir -p log/miglog
-	mkdir -p log/migrid
-	mkdir -p log/migrid-io
-	mkdir -p log/migrid-openid
-	mkdir -p log/migrid-sftp
-	mkdir -p log/migrid-webdavs
-	mkdir -p log/migrid-ftps
+	mkdir -p ${VOLATILE_ROOT}/mig_system_run
+	mkdir -p ${VOLATILE_ROOT}/openid_store
+	mkdir -p ${PERSISTENT_ROOT}/freeze_home
+	mkdir -p ${PERSISTENT_ROOT}/mrsl_files
+	mkdir -p ${PERSISTENT_ROOT}/resource_home
+	mkdir -p ${PERSISTENT_ROOT}/re_home
+	mkdir -p ${PERSISTENT_ROOT}/sharelink_home
+	mkdir -p ${PERSISTENT_ROOT}/events_home
+	mkdir -p ${PERSISTENT_ROOT}/sitestats_home
+	mkdir -p ${PERSISTENT_ROOT}/sandbox_home
+	mkdir -p ${PERSISTENT_ROOT}/sss_home
+	mkdir -p ${PERSISTENT_ROOT}/workflows_db_home
+	mkdir -p ${PERSISTENT_ROOT}/workflows_home
+	mkdir -p ${PERSISTENT_ROOT}/user_db_home
+	mkdir -p ${PERSISTENT_ROOT}/user_home
+	mkdir -p ${PERSISTENT_ROOT}/user_settings
+	mkdir -p ${PERSISTENT_ROOT}/vgrid_files_home
+	mkdir -p ${PERSISTENT_ROOT}/vgrid_files_readonly
+	mkdir -p ${PERSISTENT_ROOT}/vgrid_files_writable
+	mkdir -p ${PERSISTENT_ROOT}/vgrid_home
+	mkdir -p ${PERSISTENT_ROOT}/vgrid_private_base
+	mkdir -p ${PERSISTENT_ROOT}/vgrid_public_base
+	mkdir -p ${PERSISTENT_ROOT}/wwwpublic-archives
+	mkdir -p ${PERSISTENT_ROOT}/wwwpublic-vgrid
+	mkdir -p ${PERSISTENT_ROOT}/wwwpublic-download
+	mkdir -p ${PERSISTENT_ROOT}/secrets
+	mkdir -p ${LOG_ROOT}/migstatelog
+	mkdir -p ${LOG_ROOT}/migrid
+	mkdir -p ${LOG_ROOT}/migrid-io
+	mkdir -p ${LOG_ROOT}/migrid-openid
+	mkdir -p ${LOG_ROOT}/migrid-sftp
+	mkdir -p ${LOG_ROOT}/migrid-webdavs
+	mkdir -p ${LOG_ROOT}/migrid-ftps
 
 initcomposevars:
 	@echo "creating env variable map in docker-compose_shared.yml"
@@ -154,7 +169,7 @@ initservices:
 	@echo $$ENABLED_SERVICES > ./.migrid_enabled_services
 
 up:	initcomposevars initservices
-	${DOCKER_COMPOSE} up ${DETACH} $(shell head -n1 .migrid_enabled_services)
+	${DOCKER_COMPOSE} up ${RUN_ARGS} $(shell head -n1 .migrid_enabled_services)
 
 down:	initcomposevars
 	# NOTE: To suppress podman warnings about missing containers use:
@@ -166,8 +181,8 @@ dockerbuild: init
 	${DOCKER_COMPOSE} build ${BUILD_ARGS}
 
 dockerclean: initcomposevars
-	# remove latest image and dangling cache entries
 	${DOCKER_COMPOSE} down || true
+	# remove latest image and dangling cache entries
 	${DOCKER} rmi -f ${CONTAINER_REGISTRY}/$(OWNER)/$(IMAGE)${CONTAINER_TAG}
 	# remove dangling images and build cache
 	${DOCKER} image prune -f
@@ -206,29 +221,45 @@ clean:
 	#       Only remove it here if that's not the case.
 	[ -L ./certs ] || [ -f ./certs/.persistent ] || rm -fr ./certs
 
-stateclean: warning
-	umount ./persistent > /dev/null 2>&1 || true
-	umount ./persistent/* > /dev/null 2>&1 || true
-	umount ./volatile > /dev/null 2>&1 || true
-	umount ./volatile/* > /dev/null 2>&1 || true
-	rm -rf ./state ./volatile ./persistent
+sitestateclean: wipesitestatewarning
+	rm -rf --one-file-system ./state
+	# NOTE: never follow VOLATILE_ROOT values outside root dir!
+	@echo "Force unmounting ${VOLATILE_ROOT} to prevent deleting outside ${DOCKER_MIGRID_ROOT}"
+	umount ./${VOLATILE_ROOT} > /dev/null 2>&1 || true
+	rm -rf --one-file-system ./${VOLATILE_ROOT}
+
+sitedataclean: wipesitedatawarning
+	# NOTE: never follow PERSISTENT_ROOT or LOG_ROOT values outside root dir!
+	@echo "Force unmounting ${PERSISTENT_ROOT} to prevent deleting outside ${DOCKER_MIGRID_ROOT}"
+	umount ./${PERSISTENT_ROOT} > /dev/null 2>&1 || true
+	rm -rf --one-file-system ./${PERSISTENT_ROOT}
+	@echo "Force unmounting ${LOG_ROOT} to prevent deleting outside ${DOCKER_MIGRID_ROOT}"
+	umount ./${LOG_ROOT} > /dev/null 2>&1 || true
+	rm -rf --one-file-system ./${LOG_ROOT}
 
 # IMPORTANT: this target is meant to reset the dir to a pristine checkout
 #            and thus runs full clean up of even the state dirs with user data
 #            Be careful NOT to use it on production systems!
-distclean: stateclean clean dockerclean dockervolumeclean
+distclean: clean sitestateclean sitedataclean dockerclean dockervolumeclean
 	rm -fr ./external-certificates
-	rm -rf ./log
 	# NOTE: certs remove in clean is conditional - always remove it here
 	rm -fr ./certs
 	rm -f .env docker-compose.yml Dockerfile
 
-warning:
+wipesitestatewarning:
 	@echo
-	@echo "*** WARNING ***"
-	@echo "*** Deleting ALL local state data ***"
+	@echo "*** Warning ***"
+	@echo "This will permanently delete ALL data in state and ${VOLATILE_ROOT}"
 	@echo
 	@echo "Are you sure? [y/N]" && read ans && [ $${ans:-N} = y ]
+
+wipesitedatawarning:
+	@echo
+	@echo "*** WARNING ***"
+	@echo ""
+	@echo "This will permanently delete ALL data in ${LOG_ROOT} and ${PERSISTENT_ROOT} !"
+	@echo
+	@echo "Are you really sure? [y/N]" && read ans && [ $${ans:-N} = y ]
 
 # Test that all defined env variables are properly documented
 test-doc:

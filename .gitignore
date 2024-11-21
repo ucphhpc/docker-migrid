@@ -145,3 +145,7 @@ docker-compose.override.yml
 migrid-httpd-init.sh
 MiG-certificates
 certs
+.migrid_enabled_services
+sitetmp
+sitelogs
+sitedata
