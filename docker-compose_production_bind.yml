@@ -114,6 +114,9 @@ services:
       - type: volume
         source: wwwpublic-vgrid
         target: /home/mig/state/wwwpublic/vgrid
+      - type: volume
+        source: wwwpublic-download
+        target: /home/mig/state/wwwpublic/download
       # NOTE: these next helpers are only needed in migrid container
       - type: volume
         source: freeze_home
@@ -237,6 +240,9 @@ services:
       #- type: volume
       #  source: wwwpublic-vgrid
       #  target: /home/mig/state/wwwpublic/vgrid
+      #- type: volume
+      #  source: wwwpublic-download
+      #  target: /home/mig/state/wwwpublic/download
       # NOTE: these next helpers are only needed in migrid container
       #- type: volume
       #  source: freeze_home
@@ -281,21 +287,22 @@ services:
       - type: volume
         source: user_db_home
         target: /home/mig/state/user_db_home
-      - type: volume
-        source: vgrid_home
-        target: /home/mig/state/vgrid_home
-      - type: volume
-        source: vgrid_private_base
-        target: /home/mig/state/vgrid_private_base
-      - type: volume
-        source: vgrid_public_base
-        target: /home/mig/state/vgrid_public_base
-      - type: volume
-        source: vgrid_files_home
-        target: /home/mig/state/vgrid_files_home
-      - type: volume
-        source: vgrid_files_writable
-        target: /home/mig/state/vgrid_files_writable
+      # NOTE: these vgrid helpers are not needed in openid container
+      #- type: volume
+      #  source: vgrid_home
+      #  target: /home/mig/state/vgrid_home
+      #- type: volume
+      #  source: vgrid_private_base
+      #  target: /home/mig/state/vgrid_private_base
+      #- type: volume
+      #  source: vgrid_public_base
+      #  target: /home/mig/state/vgrid_public_base
+      #- type: volume
+      #  source: vgrid_files_home
+      #  target: /home/mig/state/vgrid_files_home
+      #- type: volume
+      #  source: vgrid_files_writable
+      #  target: /home/mig/state/vgrid_files_writable
       # NOTE: we don't need read-only vgrids/workgroups in the openid container
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
       - type: bind
@@ -352,13 +359,9 @@ services:
       #- type: volume
       #  source: wwwpublic-vgrid
       #  target: /home/mig/state/wwwpublic/vgrid
-      # NOTE: these wwwpublic helpers are only needed in apache
       #- type: volume
-      #  source: wwwpublic-archives
-      #  target: /home/mig/state/wwwpublic/archives
-      #- type: volume
-      #  source: wwwpublic-vgrid
-      #  target: /home/mig/state/wwwpublic/vgrid
+      #  source: wwwpublic-download
+      #  target: /home/mig/state/wwwpublic/download
       # NOTE: these next helpers are only needed in migrid container
       #- type: volume
       #  source: freeze_home
@@ -474,13 +477,9 @@ services:
       #- type: volume
       #  source: wwwpublic-vgrid
       #  target: /home/mig/state/wwwpublic/vgrid
-      # NOTE: these wwwpublic helpers are only needed in apache
       #- type: volume
-      #  source: wwwpublic-archives
-      #  target: /home/mig/state/wwwpublic/archives
-      #- type: volume
-      #  source: wwwpublic-vgrid
-      #  target: /home/mig/state/wwwpublic/vgrid
+      #  source: wwwpublic-download
+      #  target: /home/mig/state/wwwpublic/download
       # NOTE: these next helpers are only needed in migrid container
       #- type: volume
       #  source: freeze_home
@@ -596,13 +595,9 @@ services:
       #- type: volume
       #  source: wwwpublic-vgrid
       #  target: /home/mig/state/wwwpublic/vgrid
-      # NOTE: these wwwpublic helpers are only needed in apache
       #- type: volume
-      #  source: wwwpublic-archives
-      #  target: /home/mig/state/wwwpublic/archives
-      #- type: volume
-      #  source: wwwpublic-vgrid
-      #  target: /home/mig/state/wwwpublic/vgrid
+      #  source: wwwpublic-download
+      #  target: /home/mig/state/wwwpublic/download
       # NOTE: these next helpers are only needed in migrid container
       #- type: volume
       #  source: freeze_home
