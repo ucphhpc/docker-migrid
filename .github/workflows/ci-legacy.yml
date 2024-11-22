@@ -46,9 +46,9 @@ jobs:
           make test-doc
       - name: Build images
         run: |
-          ln -s Dockerfile.${{ matrix.container_os }} Dockerfile
-          ln -s docker-compose_${{ matrix.environment_profile }}.yml docker-compose.yml
-          ln -s ${{ matrix.environment_profile }}.env .env
+          ln -s -f Dockerfile.${{ matrix.container_os }} Dockerfile
+          ln -s -f docker-compose_${{ matrix.environment_profile }}.yml docker-compose.yml
+          ln -s -f ${{ matrix.environment_profile }}.env .env
           make init
           echo "# NOTE: use absolute paths to current dir to get docker bind mounts to work" > ci.env
           echo "DOCKER_MIGRID_ROOT=$PWD" >> ci.env
