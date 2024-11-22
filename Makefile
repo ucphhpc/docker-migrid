@@ -86,7 +86,7 @@ docker-compose.yml:
 	ln -s docker-compose_development.yml docker-compose.yml
 	@sleep 2
 
-migrid-httpd-init:
+migrid-httpd-init.sh:
 	sed 's@#unset @unset @g;s@#export @export @g' migrid-httpd.env > migrid-httpd-init.sh
 
 initdirs: initcomposevars
