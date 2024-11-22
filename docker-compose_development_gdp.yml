@@ -63,7 +63,7 @@ services:
     env_file:
       - migrid-httpd.env
     # NOTE: public hosts should create users through sign up and run like this
-    command: /app/docker-entry.sh -V
+    command: /app/docker-entry.sh -V -c
 
   # The migrid core services including httpd and tightly integrated services
   # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)

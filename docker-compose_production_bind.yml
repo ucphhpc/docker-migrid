@@ -119,8 +119,8 @@ services:
         source: freeze_home
         target: /home/mig/state/freeze_home
       - type: volume
-        source: mrsl_home
-        target: /home/mig/state/mrsl_home
+        source: mrsl_files
+        target: /home/mig/state/mrsl_files
       - type: volume
         source: resource_home
         target: /home/mig/state/resource_home
@@ -242,8 +242,8 @@ services:
       #  source: freeze_home
       #  target: /home/mig/state/freeze_home
       #- type: volume
-      #  source: mrsl_home
-      #  target: /home/mig/state/mrsl_home
+      #  source: mrsl_files
+      #  target: /home/mig/state/mrsl_files
       #- type: volume
       #  source: resource_home
       #  target: /home/mig/state/resource_home
@@ -364,8 +364,8 @@ services:
       #  source: freeze_home
       #  target: /home/mig/state/freeze_home
       #- type: volume
-      #  source: mrsl_home
-      #  target: /home/mig/state/mrsl_home
+      #  source: mrsl_files
+      #  target: /home/mig/state/mrsl_files
       #- type: volume
       #  source: resource_home
       #  target: /home/mig/state/resource_home
@@ -486,8 +486,8 @@ services:
       #  source: freeze_home
       #  target: /home/mig/state/freeze_home
       #- type: volume
-      #  source: mrsl_home
-      #  target: /home/mig/state/mrsl_home
+      #  source: mrsl_files
+      #  target: /home/mig/state/mrsl_files
       #- type: volume
       #  source: resource_home
       #  target: /home/mig/state/resource_home
@@ -608,8 +608,8 @@ services:
       #  source: freeze_home
       #  target: /home/mig/state/freeze_home
       #- type: volume
-      #  source: mrsl_home
-      #  target: /home/mig/state/mrsl_home
+      #  source: mrsl_files
+      #  target: /home/mig/state/mrsl_files
       #- type: volume
       #  source: resource_home
       #  target: /home/mig/state/resource_home
@@ -796,12 +796,12 @@ volumes:
       device: ${PERSISTENT_ROOT}/freeze_home
       o: bind
 
-  mrsl_home:
-    # Volume used to contain the migrid mrsl_home
+  mrsl_files:
+    # Volume used to contain the migrid mrsl_files
     driver: local
     driver_opts:
       type: none
-      device: ${PERSISTENT_ROOT}/mrsl_home
+      device: ${PERSISTENT_ROOT}/mrsl_files
       o: bind
 
   resource_home:
@@ -818,6 +818,14 @@ volumes:
     driver_opts:
       type: none
       device: ${PERSISTENT_ROOT}/re_home
+      o: bind
+
+  sharelink_home:
+    # Volume used to contain the migrid sharelink_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/sharelink_home
       o: bind
 
   events_home:
