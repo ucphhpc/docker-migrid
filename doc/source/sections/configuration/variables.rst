@@ -54,13 +54,13 @@ Variables
      - Optionally use to point to another installation location than `PWD`, which might be useful e.g. when automating deployment with ansible.
    * - LOG_ROOT
      - log
-     - Optionally use to point to another site log location than `log` subdir of `$DOCKER_MIGRID_ROOT`, which might be useful e.g. when storing logs on network storage or separate partitions/disks.
+     - Optionally use to point to another site log location than `log` directory in `$DOCKER_MIGRID_ROOT`, which might be useful e.g. when storing logs on network storage or separate partitions/disks.
    * - PERSISTENT_ROOT
      - persistent
-     - Optionally use to point to another site data location than `persistent` subdir of `$DOCKER_MIGRID_ROOT`, which might be useful e.g. when storing persistent site data on network storage or separate partitions/disks.
+     - Optionally use to point to another site data location than `persistent` directory in `$DOCKER_MIGRID_ROOT`, which might be useful e.g. when storing persistent site data on network storage or separate partitions/disks.
    * - VOLATILE_ROOT
      - volatile
-     - Optionally use to point to another site tmp location than `volatile` subdir of `$DOCKER_MIGRID_ROOT`, which might be useful e.g. when storing logs on network storage or separate partitions/disks.
+     - Optionally use to point to another site tmp location than `volatile` directory in `$DOCKER_MIGRID_ROOT`, which might be useful e.g. when storing logs on network storage or separate partitions/disks.
    * - UID
      - 1000
      - User ID of the migrid user inside the container, which might be useful to avoid various permission errors when juggling data inside and outside containers.
