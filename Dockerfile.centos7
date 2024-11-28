@@ -1437,9 +1437,11 @@ RUN ln -s index-${DOMAIN}.html $MIG_ROOT/state/wwwpublic/index.html && \
 # Replace index.html redirects to instance domains
 RUN sed -i -e "s@https://ext\.${EMULATE_FQDN}@https://${MIGOID_DOMAIN}@g;s@https://oid\.${EMULATE_FQDN}@https://${EXTOID_DOMAIN}@g;s@https://${EMULATE_FQDN}@https://${EXTOID_DOMAIN}@g;s@https://cert\.${EMULATE_FQDN}@https://${EXTCERT_DOMAIN}@g;s@https://sid\.${EMULATE_FQDN}@https://${SID_DOMAIN}@g" $MIG_ROOT/state/wwwpublic/index-${DOMAIN}.html
 
-# State clean services
-RUN chmod 755 generated-confs/{migstateclean,migerrors} \
-    && cp generated-confs/{migstateclean,migerrors} /etc/cron.daily/
+# Various cron jobs e.g. to clean stale state and inform migoid account users near expiry
+# TODO: add migverifyarchives, migimportdoi, migindexdoi and migsftpmon?
+# TODO: make sure native scripts like migerrors deliver mail outside container
+RUN chmod 755 generated-confs/{migstateclean,mignotifyexpire,migerrors} \
+    && cp generated-confs/{migstateclean,mignotifyexpire,migerrors} /etc/cron.daily/
 
 # Logrotate config if enabled
 RUN if [ "${ENABLE_LOGROTATE}" = "True" ]; then \
