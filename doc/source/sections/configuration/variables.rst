@@ -42,10 +42,13 @@ Variables
      - The password for the optional test user. Used by the development environments for tests.
    * - SMTP_SERVER
      - localhost
-     - The MTA that is used to submit mails from migrid. Can be a hostname or an IP.
+     - The MTA host that is used to submit mails from migrid. Can be a hostname or an IP.
+   * - SMTP_PORT
+     - 25
+     - The MTA port that is used to submit mails from migrid. Must be an integer if set.
    * - SMTP_LISTEN_PORT
      - 25
-     - Which local port for container SMTP process to listen on when using the devmail container as in the development env. Must be an integer below 65536 specifying a port which isn't already in use on the host.
+     - Which local port for container SMTP process to listen on when using the devmail container as in the development env. Must be an integer below 65536 specifying a port which isn't already in use on the host. Should probably be kept in sync with `$SMTP_PORT`.
    * - TZ
      - Europe/Copenhagen
      - The timezone that is used inside the containers.

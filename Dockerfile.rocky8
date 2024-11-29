@@ -63,6 +63,7 @@ ARG ADMIN_LIST=
 ARG SUPPORT_EMAIL=mig
 ARG SMTP_SENDER=
 ARG SMTP_SERVER=localhost
+ARG SMTP_PORT=25
 ARG LOG_LEVEL=info
 ARG TITLE="Minimum intrusion Grid"
 ARG SHORT_TITLE=MiG
@@ -309,6 +310,7 @@ ARG PREFER_PYTHON3
 ARG UID
 ARG GID
 ARG SMTP_SERVER
+ARG SMTP_PORT
 ARG ADMIN_EMAIL
 
 WORKDIR /tmp
@@ -436,8 +438,9 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
 # and configure it for host SMTP delivery for cronjobs etc to be able to route
 # mail outside containers.
 RUN if [ -n "${SMTP_SERVER}" ]; then \
+      [ -z "${SMTP_PORT}" ] && SMTP_PORT=25; \
       echo "# Simple SMTP setup to route all local mail to host SMTP" > /etc/esmtprc && \
-      echo "hostname ${SMTP_SERVER}:25" >> /etc/esmtprc && \
+      echo "hostname ${SMTP_SERVER}:${SMTP_PORT}" >> /etc/esmtprc && \
       echo "qualifydomain ${DOMAIN}" >> /etc/esmtprc ; \
     fi
 
@@ -994,6 +997,7 @@ ARG ADMIN_LIST
 ARG SUPPORT_EMAIL
 ARG SMTP_SENDER
 ARG SMTP_SERVER
+ARG SMTP_PORT
 ARG LOG_LEVEL
 ARG TITLE
 ARG SHORT_TITLE
@@ -1189,6 +1193,8 @@ RUN ./generateconfs.py --source=. \
     --admin_email="${ADMIN_EMAIL}" --admin_list="${ADMIN_LIST}" \
     --support_email="${SUPPORT_EMAIL}" --smtp_sender="${SMTP_SENDER}" \
     --smtp_server="${SMTP_SERVER}" \
+    # TODO: expose smtp_port in generateconfs and enable here
+    #--smtp_port="${SMTP_PORT}" \
     --apache_version=2.4 \
     --apache_etc=${WEB_DIR} \
     --apache_run=/var/run/httpd \
