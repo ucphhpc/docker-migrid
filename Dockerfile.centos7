@@ -435,8 +435,7 @@ RUN if [ "${WITH_PY3}" = True ]; then \
 RUN if [ -n "${SMTP_SERVER}" ]; then \
       echo "# Simple SMTP setup to route all local mail to host SMTP" > /etc/esmtprc && \
       echo "hostname ${SMTP_SERVER}:25" >> /etc/esmtprc && \
-      echo "qualifydomain ${DOMAIN}" >> /etc/esmtprc && \
-      echo "root: ${ADMIN_EMAIL}" >> /etc/aliases ; \
+      echo "qualifydomain ${DOMAIN}" >> /etc/esmtprc ; \
     fi
 
 # TODO: this breaks yum etc in build - can we switch default?
