@@ -303,6 +303,8 @@ ARG WITH_PY3
 ARG PREFER_PYTHON3
 ARG UID
 ARG GID
+ARG SMTP_SERVER
+ARG ADMIN_EMAIL
 
 # Make sure pip has a valid cert chain to avoid cert errors on pypi repo, etc.
 # https://stackoverflow.com/questions/25981703/pip-install-fails-with-connection-error-ssl-certificate-verify-failed-certi
@@ -382,6 +384,7 @@ RUN yum update -y \
     ipset \
     wget \
     patch \
+    esmtp \
     # NOTE: only install default paramiko if upgrade not requested
     && [ "${UPGRADE_PARAMIKO}" = "True" ] || yum install -y python-paramiko \
     # NOTE: no default openstack client for python2 here
@@ -425,6 +428,15 @@ RUN if [ "${WITH_PY3}" = True ]; then \
     else \
       echo "no py3 deps"; \
     fi;
+
+# Containers have esmtp installed by default but we explicitly include it above
+# and configure it for host SMTP delivery for cronjobs etc to be able to route
+# mail outside containers.
+RUN if [ -n "${SMTP_SERVER}" ]; then \
+      echo "# Simple SMTP setup to route all local mail to host SMTP" > /etc/esmtprc && \
+      echo "hostname ${SMTP_SERVER}:25" >> /etc/esmtprc && \
+      echo "qualifydomain ${DOMAIN}" >> /etc/esmtprc ; \
+    fi
 
 # TODO: this breaks yum etc in build - can we switch default?
 #RUN if [ "${PREFER_PYTHON3}" = "True" ]; then \
