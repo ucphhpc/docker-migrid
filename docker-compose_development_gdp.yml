@@ -121,7 +121,7 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
-        source: migstate-log
+        source: log
         target: /home/mig/state/log
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: bind
@@ -185,7 +185,7 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
-        source: migstate-log
+        source: log
         target: /home/mig/state/log
       # NOTE: we don't need read-only vgrids/workgroups in the openid container
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
@@ -231,7 +231,7 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
-        source: migstate-log
+        source: log
         target: /home/mig/state/log
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: bind
@@ -281,7 +281,7 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
-        source: migstate-log
+        source: log
         target: /home/mig/state/log
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: bind
@@ -330,7 +330,7 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
-        source: migstate-log
+        source: log
         target: /home/mig/state/log
       # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: bind
@@ -411,8 +411,16 @@ volumes:
       type: none
       device: ${DOCKER_MIGRID_ROOT}/state
       o: bind
-  
+
   # NOTE: we don't bother setting up persistent data outside state here
+
+  log:
+    # Volume used to contain the mig state log folder shared by all containers
+    driver: local
+    driver_opts:
+      type: none
+      device: ${LOG_ROOT}/miglog
+      o: bind
 
   migrid-syslog:
     # Volume used for exposing migrid container system log
@@ -452,12 +460,4 @@ volumes:
     driver_opts:
       type: none
       device: ${LOG_ROOT}/migrid-ftps
-      o: bind
-
-  migstate-log:
-    # Volume used to contain the migrid state log
-    driver: local
-    driver_opts:
-      type: none
-      device: ${LOG_ROOT}/migstatelog
       o: bind

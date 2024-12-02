@@ -102,7 +102,7 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
-        source: migstate-log
+        source: log
         target: /home/mig/state/log
       - type: volume
         source: secrets
@@ -228,7 +228,7 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
-        source: migstate-log
+        source: log
         target: /home/mig/state/log
       - type: volume
         source: secrets
@@ -347,7 +347,7 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
-        source: migstate-log
+        source: log
         target: /home/mig/state/log
       - type: volume
         source: secrets
@@ -465,7 +465,7 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
-        source: migstate-log
+        source: log
         target: /home/mig/state/log
       - type: volume
         source: secrets
@@ -583,7 +583,7 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
-        source: migstate-log
+        source: log
         target: /home/mig/state/log
       - type: volume
         source: secrets
@@ -935,6 +935,14 @@ volumes:
       device: ${PERSISTENT_ROOT}/vgrid_files_writable
       o: bind
 
+  log:
+    # Volume used to contain the mig state log folder shared by all containers
+    driver: local
+    driver_opts:
+      type: none
+      device: ${LOG_ROOT}/miglog
+      o: bind
+
   migrid-syslog:
     # Volume used for exposing migrid container system log
     driver: local
@@ -973,12 +981,4 @@ volumes:
     driver_opts:
       type: none
       device: ${LOG_ROOT}/migrid-ftps
-      o: bind
-
-  migstate-log:
-    # Volume used to contain the migrid state log
-    driver: local
-    driver_opts:
-      type: none
-      device: ${LOG_ROOT}/migstatelog
       o: bind
