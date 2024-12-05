@@ -1159,9 +1159,11 @@ RUN mkdir -p ${MIG_ROOT}/.local/bin; \
     if [ "${PREFER_PYTHON3}" = "True" ]; then \
       echo "setup python3 as default python in ${MIG_ROOT}" && \
       ln -s /usr/bin/python3 ${MIG_ROOT}/.local/bin/python; \
+      ln -s /usr/bin/python3-config ${MIG_ROOT}/.local/bin/python-config; \
     else \
       echo "setup python2 as default python in $MIG_ROOT" && \
       ln -s /usr/bin/python2 ${MIG_ROOT}/.local/bin/python; \
+      ln -s /usr/bin/python2-config ${MIG_ROOT}/.local/bin/python-config; \
     fi;
 
 RUN python2 ./generateconfs.py --source=. \

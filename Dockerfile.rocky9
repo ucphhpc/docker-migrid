@@ -429,9 +429,11 @@ RUN if [ -n "${SMTP_SERVER}" ]; then \
       echo "qualifydomain ${DOMAIN}" >> /etc/esmtprc ; \
     fi
 
+# NOTE: python extensions libpam and libnss need matching python-config
 RUN if [ "${PREFER_PYTHON3}" = "True" ]; then \
-      echo "set up py3 as default python" && \
+      echo "set up py3 as default python and python-config" && \
       update-alternatives --install /usr/bin/python python /usr/bin/python3 10; \
+      update-alternatives --install /usr/bin/python-config python-config /usr/bin/python3-config 10; \
     else \
       echo "*** No python2 support here ***" ; exit 1; \
     fi;

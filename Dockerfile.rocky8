@@ -447,12 +447,15 @@ RUN if [ -n "${SMTP_SERVER}" ]; then \
       echo "qualifydomain ${DOMAIN}" >> /etc/esmtprc ; \
     fi
 
+# NOTE: python extensions libpam and libnss need matching python-config
 RUN if [ "${PREFER_PYTHON3}" = "True" ]; then \
-      echo "set up py3 as default python" && \
+      echo "set up py3 as default python and python-config" && \
       update-alternatives --set python /usr/bin/python3; \
+      update-alternatives --install /usr/bin/python-config python-config /usr/bin/python3-config 10; \
     else \
       echo "set up py2 as default python" && \
       update-alternatives --set python /usr/bin/python2; \
+      update-alternatives --install /usr/bin/python-config python-config /usr/bin/python2-config 10; \
     fi;
 
 
@@ -1176,9 +1179,11 @@ RUN mkdir -p ${MIG_ROOT}/.local/bin; \
     if [ "${PREFER_PYTHON3}" = "True" ]; then \
       echo "setup python3 as default python in ${MIG_ROOT}" && \
       ln -s /usr/bin/python3 ${MIG_ROOT}/.local/bin/python; \
+      ln -s /usr/bin/python3-config ${MIG_ROOT}/.local/bin/python-config; \
     else \
       echo "setup python2 as default python in $MIG_ROOT" && \
       ln -s /usr/bin/python2 ${MIG_ROOT}/.local/bin/python; \
+      ln -s /usr/bin/python2-config ${MIG_ROOT}/.local/bin/python-config; \
     fi;
 
 RUN ./generateconfs.py --source=. \
