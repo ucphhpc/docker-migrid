@@ -1214,7 +1214,7 @@ RUN ./generateconfs.py --source=. \
     #--trac_id_field=${TRAC_ID_FIELD} \
     --openid_address=${OPENID_DOMAIN} \
     --sftp_address=${SFTP_DOMAIN} \
-    --sftp_subsys_address=${SFTP_SUBSYS_DOMAIN} \
+    --sftp_subsys_address=${SFTP_DOMAIN} \
     --ftps_address=${FTPS_DOMAIN} \
     --davs_address=${WEBDAVS_DOMAIN} \
     --public_http_port=${PUBLIC_HTTP_PORT} --public_https_port=${PUBLIC_HTTPS_PORT} \
