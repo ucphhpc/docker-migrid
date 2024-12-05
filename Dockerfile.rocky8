@@ -315,6 +315,9 @@ ARG ADMIN_EMAIL
 
 WORKDIR /tmp
 
+# Add common shell aliases
+COPY shell-aliases.sh /etc/profile.d/
+
 # TODO: is this also a problem with rocky8+?
 # Centos image default yum configs prevent docs installation
 # https://superuser.com/questions/784451/centos-on-docker-how-to-install-doc-files

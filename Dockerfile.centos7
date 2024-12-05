@@ -314,6 +314,9 @@ ENV PIP_CERT=/etc/ssl/certs/ca-bundle.crt
 
 WORKDIR /tmp
 
+# Add common shell aliases
+COPY shell-aliases.sh /etc/profile.d/
+
 # Centos image default yum configs prevent docs installation
 # https://superuser.com/questions/784451/centos-on-docker-how-to-install-doc-files
 RUN sed -i '/nodocs/d' /etc/yum.conf
