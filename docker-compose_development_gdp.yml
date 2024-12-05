@@ -278,7 +278,7 @@ services:
       # NOTE: compose does not support shell-style replacement so we can't use
       #- "${FTPS_PASV_PORTS/:/-}:${FTPS_PASV_PORTS/:/-}"
       # hard-code them for now.
-      - "8100-8399"
+      - "8100-8399:8100-8399"
     networks:
       default:
         aliases:

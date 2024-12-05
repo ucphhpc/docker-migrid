@@ -4,7 +4,8 @@ source default
 
 ${DOCKER:?} run --rm --network host --dns 127.0.0.1 curlimages/curl:8.7.1 \
   --connect-timeout 1 \
-  --retry 1 \
+  --retry-connrefused \
+  --retry 3 \
   https://${DOMAIN}:${PUBLIC_HTTPS_PORT} \
   -k \
   -s \

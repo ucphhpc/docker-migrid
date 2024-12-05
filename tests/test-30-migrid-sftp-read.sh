@@ -4,7 +4,8 @@ source default
 
 ${DOCKER:?} run --rm --network host --dns 127.0.0.1 curlimages/curl:8.7.1 \
   --connect-timeout 1 \
-  --retry 1 \
+  --retry-connrefused \
+  --retry 3 \
   --user "${MIG_TEST_USER}:${MIG_TEST_USER_PASSWORD}" \
   sftp://${SFTP_DOMAIN}:${SFTP_PORT}/welcome.txt \
   -k \

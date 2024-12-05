@@ -4,7 +4,8 @@ source default
 
 ${DOCKER:?} run --rm --network host --dns 127.0.0.1 curlimages/curl:8.7.1 \
   --connect-timeout 1 \
-  --retry 1 \
+  --retry-connrefused \
+  --retry 3 \
   --data-urlencode user=${MIG_TEST_USER} \
   --data-urlencode password=${MIG_TEST_USER_PASSWORD} \
   --data-urlencode success_to=/openid/id/ \
