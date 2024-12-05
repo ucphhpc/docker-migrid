@@ -144,7 +144,7 @@ services:
     env_file:
       - migrid-httpd.env
     # IMPORTANT: please ONLY run with this test@ user for non-public hosts
-    command: /app/docker-entry.sh -V -u ${MIG_TEST_USER} -p ${MIG_TEST_USER_PASSWORD} -s "sftp ftps webdavs"
+    command: /app/docker-entry.sh -V -c -u ${MIG_TEST_USER} -p ${MIG_TEST_USER_PASSWORD} -s "sftp ftps webdavs"
     # NOTE: public hosts should create users through sign up and run like this
     #command: /app/docker-entry.sh -V
 
@@ -160,7 +160,12 @@ services:
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: openid rsyslogd
     depends_on:
-      - migrid
+      # IMPORTANT: daemons may require DNS to bind to domain ports
+      devdns:
+        condition: service_started
+      # IMPORTANT: finish volume init before launch as explained above
+      migrid-volume-init:
+        condition: service_completed_successfully
     ports:
       # NOTE: expose the unique raw port(s) to host 
       - "${OPENID_PORT}:${OPENID_PORT}"
@@ -205,7 +210,12 @@ services:
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: sftp sftpsubsys rsyslogd
     depends_on:
-      - migrid
+      # IMPORTANT: daemons may require DNS to bind to domain ports
+      devdns:
+        condition: service_started
+      # IMPORTANT: finish volume init before launch as explained above
+      migrid-volume-init:
+        condition: service_completed_successfully
     ports:
       # NOTE: expose the unique raw port(s) to host 
       - "${SFTP_PORT}:${SFTP_PORT}"
@@ -255,11 +265,20 @@ services:
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: ftps rsyslogd
     depends_on:
-      - migrid
+      # IMPORTANT: daemons may require DNS to bind to domain ports
+      devdns:
+        condition: service_started
+      # IMPORTANT: finish volume init before launch as explained above
+      migrid-volume-init:
+        condition: service_completed_successfully
     ports:
-      # NOTE: expose the unique raw port(s) to host 
+      # NOTE: expose the unique raw port(s) to host
       - "${FTPS_CTRL_PORT}:${FTPS_CTRL_PORT}"
-      - "${FTPS_PASSIVE_PORTS}:${FTPS_PASSIVE_PORTS}"
+      # IMPORTANT: FTPS_PASV_PORTS is colon-separated but range needs hyphen
+      # NOTE: compose does not support shell-style replacement so we can't use
+      #- "${FTPS_PASV_PORTS/:/-}:${FTPS_PASV_PORTS/:/-}"
+      # hard-code them for now.
+      - "8100-8399"
     networks:
       default:
         aliases:
@@ -305,7 +324,12 @@ services:
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: webdavs rsyslogd
     depends_on:
-      - migrid
+      # IMPORTANT: daemons may require DNS to bind to domain ports
+      devdns:
+        condition: service_started
+      # IMPORTANT: finish volume init before launch as explained above
+      migrid-volume-init:
+        condition: service_completed_successfully
     ports:
       # NOTE: expose the unique raw port(s) to host 
       - "${DAVS_PORT}:${DAVS_PORT}"
@@ -353,7 +377,11 @@ services:
     #       from racing apache during start up? Apparently that will not work
     #       with on-going jupyter integration due to swarm mode, however.
     depends_on:
-      - migrid
+      # IMPORTANT: daemons may require DNS to bind to domain ports
+      devdns:
+        condition: service_started
+      migrid:
+        condition: service_started
     ports:
       # NOTE: expose the unique raw port(s) to host 
       - "80:80"

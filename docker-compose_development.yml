@@ -156,10 +156,15 @@ services:
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: openid rsyslogd
     depends_on:
-      - migrid
+      # IMPORTANT: daemons may require DNS to bind to domain ports
+      devdns:
+        condition: service_started
+      # IMPORTANT: finish volume init before launch as explained above
+      migrid-volume-init:
+        condition: service_completed_successfully
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "8443:8443"
+      - "${OPENID_PORT}:${OPENID_PORT}"
     networks:
       default:
         aliases:
@@ -201,11 +206,16 @@ services:
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: sftp sftpsubsys rsyslogd
     depends_on:
-      - migrid
+      # IMPORTANT: daemons may require DNS to bind to domain ports
+      devdns:
+        condition: service_started
+      # IMPORTANT: finish volume init before launch as explained above
+      migrid-volume-init:
+        condition: service_completed_successfully
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "2222:2222"
-      - "22222:22222"
+      - "${SFTP_PORT}:${SFTP_PORT}"
+      - "${SFTP_SUBSYS_PORT}:${SFTP_SUBSYS_PORT}"
     networks:
       default:
         aliases:
@@ -251,11 +261,20 @@ services:
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: ftps rsyslogd
     depends_on:
-      - migrid
+      # IMPORTANT: daemons may require DNS to bind to domain ports
+      devdns:
+        condition: service_started
+      # IMPORTANT: finish volume init before launch as explained above
+      migrid-volume-init:
+        condition: service_completed_successfully
     ports:
-      # NOTE: expose the unique raw port(s) to host 
-      - "8021:8021"
-      - "8100-8399:8100-8399"
+      # NOTE: expose the unique raw port(s) to host
+      - "${FTPS_CTRL_PORT}:${FTPS_CTRL_PORT}"
+      # IMPORTANT: FTPS_PASV_PORTS is colon-separated but range needs hyphen
+      # NOTE: compose does not support shell-style replacement so we can't use
+      #- "${FTPS_PASV_PORTS/:/-}:${FTPS_PASV_PORTS/:/-}"
+      # hard-code them for now.
+      - "8100-8399"
     networks:
       default:
         aliases:
@@ -301,10 +320,15 @@ services:
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: webdavs rsyslogd
     depends_on:
-      - migrid
+      # IMPORTANT: daemons may require DNS to bind to domain ports
+      devdns:
+        condition: service_started
+      # IMPORTANT: finish volume init before launch as explained above
+      migrid-volume-init:
+        condition: service_completed_successfully
     ports:
       # NOTE: expose the unique raw port(s) to host 
-      - "4443:4443"
+      - "${DAVS_PORT}:${DAVS_PORT}"
     networks:
       default:
         aliases:
@@ -341,13 +365,19 @@ services:
 
   nginx-proxy:
     image: ${CONTAINER_REGISTRY}/jwilder/nginx-proxy
+    environment:
+      TZ: ${TZ}
     container_name: nginx-proxy
     # TODO: can we add an httpd health check and switch to wait for condition
     #       service_healthy to avoid the storm of initial avoid nginx errors
     #       from racing apache during start up? Apparently that will not work
     #       with on-going jupyter integration due to swarm mode, however.
     depends_on:
-      - migrid
+      # IMPORTANT: daemons may require DNS to bind to domain ports
+      devdns:
+        condition: service_started
+      migrid:
+        condition: service_started
     ports:
       # NOTE: expose the unique raw port(s) to host 
       - "80:80"
