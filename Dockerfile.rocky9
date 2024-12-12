@@ -490,7 +490,7 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
         # NOTE: rocky9 switched from explicit version to variable expansion
         #      as in 9 - > $releasever
         && cat /etc/yum.repos.d/epel.repo | \
-                sed 's/\[epel/\[epel7/g;s/\$releasever/7/g;s/enabled=1/enabled=0/g' \
+                sed 's/\[epel/\[epel7/g;s/\(epel[a-z-]*\)-9/\1-7/g;s/\$releasever/7/g;s/enabled=1/enabled=0/g' \
                 > /etc/yum.repos.d/epel7.repo \
         && echo "build libopkele from centos7 source rpm" \
         # NOTE: avoid hard-coded version using yumdownloader from yum-utils
