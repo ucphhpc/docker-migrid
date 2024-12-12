@@ -31,7 +31,12 @@ on:
 
 jobs:
   build-run-test:
-    runs-on: ubuntu-latest
+    # Mimic modern RHEL/CentOS/Rocky with latest Ubuntu LTS
+    # IMPORTANT: ubuntu-latest started throwing bash errors on make test-doc
+    #            Maybe fall-out from the planned switch to ubuntu-24.04 as
+    #            ubuntu-latest in December 2024. We stick with 22.04 for now.
+    #runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         container_os: [rocky8, rocky9]
