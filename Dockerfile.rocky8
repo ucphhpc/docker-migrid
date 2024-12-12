@@ -525,7 +525,7 @@ RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" -o "$ENABLE_SELF_SIGNED_CERTS" = "Tru
         && rm -fr /var/cache/dnf \
         # NOTE: add EPEL CentOS 7 repos here but completely disabled
         && cat /etc/yum.repos.d/epel.repo | \
-                sed 's/\[epel/\[epel7/g;s/8/7/g;s/enabled=1/enabled=0/g' \
+                sed 's/\[epel/\[epel7/g;s/\(epel[a-z-]*\)-8/\1-7/g;s/8/7/g;s/enabled=1/enabled=0/g' \
                 > /etc/yum.repos.d/epel7.repo \
         && echo "build libopkele from centos7 source rpm" \
         # NOTE: avoid hard-coded version using yumdownloader from yum-utils
