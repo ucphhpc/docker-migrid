@@ -1550,11 +1550,11 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
     fi;
 
 # Install pylustrequota
-# NOTE: Requires py3 and git-experimental
+# NOTE: Requires py3 and git next branch
 RUN if [ "${ENABLE_QUOTA}" = "True" ] \
             && [ "${PREFER_PYTHON3}" = "True" ] \
             && [ "${WITH_GIT}" = "True" ] \
-            && [ "${MIG_GIT_BRANCH}" = "experimental" ]; then \
+            && [ "${MIG_GIT_BRANCH}" = "next" ]; then \
         if [ "${QUOTA_BACKEND}" = "lustre" ] \
             || [ "${QUOTA_BACKEND}" = "lustre-gocryptfs" ]; then \
             echo "install pylustrequota" \

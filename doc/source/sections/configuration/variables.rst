@@ -200,8 +200,8 @@ Variables
      - https://github.com/ucphhpc/migrid-sync.git
      - The Git repository from which the migrid code will be pulled, if Git is requested (i.e. WITH_GIT=True)
    * - MIG_GIT_BRANCH
-     - edge
-     - The Git branch which should be used when migrid source code is pulled.
+     - main
+     - The Git branch which should be used when migrid source code is pulled. Typically `main` (formerly `edge`) or `next` (formerly `experimental`).
    * - MIG_GIT_REV
      - HEAD
      - The Git revision which should be used when migrid source code is pulled.
