@@ -28,7 +28,7 @@ services:
   migrid:
     container_name: migrid
     image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
-    network_mode: "host"
+    network_mode: host
     extends:
       file: docker-compose_shared.yml
       service: migrid-shared
@@ -76,7 +76,7 @@ services:
   migrid-openid:
     container_name: migrid-openid
     image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
-    network_mode: "host"
+    network_mode: host
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -115,7 +115,7 @@ services:
   migrid-sftp:
     container_name: migrid-sftp
     image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
-    network_mode: "host"
+    network_mode: host
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -159,7 +159,7 @@ services:
   migrid-ftps:
     container_name: migrid-ftps
     image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
-    network_mode: "host"
+    network_mode: host
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -202,7 +202,7 @@ services:
   migrid-webdavs:
     container_name: migrid-webdavs
     image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
-    network_mode: "host"
+    network_mode: host
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -246,7 +246,7 @@ services:
 #  nginx-proxy:
 #    image: ${CONTAINER_REGISTRY}/jwilder/nginx-proxy
 #    container_name: nginx-proxy
-#    network_mode: "host"
+#    network_mode: host
 #    # TODO: can we add an httpd health check and switch to wait for condition
 #    #       service_healthy to avoid the storm of initial avoid nginx errors
 #    #       from racing apache during start up? Apparently that will not work

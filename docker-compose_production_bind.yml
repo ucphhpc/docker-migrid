@@ -16,14 +16,14 @@ services:
   # NOTE: we use a shared volume init helper container to make sure volumes
   #       are fully created and instantiated before we try to bind mount
   #       subdirs from e.g. the state volume in the service containers.
-  # NOTE: Even though no services are started then use network_mode: "host"
+  # NOTE: Even though no services are started then use network_mode: host
   #       to avoid creating virtual container networks.
   #       Lustre Networking (LNET) locks up if the network is changed
   #       while lustre is mounted.
   migrid-volume-init:
     container_name: migrid-volume-init
     image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
-    network_mode: "host"
+    network_mode: host
     extends:
       file: docker-compose_shared.yml
       service: migrid-shared
@@ -70,7 +70,7 @@ services:
   migrid:
     container_name: migrid
     image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
-    network_mode: "host"
+    network_mode: host
     extends:
       file: docker-compose_shared.yml
       service: migrid-shared
@@ -198,7 +198,7 @@ services:
   migrid-openid:
     container_name: migrid-openid
     image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
-    network_mode: "host"
+    network_mode: host
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -313,7 +313,7 @@ services:
   migrid-sftp:
     container_name: migrid-sftp
     image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
-    network_mode: "host"
+    network_mode: host
     # NOTE: sshd requires capability to write audit log on login attempts
     cap_add:
       - AUDIT_WRITE
@@ -435,7 +435,7 @@ services:
   migrid-ftps:
     container_name: migrid-ftps
     image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
-    network_mode: "host"
+    network_mode: host
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -553,7 +553,7 @@ services:
   migrid-webdavs:
     container_name: migrid-webdavs
     image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
-    network_mode: "host"
+    network_mode: host
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -671,7 +671,7 @@ services:
   migrid-lustre-quota:
     container_name: migrid-lustre-quota
     image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
-    network_mode: "host"
+    network_mode: host
     environment:
       TZ: ${TZ}
     depends_on:
@@ -700,7 +700,7 @@ services:
 #  nginx-proxy:
 #    image: ${CONTAINER_REGISTRY}/jwilder/nginx-proxy
 #    container_name: nginx-proxy
-#    network_mode: "host"
+#    network_mode: host
 #    # TODO: can we add an httpd health check and switch to wait for condition
 #    #       service_healthy to avoid the storm of initial avoid nginx errors
 #    #       from racing apache during start up? Apparently that will not work
