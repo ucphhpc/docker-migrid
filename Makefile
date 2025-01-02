@@ -10,7 +10,8 @@ PACKAGE_NAME_FORMATTED=$(subst -,_,$(PACKAGE_NAME))
 IMAGE=migrid
 OWNER?=ucphhpc
 SHELL=/bin/bash
-BUILD_ARGS=
+BUILD_ARGS?=
+DOCKER_COMPOSE_BUILD_ARGS?=
 DETACH?=-d
 RUN_ARGS?=${DETACH}
 
@@ -40,6 +41,9 @@ ifeq ($(CONTAINER_TAG),)
 	CONTAINER_TAG = $(shell egrep '^ARG MIG_GIT_BRANCH=' Dockerfile | sed 's/.*=/:/g')
 endif
 
+# NOTE: reuse network from active docker-compose in build to limit netfs interference
+DOCKER_COMPOSE_BUILD_NET=$(shell egrep 'network(|_mode):' docker-compose.yml 2> /dev/null|egrep -v '^#'|tail -n 1|sed 's/.*network.*:/network:/g')
+
 # Path helpers to init after loading .env
 LOG_ROOT?=log
 VOLATILE_ROOT?=volatile
@@ -52,6 +56,7 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile
+      $(DOCKER_COMPOSE_BUILD_NET)
       args:
 endef
 export DOCKER_COMPOSE_SHARED_HEADER
@@ -178,7 +183,7 @@ down:	initcomposevars
 	${DOCKER_COMPOSE} down
 
 dockerbuild: init
-	${DOCKER_COMPOSE} build ${BUILD_ARGS}
+	${DOCKER_COMPOSE} ${DOCKER_COMPOSE_BUILD_ARGS} build ${BUILD_ARGS}
 
 dockerclean: initcomposevars
 	${DOCKER_COMPOSE} down || true
