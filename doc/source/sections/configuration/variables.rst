@@ -79,6 +79,9 @@ Variables
    * - PUBLIC_DOMAIN
      - www.migrid.test
      - The domain to serve public migrid web pages on
+   * - PUBLIC_ALIAS_DOMAIN
+     - migrid.test
+     - Optional domain alias for the public migrid web pages
    * - MIGCERT_DOMAIN
      - cert.migrid.test
      - The optional domain under which migrid web for certificate-based authentication with a local CA will be reachable.

@@ -17,6 +17,7 @@ ARG GID=1000
 ARG DOMAIN=migrid.test
 ARG WILDCARD_DOMAIN=*.migrid.test
 ARG PUBLIC_DOMAIN=www.migrid.test
+ARG PUBLIC_ALIAS_DOMAIN=migrid.test
 ARG MIGCERT_DOMAIN=cert.migrid.test
 ARG EXTCERT_DOMAIN=
 ARG MIGOID_DOMAIN=ext.migrid.test
@@ -639,6 +640,7 @@ FROM --platform=linux/$ARCH base AS setup_security
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG PUBLIC_DOMAIN
+ARG PUBLIC_ALIAS_DOMAIN
 ARG MIGCERT_DOMAIN
 ARG EXTCERT_DOMAIN
 ARG MIGOID_DOMAIN
@@ -705,11 +707,11 @@ RUN ln -s MiG/${WILDCARD_DOMAIN}/server.crt server.crt \
     && ln -s MiG/${WILDCARD_DOMAIN}/combined.pem combined.pem \
     && ln -s MiG/${WILDCARD_DOMAIN}/server.ca.pem server.ca.pem \
     && ln -s MiG/${WILDCARD_DOMAIN}/combined.pub combined.pub \
-    && for domain in "${PUBLIC_DOMAIN}" "${MIGCERT_DOMAIN}" \
-           "${EXTCERT_DOMAIN}" "${MIGOID_DOMAIN}" "${EXTOID_DOMAIN}" \
-           "${EXTOIDC_DOMAIN}" "${SID_DOMAIN}" "${IO_DOMAIN}" \
-           "${OPENID_DOMAIN}" "${SFTP_DOMAIN}" "${FTPS_DOMAIN}" \
-               "${WEBDAVS_DOMAIN}"; do \
+    && for domain in "${PUBLIC_DOMAIN}" "${PUBLIC_ALIAS_DOMAIN}" \
+	   "${MIGCERT_DOMAIN}" "${EXTCERT_DOMAIN}" "${MIGOID_DOMAIN}" \
+	   "${EXTOID_DOMAIN}" "${EXTOIDC_DOMAIN}" "${SID_DOMAIN}" \
+	   "${IO_DOMAIN}" "${OPENID_DOMAIN}" "${SFTP_DOMAIN}" \
+           "${FTPS_DOMAIN}" "${WEBDAVS_DOMAIN}"; do \
                [ -L "$domain" ] || ln -s MiG/${WILDCARD_DOMAIN} $domain; \
        done
 
@@ -970,6 +972,7 @@ RUN if [ "${PREFER_PYTHON3}" = "True" -o "${MODERN_WSGIDAV}" = "True" ]; then \
 FROM --platform=linux/$ARCH download_mig AS install_mig
 ARG DOMAIN
 ARG PUBLIC_DOMAIN
+ARG PUBLIC_ALIAS_DOMAIN
 ARG MIGCERT_DOMAIN
 ARG EXTCERT_DOMAIN
 ARG MIGOID_DOMAIN
@@ -1190,6 +1193,7 @@ RUN ./generateconfs.py --source=. \
     --destination=generated-confs \
     --base_fqdn=$DOMAIN \
     --public_fqdn=${PUBLIC_DOMAIN} \
+    --public_alias_fqdn=${PUBLIC_ALIAS_DOMAIN} \
     --mig_cert_fqdn=${MIGCERT_DOMAIN} \
     --ext_cert_fqdn=${EXTCERT_DOMAIN} \
     --mig_oid_fqdn=${MIGOID_DOMAIN} \
