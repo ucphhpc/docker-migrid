@@ -42,7 +42,7 @@ ifeq ($(CONTAINER_TAG),)
 endif
 
 # NOTE: reuse network from active docker-compose in build to limit netfs interference
-DOCKER_COMPOSE_BUILD_NET=$(shell egrep 'network(|_mode):' docker-compose.yml 2> /dev/null|egrep -v '^#'|tail -n 1|sed 's/.*network.*:/network:/g')
+DOCKER_COMPOSE_BUILD_NET=$(shell egrep 'network(|_mode):' docker-compose.yml 2> /dev/null|egrep -v '^\#'|tail -n 1|sed 's/.*network.*:/network:/g')
 
 # Path helpers to init after loading .env
 LOG_ROOT?=log
