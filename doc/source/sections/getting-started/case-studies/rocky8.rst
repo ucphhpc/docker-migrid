@@ -332,6 +332,7 @@ In our `.env` file we use these WAYF related variables::
   SIGNUP_METHODS="migoid extcert extoid extoidc"
   LOGIN_METHODS="migoid extcert extoid extoidc"
   AUTO_ADD_OIDC_USER=True
+  AUTO_ADD_USER_PERMIT="email:[a-z0-9.]+@([a-z]+\.|)ku\.dk$"
 
 After building and launching the containers WAYF access is available
 through the `login` and `signup` backends on the `SID_DOMAIN`. In this
@@ -368,17 +369,21 @@ any future discovery service they add.
 
 Finally you should decide on a site basis if you want automatic
 creation of authenticated users or not with the `AUTO_ADD_OID_USER`
-and `AUTO_ADD_OIDC_USER` variables and perhaps limit it to certain users with
-the `AUTO_ADD_USER_PERMIT` variable. The `AUTO_ADD_OID_USER` variable used to
-be shared for enabling both OpenID 2.0 and OpenID Connect sign up without
-operator interaction, but to increase control it was split up with
-`AUTO_ADD_OIDC_USER` added for the latter. Please note that you may need a
-version released in July 2024 or later for the split up to fully take effect.
-If you enable either AUTO_ADD_X_USER you can provide a regular expression to
+and `AUTO_ADD_OIDC_USER` variables and likely limit it to certain
+users or organizations with the `AUTO_ADD_USER_PERMIT` variable. The
+`AUTO_ADD_OID_USER` variable used to be shared for enabling both
+OpenID 2.0 and OpenID Connect sign up without operator interaction,
+but to increase control it was split up with `AUTO_ADD_OIDC_USER`
+added for the latter.
+Please note that you may need a version released in July 2024 or later
+for the split up to fully take effect.
+If you enable any `AUTO_ADD_X_USER` you can provide a regular expression to
 limit which such externally authenticated users are actually permitted to use
-this sign up. The variable contains a space-separated list of colon-separated
-pairs, here each pair is as user field name and a regular expression to require
-matched for the user fields. By default it is set to `distinguished_name:.*`,
-which will match *any* user ID. To only let authenticated users with an
-`@yourdomain.org` email address and `Staff` role sign up without operator
-interaction it can be set to `email:.+@yourdomain\.org$ role:^Staff$`.
+this auto sign up. The variable contains a space-separated list of
+colon-separated pairs, where each pair is as user field name and a
+regular expression to require matched for that user field. By default
+it is set to `distinguished_name:.*`, which will match *any*
+user ID. To only let authenticated users with an `@yourdomain.org`
+email address and `Staff` role sign up without operator interaction
+you can use something like:
+`AUTO_ADD_USER_PERMIT="email:.+@yourdomain\.org$ role:^Staff$`
