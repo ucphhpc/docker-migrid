@@ -387,4 +387,4 @@ user ID. To only let authenticated users with an `@yourdomain.org`
 email address and `Staff` role sign up without operator interaction
 you can use something like:
 
-  `AUTO_ADD_USER_PERMIT="email:.+@yourdomain\.org$ role:^Staff$`
+  `AUTO_ADD_USER_PERMIT="email:.+@yourdomain\.org$ role:^Staff$"`
