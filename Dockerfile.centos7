@@ -613,9 +613,9 @@ ENV CERT_DIR=$WEB_DIR/MiG-certificates
 
 USER root
 
-RUN mkdir -p $CERT_DIR/MiG/${WILDCARD_DOMAIN} \
-    && chown $USER:$GROUP $CERT_DIR \
-    && chmod 775 $CERT_DIR
+RUN mkdir -p ${CERT_DIR}/MiG/${WILDCARD_DOMAIN} \
+    && chown $USER:$GROUP ${CERT_DIR} \
+    && chmod 775 ${CERT_DIR}
 
 #------------------------- next stage -----------------------------#
 # Certs and keys
@@ -637,66 +637,88 @@ ARG SFTP_DOMAIN
 ARG WEBDAVS_DOMAIN
 ARG OS_CA_CERT_SOURCE_PATH=/etc/pki/ca-trust/source/anchors
 
+# Copy in any existing keys+certificates that should be used in containers
+COPY certs/ ${CERT_DIR}/
+
 # Dhparam - https://wiki.mozilla.org/Security/Archive/Server_Side_TLS_4.0
-RUN curl https://ssl-config.mozilla.org/ffdhe4096.txt -o $CERT_DIR/dhparams.pem
+RUN if [ ! -e "${CERT_DIR}/.persistent" ]; then \
+    curl https://ssl-config.mozilla.org/ffdhe4096.txt -o ${CERT_DIR}/dhparams.pem ; fi
 
 # CA
 # https://gist.github.com/Soarez/9688998
-RUN openssl genrsa -des3 -passout pass:qwerty -out ca.key 2048 \
+RUN if [ ! -e "${CERT_DIR}/.persistent" ]; then \
+    openssl genrsa -des3 -passout pass:qwerty -out ca.key 2048 \
     && openssl rsa -passin pass:qwerty -in ca.key -out ca.key \
     && openssl req -x509 -new -key ca.key \
     -subj "/C=DK/ST=NA/L=NA/O=MiGrid-Test/OU=NA/CN=${WILDCARD_DOMAIN}" -out ca.crt \
     && openssl req -x509 -new -nodes -key ca.key -sha256 -days 1024 \
-    -subj "/C=DK/ST=NA/L=NA/O=MiGrid-Test/OU=NA/CN=${WILDCARD_DOMAIN}" -out ca.pem
+    -subj "/C=DK/ST=NA/L=NA/O=MiGrid-Test/OU=NA/CN=${WILDCARD_DOMAIN}" -out ca.pem ; fi
 
 # Server key/ca
 # https://gist.github.com/Soarez/9688998
-RUN openssl genrsa -out server.key 2048 \
+RUN if [ ! -e "${CERT_DIR}/.persistent" ]; then \
+    openssl genrsa -out server.key 2048 \
     && openssl req -new -key server.key -out server.csr \
     -subj "/C=DK/ST=NA/L=NA/O=MiGrid-Test/OU=NA/CN=${WILDCARD_DOMAIN}" \
-    && openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
+    && openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt ; fi
 
 # Certificate Revocation List (CRL)
-RUN mkdir -p /etc/pki/CA \
+RUN if [ ! -e "${CERT_DIR}/.persistent" ]; then \
+    mkdir -p /etc/pki/CA \
     && touch /etc/pki/CA/index.txt \
     && echo '00' > /etc/pki/CA/crlnumber \
-    && openssl ca -gencrl -keyfile ca.key -cert ca.pem -out crl.pem
+    && openssl ca -gencrl -keyfile ca.key -cert ca.pem -out crl.pem ; fi
 
 # Daemon keys
-RUN cat server.{key,crt} > combined.pem \
+RUN if [ ! -e "${CERT_DIR}/.persistent" ]; then \
+    cat server.{key,crt} > combined.pem \
     && cat server.crt > server.ca.pem \
     && cat ca.pem >> server.ca.pem \
     && chown $USER:$GROUP combined.pem \
     && chown $USER:$GROUP server.ca.pem \
     && ssh-keygen -y -f combined.pem > combined.pub \
     && chown 0:0 *.key server.crt ca.pem \
-    && chmod 400 *.key server.crt ca.pem combined.pem server.ca.pem
+    && chmod 400 *.key server.crt ca.pem combined.pem server.ca.pem \
+    && openssl x509 -noout -fingerprint -sha256 -in combined.pem | \
+       sed 's/.+ Fingerprint=//g' > combined.pem.sha256 \
+    && ssh-keygen -l -E md5 -f combined.pub | \
+       sed 's/.+ MD5://g,s/ .*//g' > combined.pub.md5 \
+    && ssh-keygen -l -f combined.pub | \
+       sed 's/.+ SHA256://g,s/ .*//g' > combined.pub.sha256; fi
 
 # Prepare keys for mig
-RUN mv server.crt $CERT_DIR/MiG/${WILDCARD_DOMAIN}/ \
-    && mv server.key $CERT_DIR/MiG/${WILDCARD_DOMAIN}/ \
-    && mv crl.pem $CERT_DIR/MiG/${WILDCARD_DOMAIN}/ \
-    && mv ca.pem $CERT_DIR/MiG/${WILDCARD_DOMAIN}/cacert.pem \
-    && mv combined.pem $CERT_DIR/MiG/${WILDCARD_DOMAIN}/ \
-    && mv combined.pub $CERT_DIR/MiG/${WILDCARD_DOMAIN}/ \
-    && mv server.ca.pem $CERT_DIR/MiG/${WILDCARD_DOMAIN}/
+RUN if [ ! -e "${CERT_DIR}/.persistent" ]; then \
+    mv server.crt ${CERT_DIR}/MiG/${WILDCARD_DOMAIN}/ \
+    && mv server.key ${CERT_DIR}/MiG/${WILDCARD_DOMAIN}/ \
+    && mv crl.pem ${CERT_DIR}/MiG/${WILDCARD_DOMAIN}/ \
+    && mv ca.pem ${CERT_DIR}/MiG/${WILDCARD_DOMAIN}/cacert.pem \
+    && mv combined.pem ${CERT_DIR}/MiG/${WILDCARD_DOMAIN}/ \
+    && mv combined.pem.sha256 ${CERT_DIR}/MiG/${WILDCARD_DOMAIN}/ \
+    && mv combined.pub ${CERT_DIR}/MiG/${WILDCARD_DOMAIN}/ \
+    && mv combined.pub.md5 ${CERT_DIR}/MiG/${WILDCARD_DOMAIN}/ \
+    && mv combined.pub.sha256 ${CERT_DIR}/MiG/${WILDCARD_DOMAIN}/ \
+    && mv server.ca.pem ${CERT_DIR}/MiG/${WILDCARD_DOMAIN}/ ; fi
 
-WORKDIR $CERT_DIR
+WORKDIR ${CERT_DIR}
 
-RUN ln -s MiG/${WILDCARD_DOMAIN}/server.crt server.crt \
+RUN if [ ! -e "${CERT_DIR}/.persistent" ]; then \
+    ln -s MiG/${WILDCARD_DOMAIN}/server.crt server.crt \
     && ln -s MiG/${WILDCARD_DOMAIN}/server.key server.key \
     && ln -s MiG/${WILDCARD_DOMAIN}/crl.pem crl.pem \
     && ln -s MiG/${WILDCARD_DOMAIN}/cacert.pem cacert.pem \
     && ln -s MiG/${WILDCARD_DOMAIN}/combined.pem combined.pem \
+    && ln -s MiG/${WILDCARD_DOMAIN}/combined.pem.sha256 combined.pem.sha256 \
     && ln -s MiG/${WILDCARD_DOMAIN}/server.ca.pem server.ca.pem \
     && ln -s MiG/${WILDCARD_DOMAIN}/combined.pub combined.pub \
+    && ln -s MiG/${WILDCARD_DOMAIN}/combined.pub.md5 combined.pub.md5 \
+    && ln -s MiG/${WILDCARD_DOMAIN}/combined.pub.sha256 combined.pub.sha256 \
     && for domain in "${PUBLIC_DOMAIN}" "${PUBLIC_ALIAS_DOMAIN}" \
 	   "${MIGCERT_DOMAIN}" "${EXTCERT_DOMAIN}" "${MIGOID_DOMAIN}" \
 	   "${EXTOID_DOMAIN}" "${EXTOIDC_DOMAIN}" "${SID_DOMAIN}" \
 	   "${IO_DOMAIN}" "${OPENID_DOMAIN}" "${SFTP_DOMAIN}" \
            "${FTPS_DOMAIN}" "${WEBDAVS_DOMAIN}"; do \
                [ -L "$domain" ] || ln -s MiG/${WILDCARD_DOMAIN} $domain; \
-       done
+       done ; fi
 
 # Upgrade pip2, required by cryptography - pip-21+ dropped python2 support, however
 RUN python2 -m pip install -U 'pip<21'
@@ -711,11 +733,14 @@ USER $USER
 
 RUN mkdir -p MiG-certificates \
     && cd MiG-certificates \
-    && ln -s $CERT_DIR/MiG/${WILDCARD_DOMAIN}/cacert.pem cacert.pem \
-    && ln -s $CERT_DIR/MiG MiG \
-    && ln -s $CERT_DIR/combined.pem combined.pem \
-    && ln -s $CERT_DIR/combined.pub combined.pub \
-    && ln -s $CERT_DIR/dhparams.pem dhparams.pem
+    && ln -s ${CERT_DIR}/MiG/${WILDCARD_DOMAIN}/cacert.pem cacert.pem \
+    && ln -s ${CERT_DIR}/MiG MiG \
+    && ln -s ${CERT_DIR}/combined.pem combined.pem \
+    && ln -s ${CERT_DIR}/combined.pem.sha256 combined.pem.sha256 \
+    && ln -s ${CERT_DIR}/combined.pub combined.pub \
+    && ln -s ${CERT_DIR}/combined.pub.md5 combined.pub.md5 \
+    && ln -s ${CERT_DIR}/combined.pub.sha256 combined.pub.sha256 \
+    && ln -s ${CERT_DIR}/dhparams.pem dhparams.pem
 
 USER root
 WORKDIR /tmp
@@ -1283,9 +1308,12 @@ RUN python2 ./generateconfs.py --source=. \
     --user_clause=User --group_clause=Group \
     --listen_clause='#Listen' \
     --serveralias_clause='ServerAlias' --alias_field=email \
-    --dhparams_path=$CERT_DIR/dhparams.pem \
-    --daemon_keycert=$CERT_DIR/combined.pem \
-    --daemon_pubkey=$CERT_DIR/combined.pub \
+    --dhparams_path="${CERT_DIR}/dhparams.pem" \
+    --daemon_keycert="${CERT_DIR}/combined.pem" \
+    --daemon_keycert_sha256="FILE::${CERT_DIR}/combined.pem.sha256" \
+    --daemon_pubkey="${CERT_DIR}/combined.pub" \
+    --daemon_pubkey_md5="FILE::${CERT_DIR}/combined.pub.md5" \
+    --daemon_pubkey_sha256="FILE::${CERT_DIR}/combined.pub.sha256" \
     --daemon_pubkey_from_dns=${PUBKEY_FROM_DNS} \
     --daemon_show_address=${IO_DOMAIN} \
     --signup_methods="${SIGNUP_METHODS}" \
@@ -1492,7 +1520,7 @@ RUN mv $WEB_DIR/conf.d/autoindex.conf $WEB_DIR/conf.d/autoindex.conf.disabled \
 
 # Add generated certificate to trust store
 RUN update-ca-trust force-enable \
-    && cp $CERT_DIR/combined.pem /etc/pki/ca-trust/source/anchors/ \
+    && cp ${CERT_DIR}/combined.pem /etc/pki/ca-trust/source/anchors/ \
     && update-ca-trust extract
 
 # rsyslog: Disable systemd and enable /dev/log
