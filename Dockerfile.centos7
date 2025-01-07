@@ -682,9 +682,9 @@ RUN if [ ! -e "${CERT_DIR}/.persistent" ]; then \
     && openssl x509 -noout -fingerprint -sha256 -in combined.pem | \
        sed 's/.* Fingerprint=//g' > combined.pem.sha256 \
     && ssh-keygen -l -E md5 -f combined.pub | \
-       sed 's/.* MD5://g,s/ .*//g' > combined.pub.md5 \
+       sed 's/.* MD5://g;s/ .*//g' > combined.pub.md5 \
     && ssh-keygen -l -f combined.pub | \
-       sed 's/.* SHA256://g,s/ .*//g' > combined.pub.sha256; fi
+       sed 's/.* SHA256://g;s/ .*//g' > combined.pub.sha256; fi
 
 # Prepare keys for mig
 RUN if [ ! -e "${CERT_DIR}/.persistent" ]; then \
