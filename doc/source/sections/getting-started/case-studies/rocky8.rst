@@ -10,14 +10,16 @@ compared to our legacy CentOS 7 platforms.
 
 In the meantime we have added support for Rocky 9 as well and intend
 to go with that distribution for our own sites. So the use of 8 here is
-mainly historical and not a specific limitation.
+mainly historical and NOT a specific limitation.
 
 Overview
 --------
 In the particular setup we rely on Rocky 8 running virtualized in KVM
 on a physical Rocky 8 host.
 The underlying storage is provided by a remote Lustre 2.12 setup but
-local storage or another network file system should also do the job.
+local storage or another network file system should also do the
+job. Newer stable versions of Lustre have been released in the
+meantime and should also work.
 Communication takes place on a private local network e.g. using a
 172.x.y.z address on the first physical network interface.
 
