@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#	/etc/rc.d/init.d/apache
+#	/etc/rc.d/init.d/apache-minimal
 #
 #	A simple apache httpd wrapper for docker-migrid container use
 #
@@ -12,7 +12,7 @@
 #	    status  - report apache httpd status
 #
 #	Customization of the httpd installation should be specified by
-#	variables in /etc/sysconfig/apache
+#	variables in /etc/sysconfig/apache-minimal
 #
 # Made from the template /usr/share/doc/initscripts-X/sysinitvfiles
 # from our CentOS installation
@@ -22,7 +22,7 @@
 # chkconfig: - 90 10
 # description: Apache httpd is a web server
 # processname: httpd
-# config: /etc/sysconfig/apache
+# config: /etc/sysconfig/apache-minimal
 # 
 
 # Source function library.
@@ -31,8 +31,8 @@
 # <define any local shell functions used by the code that follows>
 
 # first, pull in custom configuration (if it exists):
-if [ -f /etc/sysconfig/apache ]; then
-    . /etc/sysconfig/apache
+if [ -f /etc/sysconfig/apache-minimal ]; then
+    . /etc/sysconfig/apache-minimal
 fi
 # define default locations and user for MiG if not set:
 if [ -z "$MIG_USER" ]; then 
@@ -60,7 +60,7 @@ DAEMON_PATH="/usr/sbin/httpd"
 PID_FILE="$PID_DIR/httpd/httpd.pid"
 
 show_usage() {
-    echo "Usage: apache {start|stop|status|restart|reload}"
+    echo "Usage: apache-minimal {start|stop|status|restart|reload}"
 }
 
 start_apache() {
