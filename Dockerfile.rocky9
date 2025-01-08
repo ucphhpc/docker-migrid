@@ -1411,6 +1411,7 @@ RUN if [ "${ENABLE_LOGROTATE}" = "True" ]; then \
 
 # Init scripts
 RUN cp generated-confs/migrid-init.d-rh /etc/init.d/migrid
+COPY apache-init-helper /etc/init.d/apache-minimal
 
 WORKDIR $MIG_ROOT
 
