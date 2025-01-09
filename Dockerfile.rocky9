@@ -1411,8 +1411,6 @@ RUN if [ "${ENABLE_LOGROTATE}" = "True" ]; then \
 
 # Init scripts
 RUN cp generated-confs/migrid-init.d-rh /etc/init.d/migrid
-COPY migrid-httpd-init.sh /etc/sysconfig/apache-minimal
-COPY apache-init-helper /etc/init.d/apache-minimal
 
 WORKDIR $MIG_ROOT
 
@@ -1511,6 +1509,9 @@ ENTRYPOINT ["/tini", "--"]
 ADD docker-entry.sh /app/docker-entry.sh
 ADD migrid-httpd.env /app/migrid-httpd.env
 ADD migrid-httpd-init.sh /app/migrid-httpd-init.sh
+ADD apache-init-helper /etc/init.d/apache-minimal
+# NOTE: inherit LANG set above for apache
+RUN sed "s/#LANG=.*/LANG=${LANG}/g" /app/migrid-httpd-init.sh > /etc/sysconfig/apache-minimal
 RUN chown $USER:$GROUP /app/docker-entry.sh \
     && chmod +x /app/docker-entry.sh
 
