@@ -1,0 +1,120 @@
+#!/bin/bash
+#
+#	/etc/rc.d/init.d/apache-minimal
+#
+#	A simple apache httpd wrapper for docker-migrid container use
+#
+#	Recognized arguments:
+#	    start   - start apache httpd
+#	    stop    - terminate apache httpd
+#	    restart - terminate and start apache httpd
+#	    reload  - reload apache httpd
+#	    status  - report apache httpd status
+#
+#	Customization of the httpd installation should be specified by
+#	variables in /etc/sysconfig/apache-minimal
+#
+# Made from the template /usr/share/doc/initscripts-X/sysinitvfiles
+# from our CentOS installation
+#
+# <tags ...>
+#
+# chkconfig: - 90 10
+# description: Apache httpd is a web server
+# processname: httpd
+# config: /etc/sysconfig/apache-minimal
+# 
+
+# Source function library.
+. /etc/init.d/functions
+
+# <define any local shell functions used by the code that follows>
+
+# first, pull in custom configuration (if it exists):
+if [ -f /etc/sysconfig/apache-minimal ]; then
+    . /etc/sysconfig/apache-minimal
+fi
+# define default locations and user for MiG if not set:
+if [ -z "$MIG_USER" ]; then 
+    MIG_USER=mig
+fi
+if [ -z "$MIG_PATH" ]; then
+    MIG_PATH=/home/${MIG_USER}
+fi
+# more configurable paths:
+if [ -z "$MIG_STATE" ]; then 
+    MIG_STATE=${MIG_PATH}/state
+fi
+if [ -z "$MIG_CODE" ]; then 
+    MIG_CODE=${MIG_PATH}/mig
+fi
+# Needed for absolute mig.X imports which are now required by PEP8
+if [ -z "$PYTHONPATH" ]; then
+    export PYTHONPATH=${MIG_PATH}
+else
+    export PYTHONPATH=${MIG_PATH}:$PYTHONPATH
+fi
+# you probably do not want to modify these...
+PID_DIR="${PID_DIR:-/var/run}"
+DAEMON_PATH="/usr/sbin/httpd"
+PID_FILE="$PID_DIR/httpd/httpd.pid"
+
+show_usage() {
+    echo "Usage: apache-minimal {start|stop|status|restart|reload}"
+}
+
+start_apache() {
+    echo -n "Starting apache httpd server"
+    ${DAEMON_PATH} -k start
+    RET2=$?
+    [ $RET2 ] && success
+    echo
+    [ $RET2 ] || echo "Warning: httpd not started."
+    echo
+}
+
+stop_apache() {
+    echo -n "Shutting down apache httpd server"
+    killproc ${DAEMON_PATH}
+    echo
+}
+
+reload_apache() {
+    echo -n "Reloading apache httpd server"
+    killproc ${DAEMON_PATH} -HUP
+    echo
+}
+
+status_apache() {
+    status ${DAEMON_PATH}
+}
+
+
+### Main ###
+
+# Exit cleanly if main daemon is missing
+test -f ${DAEMON_PATH} || exit 0
+
+case "$1" in
+    start)
+        start_apache
+	;;
+    stop)
+        stop_apache
+	;;
+    status)
+        status_apache
+	;;
+    restart)
+        stop_apache
+        start_apache
+	;;
+    reload)
+        reload_apache
+	;;
+    *)
+	show_usage
+	exit 1
+	;;
+esac
+exit $?

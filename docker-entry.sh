@@ -128,9 +128,8 @@ for svc in ${RUN_SERVICES}; do
         # Load required httpd environment vars
         source migrid-httpd-init.sh
 
-        # TODO: can we switch to proper service start?
-        #service httpd start
-        /usr/sbin/httpd -k start
+	# Use simple apache init wrapper to allow restart without systemd need
+        service apache-minimal start
         status=$?
         if [ $status -ne 0 ]; then
             echo "Failed to start $svc: $status"
