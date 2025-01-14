@@ -353,3 +353,8 @@ PROCS
 procs
 WWWSERVE
 tmp
+SameSite
+backchannel
+PKI
+srvrco
+SSHFP

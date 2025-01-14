@@ -117,9 +117,9 @@ fingerprints from
 `FILE::/etc/httpd/MiG-certificates/combined.pem.sha256`
 respectively corresponding to the
 `certs/combined.pub.md5`, `certs/combined.pub.sha256` and
-`certs/combined.pem.sha256` files in your docker-migrid root dir on the host.
-If those files are maintained the user Setup SFTP/WebDAVS/FTPS page tabs will
-always show the current fingerprint.
+`certs/combined.pem.sha256` files in your docker-migrid root directory on the
+host.If those files are maintained the user Setup SFTP/WebDAVS/FTPS page tabs
+will always show the current fingerprint.
 
 Please note that SSH/SFTP public keys are a bit tedious for the clients to
 verify. We therefore recommend distributing the SFTP public key fingerprint
