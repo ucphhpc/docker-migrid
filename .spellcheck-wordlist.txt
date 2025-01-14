@@ -358,3 +358,5 @@ backchannel
 PKI
 srvrco
 SSHFP
+userinfo
+migcheckssl
