@@ -142,6 +142,54 @@ Variables
    * - EXT_OIDC_PASS_CLAIM_AS
      - unset
      - Used in the user ID exchange between external OpenID Connect IDP and the migrid web app. Adjustments might be needed if user IDs may contain accented characters. Default is "both" but in some such cases "both latin1" may be needed instead.
+   * - EXT_OIDC_REWRITE_COOKIE
+     - 
+     - Optional helper to expose OIDC cookies to Apache rewrites for user access decisions based on ID token.
+   * - EXT_OIDC_COOKIE_SAME_SITE
+     - 
+     - SameSite flag that will be set on cookies. Passed verbatim to Apache Auth OIDC module configuration. Please refer to the upstream docs e.g. in the sample configuration at https://github.com/OpenIDC/mod_auth_openidc/blob/master/auth_openidc.conf
+   * - EXT_OIDC_PASS_COOKIES
+     - 
+     - Cookies to pick up from the browser and send on backchannel during auth. Passed verbatim to Apache Auth OIDC module configuration. Please refer to the upstream docs e.g. in the sample configuration at https://github.com/OpenIDC/mod_auth_openidc/blob/master/auth_openidc.conf
+   * - EXT_OIDC_PROVIDER_ISSUER
+     - 
+     - Unique issuer identifier of the ID provider if not provided in metadata. Passed verbatim to Apache Auth OIDC module configuration. Please refer to the upstream docs e.g. in the sample configuration at https://github.com/OpenIDC/mod_auth_openidc/blob/master/auth_openidc.conf
+   * - EXT_OIDC_PROVIDER_AUTHORIZATION_ENDPOINT
+     - 
+     - ID provider authorization endpoint if not provided in metadata. Passed verbatim to Apache Auth OIDC module configuration. Please refer to the upstream docs e.g. in the sample configuration at https://github.com/OpenIDC/mod_auth_openidc/blob/master/auth_openidc.conf
+   * - EXT_OIDC_PROVIDER_TOKEN_ENDPOINT
+     - 
+     - ID provider token endpoint if not provided in metadata. Passed verbatim to Apache Auth OIDC module configuration. Please refer to the upstream docs e.g. in the sample configuration at https://github.com/OpenIDC/mod_auth_openidc/blob/master/auth_openidc.conf
+   * - EXT_OIDC_PROVIDER_TOKEN_ENDPOINT_AUTH
+     - 
+     - ID provider token auth endpoint if not provided in metadata. Passed verbatim to Apache Auth OIDC module configuration. Please refer to the upstream docs e.g. in the sample configuration at https://github.com/OpenIDC/mod_auth_openidc/blob/master/auth_openidc.conf
+   * - EXT_OIDC_PROVIDER_USER_INFO_ENDPOINT
+     -
+     - ID provider user info endpoint if not provided in metadata. Passed verbatim to Apache Auth OIDC module configuration. Please refer to the upstream docs e.g. in the sample configuration at https://github.com/OpenIDC/mod_auth_openidc/blob/master/auth_openidc.conf
+   * - EXT_OIDC_PRIVATE_KEY_FILES
+     - 
+     - Private keys for PKI handshake with ID Provider instead of shared secret. Passed verbatim to Apache Auth OIDC module configuration. Please refer to the upstream docs e.g. in the sample configuration at https://github.com/OpenIDC/mod_auth_openidc/blob/master/auth_openidc.conf
+   * - EXT_OIDC_PROVIDER_VERIFY_CERT_FILES
+     - 
+     - Certificates for PKI handshake with ID Provider instead of shared secret. Passed verbatim to Apache Auth OIDC module configuration. Please refer to the upstream docs e.g. in the sample configuration at https://github.com/OpenIDC/mod_auth_openidc/blob/master/auth_openidc.conf
+   * - EXT_OIDC_PUBLIC_KEY_FILES
+     - 
+     - Public keys for PKI handshake with ID Provider instead of shared secret. Passed verbatim to Apache Auth OIDC module configuration. Please refer to the upstream docs e.g. in the sample configuration at https://github.com/OpenIDC/mod_auth_openidc/blob/master/auth_openidc.conf
+   * - EXT_OIDC_USER_INFO_SIGNED_RESPONSE_ALG
+     - 
+     - Algorithm used to sign the id_token. Passed verbatim to Apache Auth OIDC module configuration. Please refer to the upstream docs e.g. in the sample configuration at https://github.com/OpenIDC/mod_auth_openidc/blob/master/auth_openidc.conf
+   * - EXT_OIDC_RESPONSE_MODE
+     - 
+     - Response mode used for configured response type. Passed verbatim to Apache Auth OIDC module configuration. Please refer to the upstream docs e.g. in the sample configuration at https://github.com/OpenIDC/mod_auth_openidc/blob/master/auth_openidc.conf
+   * - EXT_OIDC_USER_INFO_TOKEN_METHOD
+     - 
+     - How the access token will be presented to the userinfo endpoint. Passed verbatim to Apache Auth OIDC module configuration. Please refer to the upstream docs e.g. in the sample configuration at https://github.com/OpenIDC/mod_auth_openidc/blob/master/auth_openidc.conf
+   * - EXT_OIDC_ID_TOKEN_ENCRYPTED_RESPONSE_ENC
+     - 
+     - Algorithm used to encrypt the id_token with the Content Encryption Key. Passed verbatim to Apache Auth OIDC module configuration. Please refer to the upstream docs e.g. in the sample configuration at  https://github.com/OpenIDC/mod_auth_openidc/blob/master/auth_openidc.conf
+   * - EXT_OIDC_PKCE_METHOD
+     - 
+     - PKCE method used. Passed verbatim to Apache Auth OIDC module configuration. Please refer to the upstream docs e.g. in the sample configuration at https://github.com/OpenIDC/mod_auth_openidc/blob/master/auth_openidc.conf
    * - PUBLIC_HTTP_PORT
      - 80
      - TCP port for incoming plain HTTP connections. Will generally be redirected to HTTPS, except when used for LetsEncrypt HTTP-01 verification.

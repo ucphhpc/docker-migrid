@@ -95,7 +95,35 @@ Setup root account for LetsEncrypt use::
     echo 'DOMAIN_CHAIN_LOCATION="/etc/httpd/MiG-certificates/letsencrypt/bench.erda.dk/server.cert.ca.pem"'
     echo 'DOMAIN_PEM_LOCATION="/etc/httpd/MiG-certificates/letsencrypt/bench.erda.dk/server.key.crt.ca.pem"'
     } >> /root/.getssl/bench.erda.dk/getssl.cfg
-    sed -i 's/=www.bench.erda.dk/=bench-www.erda.dk,bench-sid.erda.dk,bench-io.erda.dk,bench-ext.erda.dk,bench-oid.erda.dk,bench-oidc.erda.dk,bench-cert.erda.dk/g' /root/.getssl/bench.erda.dk/getssl.cfg
+    sed -i 's/=www.bench.erda.dk/=bench-www.erda.dk,bench-sid.erda.dk,bench-io.erda.dk,bench-ext.erda.dk,bench-oid.erda.dk,bench-oidc.erda.dk,bench-cert.erda.dk,bench-wayf.erda.dk/g' /root/.getssl/bench.erda.dk/getssl.cfg
+
+To avoid having to manually update key and certificate fingerprints in the
+generated MiGserver.conf you'll want to use a persistent key for SFTP and
+automate certificate fingerprint update if using the frequently renewed
+LetsEncrypt certificates as described above for the FTPS and WebDAVS services.
+You can e.g. use the generated `migcheckssl` cron job with the `getssl` tool
+from https://github.com/srvrco/getssl to do that, or write your own hooks to
+generate the fingerprints upon renewal if you prefer to use `certbot` or other
+tools for managing and renewing your LetsEncrypt certificates.
+You can find the `ssh-keygen` and `openssl` commands to extract fingerprints of
+the SSH/SFTP public key and X509 certificates respectively in that same
+generated `migcheckssl` cronjob or in the template it's generated from at
+https://github.com/ucphhpc/migrid-sync/blob/next/mig/install/migcheckssl-template.sh.cronjob
+
+The important part is to note that docker-migrid is set up to read the
+fingerprints from
+`FILE::/etc/httpd/MiG-certificates/combined.pub.md5`
+`FILE::/etc/httpd/MiG-certificates/combined.pub.sha256` and
+`FILE::/etc/httpd/MiG-certificates/combined.pem.sha256`
+respectively corresponding to the
+`certs/combined.pub.md5`, `certs/combined.pub.sha256` and
+`certs/combined.pem.sha256` files in your docker-migrid root dir on the host.
+If those files are maintained the user Setup SFTP/WebDAVS/FTPS page tabs will
+always show the current fingerprint.
+
+Please note that SSH/SFTP public keys are a bit tedious for the clients to
+verify. We therefore recommend distributing the SFTP public key fingerprint
+over DNS(SEC) with SSHFP records even for static keys and more so if dynamic.
 
 Set up DNS for the 4 or more IPs needed for the virtual hosts
 (130.225.104.110-117 used here) and configure the VM network to listen
@@ -160,7 +188,7 @@ Generate initial server certificates with a simple python web server::
     curl https://ssl-config.mozilla.org/ffdhe4096.txt -o dhparams.pem
     chmod 755 letsencrypt/bench.erda.dk
     ln -s letsencrypt/bench.erda.dk .
-    for dom in www sid io ext oid oidc cert; do
+    for dom in www sid io ext oid oidc cert wayf; do
         ln -s letsencrypt/bench.erda.dk bench-${dom}.erda.dk;
     done
     ln -s bench.erda.dk/server.crt .
@@ -171,8 +199,14 @@ Generate initial server certificates with a simple python web server::
     cat bench.erda.dk/server.pem bench.erda.dk/server.cert.ca.pem > bench.erda.dk/combined.pem
     chmod 400 bench.erda.dk/combined.pem
     ssh-keygen -y -f bench.erda.dk/combined.pem > bench.erda.dk/combined.pub
-    ln -s bench-io.erda.dk/combined.pem .
-    ln -s bench-io.erda.dk/combined.pub .
+    openssl x509 -noout -fingerprint -sha256 -in bench.erda.dk/combined.pem | \
+       sed 's/.* Fingerprint=//g' > bench.erda.dk/combined.pem.sha256 \
+    ssh-keygen -l -E md5 -f bench.erda.dk/combined.pub | \
+       sed 's/.* MD5://g;s/ .*//g' > bench.erda.dk/combined.pub.md5 \
+    ssh-keygen -l -f bench.erda.dk/combined.pub | \
+       sed 's/.* SHA256://g;s/ .*//g' > bench.erda.dk/combined.pub.sha256
+    ln -s bench-io.erda.dk/combined.pem* .
+    ln -s bench-io.erda.dk/combined.pub* .
 
 Prepare an unprivileged `mig` account for running docker-migrid using
 the podman docker wrappers. In that relation we need to disable
