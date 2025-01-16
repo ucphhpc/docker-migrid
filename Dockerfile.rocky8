@@ -114,6 +114,7 @@ ARG ENABLE_JUPYTER=True
 ARG ENABLE_CLOUD=False
 ARG CLOUD_ACCESS=cloud-access.yaml
 ARG CLOUD_JUMPHOST_KEY=cloud-jumphost-key
+ARG OPENSTACKSDK_VERSION_OVERRIDE=
 ARG ENABLE_MIGADMIN=False
 ARG ENABLE_GDP=False
 ARG ENABLE_TWOFACTOR=True
@@ -775,6 +776,7 @@ ARG WITH_PY3
 ARG MODERN_WSGIDAV
 ARG UPGRADE_PARAMIKO
 ARG ENABLE_CLOUD
+ARG OPENSTACKSDK_VERSION_OVERRIDE
 ARG TRAC_ADMIN_PATH
 
 # NOTE: Switch back to root for system-wide pip install here
@@ -826,8 +828,14 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
 RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
       pip2 install PyYAML==3.12 'openstacksdk<2' 'python-cinderclient<6' \
                    'python-openstackclient<5'; \
+      if [ -n "${OPENSTACKSDK_VERSION_OVERRIDE}" ]; then \
+        pip2 install "openstacksdk==${OPENSTACKSDK_VERSION_OVERRIDE}" ; \
+      fi; \
       if [ "${WITH_PY3}" = "True" ]; then \
         pip3 install PyYAML==3.12 'openstacksdk<1.5' 'python-openstackclient<6'; \
+        if [ -n "${OPENSTACKSDK_VERSION_OVERRIDE}" ]; then \
+          pip3 install "openstacksdk==${OPENSTACKSDK_VERSION_OVERRIDE}" ; \
+        fi; \
       fi; \
     fi;
 
@@ -1391,6 +1399,7 @@ RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
         ln -s ../../state/secrets/${CLOUD_ACCESS} .config/openstack/clouds.yaml ; \
         [ -n "${CLOUD_JUMPHOST_KEY}" ] || CLOUD_JUMPHOST_KEY="cloud-jumphost-key" ; \ 
         ln -s ../state/secrets/${CLOUD_JUMPHOST_KEY} .ssh/${CLOUD_JUMPHOST_KEY} ; \
+        ln -s ../state/secrets/${CLOUD_JUMPHOST_KEY}.pub .ssh/${CLOUD_JUMPHOST_KEY}.pub ; \
     fi;
 
 # link relevant py trac ini into default location if no TRAC_INI_PATH is set here
