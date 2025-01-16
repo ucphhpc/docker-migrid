@@ -115,6 +115,7 @@ ARG ENABLE_JUPYTER=True
 ARG ENABLE_CLOUD=False
 ARG CLOUD_ACCESS=cloud-access.yaml
 ARG CLOUD_JUMPHOST_KEY=cloud-jumphost-key
+ARG OPENSTACKSDK_VERSION_OVERRIDE=
 ARG ENABLE_MIGADMIN=False
 ARG ENABLE_GDP=False
 ARG ENABLE_TWOFACTOR=True
@@ -732,6 +733,7 @@ ARG WITH_PY3
 ARG MODERN_WSGIDAV
 ARG UPGRADE_PARAMIKO
 ARG ENABLE_CLOUD
+ARG OPENSTACKSDK_VERSION_OVERRIDE
 ARG TRAC_ADMIN_PATH
 
 # NOTE: Switch back to root for system-wide pip install here
@@ -761,12 +763,16 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
       fi; \
     fi;
 
-# NOTE: openstackclient is available in dnf here
-#RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
-#      if [ "${WITH_PY3}" = "True" ]; then \
-#        pip3 install python-openstackclient; \
-#      fi; \
-#    fi;
+# NOTE: openstackclient is available in dnf here, but sdk may be requested
+#       e.g. to work around version 1.0.0 breaking floating IP assignment
+RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
+      #if [ "${WITH_PY3}" = "True" ]; then \
+      #  pip3 install python-openstackclient; \
+      #fi; \
+      if [ -n "${OPENSTACKSDK_VERSION_OVERRIDE}" ]; then \
+        pip3 install "openstacksdk==${OPENSTACKSDK_VERSION_OVERRIDE}" ; \
+      fi; \
+    fi;
 
 # OpenID support in python (python-openid2 for py3) - use alternative from dnf 
 #RUN pip3 install python-openid2;
@@ -1269,6 +1275,7 @@ RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
         ln -s ../../state/secrets/${CLOUD_ACCESS} .config/openstack/clouds.yaml ; \
         [ -n "${CLOUD_JUMPHOST_KEY}" ] || CLOUD_JUMPHOST_KEY="cloud-jumphost-key" ; \ 
         ln -s ../state/secrets/${CLOUD_JUMPHOST_KEY} .ssh/${CLOUD_JUMPHOST_KEY} ; \
+        ln -s ../state/secrets/${CLOUD_JUMPHOST_KEY}.pub .ssh/${CLOUD_JUMPHOST_KEY}.pub ; \
     fi;
 
 # link relevant py trac ini into default location if no TRAC_INI_PATH is set here
