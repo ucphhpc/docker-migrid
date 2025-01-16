@@ -419,6 +419,9 @@ Variables
    * - CLOUD_JUMPHOST_KEY
      - cloud-jumphost-key
      - The name of the cloud jumphost ssh key file to use for managing user ssh keys on the cloud jumphost if the optional cloud integration is enabled (ENABLE_CLOUD).
+   * - OPENSTACKSDK_VERSION_OVERRIDE
+     -
+     - Install this particular custom openstacksdk package version specifically if it and ENABLE_CLOUD is set. E.g. useful to install a pre-1.0.0 version with older OpenStack clouds to get floating IP assignment working there.
    * - ENABLE_MIGADMIN
      - False
      - Enable the built-in Server Admin feature for web based management of external user, log inspection, etc.
