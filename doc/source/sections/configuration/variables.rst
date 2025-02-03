@@ -78,10 +78,13 @@ Variables
      - For self-signed certificate use
    * - PUBLIC_DOMAIN
      - www.migrid.test
-     - The domain to serve public migrid web pages on
+     - The domain to serve public migrid web pages on for http and https
+   * - PUBLIC_SEC_DOMAIN
+     -
+     - Optional domain for securely serving the public migrid web pages, e.g. to allow both base `DOMAIN` and `www.DOMAIN` to work as front page
    * - PUBLIC_ALIAS_DOMAIN
      -
-     - Optional domain alias for the public migrid web pages, e.g. to allow both base `DOMAIN` and `PUBLIC_DOMAIN` to work as front page
+     - Optional domain alias for the public migrid web pages, e.g. to allow plain `DOMAIN`, `www.DOMAIN` and an organizational alias to work as front page
    * - MIGCERT_DOMAIN
      - cert.migrid.test
      - The optional domain under which migrid web for certificate-based authentication with a local CA will be reachable.
