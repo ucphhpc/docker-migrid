@@ -18,6 +18,7 @@ ARG DOMAIN=migrid.test
 ARG WILDCARD_DOMAIN=*.migrid.test
 ARG PUBLIC_DOMAIN=www.migrid.test
 ARG PUBLIC_ALIAS_DOMAIN=
+ARG PUBLIC_SEC_DOMAIN=
 ARG MIGCERT_DOMAIN=cert.migrid.test
 ARG EXTCERT_DOMAIN=
 ARG MIGOID_DOMAIN=ext.migrid.test
@@ -600,6 +601,7 @@ FROM --platform=linux/$ARCH base AS setup_security
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG PUBLIC_DOMAIN
+ARG PUBLIC_SEC_DOMAIN
 ARG PUBLIC_ALIAS_DOMAIN
 ARG MIGCERT_DOMAIN
 ARG EXTCERT_DOMAIN
@@ -689,10 +691,10 @@ RUN if [ ! -e "${CERT_DIR}/.persistent" ]; then \
     && ln -s MiG/${WILDCARD_DOMAIN}/combined.pub combined.pub \
     && ln -s MiG/${WILDCARD_DOMAIN}/combined.pub.md5 combined.pub.md5 \
     && ln -s MiG/${WILDCARD_DOMAIN}/combined.pub.sha256 combined.pub.sha256 \
-    && for domain in "${PUBLIC_DOMAIN}" "${PUBLIC_ALIAS_DOMAIN}" \
-	   "${MIGCERT_DOMAIN}" "${EXTCERT_DOMAIN}" "${MIGOID_DOMAIN}" \
-	   "${EXTOID_DOMAIN}" "${EXTOIDC_DOMAIN}" "${SID_DOMAIN}" \
-	   "${IO_DOMAIN}" "${OPENID_DOMAIN}" "${SFTP_DOMAIN}" \
+    && for domain in "${PUBLIC_DOMAIN}" "${PUBLIC_SEC_DOMAIN}" \
+           "${PUBLIC_ALIAS_DOMAIN}" "${MIGCERT_DOMAIN}" "${EXTCERT_DOMAIN}" \
+           "${MIGOID_DOMAIN}" "${EXTOID_DOMAIN}" "${EXTOIDC_DOMAIN}" \
+           "${SID_DOMAIN}" "${IO_DOMAIN}" "${OPENID_DOMAIN}" "${SFTP_DOMAIN}" \
            "${FTPS_DOMAIN}" "${WEBDAVS_DOMAIN}"; do \
                [ -L "$domain" ] || ln -s MiG/${WILDCARD_DOMAIN} $domain; \
        done ; fi
@@ -897,6 +899,7 @@ RUN rm -f ${MIG_ROOT}/mig/server/grid_webdavs.py ; \
 FROM --platform=linux/$ARCH download_mig AS install_mig
 ARG DOMAIN
 ARG PUBLIC_DOMAIN
+ARG PUBLIC_SEC_DOMAIN
 ARG PUBLIC_ALIAS_DOMAIN
 ARG MIGCERT_DOMAIN
 ARG EXTCERT_DOMAIN
@@ -1102,6 +1105,7 @@ RUN ./generateconfs.py --source=. \
     --destination=generated-confs \
     --base_fqdn=$DOMAIN \
     --public_fqdn=${PUBLIC_DOMAIN} \
+    --public_sec_fqdn=${PUBLIC_SEC_DOMAIN} \
     --public_alias_fqdn=${PUBLIC_ALIAS_DOMAIN} \
     --mig_cert_fqdn=${MIGCERT_DOMAIN} \
     --ext_cert_fqdn=${EXTCERT_DOMAIN} \
