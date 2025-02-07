@@ -18,6 +18,7 @@ ARG DOMAIN=migrid.test
 ARG WILDCARD_DOMAIN=*.migrid.test
 ARG PUBLIC_DOMAIN=www.migrid.test
 ARG PUBLIC_ALIAS_DOMAIN=
+ARG STATUS_ALIAS_DOMAIN=
 ARG PUBLIC_SEC_DOMAIN=
 ARG MIGCERT_DOMAIN=cert.migrid.test
 ARG EXTCERT_DOMAIN=
@@ -603,6 +604,7 @@ ARG WILDCARD_DOMAIN
 ARG PUBLIC_DOMAIN
 ARG PUBLIC_SEC_DOMAIN
 ARG PUBLIC_ALIAS_DOMAIN
+ARG STATUS_ALIAS_DOMAIN
 ARG MIGCERT_DOMAIN
 ARG EXTCERT_DOMAIN
 ARG MIGOID_DOMAIN
@@ -692,7 +694,8 @@ RUN if [ ! -e "${CERT_DIR}/.persistent" ]; then \
     && ln -s MiG/${WILDCARD_DOMAIN}/combined.pub.md5 combined.pub.md5 \
     && ln -s MiG/${WILDCARD_DOMAIN}/combined.pub.sha256 combined.pub.sha256 \
     && for domain in "${PUBLIC_DOMAIN}" "${PUBLIC_SEC_DOMAIN}" \
-           "${PUBLIC_ALIAS_DOMAIN}" "${MIGCERT_DOMAIN}" "${EXTCERT_DOMAIN}" \
+           "${PUBLIC_ALIAS_DOMAIN}" "${STATUS_ALIAS_DOMAIN}" \
+           "${MIGCERT_DOMAIN}" "${EXTCERT_DOMAIN}" \
            "${MIGOID_DOMAIN}" "${EXTOID_DOMAIN}" "${EXTOIDC_DOMAIN}" \
            "${SID_DOMAIN}" "${IO_DOMAIN}" "${OPENID_DOMAIN}" "${SFTP_DOMAIN}" \
            "${FTPS_DOMAIN}" "${WEBDAVS_DOMAIN}"; do \
@@ -901,6 +904,7 @@ ARG DOMAIN
 ARG PUBLIC_DOMAIN
 ARG PUBLIC_SEC_DOMAIN
 ARG PUBLIC_ALIAS_DOMAIN
+ARG STATUS_ALIAS_DOMAIN
 ARG MIGCERT_DOMAIN
 ARG EXTCERT_DOMAIN
 ARG MIGOID_DOMAIN
@@ -1107,6 +1111,7 @@ RUN ./generateconfs.py --source=. \
     --public_fqdn=${PUBLIC_DOMAIN} \
     --public_sec_fqdn=${PUBLIC_SEC_DOMAIN} \
     --public_alias_fqdn=${PUBLIC_ALIAS_DOMAIN} \
+    --status_alias_fqdn=${STATUS_ALIAS_DOMAIN} \
     --mig_cert_fqdn=${MIGCERT_DOMAIN} \
     --ext_cert_fqdn=${EXTCERT_DOMAIN} \
     --mig_oid_fqdn=${MIGOID_DOMAIN} \
