@@ -362,3 +362,5 @@ userinfo
 migcheckssl
 OPENSTACKSDK
 openstacksdk
+HTML
+html
