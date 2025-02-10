@@ -85,6 +85,9 @@ Variables
    * - PUBLIC_ALIAS_DOMAIN
      -
      - Optional domain alias for the public migrid web pages, e.g. to allow plain `DOMAIN`, `www.DOMAIN` and an organizational alias to work as front page
+   * - STATUS_ALIAS_DOMAIN
+     -
+     - Optional domain alias for an integrated site status web page, e.g. to allow a `status.DOMAIN` alias for one of the existing public FQDN virtual hosts in order to let it work as a direct pointer to the status.html in wwwpublic folder and thereby expose the complete status overview also integrated on the status popup on the user pages.
    * - MIGCERT_DOMAIN
      - cert.migrid.test
      - The optional domain under which migrid web for certificate-based authentication with a local CA will be reachable.
