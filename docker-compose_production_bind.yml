@@ -162,6 +162,9 @@ services:
         source: user_db_home
         target: /home/mig/state/user_db_home
       - type: volume
+        source: gdp_home
+        target: /home/mig/state/gdp_home
+      - type: volume
         source: vgrid_home
         target: /home/mig/state/vgrid_home
       - type: volume
@@ -287,6 +290,9 @@ services:
       - type: volume
         source: user_db_home
         target: /home/mig/state/user_db_home
+      - type: volume
+        source: gdp_home
+        target: /home/mig/state/gdp_home
       # NOTE: these vgrid helpers are not needed in openid container
       #- type: volume
       #  source: vgrid_home
@@ -407,6 +413,9 @@ services:
         source: user_db_home
         target: /home/mig/state/user_db_home
       - type: volume
+        source: gdp_home
+        target: /home/mig/state/gdp_home
+      - type: volume
         source: vgrid_home
         target: /home/mig/state/vgrid_home
       - type: volume
@@ -525,6 +534,9 @@ services:
         source: user_db_home
         target: /home/mig/state/user_db_home
       - type: volume
+        source: gdp_home
+        target: /home/mig/state/gdp_home
+      - type: volume
         source: vgrid_home
         target: /home/mig/state/vgrid_home
       - type: volume
@@ -642,6 +654,9 @@ services:
       - type: volume
         source: user_db_home
         target: /home/mig/state/user_db_home
+      - type: volume
+        source: gdp_home
+        target: /home/mig/state/gdp_home
       - type: volume
         source: vgrid_home
         target: /home/mig/state/vgrid_home
@@ -893,6 +908,14 @@ volumes:
     driver_opts:
       type: none
       device: ${PERSISTENT_ROOT}/user_db_home
+      o: bind
+
+  gdp_home:
+    # Volume used to contain the migrid gdp_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/gdp_home
       o: bind
 
   vgrid_home:
