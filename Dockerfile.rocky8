@@ -1389,8 +1389,12 @@ RUN ./generateconfs.py --source=. \
 
 RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/static-skin.css $MIG_ROOT/mig/images/ \
-    && cp generated-confs/index.html $MIG_ROOT/state/user_home/ \
-    && cp $MIG_ROOT/mig/images/site-conf-${EMULATE_FQDN}.js $MIG_ROOT/mig/images/site-conf.js
+    && cp generated-confs/index.html $MIG_ROOT/state/user_home/
+
+# Site conf for js helpers including status page and auth options on index page
+RUN [ -e "$MIG_ROOT/mig/images/site-conf-${DOMAIN}.js" ] || \
+    cp -a $MIG_ROOT/mig/images/site-conf-${EMULATE_FQDN}.js \
+       $MIG_ROOT/mig/images/site-conf-${DOMAIN}.js
 
 # Add a couple of named pipes for communicating with grid_X daemons
 RUN cd $MIG_ROOT && mkfifo mig/server/server.stdin && mkfifo mig/server/notify.stdin
@@ -1524,6 +1528,7 @@ RUN ln -s index-${DOMAIN}.html $MIG_ROOT/state/wwwpublic/index.html && \
     ln -s support-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/support-snippet.html && \
     ln -s tips-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/tips-snippet.html && \
     ln -s terms-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/terms-snippet.html && \
+    ln -s site-conf-${DOMAIN}.js $MIG_ROOT/mig/images/site-conf.js && \
     # Make an empty template for status popup and status page to use.
     # For inspiration on how to use it please refer to the samples at
     # https://github.com/ucphhpc/migrid-ucph-sites/tree/main/state/wwwpublic
