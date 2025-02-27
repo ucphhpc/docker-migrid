@@ -971,7 +971,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${LOG_ROOT}/migrid
+      device: ${LOG_ROOT}/syslog/migrid
       o: bind
 
   migrid-openid-syslog:
@@ -979,7 +979,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${LOG_ROOT}/migrid-openid
+      device: ${LOG_ROOT}/syslog/migrid-openid
       o: bind
 
   migrid-sftp-syslog:
@@ -987,7 +987,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${LOG_ROOT}/migrid-sftp
+      device: ${LOG_ROOT}/syslog/migrid-sftp
       o: bind
 
   migrid-webdavs-syslog:
@@ -995,7 +995,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${LOG_ROOT}/migrid-webdavs
+      device: ${LOG_ROOT}/syslog/migrid-webdavs
       o: bind
 
   migrid-ftps-syslog:
@@ -1003,5 +1003,5 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${LOG_ROOT}/migrid-ftps
+      device: ${LOG_ROOT}/syslog/migrid-ftps
       o: bind
