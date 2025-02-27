@@ -128,12 +128,12 @@ initdirs: initcomposevars
 	mkdir -p ${PERSISTENT_ROOT}/wwwpublic-download
 	mkdir -p ${PERSISTENT_ROOT}/secrets
 	mkdir -p ${LOG_ROOT}/miglog
-	mkdir -p ${LOG_ROOT}/migrid
-	mkdir -p ${LOG_ROOT}/migrid-io
-	mkdir -p ${LOG_ROOT}/migrid-openid
-	mkdir -p ${LOG_ROOT}/migrid-sftp
-	mkdir -p ${LOG_ROOT}/migrid-webdavs
-	mkdir -p ${LOG_ROOT}/migrid-ftps
+	mkdir -p ${LOG_ROOT}/syslog/migrid
+	mkdir -p ${LOG_ROOT}/syslog/migrid-io
+	mkdir -p ${LOG_ROOT}/syslog/migrid-openid
+	mkdir -p ${LOG_ROOT}/syslog/migrid-sftp
+	mkdir -p ${LOG_ROOT}/syslog/migrid-webdavs
+	mkdir -p ${LOG_ROOT}/syslog/migrid-ftps
 
 initcomposevars:
 	@echo "creating env variable map in docker-compose_shared.yml"
