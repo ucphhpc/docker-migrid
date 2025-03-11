@@ -221,6 +221,7 @@ dockervolumeclean:
 
 clean:
 	rm -f docker-compose_shared.yml
+	rm -f migrid-httpd-init.sh
 	rm -fr ./mig
 	rm -fr ./httpd
 	# NOTE: certs may be injected or symlink to externally maintained dir.
