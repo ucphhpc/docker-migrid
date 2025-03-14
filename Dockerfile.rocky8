@@ -322,10 +322,9 @@ WORKDIR /tmp
 # Add common shell aliases
 COPY shell-aliases.sh /etc/profile.d/
 
-# TODO: is this also a problem with rocky8+?
-# Centos image default yum configs prevent docs installation
+# Rocky image default dnf configs prevent doc installation like CentOS yum used to do
 # https://superuser.com/questions/784451/centos-on-docker-how-to-install-doc-files
-RUN sed -i '/nodocs/d' /etc/yum.conf
+RUN sed -i '/nodocs/d' /etc/dnf/dnf.conf
 
 # NOTE: Enable powertools repo by default on Rocky for cracklib-devel, sshfs, ...
 RUN dnf update -y \
