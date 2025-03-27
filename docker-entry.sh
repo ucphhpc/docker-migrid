@@ -26,17 +26,17 @@ else
     fi
 fi
 
-if [ ! -z "${USER}"]; then
+if [ -z "${USER}" ]; then
     echo "Failed to start because the USER environment variable is not set and is required"
     exit 1
 fi
 
-if [ ! -z "${MIG_ROOT}"]; then
+if [ -z "${MIG_ROOT}" ]; then
     echo "Failed to start because the MIG_ROOT environment variable is not set and is required"
     exit 1
 fi
 
-if [ ! -f "${MIG_ROOT}"]; then
+if [ -f "${MIG_ROOT}" ]; then
     echo "Failed to start because the MIG_ROOT environment is set, but the path: ${MIG_ROOT} does not exist"
     exit 1
 fi
