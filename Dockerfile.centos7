@@ -443,10 +443,10 @@ RUN if [ "${WITH_PY3}" = True ]; then \
 # mail outside containers.
 RUN if [ -n "${SMTP_SERVER}" ]; then \
       [ -z "${SMTP_PORT}" ] && SMTP_PORT=25; \
-      echo "# Simple SMTP setup to route all local mail to host SMTP" > /etc/esmtprc && \
-      echo "hostname ${SMTP_SERVER}:${SMTP_PORT}" >> /etc/esmtprc && \
-      echo "qualifydomain ${DOMAIN}" >> /etc/esmtprc ; \
-      echo "force reverse_path %u@${DOMAIN}" >> /etc/esmtprc ; \
+      echo "# Simple SMTP setup to route all local mail to host SMTP" > /etc/esmtprc \
+      && echo "hostname ${SMTP_SERVER}:${SMTP_PORT}" >> /etc/esmtprc \
+      && echo "qualifydomain ${DOMAIN}" >> /etc/esmtprc \
+      && echo "force reverse_path %u@${DOMAIN}" >> /etc/esmtprc ; \
     fi
 
 # TODO: this breaks yum etc in build - can we switch default?
