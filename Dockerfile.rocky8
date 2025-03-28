@@ -1528,6 +1528,7 @@ RUN ln -s index-${DOMAIN}.html $MIG_ROOT/state/wwwpublic/index.html && \
     ln -s support-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/support-snippet.html && \
     ln -s tips-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/tips-snippet.html && \
     ln -s terms-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/terms-snippet.html && \
+    ln -s terms-${EMULATE_FQDN}.html $MIG_ROOT/state/wwwpublic/terms.html && \
     ln -s site-conf-${DOMAIN}.js $MIG_ROOT/mig/images/site-conf.js && \
     # Make an empty template for status popup and status page to use.
     # For inspiration on how to use it please refer to the samples at
@@ -1535,6 +1536,19 @@ RUN ln -s index-${DOMAIN}.html $MIG_ROOT/state/wwwpublic/index.html && \
     echo '[]' > $MIG_ROOT/state/wwwpublic/status-events-${DOMAIN}.json && \
     ln -s status-events-${DOMAIN}.json $MIG_ROOT/state/wwwpublic/status-events.json && \
     ln -s status-dynamic.html $MIG_ROOT/state/wwwpublic/status.html && \
+    # Optional site helpers which we symlink in order to use them if they exist
+    ln -s cookie-policy-${DOMAIN}.pdf \
+        $MIG_ROOT/state/wwwpublic/cookie-policy.pdf && \
+    ln -s site-privacy-policy-${DOMAIN}.pdf \
+        $MIG_ROOT/state/wwwpublic/site-privacy-policy.pdf && \
+    ln -s security-${DOMAIN}.txt \
+        $MIG_ROOT/state/wwwpublic/.well-known/security.txt && \
+    ln -s security-pub-keys-${DOMAIN}.txt \
+        $MIG_ROOT/state/wwwpublic/.well-known/security-pub-keys.txt && \
+    ln -s security-pub-keys-${DOMAIN}.txt.asc \
+        $MIG_ROOT/state/wwwpublic/.well-known/security-pub-keys.txt.asc && \
+    ln -s security-disclosure-policy-${DOMAIN}.txt \
+        $MIG_ROOT/state/wwwpublic/.well-known/security-disclosure-policy.txt && \
     chown -R $USER:$GROUP $MIG_ROOT/state/wwwpublic/*.html
 
 # TODO: improve this very crude and hard-coded translation
