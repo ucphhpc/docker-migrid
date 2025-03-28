@@ -13,6 +13,48 @@ services:
 #    environment:
 #      TZ: ${TZ}
 
+  # NOTE: we use a shared volume init helper container to make sure volumes
+  #       are fully created and instantiated before we try to bind mount
+  #       subdirs from e.g. the state volume in the service containers.
+  # NOTE: Even though no services are started then use network_mode: host
+  #       to avoid creating virtual container networks.
+  #       Lustre Networking (LNET) locks up if the network is changed
+  #       while lustre is mounted.
+  migrid-volume-init:
+    container_name: migrid-volume-init
+    image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
+    network_mode: host
+    extends:
+      file: docker-compose_shared.yml
+      service: migrid-shared
+    environment:
+      TZ: ${TZ}
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      RUN_SERVICES: 
+    volumes:
+      - type: volume
+        source: httpd
+        target: /etc/httpd
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: certs
+        target: /etc/httpd/MiG-certificates
+      - type: volume
+        source: migrid-syslog
+        target: /var/log
+      - type: volume
+        source: state
+        target: /home/mig/state
+    env_file:
+      - migrid-httpd.env
+    # NOTE: public hosts should create users through sign up and run like this
+    command: /app/docker-entry.sh -V -c
+
   # The migrid core services including httpd and tightly integrated services
   # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
 
@@ -39,6 +81,10 @@ services:
       #   httpd script monitor sshmux events cron transfers
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy notify crond rsyslogd
+    depends_on:
+      # IMPORTANT: finish volume init before migrid launch as explained above
+      migrid-volume-init:
+        condition: service_completed_successfully
     volumes:
       - type: volume
         source: httpd
@@ -55,19 +101,98 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: volume
-        source: vgrid_files_readonly
+        source: log
+        target: /home/mig/state/log
+      - type: volume
+        source: secrets
+        target: /home/mig/state/secrets
+      # NOTE: these wwwpublic helpers are only needed in apache
+      - type: volume
+        source: wwwpublic-archives
+        target: /home/mig/state/wwwpublic/archives
+      - type: volume
+        source: wwwpublic-vgrid
+        target: /home/mig/state/wwwpublic/vgrid
+      - type: volume
+        source: wwwpublic-download
+        target: /home/mig/state/wwwpublic/download
+      # NOTE: these next helpers are only needed in migrid container
+      - type: volume
+        source: freeze_home
+        target: /home/mig/state/freeze_home
+      - type: volume
+        source: mrsl_files
+        target: /home/mig/state/mrsl_files
+      - type: volume
+        source: resource_home
+        target: /home/mig/state/resource_home
+      - type: volume
+        source: re_home
+        target: /home/mig/state/re_home
+      - type: volume
+        source: sharelink_home
+        target: /home/mig/state/sharelink_home
+      - type: volume
+        source: events_home
+        target: /home/mig/state/events_home
+      - type: volume
+        source: sitestats_home
+        target: /home/mig/state/sitestats_home
+      - type: volume
+        source: sandbox_home
+        target: /home/mig/state/sandbox_home
+      - type: volume
+        source: sss_home
+        target: /home/mig/state/sss_home
+      - type: volume
+        source: workflows_db_home
+        target: /home/mig/state/workflows_db_home
+      - type: volume
+        source: workflows_home
+        target: /home/mig/state/workflows_home
+      # NOTE: general user and vgrid data required in almost all containers
+      - type: volume
+        source: user_home
+        target: /home/mig/state/user_home
+      - type: volume
+        source: user_settings
+        target: /home/mig/state/user_settings
+      - type: volume
+        source: user_db_home
+        target: /home/mig/state/user_db_home
+      - type: volume
+        source: gdp_home
+        target: /home/mig/state/gdp_home
+      - type: volume
+        source: vgrid_home
+        target: /home/mig/state/vgrid_home
+      - type: volume
+        source: vgrid_private_base
+        target: /home/mig/state/vgrid_private_base
+      - type: volume
+        source: vgrid_public_base
+        target: /home/mig/state/vgrid_public_base
+      - type: volume
+        source: vgrid_files_home
+        target: /home/mig/state/vgrid_files_home
+      - type: volume
+        source: vgrid_files_writable
+        target: /home/mig/state/vgrid_files_writable
+      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
+      - type: bind
+        source: ${VGRID_FILES_WRITABLE}
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
-      - type: volume
-        source: mig_system_run
+      - type: bind
+        source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
-    # NOTE: openid_store is a volatile cache and should use fast local tmpfs
-    # TODO: enable the tmpfs or a similar structure as MIG_SYSTEM_RUN here?
-    #tmpfs:
-    #  - /home/mig/state/openid_store:mode=770,uid=${UID:-1000},gid=${GID:-1000}
+      # NOTE: openid_store is a volatile state for apache mod auth openid and
+      #       gains scalability and performance from using a fast local tmpfs
+      - type: bind
+        source: ${OPENID_STORE}
+        target: /home/mig/state/openid_store
     env_file:
       - migrid-httpd.env
     command: /app/docker-entry.sh -k -V
@@ -105,10 +230,89 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: log
+        target: /home/mig/state/log
+      - type: volume
+        source: secrets
+        target: /home/mig/state/secrets
+      # NOTE: these wwwpublic helpers are only needed in apache
+      #- type: volume
+      #  source: wwwpublic-archives
+      #  target: /home/mig/state/wwwpublic/archives
+      #- type: volume
+      #  source: wwwpublic-vgrid
+      #  target: /home/mig/state/wwwpublic/vgrid
+      #- type: volume
+      #  source: wwwpublic-download
+      #  target: /home/mig/state/wwwpublic/download
+      # NOTE: these next helpers are only needed in migrid container
+      #- type: volume
+      #  source: freeze_home
+      #  target: /home/mig/state/freeze_home
+      #- type: volume
+      #  source: mrsl_files
+      #  target: /home/mig/state/mrsl_files
+      #- type: volume
+      #  source: resource_home
+      #  target: /home/mig/state/resource_home
+      #- type: volume
+      #  source: re_home
+      #  target: /home/mig/state/re_home
+      #- type: volume
+      #  source: sharelink_home
+      #  target: /home/mig/state/sharelink_home
+      #- type: volume
+      #  source: events_home
+      #  target: /home/mig/state/events_home
+      #- type: volume
+      #  source: sitestats_home
+      #  target: /home/mig/state/sitestats_home
+      #- type: volume
+      #  source: sandbox_home
+      #  target: /home/mig/state/sandbox_home
+      #- type: volume
+      #  source: sss_home
+      #  target: /home/mig/state/sss_home
+      #- type: volume
+      #  source: workflows_db_home
+      #  target: /home/mig/state/workflows_db_home
+      #- type: volume
+      #  source: workflows_home
+      #  target: /home/mig/state/workflows_home
+      # NOTE: general user and vgrid data required in almost all containers
+      - type: volume
+        source: user_home
+        target: /home/mig/state/user_home
+      - type: volume
+        source: user_settings
+        target: /home/mig/state/user_settings
+      - type: volume
+        source: user_db_home
+        target: /home/mig/state/user_db_home
+      - type: volume
+        source: gdp_home
+        target: /home/mig/state/gdp_home
+      # NOTE: these vgrid helpers are not needed in openid container
+      #- type: volume
+      #  source: vgrid_home
+      #  target: /home/mig/state/vgrid_home
+      #- type: volume
+      #  source: vgrid_private_base
+      #  target: /home/mig/state/vgrid_private_base
+      #- type: volume
+      #  source: vgrid_public_base
+      #  target: /home/mig/state/vgrid_public_base
+      #- type: volume
+      #  source: vgrid_files_home
+      #  target: /home/mig/state/vgrid_files_home
+      #- type: volume
+      #  source: vgrid_files_writable
+      #  target: /home/mig/state/vgrid_files_writable
       # NOTE: we don't need read-only vgrids/workgroups in the openid container
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
-      - type: volume
-        source: mig_system_run
+      - type: bind
+        source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
     command: /app/docker-entry.sh -k
 
@@ -116,6 +320,9 @@ services:
     container_name: migrid-sftp
     image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
     network_mode: host
+    # NOTE: sshd requires capability to write audit log on login attempts
+    cap_add:
+      - AUDIT_WRITE
     environment:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
@@ -145,14 +352,92 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: volume
-        source: vgrid_files_readonly
+        source: log
+        target: /home/mig/state/log
+      - type: volume
+        source: secrets
+        target: /home/mig/state/secrets
+      # NOTE: these wwwpublic helpers are only needed in apache
+      #- type: volume
+      #  source: wwwpublic-archives
+      #  target: /home/mig/state/wwwpublic/archives
+      #- type: volume
+      #  source: wwwpublic-vgrid
+      #  target: /home/mig/state/wwwpublic/vgrid
+      #- type: volume
+      #  source: wwwpublic-download
+      #  target: /home/mig/state/wwwpublic/download
+      # NOTE: these next helpers are only needed in migrid container
+      #- type: volume
+      #  source: freeze_home
+      #  target: /home/mig/state/freeze_home
+      #- type: volume
+      #  source: mrsl_files
+      #  target: /home/mig/state/mrsl_files
+      #- type: volume
+      #  source: resource_home
+      #  target: /home/mig/state/resource_home
+      #- type: volume
+      #  source: re_home
+      #  target: /home/mig/state/re_home
+      #- type: volume
+      #  source: sharelink_home
+      #  target: /home/mig/state/sharelink_home
+      #- type: volume
+      #  source: events_home
+      #  target: /home/mig/state/events_home
+      #- type: volume
+      #  source: sitestats_home
+      #  target: /home/mig/state/sitestats_home
+      #- type: volume
+      #  source: sandbox_home
+      #  target: /home/mig/state/sandbox_home
+      #- type: volume
+      #  source: sss_home
+      #  target: /home/mig/state/sss_home
+      #- type: volume
+      #  source: workflows_db_home
+      #  target: /home/mig/state/workflows_db_home
+      #- type: volume
+      #  source: workflows_home
+      #  target: /home/mig/state/workflows_home
+      # NOTE: general user and vgrid data required in almost all containers
+      - type: volume
+        source: user_home
+        target: /home/mig/state/user_home
+      - type: volume
+        source: user_settings
+        target: /home/mig/state/user_settings
+      - type: volume
+        source: user_db_home
+        target: /home/mig/state/user_db_home
+      - type: volume
+        source: gdp_home
+        target: /home/mig/state/gdp_home
+      - type: volume
+        source: vgrid_home
+        target: /home/mig/state/vgrid_home
+      - type: volume
+        source: vgrid_private_base
+        target: /home/mig/state/vgrid_private_base
+      - type: volume
+        source: vgrid_public_base
+        target: /home/mig/state/vgrid_public_base
+      - type: volume
+        source: vgrid_files_home
+        target: /home/mig/state/vgrid_files_home
+      - type: volume
+        source: vgrid_files_writable
+        target: /home/mig/state/vgrid_files_writable
+      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
+      - type: bind
+        source: ${VGRID_FILES_WRITABLE}
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
-      - type: volume
-        source: mig_system_run
+      - type: bind
+        source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
     command: /app/docker-entry.sh -k
 
@@ -188,14 +473,92 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: volume
-        source: vgrid_files_readonly
+        source: log
+        target: /home/mig/state/log
+      - type: volume
+        source: secrets
+        target: /home/mig/state/secrets
+      # NOTE: these wwwpublic helpers are only needed in apache
+      #- type: volume
+      #  source: wwwpublic-archives
+      #  target: /home/mig/state/wwwpublic/archives
+      #- type: volume
+      #  source: wwwpublic-vgrid
+      #  target: /home/mig/state/wwwpublic/vgrid
+      #- type: volume
+      #  source: wwwpublic-download
+      #  target: /home/mig/state/wwwpublic/download
+      # NOTE: these next helpers are only needed in migrid container
+      #- type: volume
+      #  source: freeze_home
+      #  target: /home/mig/state/freeze_home
+      #- type: volume
+      #  source: mrsl_files
+      #  target: /home/mig/state/mrsl_files
+      #- type: volume
+      #  source: resource_home
+      #  target: /home/mig/state/resource_home
+      #- type: volume
+      #  source: re_home
+      #  target: /home/mig/state/re_home
+      #- type: volume
+      #  source: sharelink_home
+      #  target: /home/mig/state/sharelink_home
+      #- type: volume
+      #  source: events_home
+      #  target: /home/mig/state/events_home
+      #- type: volume
+      #  source: sitestats_home
+      #  target: /home/mig/state/sitestats_home
+      #- type: volume
+      #  source: sandbox_home
+      #  target: /home/mig/state/sandbox_home
+      #- type: volume
+      #  source: sss_home
+      #  target: /home/mig/state/sss_home
+      #- type: volume
+      #  source: workflows_db_home
+      #  target: /home/mig/state/workflows_db_home
+      #- type: volume
+      #  source: workflows_home
+      #  target: /home/mig/state/workflows_home
+      # NOTE: general user and vgrid data required in almost all containers
+      - type: volume
+        source: user_home
+        target: /home/mig/state/user_home
+      - type: volume
+        source: user_settings
+        target: /home/mig/state/user_settings
+      - type: volume
+        source: user_db_home
+        target: /home/mig/state/user_db_home
+      - type: volume
+        source: gdp_home
+        target: /home/mig/state/gdp_home
+      - type: volume
+        source: vgrid_home
+        target: /home/mig/state/vgrid_home
+      - type: volume
+        source: vgrid_private_base
+        target: /home/mig/state/vgrid_private_base
+      - type: volume
+        source: vgrid_public_base
+        target: /home/mig/state/vgrid_public_base
+      - type: volume
+        source: vgrid_files_home
+        target: /home/mig/state/vgrid_files_home
+      - type: volume
+        source: vgrid_files_writable
+        target: /home/mig/state/vgrid_files_writable
+      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
+      - type: bind
+        source: ${VGRID_FILES_WRITABLE}
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
-      - type: volume
-        source: mig_system_run
+      - type: bind
+        source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
     command: /app/docker-entry.sh -k
 
@@ -231,16 +594,122 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
-      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
       - type: volume
-        source: vgrid_files_readonly
+        source: log
+        target: /home/mig/state/log
+      - type: volume
+        source: secrets
+        target: /home/mig/state/secrets
+      # NOTE: these wwwpublic helpers are only needed in apache
+      #- type: volume
+      #  source: wwwpublic-archives
+      #  target: /home/mig/state/wwwpublic/archives
+      #- type: volume
+      #  source: wwwpublic-vgrid
+      #  target: /home/mig/state/wwwpublic/vgrid
+      #- type: volume
+      #  source: wwwpublic-download
+      #  target: /home/mig/state/wwwpublic/download
+      # NOTE: these next helpers are only needed in migrid container
+      #- type: volume
+      #  source: freeze_home
+      #  target: /home/mig/state/freeze_home
+      #- type: volume
+      #  source: mrsl_files
+      #  target: /home/mig/state/mrsl_files
+      #- type: volume
+      #  source: resource_home
+      #  target: /home/mig/state/resource_home
+      #- type: volume
+      #  source: re_home
+      #  target: /home/mig/state/re_home
+      #- type: volume
+      #  source: sharelink_home
+      #  target: /home/mig/state/sharelink_home
+      #- type: volume
+      #  source: events_home
+      #  target: /home/mig/state/events_home
+      #- type: volume
+      #  source: sitestats_home
+      #  target: /home/mig/state/sitestats_home
+      #- type: volume
+      #  source: sandbox_home
+      #  target: /home/mig/state/sandbox_home
+      #- type: volume
+      #  source: sss_home
+      #  target: /home/mig/state/sss_home
+      #- type: volume
+      #  source: workflows_db_home
+      #  target: /home/mig/state/workflows_db_home
+      #- type: volume
+      #  source: workflows_home
+      #  target: /home/mig/state/workflows_home
+      # NOTE: general user and vgrid data required in almost all containers
+      - type: volume
+        source: user_home
+        target: /home/mig/state/user_home
+      - type: volume
+        source: user_settings
+        target: /home/mig/state/user_settings
+      - type: volume
+        source: user_db_home
+        target: /home/mig/state/user_db_home
+      - type: volume
+        source: gdp_home
+        target: /home/mig/state/gdp_home
+      - type: volume
+        source: vgrid_home
+        target: /home/mig/state/vgrid_home
+      - type: volume
+        source: vgrid_private_base
+        target: /home/mig/state/vgrid_private_base
+      - type: volume
+        source: vgrid_public_base
+        target: /home/mig/state/vgrid_public_base
+      - type: volume
+        source: vgrid_files_home
+        target: /home/mig/state/vgrid_files_home
+      - type: volume
+        source: vgrid_files_writable
+        target: /home/mig/state/vgrid_files_writable
+      # NOTE: for read-only vgrids/workgroups we need a local 'ro' bind-mount
+      - type: bind
+        source: ${VGRID_FILES_WRITABLE}
         target: /home/mig/state/vgrid_files_readonly
         read_only: true
       # NOTE: mig_system_run is a shared volatile cache which gains from using host tmpfs
-      - type: volume
-        source: mig_system_run
+      - type: bind
+        source: ${MIG_SYSTEM_RUN}
         target: /home/mig/state/mig_system_run
     command: /app/docker-entry.sh -k
+
+  migrid-lustre-quota:
+    container_name: migrid-lustre-quota
+    image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
+    network_mode: host
+    environment:
+      TZ: ${TZ}
+    depends_on:
+      - migrid
+    cap_add:
+      - SYS_ADMIN
+    volumes:
+      - type: bind
+        source: ${QUOTA_LUSTRE_BASE:-/dev/null}
+        target: /lustre/${DOMAIN}
+      - type: bind
+        source: ${QUOTA_GOCRYPTFS_XRAY:-/dev/null}
+        target: /usr/local/bin/gocryptfs-xray
+      - type: bind
+        source: ${QUOTA_GOCRYPTFS_SOCK:-/dev/null}
+        target: /var/run/gocryptfs.${DOMAIN}.sock
+      - type: volume
+        source: mig
+        target: /home/mig/mig
+      - type: volume
+        source: state
+        target: /home/mig/state
+    command: miglustrequota.py -c /home/mig/mig/server/MiGserver.conf
 
 # NOTE: not used in stand-alone production mode
 #  nginx-proxy:
@@ -297,19 +766,204 @@ volumes:
       device: ${DOCKER_MIGRID_ROOT}/state
       o: bind
   
-  vgrid_files_readonly:
+  secrets:
+    # Volume used to contain the migrid secrets
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/state/vgrid_files_writable
-      o: bind,ro
+      device: ${PERSISTENT_ROOT}/secrets
+      o: bind
 
-  mig_system_run:
-    # Volume used to map a fast host disk or tmpfs into the shared cache folder
+  wwwpublic-archives:
+    # Volume used to contain the migrid wwwpublic/archives
     driver: local
     driver_opts:
       type: none
-      device: ${MIG_SYSTEM_RUN}
+      device: ${PERSISTENT_ROOT}/wwwpublic-archives
+      o: bind
+
+  wwwpublic-vgrid:
+    # Volume used to contain the migrid wwwpublic/vgrid
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/wwwpublic-vgrid
+      o: bind
+
+  wwwpublic-download:
+    # Volume used to contain the migrid wwwpublic/download
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/wwwpublic-download
+      o: bind
+
+  freeze_home:
+    # Volume used to contain the migrid freeze_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/freeze_home
+      o: bind
+
+  mrsl_files:
+    # Volume used to contain the migrid mrsl_files
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/mrsl_files
+      o: bind
+
+  resource_home:
+    # Volume used to contain the migrid resource_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/resource_home
+      o: bind
+
+  re_home:
+    # Volume used to contain the migrid re_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/re_home
+      o: bind
+
+  sharelink_home:
+    # Volume used to contain the migrid sharelink_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/sharelink_home
+      o: bind
+
+  events_home:
+    # Volume used to contain the migrid events_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/events_home
+      o: bind
+
+  sitestats_home:
+    # Volume used to contain the migrid sitestats_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/sitestats_home
+      o: bind
+
+  sandbox_home:
+    # Volume used to contain the migrid sandbox_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/sandbox_home
+      o: bind
+
+  sss_home:
+    # Volume used to contain the migrid sss_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/sss_home
+      o: bind
+
+  workflows_db_home:
+    # Volume used to contain the migrid workflows_db_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/workflows_db_home
+      o: bind
+
+  workflows_home:
+    # Volume used to contain the migrid workflows_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/workflows_home
+      o: bind
+
+  user_home:
+    # Volume used to contain the migrid user_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/user_home
+      o: bind
+
+  user_settings:
+    # Volume used to contain the migrid user_settings
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/user_settings
+      o: bind
+
+  user_db_home:
+    # Volume used to contain the migrid user_db_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/user_db_home
+      o: bind
+
+  gdp_home:
+    # Volume used to contain the migrid gdp_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/gdp_home
+      o: bind
+
+  vgrid_home:
+    # Volume used to contain the migrid vgrid_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/vgrid_home
+      o: bind
+
+  vgrid_private_base:
+    # Volume used to contain the migrid vgrid_private_base
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/vgrid_private_base
+      o: bind
+
+  vgrid_public_base:
+    # Volume used to contain the migrid vgrid_public_base
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/vgrid_public_base
+      o: bind
+
+  vgrid_files_home:
+    # Volume used to contain the migrid vgrid_files_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/vgrid_files_home
+      o: bind
+
+  vgrid_files_writable:
+    # Volume used to contain the migrid vgrid_files_writable
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/vgrid_files_writable
+      o: bind
+
+  log:
+    # Volume used to contain the mig state log folder shared by all containers
+    driver: local
+    driver_opts:
+      type: none
+      device: ${LOG_ROOT}/miglog
       o: bind
 
   migrid-syslog:
@@ -317,7 +971,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid
+      device: ${LOG_ROOT}/syslog/migrid
       o: bind
 
   migrid-openid-syslog:
@@ -325,7 +979,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-openid
+      device: ${LOG_ROOT}/syslog/migrid-openid
       o: bind
 
   migrid-sftp-syslog:
@@ -333,7 +987,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-sftp
+      device: ${LOG_ROOT}/syslog/migrid-sftp
       o: bind
 
   migrid-webdavs-syslog:
@@ -341,7 +995,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-webdavs
+      device: ${LOG_ROOT}/syslog/migrid-webdavs
       o: bind
 
   migrid-ftps-syslog:
@@ -349,5 +1003,5 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: ${DOCKER_MIGRID_ROOT}/log/migrid-ftps
+      device: ${LOG_ROOT}/syslog/migrid-ftps
       o: bind
