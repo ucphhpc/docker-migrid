@@ -162,6 +162,9 @@ services:
         source: user_db_home
         target: /home/mig/state/user_db_home
       - type: volume
+        source: user_pending
+        target: /home/mig/state/user_pending
+      - type: volume
         source: gdp_home
         target: /home/mig/state/gdp_home
       - type: volume
@@ -290,6 +293,10 @@ services:
       - type: volume
         source: user_db_home
         target: /home/mig/state/user_db_home
+      #  NOTE: user_pending is not needed in openid container
+      #- type: volume
+      #  source: user_pending
+      #  target: /home/mig/state/user_pending
       - type: volume
         source: gdp_home
         target: /home/mig/state/gdp_home
@@ -413,6 +420,10 @@ services:
         source: user_db_home
         target: /home/mig/state/user_db_home
       - type: volume
+      #  NOTE: user_pending is not needed in sftp container
+      #- type: volume
+      #  source: user_pending
+      #  target: /home/mig/state/user_pending
         source: gdp_home
         target: /home/mig/state/gdp_home
       - type: volume
@@ -534,6 +545,10 @@ services:
         source: user_db_home
         target: /home/mig/state/user_db_home
       - type: volume
+      #  NOTE: user_pending is not needed in ftps container
+      #- type: volume
+      #  source: user_pending
+      #  target: /home/mig/state/user_pending
         source: gdp_home
         target: /home/mig/state/gdp_home
       - type: volume
@@ -655,6 +670,10 @@ services:
         source: user_db_home
         target: /home/mig/state/user_db_home
       - type: volume
+      #  NOTE: user_pending is not needed in webdavs container
+      #- type: volume
+      #  source: user_pending
+      #  target: /home/mig/state/user_pending
         source: gdp_home
         target: /home/mig/state/gdp_home
       - type: volume
@@ -908,6 +927,14 @@ volumes:
     driver_opts:
       type: none
       device: ${PERSISTENT_ROOT}/user_db_home
+      o: bind
+
+  user_pending:
+    # Volume used to contain the migrid user_pending
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/user_pending
       o: bind
 
   gdp_home:

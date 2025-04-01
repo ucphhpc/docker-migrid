@@ -114,6 +114,7 @@ initdirs: initcomposevars
 	mkdir -p ${PERSISTENT_ROOT}/workflows_db_home
 	mkdir -p ${PERSISTENT_ROOT}/workflows_home
 	mkdir -p ${PERSISTENT_ROOT}/user_db_home
+	mkdir -p ${PERSISTENT_ROOT}/user_pending
 	mkdir -p ${PERSISTENT_ROOT}/gdp_home
 	mkdir -p ${PERSISTENT_ROOT}/user_home
 	mkdir -p ${PERSISTENT_ROOT}/user_settings
