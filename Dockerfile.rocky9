@@ -1417,10 +1417,10 @@ RUN ln -s index-${DOMAIN}.html $MIG_ROOT/state/wwwpublic/index.html && \
         $MIG_ROOT/state/wwwpublic/site-privacy-policy.pdf && \
     ln -s security-${DOMAIN}.txt \
         $MIG_ROOT/state/wwwpublic/.well-known/security.txt && \
+    ln -s security-${DOMAIN}.txt.asc \
+        $MIG_ROOT/state/wwwpublic/.well-known/security.txt.asc && \
     ln -s security-pub-keys-${DOMAIN}.txt \
         $MIG_ROOT/state/wwwpublic/.well-known/security-pub-keys.txt && \
-    ln -s security-pub-keys-${DOMAIN}.txt.asc \
-        $MIG_ROOT/state/wwwpublic/.well-known/security-pub-keys.txt.asc && \
     ln -s security-disclosure-policy-${DOMAIN}.txt \
         $MIG_ROOT/state/wwwpublic/.well-known/security-disclosure-policy.txt && \
     chown -R $USER:$GROUP $MIG_ROOT/state/wwwpublic/*.html
