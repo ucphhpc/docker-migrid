@@ -26,6 +26,27 @@ else
     fi
 fi
 
+if [ -z "${USER}" ]; then
+    echo "Failed to start because the USER environment variable is not set and is required"
+    exit 1
+fi
+
+if ! id "${USER}" >/dev/null 2>&1; then
+    echo "Failed to start because the USER environment variable is set to a user that does not exist: ${USER}"
+    exit 1
+fi
+
+if [ -z "${MIG_ROOT}" ]; then
+    echo "Failed to start because the MIG_ROOT environment variable is not set and is required"
+    exit 1
+fi
+
+if [ ! -d "${MIG_ROOT}" ]; then
+    echo "Failed to start because the MIG_ROOT environment is set, but the directory: ${MIG_ROOT} does not exist"
+    exit 1
+fi
+
+
 # Create any user requested
 while getopts cku:p:s:V option; do
     case "${option}" in
@@ -65,10 +86,13 @@ if [ $CHECKCONF -eq 1 ]; then
   su - "$USER" -c "echo 'n' | ${MIG_ROOT}/mig/server/checkconf.py"
 fi
 
+# Ensure the MiG users database is present
+# TODO, when a specific script for initializing the database is available
+# this should be used instead.
+su - "$USER" -c "${MIG_ROOT}/mig/server/migrateusers.py"
+
 # Create a default account (Use service owner account)
 if [ "$USERNAME" != "" ] && [ "$PASSWORD" != "" ]; then
-    # Ensure the database is present
-    su - "$USER" -c "${MIG_ROOT}/mig/server/migrateusers.py"
     # createuser.py Usage:
     # [OPTIONS] [FULL_NAME ORGANIZATION STATE COUNTRY EMAIL COMMENT PASSWORD]
     # Create with renew flag to avoid partial clean up which is particularly
