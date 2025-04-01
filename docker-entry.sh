@@ -31,6 +31,11 @@ if [ -z "${USER}" ]; then
     exit 1
 fi
 
+if ! id "${USER}" >/dev/null 2>&1; then
+    echo "Failed to start because the USER environment variable is set to a user that does not exist: ${USER}"
+    exit 1
+fi
+
 if [ -z "${MIG_ROOT}" ]; then
     echo "Failed to start because the MIG_ROOT environment variable is not set and is required"
     exit 1
