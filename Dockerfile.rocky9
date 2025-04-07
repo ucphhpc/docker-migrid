@@ -538,7 +538,7 @@ RUN echo "UPGRADE_MOD_AUTH_OPENIDC: $UPGRADE_MOD_AUTH_OPENIDC"
 RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
         if [ -z "${UPGRADE_OIDC_AUTH_MOD_SRC}" ]; then \
 		echo "upgrading mod_auth_openidc from upstream release package"; \
-		UPGRADE_OIDC_AUTH_MOD_SRC="https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.16.5/mod_auth_openidc-2.4.16.5-1.el9.x86_64.rpm"; \
+		UPGRADE_OIDC_AUTH_MOD_SRC="https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.16.11/mod_auth_openidc-2.4.16.11-1.el9.x86_64.rpm"; \
 	else \
 		echo "upgrading mod_auth_openidc from ${UPGRADE_OIDC_AUTH_MOD_SRC}"; \
 	fi; \ 
