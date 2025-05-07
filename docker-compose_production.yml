@@ -140,6 +140,9 @@ services:
         source: sitestats_home
         target: /home/mig/state/sitestats_home
       - type: volume
+        source: quota_home
+        target: /home/mig/state/quota_home
+      - type: volume
         source: sandbox_home
         target: /home/mig/state/sandbox_home
       - type: volume
@@ -272,6 +275,9 @@ services:
       #  source: sitestats_home
       #  target: /home/mig/state/sitestats_home
       #- type: volume
+      #  source: quota_home
+      #  target: /home/mig/state/quota_home
+      #- type: volume
       #  source: sandbox_home
       #  target: /home/mig/state/sandbox_home
       #- type: volume
@@ -398,6 +404,9 @@ services:
       #  source: sitestats_home
       #  target: /home/mig/state/sitestats_home
       #- type: volume
+      #  source: quota_home
+      #  target: /home/mig/state/quota_home
+      #- type: volume
       #  source: sandbox_home
       #  target: /home/mig/state/sandbox_home
       #- type: volume
@@ -523,6 +532,9 @@ services:
       #  source: sitestats_home
       #  target: /home/mig/state/sitestats_home
       #- type: volume
+      #  source: quota_home
+      #  target: /home/mig/state/quota_home
+      #- type: volume
       #  source: sandbox_home
       #  target: /home/mig/state/sandbox_home
       #- type: volume
@@ -647,6 +659,9 @@ services:
       #- type: volume
       #  source: sitestats_home
       #  target: /home/mig/state/sitestats_home
+      #- type: volume
+      #  source: quota_home
+      #  target: /home/mig/state/quota_home
       #- type: volume
       #  source: sandbox_home
       #  target: /home/mig/state/sandbox_home
@@ -871,6 +886,14 @@ volumes:
     driver_opts:
       type: none
       device: ${PERSISTENT_ROOT}/sitestats_home
+      o: bind
+
+  quota_home:
+    # Volume used to contain the migrid quota_home
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/quota_home
       o: bind
 
   sandbox_home:

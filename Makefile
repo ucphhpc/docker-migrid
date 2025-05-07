@@ -109,6 +109,7 @@ initdirs: initcomposevars
 	mkdir -p ${PERSISTENT_ROOT}/sharelink_home
 	mkdir -p ${PERSISTENT_ROOT}/events_home
 	mkdir -p ${PERSISTENT_ROOT}/sitestats_home
+	mkdir -p ${PERSISTENT_ROOT}/quota_home
 	mkdir -p ${PERSISTENT_ROOT}/sandbox_home
 	mkdir -p ${PERSISTENT_ROOT}/sss_home
 	mkdir -p ${PERSISTENT_ROOT}/workflows_db_home
