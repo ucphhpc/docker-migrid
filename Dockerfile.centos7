@@ -139,7 +139,8 @@ ARG UPGRADE_MOD_AUTH_OPENIDC=False
 # NOTE: source for optional mod auth openidc upgrade - upstream release if left unset
 ARG UPGRADE_OIDC_CJOSE_SRC=""
 ARG UPGRADE_OIDC_AUTH_MOD_SRC=""
-ARG UPGRADE_PARAMIKO=False
+# NOTE: more recent paramiko is required e.g. for modern host key algo and security fixes
+ARG UPGRADE_PARAMIKO=True
 ARG PUBKEY_FROM_DNS=False
 ARG WITH_PY3=False
 ARG PREFER_PYTHON3=False
