@@ -143,6 +143,7 @@ ARG UPGRADE_MOD_AUTH_OPENIDC=False
 #       https://github.com/OpenIDC/mod_auth_openidc/releases
 ARG UPGRADE_OIDC_CJOSE_SRC=""
 ARG UPGRADE_OIDC_AUTH_MOD_SRC=""
+# NOTE: paramiko is a bit dated in OS repo - allow optional upgrade
 ARG UPGRADE_PARAMIKO=False
 ARG PUBKEY_FROM_DNS=False
 # NOTE: python2 support is gone on rocky9+

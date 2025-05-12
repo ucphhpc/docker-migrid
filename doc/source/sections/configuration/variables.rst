@@ -477,8 +477,8 @@ Variables
      - 
      - Optional custom source for the cjose OpenIDC dependency package if UPGRADE_MOD_AUTH_OPENIDC is requested 
    * - UPGRADE_PARAMIKO
-     - False
-     - Upgrade the default Paramiko version to latest supported one during build 
+     -
+     - Upgrade the default Paramiko version to latest supported one during build. Leave unset to pick default from active Dockerfile.
    * - PUBKEY_FROM_DNS
      - False
      - Advertize to SFTP users that they can find the host key in DNS(SEC).
