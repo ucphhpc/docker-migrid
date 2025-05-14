@@ -31,11 +31,11 @@ on:
 
 jobs:
   build-run-test-legacy:
-    # Mimic legacy RHEL/CentOS/Rocky with Ubuntu 22.04 LTS
+    # Mimic legacy RHEL/Rocky with Ubuntu 22.04 LTS
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        container_os: [centos7, rocky8]
+        container_os: [rocky8]
         environment_profile: [development]
     steps:
       - name: Check out repository contents
