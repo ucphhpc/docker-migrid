@@ -728,6 +728,9 @@ services:
       - type: volume
         source: state
         target: /home/mig/state
+      - type: volume
+        source: log
+        target: /home/mig/state/log
     command: miglustrequota.py -c /home/mig/mig/server/MiGserver.conf
 
 # NOTE: not used in stand-alone production mode
