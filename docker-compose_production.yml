@@ -1078,7 +1078,7 @@ volumes:
       o: bind
 
   migrid-lustre-quota-syslog:
-    # Volume used for exposing migrid ftps container system log
+    # Volume used for exposing migrid lustre quota container system log
     driver: local
     driver_opts:
       type: none
