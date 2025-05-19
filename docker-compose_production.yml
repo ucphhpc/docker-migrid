@@ -749,6 +749,18 @@ services:
       - type: volume
         source: quota_home
         target: /home/mig/state/quota_home
+      - type: volume
+        source: user_home
+        target: /home/mig/state/user_home
+      - type: volume
+        source: vgrid_home
+        target: /home/mig/state/vgrid_home
+      - type: volume
+        source: vgrid_files_home
+        target: /home/mig/state/vgrid_files_home
+      - type: volume
+        source: vgrid_files_writable
+        target: /home/mig/state/vgrid_files_writable
     command: miglustrequota.py -c /home/mig/mig/server/MiGserver.conf
 
 # NOTE: not used in stand-alone production mode
