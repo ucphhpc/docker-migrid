@@ -744,6 +744,9 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
+        source: log
+        target: /home/mig/state/log
+      - type: volume
         source: quota_home
         target: /home/mig/state/quota_home
     command: miglustrequota.py -c /home/mig/mig/server/MiGserver.conf
