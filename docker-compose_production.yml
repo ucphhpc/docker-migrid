@@ -741,6 +741,9 @@ services:
         source: mig
         target: /home/mig/mig
       - type: volume
+        source: migrid-lustre-quota-syslog
+        target: /var/log
+      - type: volume
         source: state
         target: /home/mig/state
       - type: volume
@@ -1072,4 +1075,12 @@ volumes:
     driver_opts:
       type: none
       device: ${LOG_ROOT}/syslog/migrid-ftps
+      o: bind
+
+  migrid-lustre-quota-syslog:
+    # Volume used for exposing migrid lustre quota container system log
+    driver: local
+    driver_opts:
+      type: none
+      device: ${LOG_ROOT}/syslog/migrid-lustre-quota
       o: bind
