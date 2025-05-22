@@ -1424,6 +1424,31 @@ RUN ln -s index-${DOMAIN}.html $MIG_ROOT/state/wwwpublic/index.html && \
         $MIG_ROOT/state/wwwpublic/.well-known/security-pub-keys.txt && \
     ln -s security-disclosure-policy-${DOMAIN}.txt \
         $MIG_ROOT/state/wwwpublic/.well-known/security-disclosure-policy.txt && \
+    # Reuse site helpers from EMULATE_FQDN if no site versions exist
+    if [ ! -e "$MIG_ROOT/state/wwwpublic/cookie-policy-${DOMAIN}.pdf" ]; then \
+        ln -s cookie-policy-${EMULATE_FQDN}.pdf \
+            $MIG_ROOT/state/wwwpublic/cookie-policy-${DOMAIN}.pdf ; \
+    fi && \
+    if [ ! -e "$MIG_ROOT/state/wwwpublic/site-privacy-policy-${DOMAIN}.pdf" ]; then \
+        ln -s site-privacy-policy-${EMULATE_FQDN}.pdf \
+            $MIG_ROOT/state/wwwpublic/site-privacy-policy-${DOMAIN}.pdf ; \
+    fi && \
+    if [ ! -e "$MIG_ROOT/state/wwwpublic/.well-known/security-${DOMAIN}.txt" ]; then \
+        ln -s security-${EMULATE_FQDN}.txt \
+            $MIG_ROOT/state/wwwpublic/.well-known/security-${DOMAIN}.txt ; \
+    fi && \
+    if [ ! -e "$MIG_ROOT/state/wwwpublic/.well-known/security-${DOMAIN}.txt.asc" ]; then \
+        ln -s security-${EMULATE_FQDN}.txt.asc \
+            $MIG_ROOT/state/wwwpublic/.well-known/security-${DOMAIN}.txt.asc ; \
+    fi && \
+    if [ ! -e "$MIG_ROOT/state/wwwpublic/.well-known/security-pub-keys-${DOMAIN}.txt" ]; then \
+        ln -s security-pub-keys-${EMULATE_FQDN}.txt \
+            $MIG_ROOT/state/wwwpublic/.well-known/security-pub-keys-${DOMAIN}.txt ; \
+    fi && \
+    if [ ! -e "$MIG_ROOT/state/wwwpublic/.well-known/security-disclosure-policy-${DOMAIN}.txt" ]; then \
+        ln -s security-disclosure-policy-${EMULATE_FQDN}.txt \
+            $MIG_ROOT/state/wwwpublic/.well-known/security-disclosure-policy-${DOMAIN}.txt ; \
+    fi && \
     chown -R $USER:$GROUP $MIG_ROOT/state/wwwpublic/*.html
 
 # TODO: improve this very crude and hard-coded translation
