@@ -99,6 +99,7 @@ initdirs: initcomposevars
 	mkdir -p certs
 	mkdir -p httpd
 	mkdir -p mig
+	mkdir -p external-conf-sections
 	mkdir -p state
 	mkdir -p ${VOLATILE_ROOT}/mig_system_run
 	mkdir -p ${VOLATILE_ROOT}/openid_store
@@ -254,6 +255,7 @@ distclean: clean sitestateclean sitedataclean dockerclean dockervolumeclean
 	rm -fr ./external-certificates
 	# NOTE: certs remove in clean is conditional - always remove it here
 	rm -fr ./certs
+	rm -fr ./external-conf-sections
 	rm -f .env docker-compose.yml Dockerfile
 
 wipesitestatewarning:
