@@ -1302,6 +1302,9 @@ RUN if [ -n "${TRAC_ADMIN_PATH}" -a -z "${TRAC_INI_PATH}" ]; then \
         fi; \
     fi;
 
+# Copy in any external conf sections to supplement generated MiGserver.conf
+COPY external-conf-sections/ mig/server/MiGserver.d/
+
 
 #------------------------- next stage -----------------------------#
 FROM --platform=linux/$ARCH install_mig AS setup_mig_configs
