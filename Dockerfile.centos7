@@ -1409,7 +1409,8 @@ RUN if [ -n "${TRAC_ADMIN_PATH}" -a -z "${TRAC_INI_PATH}" ]; then \
     fi;
 
 # Copy in any external conf sections to supplement generated MiGserver.conf
-COPY external-conf-sections/ mig/server/MiGserver.d/
+RUN mkdir -p $MIG_ROOT/mig/server/MiGserver.d
+COPY external-conf-sections/ $MIG_ROOT/mig/server/MiGserver.d/
 
 
 #------------------------- next stage -----------------------------#
