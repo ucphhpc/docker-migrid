@@ -42,6 +42,9 @@ services:
         source: mig
         target: /home/mig/mig
       - type: volume
+        source: mig-server-extconfs
+        target: /home/mig/mig/server/MiGserver.d
+      - type: volume
         source: certs
         target: /etc/httpd/MiG-certificates
       - type: volume
@@ -92,6 +95,9 @@ services:
       - type: volume
         source: mig
         target: /home/mig/mig
+      - type: volume
+        source: mig-server-extconfs
+        target: /home/mig/mig/server/MiGserver.d
       - type: volume
         source: certs
         target: /etc/httpd/MiG-certificates
@@ -228,6 +234,9 @@ services:
         source: mig
         target: /home/mig/mig
       - type: volume
+        source: mig-server-extconfs
+        target: /home/mig/mig/server/MiGserver.d
+      - type: volume
         source: certs
         target: /etc/httpd/MiG-certificates
       - type: volume
@@ -357,6 +366,9 @@ services:
         source: mig
         target: /home/mig/mig
       - type: volume
+        source: mig-server-extconfs
+        target: /home/mig/mig/server/MiGserver.d
+      - type: volume
         source: certs
         target: /etc/httpd/MiG-certificates
       - type: volume
@@ -484,6 +496,9 @@ services:
       - type: volume
         source: mig
         target: /home/mig/mig
+      - type: volume
+        source: mig-server-extconfs
+        target: /home/mig/mig/server/MiGserver.d
       - type: volume
         source: certs
         target: /etc/httpd/MiG-certificates
@@ -613,6 +628,9 @@ services:
         source: mig
         target: /home/mig/mig
       - type: volume
+        source: mig-server-extconfs
+        target: /home/mig/mig/server/MiGserver.d
+      - type: volume
         source: certs
         target: /etc/httpd/MiG-certificates
       - type: volume
@@ -741,6 +759,9 @@ services:
         source: mig
         target: /home/mig/mig
       - type: volume
+        source: mig-server-extconfs
+        target: /home/mig/mig/server/MiGserver.d
+      - type: volume
         source: migrid-lustre-quota-syslog
         target: /var/log
       - type: volume
@@ -814,6 +835,14 @@ volumes:
     driver_opts:
       type: none
       device: ${DOCKER_MIGRID_ROOT}/mig
+      o: bind
+
+  mig-server-extconf:
+    # Volume used to contain the optional additional mig server config snippets
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/mig-server-extconfs
       o: bind
 
   state:
