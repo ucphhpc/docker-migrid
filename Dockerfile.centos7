@@ -1396,6 +1396,8 @@ RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
         [ -n "${CLOUD_JUMPHOST_KEY}" ] || CLOUD_JUMPHOST_KEY="cloud-jumphost-key" ; \ 
         ln -s ../state/secrets/${CLOUD_JUMPHOST_KEY} .ssh/${CLOUD_JUMPHOST_KEY} ; \
         ln -s ../state/secrets/${CLOUD_JUMPHOST_KEY}.pub .ssh/${CLOUD_JUMPHOST_KEY}.pub ; \
+        ln -s .ssh/${CLOUD_JUMPHOST_KEY} .ssh/id_rsa ; \
+        ln -s .ssh/${CLOUD_JUMPHOST_KEY}.pub .ssh/id_rsa.pub ; \
     fi;
 
 # link relevant py trac ini into default location if no TRAC_INI_PATH is set here
