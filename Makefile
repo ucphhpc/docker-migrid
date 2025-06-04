@@ -129,6 +129,7 @@ initdirs: initcomposevars
 	mkdir -p ${PERSISTENT_ROOT}/wwwpublic-vgrid
 	mkdir -p ${PERSISTENT_ROOT}/wwwpublic-download
 	mkdir -p ${PERSISTENT_ROOT}/secrets
+	mkdir -p ${PERSISTENT_ROOT}/mig-server-extconfs
 	mkdir -p ${LOG_ROOT}/miglog
 	mkdir -p ${LOG_ROOT}/syslog/migrid
 	mkdir -p ${LOG_ROOT}/syslog/migrid-io
