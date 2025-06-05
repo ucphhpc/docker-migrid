@@ -613,10 +613,13 @@ Variables
      - The number of worker processes started in the Apache service to handle all incoming web requests.Increase to allow handling more concurrent clients if needed but at the cost of higher system resource requirements.
    * - JUPYTER_SERVICES
      - ""
-     - Where the optional external Jupyter nodes can be reached. Expects the format "SERVICE_NAME.http(s)://url-or-ip-to-the-jupyter(hub)-node SERVICE_NAME.http(s)://url-or-ip-to-any-additional-jupyter(hub)-node"
+     - Where the optional external Jupyter nodes can be reached. Expects the format "SERVICE_NAME.http(s)://URL-or-IP-to-the-jupyter(hub)-node SERVICE_NAME.http(s)://URL-or-IP-to-any-additional-jupyter(hub)-node"
+   * - JUPYTER_SERVICES_ENABLE_PROXY_HTTPS
+     - True
+     - Whether or not the internal Apache reverse proxy configuration should use HTTPS or not when connecting to the designated JupyterHub service.
    * - JUPYTER_SERVICES_PROXY_CONFIG
      - "{}"
-     - Additional Apache proxy configuration options that can be used to generated the underlying Apache reverse proxy configuration for reaching the Jupyter service. It is expected to be structured as a string formated dictionary and it currently supports the following keys, `enable_proxy_ssl` and `ssl_proxy_ca_certificate_file`. Therefore a potential config value could be "{'SERVICE_NAME': {'enable_proxy_ssl': True} }"
+     - Can be set to add any additional Apache proxy balancer configuration options that should be used when establishing the HTTP(S) connection to the designated JupyterHub service. It is expected to be structured as a string formated dictionary that accepts any key attribute that is supported as an Apache mod_proxy_balancer proxy section option as can be seen at https://httpd.apache.org/docs/2.4/mod/mod_proxy_balancer.html. Therefore a potential config value could be "{'SSLProxyCACertificateFile': 'path/to/local/ca-certificate.pem'}"
    * - JUPYTER_SERVICES_DESC
      - "{}"
      - A text to describe the optional external Jupyter nodes
