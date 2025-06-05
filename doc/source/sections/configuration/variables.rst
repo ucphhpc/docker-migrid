@@ -619,7 +619,7 @@ Variables
      - Whether or not the internal Apache reverse proxy configuration should use HTTPS or not when connecting to the designated JupyterHub service.
    * - JUPYTER_SERVICES_PROXY_CONFIG
      - "{}"
-     - Can be set to add any additional Apache proxy balancer configuration options that should be used when establishing the HTTP(S) connection to the designated JupyterHub service. It is expected to be structured as a string formated dictionary that accepts any key attribute that is supported as an Apache mod_proxy_balancer proxy section option as can be seen at https://httpd.apache.org/docs/2.4/mod/mod_proxy_balancer.html. Therefore a potential config value could be "{'SSLProxyCACertificateFile': 'path/to/local/ca-certificate.pem'}"
+     - Can be set to add any additional Apache proxy balancer configuration options that should be used when establishing the HTTP(S) connection to the designated JupyterHub service. It is expected to be structured as a string formatted dictionary that accepts any key attribute that is supported as an Apache mod_proxy_balancer proxy section option as can be seen at https://httpd.apache.org/docs/2.4/mod/mod_proxy_balancer.html. Therefore a potential config value could be "{'SSLProxyCACertificateFile': 'path/to/local/ca-certificate.pem'}"
    * - JUPYTER_SERVICES_DESC
      - "{}"
      - A text to describe the optional external Jupyter nodes
