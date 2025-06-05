@@ -364,3 +364,6 @@ OPENSTACKSDK
 openstacksdk
 HTML
 html
+balancer
+JupyterHub
+SSLProxyCACertificateFile
