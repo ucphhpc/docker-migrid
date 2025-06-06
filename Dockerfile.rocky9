@@ -728,8 +728,9 @@ RUN mkdir -p MiG-certificates \
 USER root
 WORKDIR /tmp
 # Copy in any external certificates that should be part of the OS trusted ca bundle
-COPY external-certificates/ $OS_CA_CERT_SOURCE_PATH/
-RUN update-ca-trust
+RUN update-ca-trust force-enable
+COPY external-certificates/ ${OS_CA_CERT_SOURCE_PATH}/
+RUN update-ca-trust extract
 
 WORKDIR $MIG_ROOT
 USER $USER
@@ -1337,6 +1338,7 @@ ARG MIG_GIT_BRANCH
 ARG ENABLE_QUOTA
 ARG QUOTA_BACKEND
 ARG QUOTA_LUSTRE_VERSION
+ARG OS_CA_CERT_SOURCE_PATH
 
 USER root
 
@@ -1493,7 +1495,7 @@ RUN mv $WEB_DIR/conf.d/autoindex.conf $WEB_DIR/conf.d/autoindex.conf.disabled \
 
 # Add generated certificate to trust store
 RUN update-ca-trust force-enable \
-    && cp ${CERT_DIR}/combined.pem /etc/pki/ca-trust/source/anchors/ \
+    && cp ${CERT_DIR}/combined.pem ${OS_CA_CERT_SOURCE_PATH}/ \
     && update-ca-trust extract
 
 # rsyslog: Disable systemd and enable /dev/log
