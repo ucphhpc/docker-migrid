@@ -137,9 +137,6 @@ services:
         source: re_home
         target: /home/mig/state/re_home
       - type: volume
-        source: sharelink_home
-        target: /home/mig/state/sharelink_home
-      - type: volume
         source: events_home
         target: /home/mig/state/events_home
       - type: volume
@@ -160,6 +157,10 @@ services:
       - type: volume
         source: workflows_home
         target: /home/mig/state/workflows_home
+      # NOTE: sharelinks are required in almost all containers
+      - type: volume
+        source: sharelink_home
+        target: /home/mig/state/sharelink_home
       # NOTE: general user and vgrid data required in almost all containers
       - type: volume
         source: user_home
@@ -275,9 +276,6 @@ services:
       #  source: re_home
       #  target: /home/mig/state/re_home
       #- type: volume
-      #  source: sharelink_home
-      #  target: /home/mig/state/sharelink_home
-      #- type: volume
       #  source: events_home
       #  target: /home/mig/state/events_home
       #- type: volume
@@ -298,6 +296,10 @@ services:
       #- type: volume
       #  source: workflows_home
       #  target: /home/mig/state/workflows_home
+      # NOTE: sharelinks are required in almost all containers
+      - type: volume
+        source: sharelink_home
+        target: /home/mig/state/sharelink_home
       # NOTE: general user and vgrid data required in almost all containers
       - type: volume
         source: user_home
@@ -407,9 +409,6 @@ services:
       #  source: re_home
       #  target: /home/mig/state/re_home
       #- type: volume
-      #  source: sharelink_home
-      #  target: /home/mig/state/sharelink_home
-      #- type: volume
       #  source: events_home
       #  target: /home/mig/state/events_home
       #- type: volume
@@ -430,6 +429,10 @@ services:
       #- type: volume
       #  source: workflows_home
       #  target: /home/mig/state/workflows_home
+      # NOTE: sharelinks are required in almost all containers
+      - type: volume
+        source: sharelink_home
+        target: /home/mig/state/sharelink_home
       # NOTE: general user and vgrid data required in almost all containers
       - type: volume
         source: user_home
@@ -538,9 +541,6 @@ services:
       #  source: re_home
       #  target: /home/mig/state/re_home
       #- type: volume
-      #  source: sharelink_home
-      #  target: /home/mig/state/sharelink_home
-      #- type: volume
       #  source: events_home
       #  target: /home/mig/state/events_home
       #- type: volume
@@ -561,6 +561,10 @@ services:
       #- type: volume
       #  source: workflows_home
       #  target: /home/mig/state/workflows_home
+      # NOTE: sharelinks are required in almost all containers
+      - type: volume
+        source: sharelink_home
+        target: /home/mig/state/sharelink_home
       # NOTE: general user and vgrid data required in almost all containers
       - type: volume
         source: user_home
@@ -669,9 +673,6 @@ services:
       #  source: re_home
       #  target: /home/mig/state/re_home
       #- type: volume
-      #  source: sharelink_home
-      #  target: /home/mig/state/sharelink_home
-      #- type: volume
       #  source: events_home
       #  target: /home/mig/state/events_home
       #- type: volume
@@ -692,6 +693,10 @@ services:
       #- type: volume
       #  source: workflows_home
       #  target: /home/mig/state/workflows_home
+      # NOTE: sharelinks are required in almost all containers
+      - type: volume
+        source: sharelink_home
+        target: /home/mig/state/sharelink_home
       # NOTE: general user and vgrid data required in almost all containers
       - type: volume
         source: user_home
