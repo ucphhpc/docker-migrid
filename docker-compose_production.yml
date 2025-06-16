@@ -175,6 +175,12 @@ services:
         source: user_pending
         target: /home/mig/state/user_pending
       - type: volume
+        source: user_cache
+        target: /home/mig/state/user_cache
+      - type: volume
+        source: mig_system_files
+        target: /home/mig/state/mig_system_files
+      - type: volume
         source: gdp_home
         target: /home/mig/state/gdp_home
       - type: volume
@@ -310,10 +316,17 @@ services:
       - type: volume
         source: user_db_home
         target: /home/mig/state/user_db_home
-      #  NOTE: user_pending is not needed in openid container
+      # NOTE: user_pending is not needed in openid container
       #- type: volume
       #  source: user_pending
       #  target: /home/mig/state/user_pending
+      # NOTE: user_cache is not needed in openid container
+      #- type: volume
+      #  source: user_cache
+      #  target: /home/mig/state/user_cache
+      - type: volume
+        source: mig_system_files
+        target: /home/mig/state/mig_system_files
       - type: volume
         source: gdp_home
         target: /home/mig/state/gdp_home
@@ -443,11 +456,18 @@ services:
       - type: volume
         source: user_db_home
         target: /home/mig/state/user_db_home
-      - type: volume
-      #  NOTE: user_pending is not needed in sftp container
+      # NOTE: user_pending is not needed in sftp container
       #- type: volume
       #  source: user_pending
       #  target: /home/mig/state/user_pending
+      # NOTE: user_cache is not needed in sftp container
+      #- type: volume
+      #  source: user_cache
+      #  target: /home/mig/state/user_cache
+      - type: volume
+        source: mig_system_files
+        target: /home/mig/state/mig_system_files
+      - type: volume
         source: gdp_home
         target: /home/mig/state/gdp_home
       - type: volume
@@ -575,11 +595,18 @@ services:
       - type: volume
         source: user_db_home
         target: /home/mig/state/user_db_home
-      - type: volume
-      #  NOTE: user_pending is not needed in ftps container
+      # NOTE: user_pending is not needed in ftps container
       #- type: volume
       #  source: user_pending
       #  target: /home/mig/state/user_pending
+      # NOTE: user_cache is not needed in ftps container
+      #- type: volume
+      #  source: user_cache
+      #  target: /home/mig/state/user_cache
+      - type: volume
+        source: mig_system_files
+        target: /home/mig/state/mig_system_files
+      - type: volume
         source: gdp_home
         target: /home/mig/state/gdp_home
       - type: volume
@@ -707,11 +734,18 @@ services:
       - type: volume
         source: user_db_home
         target: /home/mig/state/user_db_home
-      - type: volume
-      #  NOTE: user_pending is not needed in webdavs container
+      # NOTE: user_pending is not needed in webdavs container
       #- type: volume
       #  source: user_pending
       #  target: /home/mig/state/user_pending
+      # NOTE: user_cache is not needed in webdavs container
+      #- type: volume
+      #  source: user_cache
+      #  target: /home/mig/state/user_cache
+      - type: volume
+        source: mig_system_files
+        target: /home/mig/state/mig_system_files
+      - type: volume
         source: gdp_home
         target: /home/mig/state/gdp_home
       - type: volume
@@ -1016,6 +1050,22 @@ volumes:
     driver_opts:
       type: none
       device: ${PERSISTENT_ROOT}/user_pending
+      o: bind
+
+  user_cache:
+    # Volume used to contain the migrid user_cache
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/user_cache
+      o: bind
+
+  mig_system_files:
+    # Volume used to contain the migrid mig_system_files
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/mig_system_files
       o: bind
 
   gdp_home:
