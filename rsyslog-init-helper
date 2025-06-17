@@ -40,7 +40,7 @@ DAEMON_PATH="/usr/sbin/rsyslogd"
 PID_FILE="$PID_DIR/rsyslogd.pid"
 
 show_usage() {
-    echo "Usage: rsyslog--minimal {start|stop|status|restart|reload}"
+    echo "Usage: rsyslog-minimal {start|stop|status|restart|reload}"
 }
 
 start_rsyslog() {
