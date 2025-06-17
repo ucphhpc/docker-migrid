@@ -1,0 +1,100 @@
+#!/bin/bash
+#
+#	/etc/rc.d/init.d/rsyslog-minimal
+#
+#	A simple rsyslog wrapper for docker-migrid container use
+#
+#	Recognized arguments:
+#	    start   - start rsyslog
+#	    stop    - terminate rsyslog
+#	    restart - terminate and start rsyslog
+#	    reload  - reload rsyslog
+#	    status  - report rsyslog status
+#
+#	Customization of the rsyslog installation should be specified by
+#	variables in /etc/sysconfig/rsyslog-minimal
+#
+# Made from the template /usr/share/doc/initscripts-X/sysinitvfiles
+# from our CentOS installation
+#
+# <tags ...>
+#
+# chkconfig: - 90 10
+# description: rsyslogd - reliable and extended syslogd
+# processname: rsyslogd
+# config: /etc/sysconfig/rsyslog-minimal
+# 
+
+# Source function library.
+. /etc/init.d/functions
+
+# <define any local shell functions used by the code that follows>
+
+# first, pull in custom configuration (if it exists):
+if [ -f /etc/sysconfig/rsyslog-minimal ]; then
+    . /etc/sysconfig/rsyslog-minimal
+fi
+# you probably do not want to modify these...
+PID_DIR="${PID_DIR:-/var/run}"
+DAEMON_PATH="/usr/sbin/rsyslogd"
+PID_FILE="$PID_DIR/rsyslogd.pid"
+
+show_usage() {
+    echo "Usage: rsyslog-minimal {start|stop|status|restart|reload}"
+}
+
+start_rsyslog() {
+    echo -n "Starting rsyslog daemon"
+    ${DAEMON_PATH}
+    RET2=$?
+    [ $RET2 ] && success
+    echo
+    [ $RET2 ] || echo "Warning: rsyslog daemon not started."
+    echo
+}
+
+stop_rsyslog() {
+    echo -n "Shutting down rsyslog daemon"
+    killproc ${DAEMON_PATH}
+    echo
+}
+
+reload_rsyslog() {
+    echo -n "Reloading rsyslog daemon"
+    killproc ${DAEMON_PATH} -HUP
+    echo
+}
+
+status_rsyslog() {
+    status ${DAEMON_PATH}
+}
+
+
+### Main ###
+
+# Exit cleanly if main daemon is missing
+test -f ${DAEMON_PATH} || exit 0
+
+case "$1" in
+    start)
+        start_rsyslog
+	;;
+    stop)
+        stop_rsyslog
+	;;
+    status)
+        status_rsyslog
+	;;
+    restart)
+        stop_rsyslog
+        start_rsyslog
+	;;
+    reload)
+        reload_rsyslog
+	;;
+    *)
+	show_usage
+	exit 1
+	;;
+esac
+exit $?
