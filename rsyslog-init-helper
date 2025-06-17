@@ -21,7 +21,7 @@
 #
 # chkconfig: - 90 10
 # description: rsyslogd - reliable and extended syslogd
-# processname: rsyslog
+# processname: rsyslogd
 # config: /etc/sysconfig/rsyslog-minimal
 # 
 
