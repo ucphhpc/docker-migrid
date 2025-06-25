@@ -876,7 +876,7 @@ volumes:
       device: ${DOCKER_MIGRID_ROOT}/mig
       o: bind
 
-  mig-server-extconf:
+  mig-server-extconfs:
     # Volume used to contain the optional additional mig server config snippets
     driver: local
     driver_opts:
