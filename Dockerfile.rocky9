@@ -768,7 +768,11 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
         #            dependencies specifically into /usr instead.
         #pip3 install -U setuptools; \
         #pip3 install setuptools_rust; \
-        pip3 install --prefix=$(python3-config --prefix) paramiko; \
+        # Additional NOTE: paramiko version 3.0.0 introduces several changes that in particular improves the SFTP download performance.
+        # At the time of writing, the upcoming rhel10 epel uses 3.5, which we use as a version floor for which to use.
+        # However, bcrypt version 4 and above has shown to produce import errors in mod_wsgi caused by the usage of sub-interpreters
+        # as highlighted at https://github.com/PyO3/pyo3/blob/main/guide/src/migration.md#each-pymodule-can-now-only-be-initialized-once-per-process
+        pip3 install --prefix=$(python3-config --prefix) 'paramiko>=3.5' 'bcrypt<4'; \
       fi; \
     fi;
 
