@@ -395,6 +395,9 @@ Variables
    * - PERMANENT_FREEZE
      - 
      - Flavors of frozen archives to write-protect when user selects finalize.
+   * - FREEZE_TO_TAPE
+     - 
+     - If `PERMANENT_FREEZE` is set this value is the expected time before such finalized freeze archives are stored on tape.
    * - ENABLE_CRACKLIB
      - True
      - Enable the built-in cracklib password checking integration on user-supplied passwords

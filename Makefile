@@ -277,7 +277,7 @@ wipesitedatawarning:
 # Test that all defined env variables are properly documented
 test-doc:
 	@shopt -s extglob; \
-	for i in $$( grep -hv '\(^#.*\|^$$\)' !(migrid-httpd).env | sed -E 's!^([^=]*)=.*$$!\1!g' | sort | uniq ) ; do \
+	for i in $$( grep -hv '\(^#.*\|^$$\)' --exclude=migrid-httpd.env *.env | sed -E 's!^([^=]*)=.*$$!\1!g' | sort | uniq ) ; do \
 		grep -q "$$i" doc/source/sections/configuration/variables.rst \
 		|| missing+=( "$$i" ) ; \
 	done; \

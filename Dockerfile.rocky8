@@ -106,6 +106,7 @@ ARG ENABLE_SITESTATUS=True
 ARG STATUS_SYSTEM_MATCH="ANY"
 ARG ENABLE_FREEZE=False
 ARG PERMANENT_FREEZE=""
+ARG FREEZE_TO_TAPE=""
 ARG ENABLE_CRACKLIB=True
 ARG ENABLE_IMNOTIFY=False
 ARG ENABLE_NOTIFY=True
@@ -1098,6 +1099,7 @@ ARG ENABLE_SITESTATUS
 ARG STATUS_SYSTEM_MATCH
 ARG ENABLE_FREEZE
 ARG PERMANENT_FREEZE
+ARG FREEZE_TO_TAPE
 ARG ENABLE_CRACKLIB
 ARG ENABLE_IMNOTIFY
 ARG ENABLE_NOTIFY
@@ -1325,7 +1327,8 @@ RUN ./generateconfs.py --source=. \
     --enable_resources=${ENABLE_RESOURCES} --enable_events=${ENABLE_EVENTS} \
     --enable_gravatars=${ENABLE_GRAVATARS} --enable_sitestatus=${ENABLE_SITESTATUS} \
     --status_system_match="${STATUS_SYSTEM_MATCH}" --enable_freeze=${ENABLE_FREEZE} \
-    --permanent_freeze="${PERMANENT_FREEZE}" --enable_imnotify=${ENABLE_IMNOTIFY} \
+    --permanent_freeze="${PERMANENT_FREEZE}" --freeze_to_tape=${FREEZE_TO_TAPE} \
+    --enable_imnotify=${ENABLE_IMNOTIFY} \
     --enable_cracklib=${ENABLE_CRACKLIB} --enable_twofactor=${ENABLE_TWOFACTOR} \
     --enable_twofactor_strict_address=${ENABLE_TWOFACTOR_STRICT_ADDRESS} \
     --twofactor_auth_apps="${TWOFACTOR_AUTH_APPS}" \
