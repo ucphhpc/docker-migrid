@@ -1717,10 +1717,21 @@ FROM --platform=linux/$ARCH setup_mig_configs AS start_mig
 ARG DOMAIN
 
 # Reap defuncted/orphaned processes
-# IMPORTANT: always verify tini gpg signature and use checksum in download here
+# IMPORTANT: always verify gpg signature / use verified checksum in downloads!
 ARG TINI_VERSION=v0.18.0
 ARG TINI_CHECKSUM=sha256:12d20136605531b09a2c2dac02ccee85e1b874eb322ef6baf7561cd93f93c855
-ADD --checksum=${TINI_CHECKSUM} https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+ARG TINI_GPG_KEY=0527A9B7
+# NOTE: hadolint awaits https://github.com/hadolint/language-docker/pull/92 in
+#       an actual release so it will currectly fail hard on the checksum arg.
+#       Rely solely on explicit gpg signature verification for the time being.
+#ADD --checksum=${TINI_CHECKSUM} https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini.asc /tini.asc
+RUN gpg --keyserver hkp://keyserver.ubuntu.com --recv-keys ${TINI_GPG_KEY} \
+    && if ! gpg --verify /tini.asc /tini ; then \
+      echo "FATAL: failed to verify tini binary"; \
+      exit 1 ; \
+   fi
 RUN chmod +x /tini
 ENTRYPOINT ["/tini", "--"]
 
