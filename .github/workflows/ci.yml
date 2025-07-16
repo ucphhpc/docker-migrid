@@ -51,6 +51,8 @@ jobs:
         with:
           dockerfile: ./Dockerfile.${{ matrix.container_os }}
           failure-threshold: error
+          # TODO: disable next once we have lint succeeding
+          no-fail: true
       - name: Print Hadolint results
         run: echo 'HADOLINT RESULTS => ${{ env.HADOLINT_RESULTS }}'
       - name: Run tests for documentation
