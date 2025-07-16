@@ -49,12 +49,17 @@ jobs:
       - name: Lint Dockerfile with Hadolint
         uses: hadolint/hadolint-action@v3.1.0
         with:
-          dockerfile: ./Dockerfile.${{ matrix.container_os }}
+          dockerfile: Dockerfile.${{ matrix.container_os }}
           failure-threshold: error
+          output-file: hadolint_Dockerfile.${{ matrix.container_os }}.out
           # TODO: disable next once we have lint succeeding
           no-fail: true
       - name: Print Hadolint results
-        run: echo 'HADOLINT RESULTS => ${{ env.HADOLINT_RESULTS }}'
+        run: |
+          echo '================================================'
+          echo 'HADOLINT RESULTS'
+          cat hadolint_Dockerfile.${{ matrix.container_os }}.out
+          echo '================================================'
       - name: Run tests for documentation
         run: |
           make test-doc
