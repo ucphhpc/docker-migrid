@@ -540,11 +540,11 @@ RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" -o "$ENABLE_SELF_SIGNED_CERTS" = "Tru
         && yumdownloader -y --enablerepo=epel7-source --source --resolve --destdir /root/rpmbuild/SRPMS libopkele \
         && rpm -ivh /root/rpmbuild/SRPMS/libopkele-*.src.rpm \
         # Optionally pull more recent gcc4.9 patch from Debian on rocky8+ (local copy in patches)
-        && wget -O /root/rpmbuild/SOURCES/fix-ftbfs-gcc4.9.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-ftbfs-gcc4.9.diff \
+        && wget -q -O /root/rpmbuild/SOURCES/fix-ftbfs-gcc4.9.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-ftbfs-gcc4.9.diff \
         # Pull the more recent required OpenSSL-1.1 patch from Debian on rocky8+ (local copy in patches)
-        && wget -O /root/rpmbuild/SOURCES/fix-openssl-1.1.0.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-openssl-1.1.0.diff \
+        && wget -q -O /root/rpmbuild/SOURCES/fix-openssl-1.1.0.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-openssl-1.1.0.diff \
         # Pull patch from own repo to rpmbuild with Debian patches on rocky8+ (local copy in patches)
-        && wget -O /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff https://github.com/ucphhpc/docker-migrid/raw/master/patches/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff \
+        && wget -q -O /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff https://github.com/ucphhpc/docker-migrid/raw/master/patches/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff \
         && cd /root && patch -p 0 < /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff && cd - \
         # TODO: is this security crippling needed or a matter of proper apache proxying?
         # Disable Apache OpenID ssl-certificate verification if self-signed
