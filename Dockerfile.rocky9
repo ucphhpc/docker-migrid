@@ -1577,6 +1577,9 @@ RUN if [ "${ENABLE_QUOTA}" = "True" ] \
             libnl3-devel.x86_64 \
             libyaml-devel \
             krb5-devel.x86_64 \
+            && dnf clean all \
+            && rm -fr /var/cache/dnf \
+            # TODO: clean up after this download+build to avoid bloating image
             && cd ${MIG_ROOT}/mig/src/pylustrequota \
             && git clone git://git.whamcloud.com/fs/lustre-release.git \
             && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release \
