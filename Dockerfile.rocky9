@@ -587,7 +587,8 @@ ENV USER=mig
 ENV GROUP=mig
 
 RUN groupadd -g $GID $USER
-RUN useradd -u $UID -g $GID -ms /bin/bash $USER
+# NOTE: use -l to avoid excessively large image (hadolint hint)
+RUN useradd -l -u $UID -g $GID -ms /bin/bash $USER
 
 # MiG environment
 ENV MIG_ROOT=/home/$USER
@@ -662,8 +663,8 @@ RUN if [ ! -e "${CERT_DIR}/.persistent" ]; then \
     && chown $USER:$GROUP combined.pem \
     && chown $USER:$GROUP server.ca.pem \
     && ssh-keygen -y -f combined.pem > combined.pub \
-    && chown 0:0 *.key server.crt ca.pem \
-    && chmod 400 *.key server.crt ca.pem combined.pem server.ca.pem \
+    && chown 0:0 ./*.key server.crt ca.pem \
+    && chmod 400 ./*.key server.crt ca.pem combined.pem server.ca.pem \
     && openssl x509 -noout -fingerprint -sha256 -in combined.pem | \
        sed 's/.* Fingerprint=//g' > combined.pem.sha256 \
     && ssh-keygen -l -E md5 -f combined.pub | \
