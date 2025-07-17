@@ -103,6 +103,8 @@ initdirs: initcomposevars
 	mkdir -p ${VOLATILE_ROOT}/mig_system_run
 	mkdir -p ${VOLATILE_ROOT}/openid_store
 	mkdir -p ${PERSISTENT_ROOT}/freeze_home
+	# NOTE: staging subdir is needed by migverifyarchives cronjob
+	mkdir -p ${PERSISTENT_ROOT}/freeze_tape/staging
 	mkdir -p ${PERSISTENT_ROOT}/mrsl_files
 	mkdir -p ${PERSISTENT_ROOT}/resource_home
 	mkdir -p ${PERSISTENT_ROOT}/re_home
