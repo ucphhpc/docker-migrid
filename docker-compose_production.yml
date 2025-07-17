@@ -128,6 +128,9 @@ services:
         source: freeze_home
         target: /home/mig/state/freeze_home
       - type: volume
+        source: freeze_tape
+        target: /home/mig/state/freeze_tape
+      - type: volume
         source: mrsl_files
         target: /home/mig/state/mrsl_files
       - type: volume
@@ -273,6 +276,9 @@ services:
       #  source: freeze_home
       #  target: /home/mig/state/freeze_home
       #- type: volume
+      #  source: freeze_tape
+      #  target: /home/mig/state/freeze_tape
+      #- type: volume
       #  source: mrsl_files
       #  target: /home/mig/state/mrsl_files
       #- type: volume
@@ -413,6 +419,9 @@ services:
       #  source: freeze_home
       #  target: /home/mig/state/freeze_home
       #- type: volume
+      #  source: freeze_tape
+      #  target: /home/mig/state/freeze_tape
+      #- type: volume
       #  source: mrsl_files
       #  target: /home/mig/state/mrsl_files
       #- type: volume
@@ -552,6 +561,9 @@ services:
       #  source: freeze_home
       #  target: /home/mig/state/freeze_home
       #- type: volume
+      #  source: freeze_tape
+      #  target: /home/mig/state/freeze_tape
+      #- type: volume
       #  source: mrsl_files
       #  target: /home/mig/state/mrsl_files
       #- type: volume
@@ -690,6 +702,9 @@ services:
       #- type: volume
       #  source: freeze_home
       #  target: /home/mig/state/freeze_home
+      #- type: volume
+      #  source: freeze_tape
+      #  target: /home/mig/state/freeze_tape
       #- type: volume
       #  source: mrsl_files
       #  target: /home/mig/state/mrsl_files
@@ -930,6 +945,14 @@ volumes:
     driver_opts:
       type: none
       device: ${PERSISTENT_ROOT}/freeze_home
+      o: bind
+
+  freeze_tape:
+    # Volume used to contain the migrid freeze_tape
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/freeze_tape
       o: bind
 
   mrsl_files:
