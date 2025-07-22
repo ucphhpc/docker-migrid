@@ -1601,6 +1601,10 @@ RUN sed -i -e "s@https://ext\.${EMULATE_FQDN}@https://${MIGOID_DOMAIN}@g;s@https
 RUN chmod 755 generated-confs/{migstateclean,mignotifyexpire,migerrors,migacctexpire} \
     && cp generated-confs/{migstateclean,mignotifyexpire,migerrors} /etc/cron.daily/ \
     && cp generated-confs/migacctexpire /etc/cron.monthly/
+RUN if [  -e "generated-confs/migstats" ]; then \
+    chmod 755 generated-confs/migstats \
+    && cp generated-confs/migstats /etc/cron.weekly/ ; \
+    fi;
 RUN if [ "${ENABLE_FREEZE}" = "True" ]; then \
       chmod 755 generated-confs/{migimportdoi,migindexdoi,migverifyarchives} \
       && cp generated-confs/{migimportdoi,migindexdoi} /etc/cron.daily/ \
