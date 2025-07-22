@@ -1485,8 +1485,9 @@ RUN ln -s index-${DOMAIN}.html $MIG_ROOT/state/wwwpublic/index.html && \
 RUN sed -i -e "s@https://ext\.${EMULATE_FQDN}@https://${MIGOID_DOMAIN}@g;s@https://oid\.${EMULATE_FQDN}@https://${EXTOID_DOMAIN}@g;s@https://oidc\.${EMULATE_FQDN}@https://${EXTOIDC_DOMAIN}@g;s@https://${EMULATE_FQDN}@https://${PUBLIC_DOMAIN}@g;s@https://cert\.${EMULATE_FQDN}@https://${EXTCERT_DOMAIN}@g;s@https://sid\.${EMULATE_FQDN}@https://${SID_DOMAIN}@g" $MIG_ROOT/state/wwwpublic/index-${DOMAIN}.html
 
 # Various cron jobs e.g. to clean stale state and inform migoid account users near expiry
-RUN chmod 755 generated-confs/{migstateclean,mignotifyexpire,migerrors,migacctexpire} \
+RUN chmod 755 generated-confs/{migstateclean,mignotifyexpire,migerrors,migstats,migacctexpire} \
     && cp generated-confs/{migstateclean,mignotifyexpire,migerrors} /etc/cron.daily/ \
+    && cp generated-confs/migstats /etc/cron.weekly/ \
     && cp generated-confs/migacctexpire /etc/cron.monthly/
 RUN if [ "${ENABLE_FREEZE}" = "True" ]; then \
       chmod 755 generated-confs/{migimportdoi,migindexdoi,migverifyarchives} \
