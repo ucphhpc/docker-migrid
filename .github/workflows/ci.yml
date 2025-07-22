@@ -52,8 +52,8 @@ jobs:
           dockerfile: Dockerfile.${{ matrix.container_os }}
           failure-threshold: error
           output-file: hadolint_Dockerfile.${{ matrix.container_os }}.out
-          # TODO: disable next once we have lint succeeding
-          no-fail: true
+          # NOTE: disabled next now we have cleaned enough to stop lint errors
+          #no-fail: true
       - name: Print Hadolint results
         run: |
           echo '================================================'
