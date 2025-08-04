@@ -1592,6 +1592,7 @@ RUN if [ "${ENABLE_QUOTA}" = "True" ] \
             && make liblustreapi.la \
             && cd ${MIG_ROOT}/mig/src/pylustrequota \
             && python3 setup.py install; \
+            && rm -rf ${MIG_ROOT}/mig/src/pylustrequota/lustre-release \
         fi; \
     fi;
 #------------------------- next stage -----------------------------#
