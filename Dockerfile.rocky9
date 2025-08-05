@@ -1591,7 +1591,8 @@ RUN if [ "${ENABLE_QUOTA}" = "True" ] \
             && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release/lustre/utils \
             && make liblustreapi.la \
             && cd ${MIG_ROOT}/mig/src/pylustrequota \
-            && python3 setup.py install; \
+            && python3 -m pip install --use-pep517 . \
+            && rm -rf ${MIG_ROOT}/mig/src/pylustrequota/lustre-release; \
         fi; \
     fi;
 #------------------------- next stage -----------------------------#
