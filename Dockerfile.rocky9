@@ -302,7 +302,7 @@ RUN echo "Enable python3 support: $WITH_PY3"
 #RUN echo "Enable git checkout: $WITH_GIT"
 
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH init as base
+FROM --platform=linux/$ARCH init AS base
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG ENABLE_GDP
@@ -413,7 +413,7 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       python3-typing-extensions \
       # Patch python3-openid until our pull request makes it to the Rocky repo
       && echo "Pull python3 openid patch from own repo" \
-      && wget -O /tmp/python3-openid-assoc_handle.patch.diff https://raw.githubusercontent.com/ucphhpc/docker-migrid/master/patches/python3-openid-assoc_handle.patch.diff \
+      && wget -q -O /tmp/python3-openid-assoc_handle.patch.diff https://raw.githubusercontent.com/ucphhpc/docker-migrid/master/patches/python3-openid-assoc_handle.patch.diff \
       && patch -p 0 /usr/lib/python3.9/site-packages/openid/server/server.py < /tmp/python3-openid-assoc_handle.patch.diff \
       && rm -f /tmp/python3-openid-assoc_handle.patch.diff \
       # NOTE: only install default paramiko if upgrade not requested
@@ -462,8 +462,8 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       && rm -fr /var/cache/dnf; \
       if [ "${WITH_PY3}" = "True" ]; then \
          echo "install py3 deps" && \
-         pip3 install xvfbwrapper && \
-	     pip3 install pdfkit; \
+         pip3 install --no-cache-dir xvfbwrapper && \
+	     pip3 install --no-cache-dir pdfkit; \
       fi; \
     else \
       echo "no GDP deps"; \
@@ -505,11 +505,11 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
         && yumdownloader -y --enablerepo=epel7-source --source --resolve --destdir /root/rpmbuild/SRPMS libopkele \
         && rpm -ivh /root/rpmbuild/SRPMS/libopkele-*.src.rpm \
         # Optionally pull more recent gcc4.9 patch from Debian on rocky8+ (local copy in patches)
-        && wget -O /root/rpmbuild/SOURCES/fix-ftbfs-gcc4.9.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-ftbfs-gcc4.9.diff \
+        && wget -q -O /root/rpmbuild/SOURCES/fix-ftbfs-gcc4.9.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-ftbfs-gcc4.9.diff \
         # Pull the more recent required OpenSSL-1.1 patch from Debian on rocky8+ (local copy in patches)
-        && wget -O /root/rpmbuild/SOURCES/fix-openssl-1.1.0.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-openssl-1.1.0.diff \
+        && wget -q -O /root/rpmbuild/SOURCES/fix-openssl-1.1.0.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-openssl-1.1.0.diff \
         # Pull patch from own repo to rpmbuild with Debian patches on rocky8+ (local copy in patches)
-        && wget -O /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff https://github.com/ucphhpc/docker-migrid/raw/master/patches/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff \
+        && wget -q -O /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff https://github.com/ucphhpc/docker-migrid/raw/master/patches/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff \
         && cd /root && patch -p 0 < /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff && cd - \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
         && rm -f /root/rpmbuild/RPMS/*/libopkele-*debug*.rpm \
@@ -587,7 +587,8 @@ ENV USER=mig
 ENV GROUP=mig
 
 RUN groupadd -g $GID $USER
-RUN useradd -u $UID -g $GID -ms /bin/bash $USER
+# NOTE: use -l to avoid excessively large image (hadolint hint)
+RUN useradd -l -u $UID -g $GID -ms /bin/bash $USER
 
 # MiG environment
 ENV MIG_ROOT=/home/$USER
@@ -662,8 +663,8 @@ RUN if [ ! -e "${CERT_DIR}/.persistent" ]; then \
     && chown $USER:$GROUP combined.pem \
     && chown $USER:$GROUP server.ca.pem \
     && ssh-keygen -y -f combined.pem > combined.pub \
-    && chown 0:0 *.key server.crt ca.pem \
-    && chmod 400 *.key server.crt ca.pem combined.pem server.ca.pem \
+    && chown 0:0 ./*.key server.crt ca.pem \
+    && chmod 400 ./*.key server.crt ca.pem combined.pem server.ca.pem \
     && openssl x509 -noout -fingerprint -sha256 -in combined.pem | \
        sed 's/.* Fingerprint=//g' > combined.pem.sha256 \
     && ssh-keygen -l -E md5 -f combined.pub | \
@@ -708,7 +709,7 @@ RUN if [ ! -e "${CERT_DIR}/.persistent" ]; then \
 
 # Upgrade pip3 is only required for cryptography from pip - irrelevant here
 #RUN if [ "${WITH_PY3}" = "True" ]; then \
-#      python3 -m pip install -U 'pip'; \
+#      python3 -m pip install --no-cache-dir -U 'pip'; \
 #    fi;
 
 # NOTE: make certs as mig user
@@ -753,7 +754,7 @@ USER root
 
 # NOTE: use jsonrpclib and pysendfile from pip for py3 here
 RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install 'jsonrpclib<0.2' pysendfile; \
+      pip3 install --no-cache-dir 'jsonrpclib<0.2' pysendfile; \
     fi;
 
 # NOTE: recent paramiko is required for modern host key algo
@@ -767,8 +768,8 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
         #            /usr/local, which is now the default install location for
         #            pip3. Thus, we force pip3 to install the paramiko plus
         #            dependencies specifically into /usr instead.
-        #pip3 install -U setuptools; \
-        #pip3 install setuptools_rust; \
+        #pip3 install --no-cache-dir -U setuptools; \
+        #pip3 install --no-cache-dir setuptools_rust; \
         # Additional NOTE: paramiko version 3.x introduces several changes
         # that in particular improve the SFTP download performance.
         # At the time of writing, the RHEL/Rocky 10 EPEL repo provides 3.5,
@@ -782,7 +783,7 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
         # https://github.com/PyO3/pyo3/issues/3451
         # So we explicitly cap the bcrypt version to the latest 3.2 one,
         # which coincides with the default Rocky version, btw.
-        pip3 install --prefix=$(python3-config --prefix) 'paramiko>=3.5' 'bcrypt<4'; \
+        pip3 install --no-cache-dir --prefix=$(python3-config --prefix) 'paramiko>=3.5' 'bcrypt<4'; \
       fi; \
     fi;
 
@@ -790,19 +791,19 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
 #       e.g. to work around version 1.0.0 breaking floating IP assignment
 RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
       #if [ "${WITH_PY3}" = "True" ]; then \
-      #  pip3 install python-openstackclient; \
+      #  pip3 install --no-cache-dir python-openstackclient; \
       #fi; \
       if [ -n "${OPENSTACKSDK_VERSION_OVERRIDE}" ]; then \
-        pip3 install "openstacksdk==${OPENSTACKSDK_VERSION_OVERRIDE}" ; \
+        pip3 install --no-cache-dir "openstacksdk==${OPENSTACKSDK_VERSION_OVERRIDE}" ; \
       fi; \
     fi;
 
 # OpenID support in python (python-openid2 for py3) - use alternative from dnf 
-#RUN pip3 install python-openid2;
+#RUN pip3 install --no-cache-dir python-openid2;
 
 # Modules required by grid_events.py
 RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install watchdog scandir; \
+      pip3 install --no-cache-dir watchdog scandir; \
     fi;
 
 # Modules required by grid_webdavs
@@ -812,17 +813,17 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       # IMPORTANT: use cheroot before 10.0.1 as it currently crashes webdavs
       #            One can trigger the crash with a simple testssl.sh run
       # TODO: investigate if the problem is in cheroot, wsgidav or migrid.
-      pip3 install 'cheroot<10.0.1' 'wsgidav>=4.1.0'; \
+      pip3 install --no-cache-dir 'cheroot<10.0.1' 'wsgidav>=4.1.0'; \
     fi;
 # Prefer sslkeylog as session tracking helper in webdavs daemon.
 RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install sslkeylog ; \
+      pip3 install --no-cache-dir sslkeylog ; \
     fi;
 
 # Modules required by grid_ftps
 # NOTE: relies on pyOpenSSL and Cryptography from yum/dnf for now
 RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install pyftpdlib; \
+      pip3 install --no-cache-dir pyftpdlib; \
     fi;
 
 # Modules required by grid_X IO daemons (not available in yum/dnf for python3)
@@ -830,52 +831,52 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
 #            Otherwise sftpsubsys will fail to import it because the /usr/local
 #            dir used as prefix by default in pip is outside sys.path
 RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install --prefix=$(python3-config --prefix) cracklib; \
+      pip3 install --no-cache-dir --prefix=$(python3-config --prefix) cracklib; \
     fi;
 
 # Module required to run pytests
 RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install pytest; \
+      pip3 install --no-cache-dir pytest; \
     fi;
 
 # Modules required by 2FA
 RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install pyotp; \
+      pip3 install --no-cache-dir pyotp; \
     fi;
 
 # Modules required for smart country selection
 RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install iso3166; \
+      pip3 install --no-cache-dir iso3166; \
     fi;
 
 # Modules required for email validation (already available in yum/dnf for python3)
 # IMPORTANT: install in main python site-packages to work with 'python -s'
 #            Otherwise sftpsubsys will fail to import it because the /usr/local
 #            dir used as prefix by default in pip is outside sys.path
-#RUN pip3 install --prefix=$(python3-config --prefix) email-validator;
+#RUN pip3 install --no-cache-dir --prefix=$(python3-config --prefix) email-validator;
 
 # Modules required for Trac integration 
 RUN if [ -n "${TRAC_ADMIN_PATH}" ]; then \
       echo "install Trac and plugins" \
-      && pip3 install Trac TracWikiPrint TracGraphviz TracFullBlog TracWikiCssPlugin \
+      && pip3 install --no-cache-dir Trac TracWikiPrint TracGraphviz TracFullBlog TracWikiCssPlugin \
       # IMPORTANT: Mercurial plugin is required for our repos and only recent
       #            stable releases support current python and Trac versions.
       #            We need 1.0.0.11+ for the default Python 3 and Trac-1.6.
-      && pip3 install 'TracMercurial>=1.0.0.11' \
+      && pip3 install --no-cache-dir 'TracMercurial>=1.0.0.11' \
       # NOTE: these plugins would be nice but have gone stale and only support
       #       older Trac versions.
-      #&& pip3 install TracStats TracMasterTickets TracDiscussion TracDownloads TracWysiwyg \
-      #&& pip3 install https://trac-hacks.org/svn/tracwysiwygplugin/0.12
+      #&& pip3 install --no-cache-dir TracStats TracMasterTickets TracDiscussion TracDownloads TracWysiwyg \
+      #&& pip3 install --no-cache-dir https://trac-hacks.org/svn/tracwysiwygplugin/0.12
       # NOTE: install more recent dev versions of those with Trac-1.6+ support
       # latest tag https://github.com/trac-hacks/tracstats/releases/tag/v0.6.1 is pre 1.6
-      && pip3 install https://github.com/trac-hacks/tracstats/archive/refs/heads/master.zip ; \
+      && pip3 install --no-cache-dir https://github.com/trac-hacks/tracstats/archive/refs/heads/master.zip ; \
     else \
       echo "no Trac deps"; \
     fi;
 
 # Modules required for workflows
 RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install nbformat nbconvert papermill; \
+      pip3 install --no-cache-dir nbformat nbconvert papermill; \
     fi;
 
 #------------------------- next stage -----------------------------#
@@ -1375,7 +1376,7 @@ RUN cd $MIG_ROOT/mig/src/libnss-mig \
 # runtime when used with OpenSSL-1.1+, however.
 RUN if [ "${WITH_PY3}" = "True" ]; then \
       cd $MIG_ROOT/mig/src/sslsession \
-      && pip3 install . ; \
+      && pip3 install --no-cache-dir . ; \
     fi;
 
 RUN cp generated-confs/libnss_mig.conf /etc/ \
@@ -1577,6 +1578,9 @@ RUN if [ "${ENABLE_QUOTA}" = "True" ] \
             libnl3-devel.x86_64 \
             libyaml-devel \
             krb5-devel.x86_64 \
+            && dnf clean all \
+            && rm -fr /var/cache/dnf \
+            # TODO: clean up after this download+build to avoid bloating image
             && cd ${MIG_ROOT}/mig/src/pylustrequota \
             && git clone git://git.whamcloud.com/fs/lustre-release.git \
             && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release \
@@ -1600,19 +1604,33 @@ FROM --platform=linux/$ARCH setup_mig_configs AS start_mig
 ARG DOMAIN
 
 # Reap defuncted/orphaned processes
+# IMPORTANT: always verify gpg signature / use verified checksum in downloads!
 ARG TINI_VERSION=v0.18.0
+ARG TINI_CHECKSUM=sha256:12d20136605531b09a2c2dac02ccee85e1b874eb322ef6baf7561cd93f93c855
+ARG TINI_GPG_KEY=0527A9B7
+# NOTE: hadolint awaits https://github.com/hadolint/language-docker/pull/92 in
+#       an actual release so it will currectly fail hard on the checksum arg.
+#       Rely solely on explicit gpg signature verification for the time being.
+#ADD --checksum=${TINI_CHECKSUM} https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini.asc /tini.asc
+RUN gpg --keyserver hkp://keyserver.ubuntu.com --recv-keys ${TINI_GPG_KEY} \
+    && if ! gpg --verify /tini.asc /tini ; then \
+      echo "FATAL: failed to verify tini binary"; \
+      exit 1 ; \
+   fi
 RUN chmod +x /tini
 ENTRYPOINT ["/tini", "--"]
 
-ADD docker-entry.sh /app/docker-entry.sh
-ADD migrid-httpd.env /app/migrid-httpd.env
-ADD migrid-httpd-init.sh /app/migrid-httpd-init.sh
-ADD apache-init-helper /etc/init.d/apache-minimal
+# NOTE: it's recommended to use COPY over ADD except when URL/unpack is needed
+COPY docker-entry.sh /app/docker-entry.sh
+COPY migrid-httpd.env /app/migrid-httpd.env
+COPY migrid-httpd-init.sh /app/migrid-httpd-init.sh
+COPY apache-init-helper /etc/init.d/apache-minimal
 # NOTE: inherit explicit LANG set above for apache and migrid services
 RUN sed "s/#LANG=.*/LANG=${LANG}/g" /app/migrid-httpd-init.sh > /etc/sysconfig/apache-minimal
 RUN grep LANG /etc/sysconfig/apache-minimal > /etc/sysconfig/migrid
-ADD rsyslog-init-helper /etc/init.d/rsyslog-minimal
+COPY rsyslog-init-helper /etc/init.d/rsyslog-minimal
 RUN chown $USER:$GROUP /app/docker-entry.sh \
     && chmod +x /app/docker-entry.sh
 
