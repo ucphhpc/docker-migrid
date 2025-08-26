@@ -1695,7 +1695,7 @@ RUN if [ "${ENABLE_QUOTA}" = "True" ] \
             && rm -fr /var/cache/dnf \
             # TODO: clean up after this download+build to avoid bloating image
             && cd ${MIG_ROOT}/mig/src/pylustrequota \
-            && git clone git://git.whamcloud.com/fs/lustre-release.git \
+            && git clone https://github.com/lustre/lustre-release \
             && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release \
             && git checkout ${QUOTA_LUSTRE_VERSION} \
             && sh ./autogen.sh \
