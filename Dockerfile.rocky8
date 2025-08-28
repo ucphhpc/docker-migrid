@@ -1499,7 +1499,7 @@ RUN cp generated-confs/libnss_mig.conf /etc/ \
 
 # Adjust paramiko to reduce log noise from scans if matching patch is available
 RUN cd $MIG_ROOT/mig/src/paramiko \
-    && make patch PLATFORM=el8
+    && if [ -e Makefile ]; then make patch PLATFORM=el8 ; fi
 
 RUN chmod 755 generated-confs/envvars \
     && chmod 755 generated-confs/httpd.conf
