@@ -281,25 +281,26 @@ ARG JUPYTER_SERVICES
 ARG CLOUD_SERVICES
 #ARG WITH_GIT
 
-RUN echo "UID and GID: $UID $GID"
-RUN echo "Domains: $DOMAIN" "${PUBLIC_DOMAIN}" "${MIGCERT_DOMAIN}" \
+RUN echo "*** BEGIN Build variables ***" && \
+    echo "UID and GID: $UID $GID" && \
+    echo "Domains: $DOMAIN" "${PUBLIC_DOMAIN}" "${MIGCERT_DOMAIN}" \
            "${EXTCERT_DOMAIN}" "${MIGOID_DOMAIN}" "${EXTOID_DOMAIN}" \
            "${EXTOIDC_DOMAIN}" "${SID_DOMAIN}" "${IO_DOMAIN}" \
            "${OPENID_DOMAIN}" "${SFTP_DOMAIN}" "${FTPS_DOMAIN}" \
-           "${WEBDAVS_DOMAIN}"
-RUN echo "Ports: " "${PUBLIC_HTTP_PORT} ${PUBLIC_HTTPS_PORT}" \
+           "${WEBDAVS_DOMAIN}" && \
+    echo "Ports: " "${PUBLIC_HTTP_PORT} ${PUBLIC_HTTPS_PORT}" \
     "${MIGOID_HTTPS_PORT} ${EXTOID_HTTPS_PORT} ${EXTOIDC_HTTPS_PORT}" \
     "${MIGCERT_HTTPS_PORT} ${EXTCERT_HTTPS_PORT}" \
     "${SID_HTTPS_PORT} ${SFTP_PORT} ${SFTP_SUBSYS_PORT}" \
-    "${FTPS_CTRL_PORT} ${DAVS_PORT} ${OPENID_PORT}"
-#RUN echo "MiG svn repo and revision: $MIG_SVN_REPO $MIG_SVN_REV"
-#RUN echo "MiG git repo , branch and revision: $MIG_GIT_REPO $MIG_GIT_BRANCH $MIG_GIT_REV"
-#RUN echo "Emulate flavor: $EMULATE_FLAVOR"
-#RUN echo "Emulate FQDN: $EMULATE_FQDN"
-RUN echo "Enable python3 support: $WITH_PY3"
-#RUN echo "Designated jupyter services: $JUPYTER_SERVICES"
-#RUN echo "Designated cloud services: $CLOUD_SERVICES"
-#RUN echo "Enable git checkout: $WITH_GIT"
+    "${FTPS_CTRL_PORT} ${DAVS_PORT} ${OPENID_PORT}" && \
+    #echo "MiG svn repo and revision: $MIG_SVN_REPO $MIG_SVN_REV" && \
+    echo "Enable git checkout & repo : $WITH_GIT $MIG_GIT_REPO" && \
+    echo "MiG git branch & revision:  $MIG_GIT_BRANCH $MIG_GIT_REV" && \
+    echo "Emulate flavor & fqdn: $EMULATE_FLAVOR $EMULATE_FQDN" && \
+    echo "Enable python3 support: $WITH_PY3" && \
+    #echo "Designated jupyter services: $JUPYTER_SERVICES" && \
+    #echo "Designated cloud services: $CLOUD_SERVICES" && \
+    echo "*** END Build variables ***"
 
 #------------------------- next stage -----------------------------#
 FROM --platform=linux/$ARCH init AS base
@@ -506,8 +507,8 @@ RUN pip2 install --no-cache-dir mod_wsgi && \
 #        && rm -fr /var/cache/dnf
 
 # Build mod_auth_openid from source if requested - mainly for rocky8+ or self-signed hack
-RUN echo "BUILD_MOD_AUTH_OPENID: $BUILD_MOD_AUTH_OPENID"
-RUN echo "ENABLE_SELF_SIGNED_CERTS: $ENABLE_SELF_SIGNED_CERTS"
+RUN echo "BUILD_MOD_AUTH_OPENID: $BUILD_MOD_AUTH_OPENID" && \
+    echo "ENABLE_SELF_SIGNED_CERTS: $ENABLE_SELF_SIGNED_CERTS"
 RUN if [ "$BUILD_MOD_AUTH_OPENID" = "True" -o "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
         echo "building mod_auth_openid from centos7 source rpm" \
         && dnf update -y \
@@ -1221,12 +1222,12 @@ RUN if [ "${PREFER_PYTHON3}" = "True" ]; then \
 
 WORKDIR $MIG_ROOT/mig/install
 
-RUN echo "Designated jupyter services: ${JUPYTER_SERVICES}"
-RUN echo "Designated jupyter services proxy enable https: ${JUPYTER_SERVICES_ENABLE_PROXY_HTTPS}"
-RUN echo "Designated jupyter services proxy config: ${JUPYTER_SERVICES_PROXY_CONFIG}"
-RUN echo "Designated jupyter services descriptions: ${JUPYTER_SERVICES_DESC}"
-RUN echo "Designated cloud services: ${CLOUD_SERVICES}"
-RUN echo "Designated cloud services descriptions: ${CLOUD_SERVICES_DESC}"
+RUN echo "Designated jupyter services: ${JUPYTER_SERVICES}" && \
+    echo "Designated jupyter services proxy enable https: ${JUPYTER_SERVICES_ENABLE_PROXY_HTTPS}" && \
+    echo "Designated jupyter services proxy config: ${JUPYTER_SERVICES_PROXY_CONFIG}" && \
+    echo "Designated jupyter services descriptions: ${JUPYTER_SERVICES_DESC}" && \
+    echo "Designated cloud services: ${CLOUD_SERVICES}" && \
+    echo "Designated cloud services descriptions: ${CLOUD_SERVICES_DESC}"
 
 # TODO: do we still need the ~/.local/ wrapper now that update-alternatives run?
 RUN mkdir -p ${MIG_ROOT}/.local/bin; \
