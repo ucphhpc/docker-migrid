@@ -1226,7 +1226,7 @@ RUN ./generateconfs.py --source=. \
     --enable_peers=${ENABLE_PEERS} --peers_mandatory=${PEERS_MANDATORY} \
     --peers_explicit_fields="${PEERS_EXPLICIT_FIELDS}" \
     --peers_contact_hint="${PEERS_CONTACT_HINT}" \
-    --enable_notify=${ENABLE_NOTIFY} --enable_preview=${ENABLE_PREVIEW} \
+    --enable_notify=${ENABLE_NOTIFY} \
     --enable_workflows=${ENABLE_WORKFLOWS} --enable_hsts=True \
     --enable_vhost_certs=True --enable_verify_certs=${ENABLE_VERIFY_CERTS} \
     --enable_jupyter=${ENABLE_JUPYTER} --enable_cloud=${ENABLE_CLOUD} \
