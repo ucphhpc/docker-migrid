@@ -407,9 +407,6 @@ Variables
    * - ENABLE_NOTIFY
      - True
      - Enable the built-in user notification daemon to inform users about failed logins, etc. on email.
-   * - ENABLE_PREVIEW
-     - False
-     - Enable the built-in image preview feature - deprecated.
    * - ENABLE_WORKFLOWS
      - False
      - Enable the built-in workflows feature to act on file system events

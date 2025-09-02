@@ -110,7 +110,6 @@ ARG FREEZE_TO_TAPE=""
 ARG ENABLE_CRACKLIB=True
 ARG ENABLE_IMNOTIFY=False
 ARG ENABLE_NOTIFY=True
-ARG ENABLE_PREVIEW=False
 ARG ENABLE_WORKFLOWS=False
 ARG ENABLE_VERIFY_CERTS=True
 ARG ENABLE_JUPYTER=True
@@ -1105,7 +1104,6 @@ ARG FREEZE_TO_TAPE
 ARG ENABLE_CRACKLIB
 ARG ENABLE_IMNOTIFY
 ARG ENABLE_NOTIFY
-ARG ENABLE_PREVIEW
 ARG ENABLE_WORKFLOWS
 ARG ENABLE_VERIFY_CERTS
 ARG ENABLE_JUPYTER
@@ -1337,7 +1335,7 @@ RUN ./generateconfs.py --source=. \
     --enable_peers=${ENABLE_PEERS} --peers_mandatory=${PEERS_MANDATORY} \
     --peers_explicit_fields="${PEERS_EXPLICIT_FIELDS}" \
     --peers_contact_hint="${PEERS_CONTACT_HINT}" \
-    --enable_notify=${ENABLE_NOTIFY} --enable_preview=${ENABLE_PREVIEW} \
+    --enable_notify=${ENABLE_NOTIFY} \
     --enable_workflows=${ENABLE_WORKFLOWS} --enable_hsts=True \
     --enable_vhost_certs=True --enable_verify_certs=${ENABLE_VERIFY_CERTS} \
     --enable_jupyter=${ENABLE_JUPYTER} --enable_cloud=${ENABLE_CLOUD} \
