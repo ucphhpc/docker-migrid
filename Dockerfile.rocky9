@@ -119,6 +119,7 @@ ARG CLOUD_ACCESS=cloud-access.yaml
 ARG CLOUD_JUMPHOST_KEY=cloud-jumphost-key
 ARG OPENSTACKSDK_VERSION_OVERRIDE=
 ARG ENABLE_MIGADMIN=False
+ARG ENABLE_JANITOR=False
 ARG ENABLE_GDP=False
 ARG ENABLE_TWOFACTOR=True
 ARG ENABLE_TWOFACTOR_STRICT_ADDRESS=False
@@ -1016,6 +1017,7 @@ ARG ENABLE_CLOUD
 ARG CLOUD_ACCESS
 ARG CLOUD_JUMPHOST_KEY
 ARG ENABLE_MIGADMIN
+ARG ENABLE_JANITOR
 ARG ENABLE_GDP
 ARG ENABLE_TWOFACTOR
 ARG ENABLE_TWOFACTOR_STRICT_ADDRESS
@@ -1229,7 +1231,7 @@ RUN ./generateconfs.py --source=. \
     --enable_vhost_certs=True --enable_verify_certs=${ENABLE_VERIFY_CERTS} \
     --enable_jupyter=${ENABLE_JUPYTER} --enable_cloud=${ENABLE_CLOUD} \
     # TODO: expose additional cloud conf including jumphost key and use here
-    --enable_migadmin=${ENABLE_MIGADMIN} \
+    --enable_migadmin=${ENABLE_MIGADMIN} --enable_janitor=${ENABLE_JANITOR} \
     --enable_gdp=${ENABLE_GDP} --gdp_email_notify=${GDP_EMAIL_NOTIFY} \
     --gdp_id_scramble=${GDP_ID_SCRAMBLE} --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
     --enable_quota=${ENABLE_QUOTA} --quota_backend="${QUOTA_BACKEND}" \
