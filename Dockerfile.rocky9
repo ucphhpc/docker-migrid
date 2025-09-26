@@ -119,6 +119,7 @@ ARG CLOUD_ACCESS=cloud-access.yaml
 ARG CLOUD_JUMPHOST_KEY=cloud-jumphost-key
 ARG OPENSTACKSDK_VERSION_OVERRIDE=
 ARG ENABLE_MIGADMIN=False
+# We leave janitor disabled by default for now to allow more testing
 ARG ENABLE_JANITOR=False
 ARG ENABLE_GDP=False
 ARG ENABLE_TWOFACTOR=True
