@@ -31,7 +31,7 @@ services:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
-      #   httpd script monitor sshmux events cron transfers
+      #   httpd script monitor sshmux events cron transfers janitor
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: 
     volumes:
@@ -81,9 +81,9 @@ services:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
-      #   httpd script monitor sshmux events cron transfers
+      #   httpd script monitor sshmux events cron transfers janitor
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: httpd script monitor sshmux events cron transfers imnotify vmproxy notify crond rsyslogd
+      RUN_SERVICES: httpd script monitor sshmux events cron transfers janitor imnotify vmproxy notify crond rsyslogd
     depends_on:
       # IMPORTANT: finish volume init before migrid launch as explained above
       migrid-volume-init:
@@ -228,7 +228,7 @@ services:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
-      #   httpd script monitor sshmux events cron transfers
+      #   httpd script monitor sshmux events cron transfers janitor
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: openid rsyslogd
     depends_on:
@@ -370,7 +370,7 @@ services:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
-      #   httpd script monitor sshmux events cron transfers
+      #   httpd script monitor sshmux events cron transfers janitor
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: sftp sftpsubsys rsyslogd
     depends_on:
@@ -513,7 +513,7 @@ services:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
-      #   httpd script monitor sshmux events cron transfers
+      #   httpd script monitor sshmux events cron transfers janitor
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: ftps rsyslogd
     depends_on:
@@ -655,7 +655,7 @@ services:
       TZ: ${TZ}
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
-      #   httpd script monitor sshmux events cron transfers
+      #   httpd script monitor sshmux events cron transfers janitor
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
       RUN_SERVICES: webdavs rsyslogd
     depends_on:
