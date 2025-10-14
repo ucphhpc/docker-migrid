@@ -27,7 +27,7 @@ if [ -d "${HOTFIXES_DIR}" ]; then
                 echo "DEBUG: skip already applied patch: ${PATCH_NAME}"
             else
                 echo "Applying patch ${PATCH_PATH}"
-                patch -p0 < "${PATCH_PATH}" && \
+                patch -d / -p0 < "${PATCH_PATH}" && \
                     cp "${PATCH_PATH}" "${PATCHES_APPLIED}/"
             fi
         done
