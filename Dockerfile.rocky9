@@ -1646,7 +1646,7 @@ RUN sed "s/#LANG=.*/LANG=${LANG}/g" /app/migrid-httpd-init.sh > /etc/sysconfig/a
 RUN grep LANG /etc/sysconfig/apache-minimal > /etc/sysconfig/migrid
 COPY rsyslog-init-helper /etc/init.d/rsyslog-minimal
 RUN chown $USER:$GROUP /app/docker-entry.sh \
-    && chmod +x /app/docker-entry.sh
+    && chmod +x /app/docker-entry.sh /app/apply-hotfixes.sh
 
 USER root
 WORKDIR /app
