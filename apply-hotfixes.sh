@@ -3,7 +3,7 @@
 # Apply all hot-fixes in specified folder
 
 APPLIED_DIR="/tmp/hotfixes-applied"
-HOTFIXES_DIR="/hotfixes"
+HOTFIXES_DIR="${HOTFIXES_DIR:-/hotfixes}"
 if [ $# -gt 0 ]; then
     HOTFIXES_DIR="$1"
 fi
