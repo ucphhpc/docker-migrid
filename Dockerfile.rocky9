@@ -1619,11 +1619,17 @@ ARG TINI_GPG_KEY=0527A9B7
 #ADD --checksum=${TINI_CHECKSUM} https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini.asc /tini.asc
-RUN gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys ${TINI_GPG_KEY} \
-    && if ! gpg --verify /tini.asc /tini ; then \
+# NOTE: some build environments with strict firewalling may not allow e.g. hkp.
+#       For robustness try different methods in turn until key import succeeds.
+RUN for key in ${TINI_GPG_KEY}; do \
+      gpg --keyserver hkps://keyserver.ubuntu.com --recv-keys "$key" || \
+      gpg --keyserver hkp://keyserver.ubuntu.com --recv-keys "$key" || \
+      gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys "$key" ; \
+    done && \
+    if ! gpg --verify /tini.asc /tini ; then \
       echo "FATAL: failed to verify tini binary"; \
       exit 1 ; \
-   fi
+    fi
 RUN chmod +x /tini
 ENTRYPOINT ["/tini", "--"]
 
