@@ -1619,7 +1619,7 @@ ARG TINI_GPG_KEY=0527A9B7
 #ADD --checksum=${TINI_CHECKSUM} https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini.asc /tini.asc
-RUN gpg --keyserver hkp://keyserver.ubuntu.com --recv-keys ${TINI_GPG_KEY} \
+RUN gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys ${TINI_GPG_KEY} \
     && if ! gpg --verify /tini.asc /tini ; then \
       echo "FATAL: failed to verify tini binary"; \
       exit 1 ; \
