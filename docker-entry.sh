@@ -7,6 +7,7 @@
 CHECKCONF=0
 KEEPALIVE=0
 VERSIONINFO=0
+APPLYHOTFIXES="/app/apply-hotfixes.sh"
 
 # Make sure requested timezone is actually used everywhere for consistent 
 # log time stamps.
@@ -44,6 +45,13 @@ fi
 if [ ! -d "${MIG_ROOT}" ]; then
     echo "Failed to start because the MIG_ROOT environment is set, but the directory: ${MIG_ROOT} does not exist"
     exit 1
+fi
+
+if [ ! -f "${APPLYHOTFIXES}" ]; then
+    echo "No hot-fix support available in ${APPLYHOTFIXES}"
+else
+    echo "Apply hot-fixes with ${APPLYHOTFIXES}"
+    ${APPLYHOTFIXES}
 fi
 
 

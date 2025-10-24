@@ -596,12 +596,14 @@ RUN useradd -l -u $UID -g $GID -ms /bin/bash $USER
 ENV MIG_ROOT=/home/$USER
 ENV WEB_DIR=/etc/httpd
 ENV CERT_DIR=$WEB_DIR/MiG-certificates
+ENV HOTFIXES_DIR=/hotfixes
 
 USER root
 
-RUN mkdir -p ${CERT_DIR}/MiG/${WILDCARD_DOMAIN} \
+RUN mkdir -p ${CERT_DIR}/MiG/${WILDCARD_DOMAIN} ${HOTFIXES_DIR} \
     && chown $USER:$GROUP ${CERT_DIR} \
-    && chmod 775 ${CERT_DIR}
+    && chmod 775 ${CERT_DIR} \
+    && chmod 700 ${HOTFIXES_DIR}
 
 #------------------------- next stage -----------------------------#
 # Certs and keys
@@ -1635,6 +1637,7 @@ ENTRYPOINT ["/tini", "--"]
 
 # NOTE: it's recommended to use COPY over ADD except when URL/unpack is needed
 COPY docker-entry.sh /app/docker-entry.sh
+COPY apply-hotfixes.sh /app/apply-hotfixes.sh
 COPY migrid-httpd.env /app/migrid-httpd.env
 COPY migrid-httpd-init.sh /app/migrid-httpd-init.sh
 COPY apache-init-helper /etc/init.d/apache-minimal
@@ -1643,7 +1646,7 @@ RUN sed "s/#LANG=.*/LANG=${LANG}/g" /app/migrid-httpd-init.sh > /etc/sysconfig/a
 RUN grep LANG /etc/sysconfig/apache-minimal > /etc/sysconfig/migrid
 COPY rsyslog-init-helper /etc/init.d/rsyslog-minimal
 RUN chown $USER:$GROUP /app/docker-entry.sh \
-    && chmod +x /app/docker-entry.sh
+    && chmod +x /app/docker-entry.sh /app/apply-hotfixes.sh
 
 USER root
 WORKDIR /app
