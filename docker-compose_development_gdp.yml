@@ -1,5 +1,5 @@
 # docker-compose version
-version: '3.7'
+version: "3.7"
 
 services:
   devmail:
@@ -21,7 +21,7 @@ services:
     image: ${CONTAINER_REGISTRY}/ruudud/devdns
     container_name: devdns
     ports:
-        - "127.0.0.1:53:53/udp"
+      - "127.0.0.1:53:53/udp"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
@@ -43,7 +43,7 @@ services:
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: 
+      RUN_SERVICES:
     volumes:
       - type: volume
         source: httpd
@@ -54,6 +54,9 @@ services:
       - type: volume
         source: hotfixes
         target: /hotfixes
+      - type: volume
+        source: mig-server-extconfs
+        target: /home/mig/mig/server/MiGserver.d
       - type: volume
         source: certs
         target: /etc/httpd/MiG-certificates
@@ -118,6 +121,9 @@ services:
         source: hotfixes
         target: /hotfixes
       - type: volume
+        source: mig-server-extconfs
+        target: /home/mig/mig/server/MiGserver.d
+      - type: volume
         source: certs
         target: /etc/httpd/MiG-certificates
       - type: volume
@@ -173,7 +179,7 @@ services:
       migrid-volume-init:
         condition: service_completed_successfully
     ports:
-      # NOTE: expose the unique raw port(s) to host 
+      # NOTE: expose the unique raw port(s) to host
       - "${OPENID_PORT}:${OPENID_PORT}"
     networks:
       default:
@@ -189,6 +195,9 @@ services:
       - type: volume
         source: hotfixes
         target: /hotfixes
+      - type: volume
+        source: mig-server-extconfs
+        target: /home/mig/mig/server/MiGserver.d
       - type: volume
         source: certs
         target: /etc/httpd/MiG-certificates
@@ -226,7 +235,7 @@ services:
       migrid-volume-init:
         condition: service_completed_successfully
     ports:
-      # NOTE: expose the unique raw port(s) to host 
+      # NOTE: expose the unique raw port(s) to host
       - "${SFTP_PORT}:${SFTP_PORT}"
       - "${SFTP_SUBSYS_PORT}:${SFTP_SUBSYS_PORT}"
     networks:
@@ -243,6 +252,9 @@ services:
       - type: volume
         source: hotfixes
         target: /hotfixes
+      - type: volume
+        source: mig-server-extconfs
+        target: /home/mig/mig/server/MiGserver.d
       - type: volume
         source: certs
         target: /etc/httpd/MiG-certificates
@@ -306,6 +318,9 @@ services:
         source: hotfixes
         target: /hotfixes
       - type: volume
+        source: mig-server-extconfs
+        target: /home/mig/mig/server/MiGserver.d
+      - type: volume
         source: certs
         target: /etc/httpd/MiG-certificates
       - type: volume
@@ -346,7 +361,7 @@ services:
       migrid-volume-init:
         condition: service_completed_successfully
     ports:
-      # NOTE: expose the unique raw port(s) to host 
+      # NOTE: expose the unique raw port(s) to host
       - "${DAVS_PORT}:${DAVS_PORT}"
     networks:
       default:
@@ -362,6 +377,9 @@ services:
       - type: volume
         source: hotfixes
         target: /hotfixes
+      - type: volume
+        source: mig-server-extconfs
+        target: /home/mig/mig/server/MiGserver.d
       - type: volume
         source: certs
         target: /etc/httpd/MiG-certificates
@@ -401,7 +419,7 @@ services:
       migrid:
         condition: service_started
     ports:
-      # NOTE: expose the unique raw port(s) to host 
+      # NOTE: expose the unique raw port(s) to host
       - "80:80"
       - "443:443"
       - "444:444"
@@ -456,6 +474,14 @@ volumes:
     driver_opts:
       type: none
       device: ${PERSISTENT_ROOT}/hotfixes
+      o: bind
+
+  mig-server-extconfs:
+    # Volume used to contain the optional additional mig server config snippets
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PERSISTENT_ROOT}/mig-server-extconfs
       o: bind
 
   state:
