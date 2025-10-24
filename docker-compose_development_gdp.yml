@@ -492,7 +492,7 @@ volumes:
       device: ${DOCKER_MIGRID_ROOT}/state
       o: bind
 
-  # NOTE: we don't bother setting up persistent data outside state here
+  # NOTE: we don't bother setting up other persistent data outside state here
 
   log:
     # Volume used to contain the mig state log folder shared by all containers
