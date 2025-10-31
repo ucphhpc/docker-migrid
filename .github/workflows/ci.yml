@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        container_os: [rocky9]
+        container_os: [rocky9, rocky10]
         environment_profile: [development]
     steps:
       - name: Check out repository contents
