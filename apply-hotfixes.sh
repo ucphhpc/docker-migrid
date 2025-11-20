@@ -65,7 +65,7 @@ if [ -d "${HOTFIXES_DIR}" ]; then
     #echo "DEBUG: Applied hot-fixes available in ${HOTFIXES_DIR}"
     exit 0
 else
-    echo "WARNING: no such hot-fixes folder ${HOTFIXES_DIR}" >> ${LOGFILE}
+    echo "$(date) $(hostname): WARNING: no such hot-fixes folder ${HOTFIXES_DIR}" >> ${LOGFILE}
     exit 1
 fi
 
