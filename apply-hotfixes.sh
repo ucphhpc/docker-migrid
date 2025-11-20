@@ -31,7 +31,7 @@ if [ -d "${HOTFIXES_DIR}" ]; then
                     >> ${LOGFILE}
             else
                 echo "$(date) $(hostname): Applying patch ${PATCH_PATH}" \
-                    >> ${LOGFILE} 2>&1
+                    >> ${LOGFILE}
                 patch -d / -p0 < "${PATCH_PATH}" >> ${LOGFILE} 2>&1
                 ret=$?
                 echo "$(date) $(hostname): Applied patch: ${PATCH_PATH}: $ret" \
