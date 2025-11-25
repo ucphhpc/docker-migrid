@@ -229,6 +229,9 @@ while [ ${KEEP_RUNNING} -eq 1 ]; do
         elif [ "$svc" = "crond" ]; then
             PROCNAME="$svc"
             PROCUSER="root"
+        elif [ "$svc" = "quota" ]; then
+            PROCNAME="grid_quota"
+            PROCUSER="root"
         else
             PROCNAME="$svc"
             PROCUSER=$USER
