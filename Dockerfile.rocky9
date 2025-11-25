@@ -1569,8 +1569,7 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
 # NOTE: Requires py3 and git next branch
 RUN if [ "${ENABLE_QUOTA}" = "True" ] \
             && [ "${PREFER_PYTHON3}" = "True" ] \
-            && [ "${WITH_GIT}" = "True" ] \
-            && [ "${MIG_GIT_BRANCH}" = "next" ]; then \
+            && [ "${WITH_GIT}" = "True" ]; then \
         if [ "${QUOTA_BACKEND}" = "lustre" ] \
             || [ "${QUOTA_BACKEND}" = "lustre-gocryptfs" ]; then \
             echo "install python lustreclient extensions" \
