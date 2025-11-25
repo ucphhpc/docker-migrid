@@ -1564,7 +1564,7 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       fi; \
     fi;
 
-# Install pylustrequota
+# Install lustreclient
 # NOTE: Requires py3 and git next branch
 RUN if [ "${ENABLE_QUOTA}" = "True" ] \
             && [ "${PREFER_PYTHON3}" = "True" ] \
@@ -1572,7 +1572,7 @@ RUN if [ "${ENABLE_QUOTA}" = "True" ] \
             && [ "${MIG_GIT_BRANCH}" = "next" ]; then \
         if [ "${QUOTA_BACKEND}" = "lustre" ] \
             || [ "${QUOTA_BACKEND}" = "lustre-gocryptfs" ]; then \
-            echo "install pylustrequota" \
+            echo "install python lustreclient extensions" \
             && dnf update -y \
             && dnf --enablerepo=crb install -y \
             python3-devel.x86_64 \
@@ -1588,22 +1588,22 @@ RUN if [ "${ENABLE_QUOTA}" = "True" ] \
             krb5-devel.x86_64 \
             && dnf clean all \
             && rm -fr /var/cache/dnf \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota \
+            && cd ${MIG_ROOT}/mig/src/lustreclient \
             && git clone https://github.com/lustre/lustre-release \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release \
+            && cd ${MIG_ROOT}/mig/src/lustreclient/lustre-release \
             && git checkout ${QUOTA_LUSTRE_VERSION} \
             && sh ./autogen.sh \
             && ./configure --disable-server --enable-quota --enable-utils --enable-gss \
             && make undef.h \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release/libcfs/libcfs \
+            && cd ${MIG_ROOT}/mig/src/lustreclient/lustre-release/libcfs/libcfs \
             && make libcfs.la \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release/lnet/utils/lnetconfig \
+            && cd ${MIG_ROOT}/mig/src/lustreclient/lustre-release/lnet/utils/lnetconfig \
             && make liblnetconfig.la \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release/lustre/utils \
+            && cd ${MIG_ROOT}/mig/src/lustreclient/lustre-release/lustre/utils \
             && make liblustreapi.la \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota \
+            && cd ${MIG_ROOT}/mig/src/lustreclient \
             && python3 -m pip install --use-pep517 . \
-            && rm -rf ${MIG_ROOT}/mig/src/pylustrequota/lustre-release; \
+            && rm -rf ${MIG_ROOT}/mig/src/lustreclient/lustre-release; \
         fi; \
     fi;
 #------------------------- next stage -----------------------------#
