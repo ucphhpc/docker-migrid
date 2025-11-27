@@ -1105,9 +1105,10 @@ ARG SFTP_MAX_SESSIONS
 ARG WSGI_PROCS
 ARG APACHE_WORKER_PROCS
 ARG QUOTA_BACKEND
-ARG QUOTA_LUSTRE_VERSION
+ARG QUOTA_UPDATE_INTERVAL
 ARG QUOTA_USER_LIMIT
 ARG QUOTA_VGRID_LIMIT
+ARG QUOTA_LUSTRE_VERSION
 
 # TODO: do we still need the ~/.local/ wrapper now that update-alternatives run?
 ENV PYTHONPATH=${MIG_ROOT}
@@ -1239,6 +1240,7 @@ RUN ./generateconfs.py --source=. \
     --enable_gdp=${ENABLE_GDP} --gdp_email_notify=${GDP_EMAIL_NOTIFY} \
     --gdp_id_scramble=${GDP_ID_SCRAMBLE} --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
     --enable_quota=${ENABLE_QUOTA} --quota_backend="${QUOTA_BACKEND}" \
+    --quota_update_interval=${QUOTA_UPDATE_INTERVAL} \
     --quota_user_limit=${QUOTA_USER_LIMIT} --quota_vgrid_limit=${QUOTA_VGRID_LIMIT} \
     --storage_protocols="${STORAGE_PROTOCOLS}" \
     --wwwserve_max_bytes=${WWWSERVE_MAX_BYTES} \
