@@ -230,7 +230,7 @@ while [ ${KEEP_RUNNING} -eq 1 ]; do
             PROCNAME="$svc"
             PROCUSER="root"
         elif [ "$svc" = "quota" ]; then
-            PROCNAME="grid_quota"
+            PROCNAME="grid_quota.py"
             PROCUSER="root"
         else
             PROCNAME="$svc"
