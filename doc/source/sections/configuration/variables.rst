@@ -635,6 +635,9 @@ Variables
    * - QUOTA_BACKEND
      - ""
      - Filesystem backend used to set quotas and fetch data usage. Supported backends: 'lustre' and 'lustre-gocryptfs'
+   * - QUOTA_UPDATE_INTERVAL
+     - 3600
+     - The frequency (seconds) of storage quota updates.
    * - QUOTA_USER_LIMIT
      - 1099511627776
      - Data limit for MiG users in bytes.

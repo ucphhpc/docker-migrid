@@ -142,7 +142,7 @@ initdirs: initcomposevars
 	mkdir -p ${LOG_ROOT}/syslog/migrid-sftp
 	mkdir -p ${LOG_ROOT}/syslog/migrid-webdavs
 	mkdir -p ${LOG_ROOT}/syslog/migrid-ftps
-	mkdir -p ${LOG_ROOT}/syslog/migrid-lustre-quota
+	mkdir -p ${LOG_ROOT}/syslog/migrid-quota
 
 initcomposevars:
 	@echo "creating env variable map in docker-compose_shared.yml"
@@ -176,7 +176,7 @@ initservices:
 				&& "${ENABLE_DAVS}" == "True" ]]; then
 			@ENABLED_SERVICES+=" $$service"
 		@fi
-		@if [[ "$$service" == "migrid-lustre-quota" \
+		@if [[ "$$service" == "migrid-quota" \
 				&& "${ENABLE_QUOTA}" == "True" ]]; then
 			@ENABLED_SERVICES+=" $$service"
 		@fi

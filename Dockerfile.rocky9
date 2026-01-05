@@ -223,6 +223,7 @@ ARG SFTP_MAX_SESSIONS=32
 ARG WSGI_PROCS=25
 ARG APACHE_WORKER_PROCS=256
 ARG QUOTA_BACKEND=""
+ARG QUOTA_UPDATE_INTERVAL=3600
 ARG QUOTA_USER_LIMIT=1099511627776
 ARG QUOTA_VGRID_LIMIT=1099511627776
 ARG QUOTA_LUSTRE_VERSION="2.15.4"
@@ -1104,9 +1105,10 @@ ARG SFTP_MAX_SESSIONS
 ARG WSGI_PROCS
 ARG APACHE_WORKER_PROCS
 ARG QUOTA_BACKEND
-ARG QUOTA_LUSTRE_VERSION
+ARG QUOTA_UPDATE_INTERVAL
 ARG QUOTA_USER_LIMIT
 ARG QUOTA_VGRID_LIMIT
+ARG QUOTA_LUSTRE_VERSION
 
 # TODO: do we still need the ~/.local/ wrapper now that update-alternatives run?
 ENV PYTHONPATH=${MIG_ROOT}
@@ -1238,6 +1240,7 @@ RUN ./generateconfs.py --source=. \
     --enable_gdp=${ENABLE_GDP} --gdp_email_notify=${GDP_EMAIL_NOTIFY} \
     --gdp_id_scramble=${GDP_ID_SCRAMBLE} --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
     --enable_quota=${ENABLE_QUOTA} --quota_backend="${QUOTA_BACKEND}" \
+    --quota_update_interval=${QUOTA_UPDATE_INTERVAL} \
     --quota_user_limit=${QUOTA_USER_LIMIT} --quota_vgrid_limit=${QUOTA_VGRID_LIMIT} \
     --storage_protocols="${STORAGE_PROTOCOLS}" \
     --wwwserve_max_bytes=${WWWSERVE_MAX_BYTES} \
@@ -1564,15 +1567,14 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       fi; \
     fi;
 
-# Install pylustrequota
+# Install lustreclient
 # NOTE: Requires py3 and git next branch
 RUN if [ "${ENABLE_QUOTA}" = "True" ] \
             && [ "${PREFER_PYTHON3}" = "True" ] \
-            && [ "${WITH_GIT}" = "True" ] \
-            && [ "${MIG_GIT_BRANCH}" = "next" ]; then \
+            && [ "${WITH_GIT}" = "True" ]; then \
         if [ "${QUOTA_BACKEND}" = "lustre" ] \
             || [ "${QUOTA_BACKEND}" = "lustre-gocryptfs" ]; then \
-            echo "install pylustrequota" \
+            echo "install python lustreclient extensions" \
             && dnf update -y \
             && dnf --enablerepo=crb install -y \
             python3-devel.x86_64 \
@@ -1588,22 +1590,22 @@ RUN if [ "${ENABLE_QUOTA}" = "True" ] \
             krb5-devel.x86_64 \
             && dnf clean all \
             && rm -fr /var/cache/dnf \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota \
+            && cd ${MIG_ROOT}/mig/src/lustreclient \
             && git clone https://github.com/lustre/lustre-release \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release \
+            && cd ${MIG_ROOT}/mig/src/lustreclient/lustre-release \
             && git checkout ${QUOTA_LUSTRE_VERSION} \
             && sh ./autogen.sh \
             && ./configure --disable-server --enable-quota --enable-utils --enable-gss \
             && make undef.h \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release/libcfs/libcfs \
+            && cd ${MIG_ROOT}/mig/src/lustreclient/lustre-release/libcfs/libcfs \
             && make libcfs.la \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release/lnet/utils/lnetconfig \
+            && cd ${MIG_ROOT}/mig/src/lustreclient/lustre-release/lnet/utils/lnetconfig \
             && make liblnetconfig.la \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release/lustre/utils \
+            && cd ${MIG_ROOT}/mig/src/lustreclient/lustre-release/lustre/utils \
             && make liblustreapi.la \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota \
+            && cd ${MIG_ROOT}/mig/src/lustreclient \
             && python3 -m pip install --use-pep517 . \
-            && rm -rf ${MIG_ROOT}/mig/src/pylustrequota/lustre-release; \
+            && rm -rf ${MIG_ROOT}/mig/src/lustreclient/lustre-release; \
         fi; \
     fi;
 #------------------------- next stage -----------------------------#

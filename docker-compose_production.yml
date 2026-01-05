@@ -32,7 +32,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy quota
       RUN_SERVICES: 
     volumes:
       - type: volume
@@ -85,7 +85,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy quota
       RUN_SERVICES: httpd script monitor sshmux events cron transfers janitor imnotify vmproxy notify crond rsyslogd
     depends_on:
       # IMPORTANT: finish volume init before migrid launch as explained above
@@ -235,7 +235,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy quota
       RUN_SERVICES: openid rsyslogd
     depends_on:
       - migrid
@@ -380,7 +380,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy quota
       RUN_SERVICES: sftp sftpsubsys rsyslogd
     depends_on:
       - migrid
@@ -526,7 +526,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy quota
       RUN_SERVICES: ftps rsyslogd
     depends_on:
       - migrid
@@ -671,7 +671,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy quota
       RUN_SERVICES: webdavs rsyslogd
     depends_on:
       - migrid
@@ -807,12 +807,17 @@ services:
         target: /home/mig/state/mig_system_run
     command: /app/docker-entry.sh -k
 
-  migrid-lustre-quota:
-    container_name: migrid-lustre-quota
+  migrid-quota:
+    container_name: migrid-quota
     image: ${CONTAINER_REGISTRY}/ucphhpc/migrid${CONTAINER_TAG}
     network_mode: host
     environment:
       TZ: ${TZ}
+      # RUN_SERVICES specifies which daemons to launch
+      # Available target service names follow migrid init script and are:
+      #   httpd script monitor sshmux events cron transfers janitor
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy quota
+      RUN_SERVICES: quota rsyslogd
     depends_on:
       - migrid
     cap_add:
@@ -837,7 +842,7 @@ services:
         source: mig-server-extconfs
         target: /home/mig/mig/server/MiGserver.d
       - type: volume
-        source: migrid-lustre-quota-syslog
+        source: migrid-quota-syslog
         target: /var/log
       - type: volume
         source: state
@@ -863,7 +868,7 @@ services:
       - type: volume
         source: vgrid_files_writable
         target: /home/mig/state/vgrid_files_writable
-    command: miglustrequota.py -c /home/mig/mig/server/MiGserver.conf
+    command: /app/docker-entry.sh -k
 
 # NOTE: not used in stand-alone production mode
 #  nginx-proxy:
@@ -1216,10 +1221,10 @@ volumes:
       device: ${LOG_ROOT}/syslog/migrid-ftps
       o: bind
 
-  migrid-lustre-quota-syslog:
+  migrid-quota-syslog:
     # Volume used for exposing migrid lustre quota container system log
     driver: local
     driver_opts:
       type: none
-      device: ${LOG_ROOT}/syslog/migrid-lustre-quota
+      device: ${LOG_ROOT}/syslog/migrid-quota
       o: bind
