@@ -437,6 +437,9 @@ Variables
    * - ENABLE_QUOTA
      - False
      - Enable additional quota integration in the user pages if fundamentally enabled with the QUOTA_X variables.
+   * - ENABLE_ANTISLOWLORIS
+     - False
+     - Enable additional request timeout integration in apache to help foil slowloris-like attacks and drop resource hogging clients.
    * - ENABLE_GDP
      - False
      - Enable GDP mode for sensitive data with a lot of restrictions on access and logging
