@@ -863,7 +863,9 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
 # Modules required for Trac integration 
 RUN if [ -n "${TRAC_ADMIN_PATH}" ]; then \
       echo "install Trac and plugins" \
-      && pip3 install --no-cache-dir Trac TracWikiPrint TracGraphviz TracFullBlog TracWikiCssPlugin \
+      && pip3 install --no-cache-dir Trac TracWikiPrint TracFullBlog TracWikiCssPlugin \
+      # NOTE: this plugin would be nice but it has a huge dep footprint
+      #&& pip3 install --no-cache-dir TracGraphviz \
       # IMPORTANT: Mercurial plugin is required for our repos and only recent
       #            stable releases support current python and Trac versions.
       #            We need 1.0.0.11+ for the default Python 3 and Trac-1.6.
