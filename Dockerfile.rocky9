@@ -127,6 +127,7 @@ ARG ENABLE_TWOFACTOR_STRICT_ADDRESS=False
 ARG TWOFACTOR_AUTH_APPS=""
 ARG ENABLE_PEERS=True
 ARG ENABLE_QUOTA=False
+ARG ENABLE_ANTISLOWLORIS=False
 ARG PEERS_MANDATORY=False
 ARG PEERS_EXPLICIT_FIELDS=""
 ARG PEERS_CONTACT_HINT="authorized to invite you as peer"
@@ -1030,6 +1031,7 @@ ARG ENABLE_TWOFACTOR_STRICT_ADDRESS
 ARG TWOFACTOR_AUTH_APPS
 ARG ENABLE_PEERS
 ARG ENABLE_QUOTA
+ARG ENABLE_ANTISLOWLORIS
 ARG PEERS_MANDATORY
 ARG PEERS_EXPLICIT_FIELDS
 ARG PEERS_CONTACT_HINT
@@ -1243,6 +1245,7 @@ RUN ./generateconfs.py --source=. \
     --gdp_id_scramble=${GDP_ID_SCRAMBLE} --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
     --enable_quota=${ENABLE_QUOTA} --quota_backend="${QUOTA_BACKEND}" \
     --quota_update_interval=${QUOTA_UPDATE_INTERVAL} \
+    --enable_antislowloris=${ENABLE_ANTISLOWLORIS} \
     --quota_user_limit=${QUOTA_USER_LIMIT} --quota_vgrid_limit=${QUOTA_VGRID_LIMIT} \
     --storage_protocols="${STORAGE_PROTOCOLS}" \
     --wwwserve_max_bytes=${WWWSERVE_MAX_BYTES} \
