@@ -144,6 +144,7 @@ initdirs: initcomposevars
 	mkdir -p ${LOG_ROOT}/syslog/migrid-webdavs
 	mkdir -p ${LOG_ROOT}/syslog/migrid-ftps
 	mkdir -p ${LOG_ROOT}/syslog/migrid-quota
+	mkdir -p ${LOG_ROOT}/syslog/migrid-accounting
 
 initcomposevars:
 	@echo "creating env variable map in docker-compose_shared.yml"

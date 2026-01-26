@@ -910,7 +910,7 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
-        source: migrid-quota-syslog
+        source: migrid-accounting-syslog
         target: /var/log
       - type: volume
         source: log
@@ -1288,4 +1288,12 @@ volumes:
     driver_opts:
       type: none
       device: ${LOG_ROOT}/syslog/migrid-quota
+      o: bind
+
+  migrid-accounting-syslog:
+    # Volume used for exposing migrid lustre quota container system log
+    driver: local
+    driver_opts:
+      type: none
+      device: ${LOG_ROOT}/syslog/migrid-accounting
       o: bind
