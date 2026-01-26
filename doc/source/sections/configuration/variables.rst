@@ -436,7 +436,10 @@ Variables
      - Enable the built-in janitor service to handle recurring tasks like clean up and cache update
    * - ENABLE_QUOTA
      - False
-     - Enable additional quota integration in the user pages if fundamentally enabled with the QUOTA_X variables.
+     - Enable additional storage quota daemon if fundamentally enabled with the QUOTA_X variables.
+   * - ENABLE_ACCOUNTING
+     - False
+     - Enable additional accounting daemon and integration in the user pages.
    * - ENABLE_GDP
      - False
      - Enable GDP mode for sensitive data with a lot of restrictions on access and logging
@@ -656,4 +659,7 @@ Variables
    * - QUOTA_GOCRYPTFS_SOCK
      - "/dev/null"
      - A gocryptfs socket is needed by gocryptfs-xray to resolve encoded data paths from MiG data paths.
+   * - ACCOUNTING_UPDATE_INTERVAL
+     - 3600
+     - The frequency (seconds) of storage accounting updates.
 
