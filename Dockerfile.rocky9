@@ -1337,6 +1337,9 @@ RUN if [ -n "${TRAC_ADMIN_PATH}" -a -z "${TRAC_INI_PATH}" ]; then \
         else \
             ln -s trac-py2.ini mig/server/trac.ini; \
         fi; \
+        [ ! -e "mig/images/site-logo-${EMULATE_FQDN}.png" ] || \
+        cp -a "mig/images/site-logo-${EMULATE_FQDN}.png" \
+            mig/images/site-logo.png ; \
     fi;
 
 
