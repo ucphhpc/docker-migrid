@@ -910,6 +910,15 @@ services:
         source: state
         target: /home/mig/state
       - type: volume
+        source: vgrid_home
+        target: /home/mig/state/vgrid_home
+      - type: volume
+        source: freeze_home
+        target: /home/mig/state/freeze_home
+      - type: volume
+        source: user_settings
+        target: /home/mig/state/user_settings
+      - type: volume
         source: migrid-accounting-syslog
         target: /var/log
       - type: volume
