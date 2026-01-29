@@ -1283,7 +1283,7 @@ volumes:
       o: bind
 
   migrid-quota-syslog:
-    # Volume used for exposing migrid lustre quota container system log
+    # Volume used for exposing migrid quota container system log
     driver: local
     driver_opts:
       type: none
@@ -1291,7 +1291,7 @@ volumes:
       o: bind
 
   migrid-accounting-syslog:
-    # Volume used for exposing migrid lustre quota container system log
+    # Volume used for exposing migrid accounting container system log
     driver: local
     driver_opts:
       type: none
