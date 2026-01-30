@@ -112,6 +112,7 @@ initdirs: initcomposevars
 	mkdir -p ${PERSISTENT_ROOT}/events_home
 	mkdir -p ${PERSISTENT_ROOT}/sitestats_home
 	mkdir -p ${PERSISTENT_ROOT}/quota_home
+	mkdir -p ${PERSISTENT_ROOT}/accounting_home
 	mkdir -p ${PERSISTENT_ROOT}/sandbox_home
 	mkdir -p ${PERSISTENT_ROOT}/sss_home
 	mkdir -p ${PERSISTENT_ROOT}/workflows_db_home
@@ -143,6 +144,7 @@ initdirs: initcomposevars
 	mkdir -p ${LOG_ROOT}/syslog/migrid-webdavs
 	mkdir -p ${LOG_ROOT}/syslog/migrid-ftps
 	mkdir -p ${LOG_ROOT}/syslog/migrid-quota
+	mkdir -p ${LOG_ROOT}/syslog/migrid-accounting
 
 initcomposevars:
 	@echo "creating env variable map in docker-compose_shared.yml"
@@ -178,6 +180,10 @@ initservices:
 		@fi
 		@if [[ "$$service" == "migrid-quota" \
 				&& "${ENABLE_QUOTA}" == "True" ]]; then
+			@ENABLED_SERVICES+=" $$service"
+		@fi
+		@if [[ "$$service" == "migrid-accounting" \
+				&& "${ENABLE_ACCOUNTING}" == "True" ]]; then
 			@ENABLED_SERVICES+=" $$service"
 		@fi
 	@done;
