@@ -87,6 +87,7 @@ services:
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
       #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy quota
+      #   accounting
       RUN_SERVICES: httpd script monitor sshmux events cron transfers janitor imnotify vmproxy notify crond rsyslogd
     depends_on:
       # IMPORTANT: finish volume init before migrid launch as explained above
@@ -915,20 +916,11 @@ services:
         source: mig-server-extconfs
         target: /home/mig/mig/server/MiGserver.d
       - type: volume
-        source: state
-        target: /home/mig/state
-      - type: volume
-        source: vgrid_home
-        target: /home/mig/state/vgrid_home
-      - type: volume
-        source: freeze_home
-        target: /home/mig/state/freeze_home
-      - type: volume
-        source: user_settings
-        target: /home/mig/state/user_settings
-      - type: volume
         source: migrid-accounting-syslog
         target: /var/log
+      - type: volume
+        source: state
+        target: /home/mig/state
       - type: volume
         source: log
         target: /home/mig/state/log
@@ -938,6 +930,15 @@ services:
       - type: volume
         source: accounting_home
         target: /home/mig/state/accounting_home
+      - type: volume
+        source: vgrid_home
+        target: /home/mig/state/vgrid_home
+      - type: volume
+        source: freeze_home
+        target: /home/mig/state/freeze_home
+      - type: volume
+        source: user_settings
+        target: /home/mig/state/user_settings
     command: /app/docker-entry.sh -k
 
 # NOTE: not used in stand-alone production mode
