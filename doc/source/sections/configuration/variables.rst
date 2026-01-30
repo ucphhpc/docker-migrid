@@ -439,7 +439,7 @@ Variables
      - Enable additional storage quota daemon if fundamentally enabled with the QUOTA_X variables.
    * - ENABLE_ACCOUNTING
      - False
-     - Enable additional accounting daemon and integration in the user pages.
+     - Enable additional storage accounting daemon and integration in the user pages.
    * - ENABLE_GDP
      - False
      - Enable GDP mode for sensitive data with a lot of restrictions on access and logging
