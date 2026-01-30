@@ -869,9 +869,6 @@ services:
         source: quota_home
         target: /home/mig/state/quota_home
       - type: volume
-        source: accounting_home
-        target: /home/mig/state/accounting_home
-      - type: volume
         source: user_home
         target: /home/mig/state/user_home
       - type: volume
