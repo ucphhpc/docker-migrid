@@ -842,9 +842,11 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install --no-cache-dir --prefix=$(python3-config --prefix) cracklib; \
     fi;
 
-# Module required to run pytests
+# Module required to run pytests but conflicts with TracTags
 RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install --no-cache-dir pytest; \
+      if [ -z "${TRAC_ADMIN_PATH}" ]; then \
+        pip3 install --no-cache-dir pytest; \
+      fi; \
     fi;
 
 # Modules required by 2FA
@@ -879,7 +881,9 @@ RUN if [ -n "${TRAC_ADMIN_PATH}" ]; then \
       #&& pip3 install --no-cache-dir https://trac-hacks.org/svn/tracwysiwygplugin/0.12
       # NOTE: install more recent dev versions of those with Trac-1.6+ support
       # latest tag https://github.com/trac-hacks/tracstats/releases/tag/v0.6.1 is pre 1.6
-      && pip3 install --no-cache-dir https://github.com/trac-hacks/tracstats/archive/refs/heads/master.zip ; \
+      && pip3 install --no-cache-dir https://github.com/trac-hacks/tracstats/archive/refs/heads/master.zip \
+      # latest tag https://trac-hacks.org/svn/tagsplugin/tags/0.12 is pre 1.6
+      && pip3 install --no-cache-dir svn+https://trac-hacks.org/svn/tagsplugin/trunk ; \
     else \
       echo "no Trac deps"; \
     fi;
