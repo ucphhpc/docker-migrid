@@ -936,7 +936,9 @@ RUN [ -e ./envhelp/scripts/expand_sources ] && \
 # package of migrid UX that we can install; then do so.
 RUN FEATURE_MIGUX=${FEATURE_MIGUX:./mig/install/requirements/migux-requirements.txt} &&
     [ -e "$FEATURE_MIGUX" ] && \
-    python3 -m pip install -r $FEATURE_MIGUX --index-url=./envhelp/source
+    python3 -m pip install \
+        -r $FEATURE_MIGUX \
+        --extra-index-url=./envhelp/source/migux/dist/simple
 
 # NOTE: we manually need to enable modern grid_webdavs.py here for now.
 #       Replace any existing symlink with one to the 3.x script.
