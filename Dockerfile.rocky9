@@ -928,17 +928,24 @@ RUN if [ "$WITH_GIT" = "True" ]; then \
 # With the repository available, we have access to definitions and scripts
 # within it. As such, we can gather any dependencies defined there.
 
-RUN [ -e ./envhelp/scripts/expand_sources ] && \
-    ./envhelp/scripts/expand_sources --use-wget
+RUN if [ -e "$MIG_ROOT/envhelp/scripts/expand_sources.py" ]; then \
+    "$MIG_ROOT/envhelp/scripts/expand_sources.py" --use-wget; fi
+
+RUN if [ -e "$MIG_ROOT/envhelp/scripts/expand_indexurls.py" ]; then \
+    "$MIG_ROOT/envhelp/scripts/expand_indexurls.py" --staged; fi
 
 # In a per-feature requirements file future, we will have something generic
-# across the features here. For now, perform one-off logic to arrange for a
-# package of migrid UX that we can install; then do so.
-RUN FEATURE_MIGUX=${FEATURE_MIGUX:./mig/install/requirements/migux-requirements.txt} &&
-    [ -e "$FEATURE_MIGUX" ] && \
-    python3 -m pip install \
-        -r $FEATURE_MIGUX \
-        --extra-index-url=./envhelp/source/migux/dist/simple
+# across the features here. For now, perform one-off logic to install the
+# migrid UX package we depend upon.
+
+USER root
+ENV FEATURE_MIGUX="$MIG_ROOT/mig/install/requirements/migux-requirements.txt"
+RUN if [ -e "$FEATURE_MIGUX" ]; then \
+        python3 -m pip install \
+            -r "$FEATURE_MIGUX" \
+            --extra-index-url=`cat "$MIG_ROOT/envhelp/source/.indexurls"`; \
+    fi
+USER $USER
 
 # NOTE: we manually need to enable modern grid_webdavs.py here for now.
 #       Replace any existing symlink with one to the 3.x script.
