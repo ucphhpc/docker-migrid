@@ -208,6 +208,8 @@ dockerbuild-base:
 
 dockerclean: initcomposevars
 	${DOCKER_COMPOSE} down || true
+	# remove any cached version of the base image
+	${DOCKER} rmi -f migrid/rocky$(BUILD_ROCKYVERSION)-base
 	# remove latest image and dangling cache entries
 	${DOCKER} rmi -f ${CONTAINER_REGISTRY}/$(OWNER)/$(IMAGE)${CONTAINER_TAG}
 	# remove dangling images and build cache
