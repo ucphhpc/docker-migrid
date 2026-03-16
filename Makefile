@@ -15,6 +15,11 @@ DOCKER_COMPOSE_BUILD_ARGS?=
 DETACH?=-d
 RUN_ARGS?=${DETACH}
 
+BUILD_ARCH?=amd64
+BUILD_ROCKYVERSION?=9
+BUILD_DOCKERFILE="Dockerfile.rocky$(BUILD_ROCKYVERSION)"
+BUILD_ENVIRONMENT='development'
+
 # Enable that the builder should use buildkit
 # https://docs.docker.com/develop/develop-images/build_enhancements/
 DOCKER_BUILDKIT=1
@@ -61,27 +66,22 @@ services:
 endef
 export DOCKER_COMPOSE_SHARED_HEADER
 
+all: dockerbuild
 
-all: init dockerbuild
-
-init: initbuild initdirs
-	@echo "using ${DOCKER_COMPOSE} as compose command"
-
-initbuild: Dockerfile .env docker-compose.yml migrid-httpd-init.sh
+initbuild: .env docker-compose.yml migrid-httpd-init.sh
 	@echo "initialised environment for build"
 
 Dockerfile:
 	@echo
-	@echo "*** No Dockerfile selected - defaulting to rocky9 ***"
+	@echo "*** No Dockerfile selected - defaulting to rocky $(BUILD_ROCKYVERSION) ***"
 	@echo
-	ln -s Dockerfile.rocky9 Dockerfile
-	@sleep 2
+	ln -s $(BUILD_DOCKERFILE) Dockerfile
 
 .env:
 	@echo
-	@echo "*** No deployment environment selected - defaulting to development ***"
+	@echo "*** No deployment environment selected - defaulting to $(BUILD_ENVIRONMENT) ***"
 	@echo
-	ln -s development.env .env
+	ln -s $(BUILD_ENVIRONMENT).env .env
 	@sleep 2
 
 docker-compose.yml:
@@ -198,8 +198,13 @@ down:	initcomposevars
 	# NOTE: 'docker-compose down' doesn't support a list of services
 	${DOCKER_COMPOSE} down
 
-dockerbuild: init
+dockerbuild: dockerbuild-base initbuild initdirs
 	${DOCKER_COMPOSE} ${DOCKER_COMPOSE_BUILD_ARGS} build ${BUILD_ARGS}
+
+.PHONY: dockerbuild-base
+dockerbuild-base:
+	${DOCKER} build -f Dockerfile.rocky-base --tag migrid/rocky$(BUILD_ROCKYVERSION)-base . \
+			--build-arg 'BUILD_ROCKYVERSION=$(BUILD_ROCKYVERSION)'
 
 dockerclean: initcomposevars
 	${DOCKER_COMPOSE} down || true

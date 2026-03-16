@@ -10,8 +10,8 @@
 #            explicitly listed in docker-compose.yml *args* list, too.
 #            Furthermore they must be declared after FROM in each stage used.
 
+ARG BUILD_ROCKYVERSION=9
 ARG DOCKER_MIGRID_ROOT=.
-ARG ARCH=amd64
 ARG UID=1000
 ARG GID=1000
 ARG DOMAIN=migrid.test
@@ -244,7 +244,7 @@ ARG CLOUD_SERVICES=""
 ARG CLOUD_SERVICES_DESC="{}"
 
 #------------------------- first stage -----------------------------#
-FROM --platform=linux/$ARCH rockylinux:9 AS init
+FROM migrid/rocky$(BUILD_ROCKYVERSION)-base AS init
 ARG UID
 ARG GID
 ARG DOMAIN
@@ -307,8 +307,15 @@ RUN echo "*** BEGIN Build variables ***" && \
     #echo "Designated cloud services: $CLOUD_SERVICES" && \
     echo "*** END Build variables ***"
 
+# Setup container default language to make sure UTF8 is available in wsgi app.
+# Otherwise sys.getfilesystemencoding will return ascii despite utf8 FS, and
+# thus result e.g. in broken user path and client_id for users with accented
+# chars e.g. in their name.
+# https://stackoverflow.com/a/28212946
+ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
+
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH init AS base
+FROM init AS base
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG ENABLE_GDP
@@ -327,97 +334,8 @@ ARG SMTP_PORT
 ARG ADMIN_EMAIL
 ARG ENABLE_OPENID
 
-WORKDIR /tmp
-
-# Add common shell aliases
-COPY shell-aliases.sh /etc/profile.d/
-
-# Rocky image default dnf configs prevent doc installation like CentOS yum used to do
-# https://superuser.com/questions/784451/centos-on-docker-how-to-install-doc-files
-RUN sed -i '/nodocs/d' /etc/dnf/dnf.conf
-
-# NOTE: Enable crb repo by default on rocky9 for cracklib-devel, sshfs, ...
-RUN dnf update -y \
-    && dnf install -y epel-release dnf-plugins-core \
-    && dnf config-manager --enable crb \
-    && dnf clean all \
-    && rm -fr /var/cache/dnf
-
-RUN dnf update -y \
-    # NOTE: mod_auth_openidc is available by default on rocky9+
-    && dnf install -y \
-    gcc \
-    make \
-    glibc-langpack-en \
-    pam-devel \
-    nss-devel \
-    openssl-devel \
-    httpd \
-    htop \
-    openssh \
-    cronie \
-    crontabs \
-    nano \
-    mod_ssl \
-    # NOTE: mod_proxy is included in base httpd now
-    #mod_proxy \
-    # NOTE: OpenID 2.0 needs special care here
-    #mod_auth_openid \
-    mod_auth_openidc \
-    tzdata \
-    initscripts \
-    svn \
-    git \
-    vim \
-    net-tools \
-    telnet \
-    ca-certificates \
-    mercurial \
-    openssh-server \
-    openssh-clients \
-    rsyslog \
-    rsyslog-gnutls \
-    lsof \
-    # NOTE: python2 support is gone on rocky9+
-    # NOTE: generally install cracklib from pip as yum/dnf doesn't have it
-    #cracklib-python \
-    cracklib-devel \
-    # NOTE: extra dependencies required for paramiko pip install
-    redhat-rpm-config pkg-config rust cargo libffi-devel \
-    lftp \
-    rsync \
-    fail2ban \
-    ipset \
-    wget \
-    patch \
-    esmtp \
-    && dnf clean all \
-    && rm -fr /var/cache/dnf
-
-RUN if [ "${WITH_PY3}" = "True" ]; then \
-      echo "install py3 deps" \
-      && dnf update -y \
-      && dnf install -y \
-      python3-pip \
-      python3-devel \
-      python3-mod_wsgi \
-      python3-enchant \
-      #python3-jsonrpclib \
-      python3-requests \
-      python3-psutil \
-      python3-email-validator \
-      python3-future \
-      python3-cffi \
-      python3-openid \
-      python3-pyOpenSSL \
-      # NOTE: lxml and libxslt-devel required to build python-openid2
-      python3-lxml \
-      python3-pycurl \
-      python3-PyYAML \
-      # NOTE: we can just use native Cryptography and typing-extensions here
-      python3-cryptography \
-      python3-typing-extensions \
-      # Patch python3-openid until our pull request makes it to the Rocky repo
+# Patch python3-openid until our pull request makes it to the Rocky repo
+RUN true
       && echo "Pull python3 openid patch from own repo" \
       && wget -q -O /tmp/python3-openid-assoc_handle.patch.diff https://raw.githubusercontent.com/ucphhpc/docker-migrid/master/patches/python3-openid-assoc_handle.patch.diff \
       && patch -p 0 /usr/lib/python3.9/site-packages/openid/server/server.py < /tmp/python3-openid-assoc_handle.patch.diff \
@@ -442,16 +360,6 @@ RUN if [ -n "${SMTP_SERVER}" ]; then \
       && echo "qualifydomain ${DOMAIN}" >> /etc/esmtprc \
       && echo "force reverse_path %u@${DOMAIN}" >> /etc/esmtprc ; \
     fi
-
-# NOTE: python extensions libpam and libnss need matching python-config
-RUN if [ "${PREFER_PYTHON3}" = "True" ]; then \
-      echo "set up py3 as default python and python-config" && \
-      update-alternatives --install /usr/bin/python python /usr/bin/python3 10; \
-      update-alternatives --install /usr/bin/python-config python-config /usr/bin/python3-config 10; \
-    else \
-      echo "*** No python2 support here ***" ; exit 1; \
-    fi;
-
 
 # Install GDP dependencies
 RUN if [ "${ENABLE_GDP}" = "True" ]; then \
@@ -576,18 +484,6 @@ RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
 	fi; \
     fi;
 
-
-# Setup container default language to make sure UTF8 is available in wsgi app.
-# Otherwise sys.getfilesystemencoding will return ascii despite utf8 FS, and
-# thus result e.g. in broken user path and client_id for users with accented
-# chars e.g. in their name.
-# https://stackoverflow.com/a/28212946
-# NOTE: it looks like we don't need to generate this rather common locale here
-#       but on some platforms it's needed to install an English language pack
-#       to avoid various LC_X locale warnings and errors.
-#RUN localedef -c -i en_US -f UTF-8 en_US.UTF-8
-ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
-
 # Setup user
 ENV USER=mig
 ENV GROUP=mig
@@ -611,7 +507,7 @@ RUN mkdir -p ${CERT_DIR}/MiG/${WILDCARD_DOMAIN} ${HOTFIXES_DIR} \
 
 #------------------------- next stage -----------------------------#
 # Certs and keys
-FROM --platform=linux/$ARCH base AS setup_security
+FROM base AS setup_security
 ARG DOMAIN
 ARG WILDCARD_DOMAIN
 ARG PUBLIC_DOMAIN
@@ -746,7 +642,7 @@ WORKDIR $MIG_ROOT
 USER $USER
 
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH setup_security AS mig_dependencies
+FROM setup_security AS mig_dependencies
 ARG DOMAIN
 ARG WITH_PY3
 ARG MODERN_WSGIDAV
@@ -894,7 +790,7 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
     fi;
 
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH mig_dependencies AS download_mig
+FROM mig_dependencies AS download_mig
 LABEL MIGRID=true
 ARG DOMAIN
 ARG MIG_SVN_REPO
@@ -932,7 +828,7 @@ RUN rm -f ${MIG_ROOT}/mig/server/grid_webdavs.py ; \
 
 
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH download_mig AS install_mig
+FROM download_mig AS install_mig
 ARG DOMAIN
 ARG PUBLIC_DOMAIN
 ARG PUBLIC_SEC_DOMAIN
@@ -1356,7 +1252,7 @@ RUN if [ -n "${TRAC_ADMIN_PATH}" -a -z "${TRAC_INI_PATH}" ]; then \
 
 
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH install_mig AS setup_mig_configs
+FROM install_mig AS setup_mig_configs
 ARG DOMAIN
 ARG PUBLIC_DOMAIN
 ARG MIGCERT_DOMAIN
@@ -1626,7 +1522,7 @@ RUN if [ "${ENABLE_QUOTA}" = "True" ] \
         fi; \
     fi;
 #------------------------- next stage -----------------------------#
-FROM --platform=linux/$ARCH setup_mig_configs AS start_mig
+FROM setup_mig_configs AS start_mig
 ARG DOMAIN
 
 # Reap defuncted/orphaned processes

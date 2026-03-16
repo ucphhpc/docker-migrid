@@ -1,0 +1,94 @@
+ARG BUILD_ARCH=amd64
+ARG BUILD_ROCKYVERSION=9
+
+FROM --platform=linux/$BUILD_ARCH rockylinux:${BUILD_ROCKYVERSION}
+
+WORKDIR /tmp
+
+# Add common shell aliases
+COPY shell-aliases.sh /etc/profile.d/
+
+# Rocky image default dnf configs prevent doc installation like CentOS yum used to do
+# https://superuser.com/questions/784451/centos-on-docker-how-to-install-doc-files
+RUN sed -i '/nodocs/d' /etc/dnf/dnf.conf
+
+# NOTE: Enable crb repo by default on rocky9 for cracklib-devel, sshfs, ...
+RUN dnf update -y \
+    && dnf install -y epel-release dnf-plugins-core \
+    && dnf config-manager --enable crb \
+    && dnf install -y \
+    gcc \
+    make \
+    glibc-langpack-en \
+    pam-devel \
+    nss-devel \
+    openssl-devel \
+    httpd \
+    htop \
+    openssh \
+    cronie \
+    crontabs \
+    nano \
+    mod_ssl \
+    # NOTE: mod_proxy is included in base httpd now
+    #mod_proxy \
+    # NOTE: OpenID 2.0 needs special care here
+    #mod_auth_openid \
+    # NOTE: mod_auth_openidc is available by default on rocky9+
+    mod_auth_openidc \
+    tzdata \
+    initscripts \
+    svn \
+    git \
+    vim \
+    net-tools \
+    telnet \
+    ca-certificates \
+    mercurial \
+    openssh-server \
+    openssh-clients \
+    rsyslog \
+    rsyslog-gnutls \
+    lsof \
+    # NOTE: python2 support is gone on rocky9+
+    # NOTE: generally install cracklib from pip as yum/dnf doesn't have it
+    #cracklib-python \
+    cracklib-devel \
+    # NOTE: extra dependencies required for paramiko pip install
+    redhat-rpm-config pkg-config rust cargo libffi-devel \
+    lftp \
+    rsync \
+    fail2ban \
+    ipset \
+    wget \
+    patch \
+    esmtp \
+    # pytohn3 deps
+      python3-pip \
+      python3-devel \
+      python3-mod_wsgi \
+      python3-enchant \
+      #python3-jsonrpclib \
+      python3-requests \
+      python3-psutil \
+      python3-email-validator \
+      python3-future \
+      python3-cffi \
+      python3-openid \
+      python3-pyOpenSSL \
+      # NOTE: lxml and libxslt-devel required to build python-openid2
+      python3-lxml \
+      python3-pycurl \
+      python3-PyYAML \
+      # NOTE: we can just use native Cryptography and typing-extensions here
+      python3-cryptography \
+      python3-typing-extensions \
+      # Patch python3-openid until our pull request makes it to the Rocky repo
+      && dnf clean all \
+      && rm -fr /var/cache/dnf;
+
+RUN echo "set up py3 as default python and python-config" && \
+      update-alternatives --install /usr/bin/python python /usr/bin/python3 10; \
+      update-alternatives --install /usr/bin/python-config python-config /usr/bin/python3-config 10;
+
+CMD ["python3"]
