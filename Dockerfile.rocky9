@@ -922,9 +922,14 @@ RUN if [ -e "$MIG_ROOT/envhelp/scripts/expand_sources.py" ]; then \
 USER root
 ENV FEATURE_MIGUX="$MIG_ROOT/mig/install/requirements/migux-requirements.txt"
 RUN if [ -e "$FEATURE_MIGUX" ]; then \
+        python3 -m pip install dumb-pypi; \
+        dumb-pypi \
+            --package-list "$MIG_ROOT/envhelp/source/.packages.lst" \
+            --packages-url='../..' \
+            --output-dir "$MIG_ROOT/envhelp/source"; \
         python3 -m pip install \
             -r "$FEATURE_MIGUX" \
-            --extra-index-url=`cat "$MIG_ROOT/envhelp/source/.indexurls"`; \
+            --extra-index-url="$MIG_ROOT/envhelp/source/simple"; \
     fi
 USER $USER
 
