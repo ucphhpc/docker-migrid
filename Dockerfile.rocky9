@@ -925,6 +925,33 @@ RUN if [ "$WITH_GIT" = "True" ]; then \
 	echo "migrid version: ${MIG_SVN_REPO} trunk ${MIG_SVN_REV}" > ./active-migrid-version.txt; \
     fi;
 
+# With the repository available, we have access to definitions and scripts
+# within it. As such, we can gather any dependencies defined there.
+
+RUN if [ -e "$MIG_ROOT/envhelp/scripts/expand_sources.py" ]; then \
+    "$MIG_ROOT/envhelp/scripts/expand_sources.py" --use-wget; fi
+
+# In a per-feature requirements file future, we will have something generic
+# across the features here. For now, perform one-off logic to arrange for a
+# package of migrid UX that we can install; then do so.
+
+USER root
+ENV FEATURE_MIGUX="$MIG_ROOT/mig/install/requirements/migux-requirements.txt"
+RUN if [ -e "$FEATURE_MIGUX" ]; then \
+        python3 -m pip install dumb-pypi; \
+        dumb-pypi \
+            --package-list "$MIG_ROOT/envhelp/staging/.packages.lst" \
+            --packages-url='../..' \
+            --output-dir "$MIG_ROOT/envhelp/staging"; \
+        python3 -m pip install \
+            -r "$FEATURE_MIGUX" \
+            --extra-index-url="$MIG_ROOT/envhelp/staging/simple"; \
+    fi
+USER $USER
+
+RUN if [ -e "$MIG_ROOT/mig/install/postinstall/migux-postinstall" ]; then \
+    "$MIG_ROOT/mig/install/postinstall/migux-postinstall"; fi
+
 # NOTE: we manually need to enable modern grid_webdavs.py here for now.
 #       Replace any existing symlink with one to the 3.x script.
 RUN rm -f ${MIG_ROOT}/mig/server/grid_webdavs.py ; \
@@ -1314,6 +1341,10 @@ RUN ./generateconfs.py --source=. \
 RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/static-skin.css $MIG_ROOT/mig/images/ \
     && cp generated-confs/index.html $MIG_ROOT/state/user_home/
+
+# With the configuration in hand, prime any configured templates
+RUN python3 -m mig.lib.templates prime \
+    -c $MIG_ROOT/mig/server/MiGserver.conf
 
 # Site conf for js helpers including status page and auth options on index page
 RUN [ -e "$MIG_ROOT/mig/images/site-conf-${DOMAIN}.js" ] || \
