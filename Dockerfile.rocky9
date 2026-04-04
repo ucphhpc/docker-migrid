@@ -940,12 +940,12 @@ ENV FEATURE_MIGUX="$MIG_ROOT/mig/install/requirements/migux-requirements.txt"
 RUN if [ -e "$FEATURE_MIGUX" ]; then \
         python3 -m pip install dumb-pypi; \
         dumb-pypi \
-            --package-list "$MIG_ROOT/envhelp/source/.packages.lst" \
+            --package-list "$MIG_ROOT/envhelp/staging/.packages.lst" \
             --packages-url='../..' \
-            --output-dir "$MIG_ROOT/envhelp/source"; \
+            --output-dir "$MIG_ROOT/envhelp/staging"; \
         python3 -m pip install \
             -r "$FEATURE_MIGUX" \
-            --extra-index-url="$MIG_ROOT/envhelp/source/simple"; \
+            --extra-index-url="$MIG_ROOT/envhelp/staging/simple"; \
     fi
 USER $USER
 
