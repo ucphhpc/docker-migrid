@@ -1547,7 +1547,7 @@ RUN mv $WEB_DIR/conf.d/autoindex.conf $WEB_DIR/conf.d/autoindex.conf.disabled \
 
 # Add generated certificate to trust store
 RUN update-ca-trust force-enable \
-    && cp ${CERT_DIR}/server.ca.pem ${OS_CA_CERT_SOURCE_PATH}/ \
+    && cp ${CERT_DIR}/server.crt ${OS_CA_CERT_SOURCE_PATH}/ \
     && update-ca-trust extract
 
 # rsyslog: Disable systemd and enable /dev/log
