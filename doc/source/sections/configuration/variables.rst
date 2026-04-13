@@ -365,9 +365,6 @@ Variables
    * - ENABLE_SANDBOXES
      - False
      - Enable the built-in sandbox resource feature for grid jobs
-   * - ENABLE_VMACHINES
-     - False
-     - Enable the built-in vmachine resource feature for grid jobs
    * - ENABLE_CRONTAB
      - True
      - Enable the built-in Schedule Tasks feature for users
