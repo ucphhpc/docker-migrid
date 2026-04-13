@@ -42,7 +42,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify
       RUN_SERVICES: 
     volumes:
       - type: volume
@@ -72,7 +72,7 @@ services:
     command: /app/docker-entry.sh -V -c
 
   # The migrid core services including httpd and tightly integrated services
-  # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
+  # like job handling (grid script, monitor, sshmux, imnoty and)
 
   # NOTE: in order to test the publishing of container services on the host
   #       with standard ports on 1.2.3.x one can set up a local dummy device:
@@ -94,8 +94,8 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
-      RUN_SERVICES: httpd script monitor sshmux events cron transfers janitor imnotify vmproxy notify crond rsyslogd
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify
+      RUN_SERVICES: httpd script monitor sshmux events cron transfers janitor imnotify notify crond rsyslogd
     depends_on:
       devdns:
         condition: service_started
@@ -169,7 +169,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify
       RUN_SERVICES: openid rsyslogd
     depends_on:
       # IMPORTANT: daemons may require DNS to bind to domain ports
@@ -225,7 +225,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify
       RUN_SERVICES: sftp sftpsubsys rsyslogd
     depends_on:
       # IMPORTANT: daemons may require DNS to bind to domain ports
@@ -286,7 +286,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify
       RUN_SERVICES: ftps rsyslogd
     depends_on:
       # IMPORTANT: daemons may require DNS to bind to domain ports
@@ -351,7 +351,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify
       RUN_SERVICES: webdavs rsyslogd
     depends_on:
       # IMPORTANT: daemons may require DNS to bind to domain ports

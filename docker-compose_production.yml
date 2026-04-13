@@ -32,7 +32,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy quota
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify quota
       #   accounting
       RUN_SERVICES: 
     volumes:
@@ -63,7 +63,7 @@ services:
     command: /app/docker-entry.sh -V -c
 
   # The migrid core services including httpd and tightly integrated services
-  # like job handling (grid script, monitor, sshmux, imnoty and vmproxy)
+  # like job handling (grid script, monitor, sshmux, imnoty and)
 
   # NOTE: in order to test the publishing of container services on the host
   #       with standard ports on 1.2.3.x one can set up a local dummy device:
@@ -86,9 +86,9 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy quota
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify quota
       #   accounting
-      RUN_SERVICES: httpd script monitor sshmux events cron transfers janitor imnotify vmproxy notify crond rsyslogd
+      RUN_SERVICES: httpd script monitor sshmux events cron transfers janitor imnotify notify crond rsyslogd
     depends_on:
       # IMPORTANT: finish volume init before migrid launch as explained above
       migrid-volume-init:
@@ -240,7 +240,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy quota
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify quota
       #   accounting
       RUN_SERVICES: openid rsyslogd
     depends_on:
@@ -389,7 +389,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy quota
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify quota
       #   accounting
       RUN_SERVICES: sftp sftpsubsys rsyslogd
     depends_on:
@@ -539,7 +539,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy quota
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify quota
       #   accounting
       RUN_SERVICES: ftps rsyslogd
     depends_on:
@@ -688,7 +688,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy quota
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify quota
       #   accounting
       RUN_SERVICES: webdavs rsyslogd
     depends_on:
@@ -834,7 +834,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy quota
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify quota
       #   accounting
       RUN_SERVICES: quota rsyslogd
     depends_on:
@@ -898,7 +898,7 @@ services:
       # RUN_SERVICES specifies which daemons to launch
       # Available target service names follow migrid init script and are:
       #   httpd script monitor sshmux events cron transfers janitor
-      #   openid sftp sftpsubsys webdavs ftps notify imnotify vmproxy quota
+      #   openid sftp sftpsubsys webdavs ftps notify imnotify quota
       #   accounting
       RUN_SERVICES: accounting rsyslogd
     depends_on:
