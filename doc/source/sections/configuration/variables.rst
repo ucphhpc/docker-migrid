@@ -362,9 +362,6 @@ Variables
    * - SEAFILE_RO_ACCESS
      - False
      - Toggles integrated read-only access to any locally hosted Seafile instance.
-   * - ENABLE_SANDBOXES
-     - False
-     - Enable the built-in sandbox resource feature for grid jobs
    * - ENABLE_CRONTAB
      - True
      - Enable the built-in Schedule Tasks feature for users

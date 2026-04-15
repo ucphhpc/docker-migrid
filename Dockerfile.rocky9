@@ -96,7 +96,6 @@ ARG ENABLE_DUPLICATI=True
 ARG ENABLE_SEAFILE=False
 ARG SEAFILE_FQDN=
 ARG SEAFILE_RO_ACCESS=False
-ARG ENABLE_SANDBOXES=False
 ARG ENABLE_CRONTAB=True
 ARG ENABLE_JOBS=True
 ARG ENABLE_RESOURCES=True
@@ -1007,7 +1006,6 @@ ARG ENABLE_DUPLICATI
 ARG ENABLE_SEAFILE
 ARG SEAFILE_FQDN
 ARG SEAFILE_RO_ACCESS
-ARG ENABLE_SANDBOXES
 ARG ENABLE_CRONTAB
 ARG ENABLE_JOBS
 ARG ENABLE_RESOURCES
@@ -1228,7 +1226,6 @@ RUN ./generateconfs.py --source=. \
     --enable_sharelinks=${ENABLE_SHARELINKS} --enable_transfers=${ENABLE_TRANSFERS} \
     --enable_duplicati=${ENABLE_DUPLICATI} --enable_seafile=${ENABLE_SEAFILE} \
     --seafile_fqdn=${SEAFILE_FQDN} --seafile_ro_access=${SEAFILE_RO_ACCESS} \
-    --enable_sandboxes=${ENABLE_SANDBOXES} \
     --enable_crontab=${ENABLE_CRONTAB} --enable_jobs=${ENABLE_JOBS} \
     --enable_resources=${ENABLE_RESOURCES} --enable_events=${ENABLE_EVENTS} \
     --enable_gravatars=${ENABLE_GRAVATARS} --enable_sitestatus=${ENABLE_SITESTATUS} \

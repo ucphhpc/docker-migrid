@@ -113,8 +113,6 @@ initdirs: initcomposevars
 	mkdir -p ${PERSISTENT_ROOT}/sitestats_home
 	mkdir -p ${PERSISTENT_ROOT}/quota_home
 	mkdir -p ${PERSISTENT_ROOT}/accounting_home
-	mkdir -p ${PERSISTENT_ROOT}/sandbox_home
-	mkdir -p ${PERSISTENT_ROOT}/sss_home
 	mkdir -p ${PERSISTENT_ROOT}/workflows_db_home
 	mkdir -p ${PERSISTENT_ROOT}/workflows_home
 	mkdir -p ${PERSISTENT_ROOT}/user_db_home
