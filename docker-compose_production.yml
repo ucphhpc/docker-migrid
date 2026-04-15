@@ -160,12 +160,6 @@ services:
         source: accounting_home
         target: /home/mig/state/accounting_home
       - type: volume
-        source: sandbox_home
-        target: /home/mig/state/sandbox_home
-      - type: volume
-        source: sss_home
-        target: /home/mig/state/sss_home
-      - type: volume
         source: workflows_db_home
         target: /home/mig/state/workflows_db_home
       - type: volume
@@ -315,12 +309,6 @@ services:
       #  source: accounting_home
       #  target: /home/mig/state/accounting_home
       #- type: volume
-      #  source: sandbox_home
-      #  target: /home/mig/state/sandbox_home
-      #- type: volume
-      #  source: sss_home
-      #  target: /home/mig/state/sss_home
-      #- type: volume
       #  source: workflows_db_home
       #  target: /home/mig/state/workflows_db_home
       #- type: volume
@@ -465,12 +453,6 @@ services:
       #  source: accounting_home
       #  target: /home/mig/state/accounting_home
       #- type: volume
-      #  source: sandbox_home
-      #  target: /home/mig/state/sandbox_home
-      #- type: volume
-      #  source: sss_home
-      #  target: /home/mig/state/sss_home
-      #- type: volume
       #  source: workflows_db_home
       #  target: /home/mig/state/workflows_db_home
       #- type: volume
@@ -614,12 +596,6 @@ services:
       #  source: accounting_home
       #  target: /home/mig/state/accounting_home
       #- type: volume
-      #  source: sandbox_home
-      #  target: /home/mig/state/sandbox_home
-      #- type: volume
-      #  source: sss_home
-      #  target: /home/mig/state/sss_home
-      #- type: volume
       #  source: workflows_db_home
       #  target: /home/mig/state/workflows_db_home
       #- type: volume
@@ -759,12 +735,6 @@ services:
       #- type: volume
       #  source: quota_home
       #  target: /home/mig/state/quota_home
-      #- type: volume
-      #  source: sandbox_home
-      #  target: /home/mig/state/sandbox_home
-      #- type: volume
-      #  source: sss_home
-      #  target: /home/mig/state/sss_home
       #- type: volume
       #  source: workflows_db_home
       #  target: /home/mig/state/workflows_db_home
@@ -1122,22 +1092,6 @@ volumes:
     driver_opts:
       type: none
       device: ${PERSISTENT_ROOT}/accounting_home
-      o: bind
-
-  sandbox_home:
-    # Volume used to contain the migrid sandbox_home
-    driver: local
-    driver_opts:
-      type: none
-      device: ${PERSISTENT_ROOT}/sandbox_home
-      o: bind
-
-  sss_home:
-    # Volume used to contain the migrid sss_home
-    driver: local
-    driver_opts:
-      type: none
-      device: ${PERSISTENT_ROOT}/sss_home
       o: bind
 
   workflows_db_home:
