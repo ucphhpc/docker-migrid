@@ -1,7 +1,9 @@
-.PHONY: all init initservices initbuild initdirs initcomposevars clean
-.PHONY: distclean sitestateclean sitedataclean dockerclean dockervolumeclean
-.PHONY: wipesitestatewarning wipesitedatawarning dockerbuild dockerpush
-.PHONY: up stop down
+.PHONY: all init initservices initbuild initdirs initcomposevars
+.PHONY: dockerbuild dockerlint dockerpush
+.PHONY: dockerclean dockervolumeclean
+.PHONY: wipesitestatewarning wipesitedatawarning
+.PHONY: clean distclean sitestateclean sitedataclean
+.PHONY: up down
 .PHONY: test-doc test-doc-full
 .ONESHELL:
 
@@ -100,6 +102,7 @@ initdirs: initcomposevars
 	mkdir -p httpd
 	mkdir -p mig
 	mkdir -p state
+	mkdir -p cache
 	mkdir -p ${VOLATILE_ROOT}/mig_system_run
 	mkdir -p ${VOLATILE_ROOT}/openid_store
 	mkdir -p ${PERSISTENT_ROOT}/freeze_home
@@ -199,6 +202,34 @@ down:	initcomposevars
 dockerbuild: init
 	${DOCKER_COMPOSE} ${DOCKER_COMPOSE_BUILD_ARGS} build ${BUILD_ARGS}
 
+dockerlint:
+	@if [ "$$(${DOCKER} image ls -q ${OWNER}/${IMAGE})" != "" ]; then \
+		echo "Linting and security scanning ${IMAGE} image with trivy"; \
+		TRIVY="/usr/bin/trivy"; \
+		TRIVY_ARGS="--scanners vuln"; \
+		if [ $$(basename "${DOCKER}") == "podman" ]; then \
+			#echo "using podman trivy args for ${DOCKER}"; \
+			TRIVY_ARGS="$${TRIVY_ARGS} --image-src podman"; \
+			TRIVY_ARGS="$${TRIVY_ARGS} --podman-host /var/run/podman/podman.sock"; \
+			FWD_DOCKER_SOCK="-v /var/run/podman/podman.sock:/var/run/podman/podman.sock"; \
+		else \
+			#echo "using docker trivy args for ${DOCKER}"; \
+			TRIVY_ARGS="$${TRIVY_ARGS} --image-src docker"; \
+			TRIVY_ARGS="$${TRIVY_ARGS} --docker-host /var/run/docker.sock"; \
+			FWD_DOCKER_SOCK="-v /var/run/docker.sock:/var/run/docker.sock"; \
+		fi; \
+		if [ -x "$${TRIVY}" ]; then \
+			#echo "Scanning ${IMAGE} image with $${TRIVY} $${TRIVY_ARGS}"; \
+			$${TRIVY} image $${TRIVY_ARGS} "${CONTAINER_REGISTRY}/${OWNER}/${IMAGE}${CONTAINER_TAG}"; \
+		else \
+			#echo "Scanning ${IMAGE} image with docker trivy $${TRIVY_ARGS}"; \
+			mkdir -p cache/trivy; \
+			${DOCKER} run $${FWD_DOCKER_SOCK} -v ${DOCKER_MIGRID_ROOT}/cache/trivy:/root/.cache/ aquasec/trivy image $${TRIVY_ARGS} "${CONTAINER_REGISTRY}/${OWNER}/${IMAGE}${CONTAINER_TAG}"; \
+		fi; \
+	else \
+		echo "No ${IMAGE} images to scan with trivy - did you build?"; \
+	fi
+
 dockerclean: initcomposevars
 	${DOCKER_COMPOSE} down || true
 	# remove latest image and dangling cache entries
@@ -237,6 +268,7 @@ clean:
 	rm -f migrid-httpd-init.sh
 	rm -fr ./mig
 	rm -fr ./httpd
+	rm -fr ./cache
 	# NOTE: certs may be injected or symlink to externally maintained dir.
 	#       Only remove it here if that's not the case.
 	[ -L ./certs ] || [ -f ./certs/.persistent ] || rm -fr ./certs
