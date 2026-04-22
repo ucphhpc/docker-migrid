@@ -203,19 +203,23 @@ dockerbuild: init
 	${DOCKER_COMPOSE} ${DOCKER_COMPOSE_BUILD_ARGS} build ${BUILD_ARGS}
 
 dockerlint:
-	@if [ "$$(${DOCKER} image ls -q ${OWNER}/${IMAGE})" != "" ]; then \
+	@if [ "$$(${DOCKER} image ls -q ${CONTAINER_REGISTRY}/${OWNER}/${IMAGE})" != "" ]; then \
 		echo "Linting and security scanning ${IMAGE} image with trivy"; \
 		TRIVY="/usr/bin/trivy"; \
 		TRIVY_ARGS="--scanners vuln"; \
 		if [ $$(basename "${DOCKER}") == "podman" ]; then \
 			#echo "using podman trivy args for ${DOCKER}"; \
 			TRIVY_ARGS="$${TRIVY_ARGS} --image-src podman"; \
+			# NOTE: unix socket prefix doesn't work here
+			#TRIVY_ARGS="$${TRIVY_ARGS} --podman-host unix:///var/run/podman/podman.sock"; \
 			TRIVY_ARGS="$${TRIVY_ARGS} --podman-host /var/run/podman/podman.sock"; \
 			FWD_DOCKER_SOCK="-v /var/run/podman/podman.sock:/var/run/podman/podman.sock"; \
 		else \
 			#echo "using docker trivy args for ${DOCKER}"; \
 			TRIVY_ARGS="$${TRIVY_ARGS} --image-src docker"; \
-			TRIVY_ARGS="$${TRIVY_ARGS} --docker-host /var/run/docker.sock"; \
+			# NOTE: unix socket prefix is required here
+			TRIVY_ARGS="$${TRIVY_ARGS} --docker-host unix:///var/run/docker.sock"; \
+			#TRIVY_ARGS="$${TRIVY_ARGS} --docker-host /var/run/docker.sock"; \
 			FWD_DOCKER_SOCK="-v /var/run/docker.sock:/var/run/docker.sock"; \
 		fi; \
 		if [ -x "$${TRIVY}" ]; then \
