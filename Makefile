@@ -205,9 +205,9 @@ dockerbuild: init
 dockerlint:
 	@if [ "$$(${DOCKER} image ls -q ${CONTAINER_REGISTRY}/${OWNER}/${IMAGE})" != "" ]; then \
 		echo "Linting and security scanning ${IMAGE} image with trivy"; \
-		TRIVY="/usr/bin/trivy"; \
+		TRIVY="$$(command -v trivy || true)"; \
 		TRIVY_ARGS="--scanners vuln"; \
-		if [ $$(basename "${DOCKER}") == "podman" ]; then \
+		if [[ $$(basename "${DOCKER}") == "podman" ]]; then \
 			#echo "using podman trivy args for ${DOCKER}"; \
 			TRIVY_ARGS="$${TRIVY_ARGS} --image-src podman"; \
 			# NOTE: unix socket prefix doesn't work here
