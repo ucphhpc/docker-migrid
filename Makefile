@@ -203,7 +203,7 @@ dockerbuild: init
 	${DOCKER_COMPOSE} ${DOCKER_COMPOSE_BUILD_ARGS} build ${BUILD_ARGS}
 
 dockerlint:
-	@if [ "$$(${DOCKER} image ls -q ${CONTAINER_REGISTRY}/${OWNER}/${IMAGE})" != "" ]; then \
+	@if [[ "$$(${DOCKER} image ls -q ${CONTAINER_REGISTRY}/${OWNER}/${IMAGE})" != "" ]]; then \
 		echo "Linting and security scanning ${IMAGE} image with trivy"; \
 		TRIVY="$$(command -v trivy || true)"; \
 		TRIVY_ARGS="--scanners vuln"; \
@@ -247,7 +247,7 @@ logs:	initcomposevars
 
 
 dockerpushwarning:
-	@if [ "${CONTAINER_REGISTRY}" == "docker.io" ]; then \
+	@if [[ "${CONTAINER_REGISTRY}" == "docker.io" ]]; then \
 		echo
 		echo "*** WARNING ***"
 		echo "*** Pushing to docker.io ***"
@@ -262,7 +262,7 @@ dockerpush: dockerpushwarning
 	${DOCKER} push ${CONTAINER_REGISTRY}/$(OWNER)/$(IMAGE)${CONTAINER_TAG}
 
 dockervolumeclean:
-	@if [ "$$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*')" != "" ]; then \
+	@if [[ "$$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*')" != "" ]]; then \
 		echo "Removing volumes with name ${PACKAGE_NAME}*:"; \
 		${DOCKER} volume rm -f $$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*'); \
 	fi
