@@ -1,7 +1,7 @@
 # Default ARG values which may be overriden in build command with
 # docker-compose build --build-arg KEY=VAL
 #  as in 
-# make init && make build ARGS="--build-arg MIG_SVN_REV=HEAD"
+# make init && make build ARGS="--build-arg MIG_GIT_REV=HEAD"
 #  or using
 # docker-compose build
 # with .env file in place
@@ -56,8 +56,6 @@ ARG FTPS_CTRL_PORT=8021
 ARG FTPS_CTRL_SHOW_PORT=21
 ARG OPENID_PORT=8443
 ARG OPENID_SHOW_PORT=443
-ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
-ARG MIG_SVN_REV=HEAD
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
 # NOTE: next branch is needed for python3 support
 ARG MIG_GIT_BRANCH=next
@@ -196,7 +194,7 @@ ARG IMNOTIFY_ADDRESS=""
 ARG IMNOTIFY_CHANNEL=""
 ARG IMNOTIFY_USERNAME=""
 ARG IMNOTIFY_PASSWD=""
-ARG EXTERNAL_DOC="https://sourceforge.net/p/migrid/wiki"
+ARG EXTERNAL_DOC="https://github.com/ucphhpc/migrid-sync/wiki"
 ARG IO_ACCOUNT_EXPIRE="False"
 # TODO: expose and enable these UI vars
 #ARG PEERS_NOTICE=""
@@ -207,7 +205,6 @@ ARG DATASAFETY_LINK=""
 ARG DATASAFETY_TEXT=""
 # NOTE: no python2 here and we already get 4.3+ for python3
 ARG MODERN_WSGIDAV=False
-ARG WITH_GIT=False
 ARG OPENSSH_VERSION=7.4
 ARG VGRID_LABEL=VGrid
 ARG DIGEST_SALT="AUTO"
@@ -272,8 +269,6 @@ ARG SFTP_SUBSYS_PORT
 ARG DAVS_PORT
 ARG FTPS_CTRL_PORT
 ARG OPENID_PORT
-#ARG MIG_SVN_REPO
-#ARG MIG_SVN_REV
 #ARG MIG_GIT_REPO
 #ARG MIG_GIT_BRANCH
 #ARG MIG_GIT_REV
@@ -282,7 +277,6 @@ ARG OPENID_PORT
 ARG WITH_PY3
 ARG JUPYTER_SERVICES
 ARG CLOUD_SERVICES
-#ARG WITH_GIT
 
 RUN echo "*** BEGIN Build variables ***" && \
     echo "UID and GID: $UID $GID" && \
@@ -296,9 +290,8 @@ RUN echo "*** BEGIN Build variables ***" && \
     "${MIGCERT_HTTPS_PORT} ${EXTCERT_HTTPS_PORT}" \
     "${SID_HTTPS_PORT} ${SFTP_PORT} ${SFTP_SUBSYS_PORT}" \
     "${FTPS_CTRL_PORT} ${DAVS_PORT} ${OPENID_PORT}" && \
-    #echo "MiG svn repo and revision: $MIG_SVN_REPO $MIG_SVN_REV" && \
-    echo "Enable git checkout & repo : $WITH_GIT $MIG_GIT_REPO" && \
-    echo "MiG git branch & revision:  $MIG_GIT_BRANCH $MIG_GIT_REV" && \
+    echo "MiG git repo: $MIG_GIT_REPO" && \
+    echo "MiG git branch & revision: $MIG_GIT_BRANCH $MIG_GIT_REV" && \
     echo "Emulate flavor & fqdn: $EMULATE_FLAVOR $EMULATE_FQDN" && \
     echo "Enable python3 support: $WITH_PY3" && \
     #echo "Designated jupyter services: $JUPYTER_SERVICES" && \
@@ -364,6 +357,7 @@ RUN dnf update -y \
     mod_auth_openidc \
     tzdata \
     initscripts \
+    # NOTE: svn is still needed for trac plugin install from svn+https
     svn \
     git \
     vim \
@@ -895,9 +889,6 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
 FROM --platform=linux/$ARCH mig_dependencies AS download_mig
 LABEL MIGRID=true
 ARG DOMAIN
-ARG MIG_SVN_REPO
-ARG MIG_SVN_REV
-ARG WITH_GIT
 ARG MIG_GIT_REPO
 ARG MIG_GIT_BRANCH
 ARG MIG_GIT_REV
@@ -910,18 +901,13 @@ USER $USER
 # Install and configure MiG
 # NOTE: git refuses to clone into non-empty dir - use tmp
 
-RUN if [ "$WITH_GIT" = "True" ]; then \
-      git clone ${MIG_GIT_REPO} migrid.git && \
-        cd migrid.git && \
-        git checkout -B ${MIG_GIT_BRANCH} --track origin/${MIG_GIT_BRANCH} && \
-        git checkout ${MIG_GIT_REV} && cd .. && \
-        rsync -a migrid.git/ ./ && \
-        rm -rf migrid.git/ && \
-	echo "migrid version: ${MIG_GIT_REPO} ${MIG_GIT_BRANCH} ${MIG_GIT_REV}" > ./active-migrid-version.txt; \
-    else \
-      svn checkout -r ${MIG_SVN_REV} ${MIG_SVN_REPO} . && \
-	echo "migrid version: ${MIG_SVN_REPO} trunk ${MIG_SVN_REV}" > ./active-migrid-version.txt; \
-    fi;
+RUN git clone ${MIG_GIT_REPO} migrid.git && \
+    cd migrid.git && \
+    git checkout -B ${MIG_GIT_BRANCH} --track origin/${MIG_GIT_BRANCH} && \
+    git checkout ${MIG_GIT_REV} && cd .. && \
+    rsync -a migrid.git/ ./ && \
+    rm -rf migrid.git/ && \
+    echo "migrid version: ${MIG_GIT_REPO} ${MIG_GIT_BRANCH} ${MIG_GIT_REV}" > ./active-migrid-version.txt
 
 
 #------------------------- next stage -----------------------------#
@@ -1364,7 +1350,6 @@ ARG PREFER_PYTHON3
 ARG ENABLE_LOGROTATE
 ARG LOGROTATE_MIGRID
 ARG ENABLE_GDP
-ARG WITH_GIT
 ARG MIG_GIT_BRANCH
 ARG ENABLE_QUOTA
 ARG ENABLE_FREEZE
@@ -1577,8 +1562,7 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
 # Install lustreclient
 # NOTE: Requires py3 and git next branch
 RUN if [ "${ENABLE_QUOTA}" = "True" ] \
-            && [ "${PREFER_PYTHON3}" = "True" ] \
-            && [ "${WITH_GIT}" = "True" ]; then \
+            && [ "${PREFER_PYTHON3}" = "True" ]; then \
         if [ "${QUOTA_BACKEND}" = "lustre" ] \
             || [ "${QUOTA_BACKEND}" = "lustre-gocryptfs" ]; then \
             echo "install python lustreclient extensions" \
