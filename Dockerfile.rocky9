@@ -205,7 +205,6 @@ ARG DATASAFETY_LINK=""
 ARG DATASAFETY_TEXT=""
 # NOTE: no python2 here and we already get 4.3+ for python3
 ARG MODERN_WSGIDAV=False
-ARG WITH_GIT=False
 ARG OPENSSH_VERSION=7.4
 ARG VGRID_LABEL=VGrid
 ARG DIGEST_SALT="AUTO"
@@ -278,7 +277,6 @@ ARG OPENID_PORT
 ARG WITH_PY3
 ARG JUPYTER_SERVICES
 ARG CLOUD_SERVICES
-#ARG WITH_GIT
 
 RUN echo "*** BEGIN Build variables ***" && \
     echo "UID and GID: $UID $GID" && \
@@ -292,8 +290,8 @@ RUN echo "*** BEGIN Build variables ***" && \
     "${MIGCERT_HTTPS_PORT} ${EXTCERT_HTTPS_PORT}" \
     "${SID_HTTPS_PORT} ${SFTP_PORT} ${SFTP_SUBSYS_PORT}" \
     "${FTPS_CTRL_PORT} ${DAVS_PORT} ${OPENID_PORT}" && \
-    echo "Enable git checkout & repo : $WITH_GIT $MIG_GIT_REPO" && \
-    echo "MiG git branch & revision:  $MIG_GIT_BRANCH $MIG_GIT_REV" && \
+    echo "MiG git repo: $MIG_GIT_REPO" && \
+    echo "MiG git branch & revision: $MIG_GIT_BRANCH $MIG_GIT_REV" && \
     echo "Emulate flavor & fqdn: $EMULATE_FLAVOR $EMULATE_FQDN" && \
     echo "Enable python3 support: $WITH_PY3" && \
     #echo "Designated jupyter services: $JUPYTER_SERVICES" && \
@@ -891,7 +889,6 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
 FROM --platform=linux/$ARCH mig_dependencies AS download_mig
 LABEL MIGRID=true
 ARG DOMAIN
-ARG WITH_GIT
 ARG MIG_GIT_REPO
 ARG MIG_GIT_BRANCH
 ARG MIG_GIT_REV
@@ -1353,7 +1350,6 @@ ARG PREFER_PYTHON3
 ARG ENABLE_LOGROTATE
 ARG LOGROTATE_MIGRID
 ARG ENABLE_GDP
-ARG WITH_GIT
 ARG MIG_GIT_BRANCH
 ARG ENABLE_QUOTA
 ARG ENABLE_FREEZE
@@ -1566,8 +1562,7 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
 # Install lustreclient
 # NOTE: Requires py3 and git next branch
 RUN if [ "${ENABLE_QUOTA}" = "True" ] \
-            && [ "${PREFER_PYTHON3}" = "True" ] \
-            && [ "${WITH_GIT}" = "True" ]; then \
+            && [ "${PREFER_PYTHON3}" = "True" ]; then \
         if [ "${QUOTA_BACKEND}" = "lustre" ] \
             || [ "${QUOTA_BACKEND}" = "lustre-gocryptfs" ]; then \
             echo "install python lustreclient extensions" \
