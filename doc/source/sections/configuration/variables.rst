@@ -247,21 +247,15 @@ Variables
    * - OPENID_SHOW_PORT
      - 443
      - Where the OpenID service is advertized to run for the users. Mainly used when the standard openid port 443 is transparently forwarded in the local firewall or Apache proxy.
-   * - MIG_SVN_REPO
-     - https://svn.code.sf.net/p/migrid/code/trunk
-     - The Subversion repository from which the migrid code will be pulled, if Git isn't specifically requested (i.e. unless WITH_GIT=True) 
-   * - MIG_SVN_REV
-     - HEAD
-     - Which SVN revision of the migrid codebase to deploy from the above repo when SVN is used
    * - MIG_GIT_REPO
      - https://github.com/ucphhpc/migrid-sync.git
-     - The Git repository from which the migrid code will be pulled, if Git is requested (i.e. WITH_GIT=True)
+     - The Git repository from which the migrid code will be pulled
    * - MIG_GIT_BRANCH
      - main
-     - The Git branch which should be used when migrid source code is pulled. Typically `main` (formerly `edge`) or `next` (formerly `experimental`).
+     - The Git branch which should be used when migrid source code is pulled. Typically `next` (formerly `experimental`).
    * - MIG_GIT_REV
      - HEAD
-     - The Git revision which should be used when migrid source code is pulled.
+     - The Git revision of the migrid source code to use.
    * - SUPPORT_EMAIL
      - mig
      - The email address to point users to for various support purposes in the migrid user pages
@@ -560,9 +554,6 @@ Variables
    * - MODERN_WSGIDAV
      - False
      - Whether the WebDAVS service should use the tried and tested wsgidav 1.3 or upgrade to a more modern version.
-   * - WITH_GIT
-     - False
-     - Use git instead of subversion, see `$MIG_GIT_REPO`
    * - OPENSSH_VERSION
      - 7.4
      - Minimum client OpenSSH version to support, mainly regarding security hardening
