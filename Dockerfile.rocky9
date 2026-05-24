@@ -1309,7 +1309,7 @@ RUN ./generateconfs.py --source=. \
     #--peers_notice="${PEERS_NOTICE}" --logo_center="${LOGO_CENTER}" \
     #--support-text="${SUPPORT_TEXT}" --privacy_text="${PRIVACY_TEXT}" \
     --datasafety_link="${DATASAFETY_LINK}" --datasafety_text="${DATASAFETY_TEXT}" \
-    --templates_cache_dir="${MIG_ROOT}/__templates_cache__" \
+    --templates_cache_dir="${MIG_ROOT}/__template_cache__" \
     --extra_userpage_scripts="${EXTRA_USERPAGE_SCRIPTS}" \
     --extra_userpage_styles="${EXTRA_USERPAGE_STYLES}" \
     --sftp_max_sessions=${SFTP_MAX_SESSIONS} \
