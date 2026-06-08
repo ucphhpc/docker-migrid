@@ -368,6 +368,9 @@ Variables
    * - ENABLE_GRAVATARS
      - True
      - Enables optional gravatar integration on user profiles of registered users
+   * - ENABLE_PYTEST
+     - False
+     - Enables optional pytest integration for self-test support e.g. during development
    * - ENABLE_SITESTATUS
      - True
      - Enable the built-in site status through the pop-up in the bottom right corner based on events authored in state/wwwpublic/status-events.json .

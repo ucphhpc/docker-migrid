@@ -99,6 +99,7 @@ ARG ENABLE_JOBS=True
 ARG ENABLE_RESOURCES=True
 ARG ENABLE_EVENTS=True
 ARG ENABLE_GRAVATARS=True
+ARG ENABLE_PYTEST=False
 ARG ENABLE_SITESTATUS=True
 ARG STATUS_SYSTEM_MATCH="ANY"
 ARG ENABLE_FREEZE=False
@@ -834,9 +835,11 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install --no-cache-dir --prefix=$(python3-config --prefix) cracklib; \
     fi;
 
-# Module required to run pytests but conflicts with TracTags
-RUN if [ "${WITH_PY3}" = "True" ]; then \
-      if [ -z "${TRAC_ADMIN_PATH}" ]; then \
+# Module for pytests but unwanted in production and conflicts with TracTags
+RUN if [ "${ENABLE_PYTEST}" = "True" ]; then \
+      if [ -n "${TRAC_ADMIN_PATH}" ]; then \
+        echo "*** TracTags is incompatible with pytest ***" ; exit 1; \
+      else \
         pip3 install --no-cache-dir pytest; \
       fi; \
     fi;
