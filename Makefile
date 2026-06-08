@@ -122,9 +122,16 @@ initdirs: initcomposevars
 	mkdir -p ${PERSISTENT_ROOT}/user_pending
 	mkdir -p ${PERSISTENT_ROOT}/user_cache
 	mkdir -p ${PERSISTENT_ROOT}/mig_system_files
+	mkdir -p ${PERSISTENT_ROOT}/gridstat_files
 	mkdir -p ${PERSISTENT_ROOT}/gdp_home
 	mkdir -p ${PERSISTENT_ROOT}/user_home
 	mkdir -p ${PERSISTENT_ROOT}/user_settings
+	mkdir -p ${PERSISTENT_ROOT}/server_home
+	mkdir -p ${PERSISTENT_ROOT}/webserver_home
+	mkdir -p ${PERSISTENT_ROOT}/notify_home
+	mkdir -p ${PERSISTENT_ROOT}/twofactor_home
+	mkdir -p ${PERSISTENT_ROOT}/sessid_to_jupyter_mount_link_home
+	mkdir -p ${PERSISTENT_ROOT}/sessid_to_mrsl_link_home
 	mkdir -p ${PERSISTENT_ROOT}/vgrid_files_home
 	mkdir -p ${PERSISTENT_ROOT}/vgrid_files_readonly
 	mkdir -p ${PERSISTENT_ROOT}/vgrid_files_writable
