@@ -746,6 +746,7 @@ ARG MODERN_WSGIDAV
 ARG UPGRADE_PARAMIKO
 ARG ENABLE_CLOUD
 ARG ENABLE_PYTEST
+ARG ENABLE_WORKFLOWS
 ARG OPENSTACKSDK_VERSION_OVERRIDE
 ARG TRAC_ADMIN_PATH
 
@@ -885,7 +886,10 @@ RUN if [ -n "${TRAC_ADMIN_PATH}" ]; then \
     fi;
 
 # Modules required for workflows
-RUN if [ "${WITH_PY3}" = "True" ]; then \
+# NOTE: the bleach library used by nbconvert is abandoned
+#       https://github.com/jupyter/nbconvert/issues/2289
+#       and has security issues, too, so only install if explicitly requested.
+RUN if [ "${ENABLE_WORKFLOWS}" = "True" ]; then \
       pip3 install --no-cache-dir nbformat nbconvert papermill; \
     fi;
 
