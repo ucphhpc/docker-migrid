@@ -148,6 +148,7 @@ ARG UPGRADE_OIDC_AUTH_MOD_SRC=""
 ARG UPGRADE_PARAMIKO=False
 ARG PUBKEY_FROM_DNS=False
 # NOTE: python2 support is gone on rocky9+
+# TODO: eliminate WITH_PY3 arg completely
 ARG WITH_PY3=True
 ARG PREFER_PYTHON3=True
 ARG SIGNUP_METHODS=migoid
@@ -453,7 +454,7 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       && dnf install -y \
       # NOTE: python2 support is gone on rocky9+
       xorg-x11-server-Xvfb \
-      # NOTE: wkhtmltopdf not yet build for Rocky9 
+      # NOTE: wkhtmltopdf not yet built for Rocky9
       https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox-0.12.6-1.centos8.x86_64.rpm \
       # NOTE: compat-openssl11.x86_64 is needed by Rocky8 version of wkhtmltopdf 
       compat-openssl11.x86_64 \
@@ -708,11 +709,6 @@ RUN if [ ! -e "${CERT_DIR}/.persistent" ]; then \
                [ -L "$domain" ] || ln -s MiG/${WILDCARD_DOMAIN} $domain; \
        done ; fi
 
-# Upgrade pip3 is only required for cryptography from pip - irrelevant here
-#RUN if [ "${WITH_PY3}" = "True" ]; then \
-#      python3 -m pip install --no-cache-dir -U 'pip'; \
-#    fi;
-
 # NOTE: make certs as mig user
 WORKDIR $MIG_ROOT
 USER $USER
@@ -741,7 +737,6 @@ USER $USER
 #------------------------- next stage -----------------------------#
 FROM --platform=linux/$ARCH setup_security AS mig_dependencies
 ARG DOMAIN
-ARG WITH_PY3
 ARG MODERN_WSGIDAV
 ARG UPGRADE_PARAMIKO
 ARG ENABLE_CLOUD
@@ -756,13 +751,12 @@ USER root
 # Prepare py dependencies not in dnf or just outdated there
 
 # NOTE: use jsonrpclib and pysendfile from pip for py3 here
-RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install --no-cache-dir 'jsonrpclib<0.2' pysendfile; \
-    fi;
+#       and iso3166 for smart country selection
+RUN pip3 install --no-cache-dir 'jsonrpclib<0.2' pysendfile iso3166
 
 # NOTE: recent paramiko is required for modern host key algo
-RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
-      if [ "${WITH_PY3}" = "True" ]; then \
+RUN if [ "${ENABLE_SFTP_SUBSYS}" = "True" -o "${ENABLE_SFTP}" = "True" ]; then \
+      if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
         # NOTE: a newer setuptools MAY be needed and setuptools_rust MUST be 
         #       installed separately here for whatever reason.
         # IMPORTANT: sftp_subsys.py is explicitly called with 'python -s' to
@@ -793,9 +787,6 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
 # NOTE: openstackclient is available in dnf here, but sdk may be requested
 #       e.g. to work around version 1.0.0 breaking floating IP assignment
 RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
-      #if [ "${WITH_PY3}" = "True" ]; then \
-      #  pip3 install --no-cache-dir python-openstackclient; \
-      #fi; \
       if [ -n "${OPENSTACKSDK_VERSION_OVERRIDE}" ]; then \
         pip3 install --no-cache-dir "openstacksdk==${OPENSTACKSDK_VERSION_OVERRIDE}" ; \
       fi; \
@@ -804,28 +795,27 @@ RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
 # OpenID support in python (python-openid2 for py3) - use alternative from dnf 
 #RUN pip3 install --no-cache-dir python-openid2;
 
-# Modules required by grid_events.py
-RUN if [ "${WITH_PY3}" = "True" ]; then \
+# Modules required by grid_events.py and grid_cron.py
+# TODO: eliminate scandir now that it is built into os.scandir
+RUN if [ "${ENABLE_EVENTS}" = "True" -o "${ENABLE_CRONTAB}" = "True" ]; then \
       pip3 install --no-cache-dir watchdog scandir; \
     fi;
 
 # Modules required by grid_webdavs
-RUN if [ "${WITH_PY3}" = "True" ]; then \
+RUN if [ "${ENABLE_DAVS}" = "True" ]; then \
       # IMPORTANT: use at least 4.1 here to avoid a potential security issue 
       # https://github.com/mar10/wsgidav/security/advisories/GHSA-xx6g-jj35-pxjv
       # IMPORTANT: use cheroot before 10.0.1 as it currently crashes webdavs
       #            One can trigger the crash with a simple testssl.sh run
       # TODO: investigate if the problem is in cheroot, wsgidav or migrid.
+      # Prefer sslkeylog as session tracking helper in webdavs daemon.
       pip3 install --no-cache-dir 'cheroot<10.0.1' 'wsgidav>=4.1.0'; \
-    fi;
-# Prefer sslkeylog as session tracking helper in webdavs daemon.
-RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install --no-cache-dir sslkeylog ; \
     fi;
 
 # Modules required by grid_ftps
 # NOTE: relies on pyOpenSSL and Cryptography from yum/dnf for now
-RUN if [ "${WITH_PY3}" = "True" ]; then \
+RUN if [ "${ENABLE_FTPS}" = "True" ]; then \
       pip3 install --no-cache-dir pyftpdlib; \
     fi;
 
@@ -833,7 +823,7 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
 # IMPORTANT: install in main python site-packages to work with 'python -s'
 #            Otherwise sftpsubsys will fail to import it because the /usr/local
 #            dir used as prefix by default in pip is outside sys.path
-RUN if [ "${WITH_PY3}" = "True" ]; then \
+RUN if [ "${ENABLE_CRACKLIB}" = "True" ]; then \
       pip3 install --no-cache-dir --prefix=$(python3-config --prefix) cracklib; \
     fi;
 
@@ -847,13 +837,8 @@ RUN if [ "${ENABLE_PYTEST}" = "True" ]; then \
     fi;
 
 # Modules required by 2FA
-RUN if [ "${WITH_PY3}" = "True" ]; then \
+RUN if [ "${ENABLE_TWOFACTOR}" = "True" ]; then \
       pip3 install --no-cache-dir pyotp; \
-    fi;
-
-# Modules required for smart country selection
-RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install --no-cache-dir iso3166; \
     fi;
 
 # Modules required for email validation (already available in yum/dnf for python3)
@@ -1353,7 +1338,6 @@ ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
 ARG ENABLE_SELF_SIGNED_CERTS
 ARG ENABLE_OPENID
-ARG WITH_PY3
 ARG PREFER_PYTHON3
 ARG ENABLE_LOGROTATE
 ARG LOGROTATE_MIGRID
@@ -1381,7 +1365,7 @@ RUN cd $MIG_ROOT/mig/src/libnss-mig \
 # NOTE: both require openssl-devel to build and sslkeylog is only supported
 # on python 2.7.9+ and 3. The sslsession module generally builds but fails at
 # runtime when used with OpenSSL-1.1+, however.
-RUN if [ "${WITH_PY3}" = "True" ]; then \
+RUN if [ "${ENABLE_DAVS}" = "True" ]; then \
       cd $MIG_ROOT/mig/src/sslsession \
       && pip3 install --no-cache-dir . ; \
     fi;
