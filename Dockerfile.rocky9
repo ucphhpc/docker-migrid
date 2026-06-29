@@ -739,8 +739,16 @@ FROM --platform=linux/$ARCH setup_security AS mig_dependencies
 ARG DOMAIN
 ARG MODERN_WSGIDAV
 ARG UPGRADE_PARAMIKO
+ARG ENABLE_SFTP
+ARG ENABLE_SFTP_SUBSYS
 ARG ENABLE_CLOUD
+ARG ENABLE_CRONTAB
+ARG ENABLE_EVENTS
+ARG ENABLE_DAVS
+ARG ENABLE_FTPS
+ARG ENABLE_CRACKLIB
 ARG ENABLE_PYTEST
+ARG ENABLE_TWOFACTOR
 ARG ENABLE_WORKFLOWS
 ARG OPENSTACKSDK_VERSION_OVERRIDE
 ARG TRAC_ADMIN_PATH
@@ -755,7 +763,7 @@ USER root
 RUN pip3 install --no-cache-dir 'jsonrpclib<0.2' pysendfile iso3166
 
 # NOTE: recent paramiko is required for modern host key algo
-RUN if [ "${ENABLE_SFTP_SUBSYS}" = "True" -o "${ENABLE_SFTP}" = "True" ]; then \
+RUN if [ "${ENABLE_SFTP}" = "True" -o "${ENABLE_SFTP_SUBSYS}" = "True" ]; then \
       if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
         # NOTE: a newer setuptools MAY be needed and setuptools_rust MUST be 
         #       installed separately here for whatever reason.
@@ -797,7 +805,7 @@ RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
 
 # Modules required by grid_events.py and grid_cron.py
 # TODO: eliminate scandir now that it is built into os.scandir
-RUN if [ "${ENABLE_EVENTS}" = "True" -o "${ENABLE_CRONTAB}" = "True" ]; then \
+RUN if [ "${ENABLE_CRONTAB}" = "True" -o "${ENABLE_EVENTS}" = "True" ]; then \
       pip3 install --no-cache-dir watchdog scandir; \
     fi;
 
