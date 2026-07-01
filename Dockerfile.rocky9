@@ -533,16 +533,17 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
     fi;
 
 
-# Upgrade mod_auth_openidc from upstream github packages if requested - mainly needed for rhel/centos7
-# https://stackoverflow.com/questions/68742362/how-to-install-mod-auth-openidc-on-rhel-7
+# Upgrade mod_auth_openidc from upstream github packages if requested - mainly
+# needed for most recent security fixes.
 # The module requires a recent cjose library version. Packaged versions are
 # also available on the upstream releases page under the 2.4.0 release Assets.
-# Version 2.4.12.1+ is needed to support the OIDCPassClaimsAs encoding setting in apache conf
+# Version 2.4.12.1+ is needed to support the OIDCPassClaimsAs encoding setting
+# in apache conf.
 RUN echo "UPGRADE_MOD_AUTH_OPENIDC: $UPGRADE_MOD_AUTH_OPENIDC"
 RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
         if [ -z "${UPGRADE_OIDC_AUTH_MOD_SRC}" ]; then \
 		echo "upgrading mod_auth_openidc from upstream release package"; \
-		UPGRADE_OIDC_AUTH_MOD_SRC="https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.19.3/mod_auth_openidc-2.4.19.3-1.el9.x86_64.rpm"; \
+		UPGRADE_OIDC_AUTH_MOD_SRC="https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.19.4/mod_auth_openidc-2.4.19.4-1.el9.x86_64.rpm"; \
 	else \
 		echo "upgrading mod_auth_openidc from ${UPGRADE_OIDC_AUTH_MOD_SRC}"; \
 	fi; \ 
@@ -551,7 +552,7 @@ RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
 		#echo "installing cjose dependency from OS package"; \
 		#UPGRADE_OIDC_CJOSE_SRC="cjose"; \
 		echo "upgrading cjose from upstream release package"; \
-		UPGRADE_OIDC_CJOSE_SRC="https://github.com/OpenIDC/cjose/releases/download/v0.6.2.4/cjose-0.6.2.4-2.el9.x86_64.rpm"; \
+		UPGRADE_OIDC_CJOSE_SRC="https://github.com/OpenIDC/cjose/releases/download/v0.6.2.7/cjose-0.6.2.7-1.el9.x86_64.rpm"; \
 	else \
 		echo "upgrading cjose from ${UPGRADE_OIDC_CJOSE_SRC}"; \
 	fi; \
