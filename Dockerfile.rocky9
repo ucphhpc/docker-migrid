@@ -759,9 +759,9 @@ USER root
 
 # Prepare py dependencies not in dnf or just outdated there
 
-# NOTE: use jsonrpclib and pysendfile from pip for py3 here
+# NOTE: use maintained jsonrpclib fork and pysendfile from pip for py3 here
 #       and iso3166 for smart country selection
-RUN pip3 install --no-cache-dir 'jsonrpclib<0.2' pysendfile iso3166
+RUN pip3 install --no-cache-dir jsonrpclib-pelix pysendfile iso3166
 
 # NOTE: recent paramiko is required for modern host key algo
 RUN if [ "${ENABLE_SFTP}" = "True" -o "${ENABLE_SFTP_SUBSYS}" = "True" ]; then \
