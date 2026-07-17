@@ -147,10 +147,6 @@ ARG UPGRADE_OIDC_AUTH_MOD_SRC=""
 # NOTE: paramiko is a bit dated in OS repo - allow optional upgrade
 ARG UPGRADE_PARAMIKO=False
 ARG PUBKEY_FROM_DNS=False
-# NOTE: python2 support is gone on rocky9+
-# TODO: eliminate WITH_PY3 arg completely
-ARG WITH_PY3=True
-ARG PREFER_PYTHON3=True
 ARG SIGNUP_METHODS=migoid
 ARG LOGIN_METHODS=migoid
 ARG USER_INTERFACES=V3
@@ -276,7 +272,6 @@ ARG OPENID_PORT
 #ARG MIG_GIT_REV
 #ARG EMULATE_FLAVOR
 #ARG EMULATE_FQDN
-ARG WITH_PY3
 ARG JUPYTER_SERVICES
 ARG CLOUD_SERVICES
 
@@ -295,7 +290,6 @@ RUN echo "*** BEGIN Build variables ***" && \
     echo "MiG git repo: $MIG_GIT_REPO" && \
     echo "MiG git branch & revision: $MIG_GIT_BRANCH $MIG_GIT_REV" && \
     echo "Emulate flavor & fqdn: $EMULATE_FLAVOR $EMULATE_FQDN" && \
-    echo "Enable python3 support: $WITH_PY3" && \
     #echo "Designated jupyter services: $JUPYTER_SERVICES" && \
     #echo "Designated cloud services: $CLOUD_SERVICES" && \
     echo "*** END Build variables ***"
@@ -311,8 +305,6 @@ ARG UPGRADE_OIDC_CJOSE_SRC
 ARG UPGRADE_OIDC_AUTH_MOD_SRC
 ARG UPGRADE_PARAMIKO
 ARG ENABLE_CLOUD
-ARG WITH_PY3
-ARG PREFER_PYTHON3
 ARG UID
 ARG GID
 ARG SMTP_SERVER
@@ -388,43 +380,39 @@ RUN dnf update -y \
     && dnf clean all \
     && rm -fr /var/cache/dnf
 
-RUN if [ "${WITH_PY3}" = "True" ]; then \
-      echo "install py3 deps" \
-      && dnf update -y \
-      && dnf install -y \
-      python3-pip \
-      python3-devel \
-      python3-mod_wsgi \
-      python3-enchant \
-      #python3-jsonrpclib \
-      python3-requests \
-      python3-psutil \
-      python3-email-validator \
-      python3-future \
-      python3-cffi \
-      python3-openid \
-      python3-pyOpenSSL \
-      # NOTE: lxml and libxslt-devel required to build python-openid2
-      python3-lxml \
-      python3-pycurl \
-      python3-PyYAML \
-      # NOTE: we can just use native Cryptography and typing-extensions here
-      python3-cryptography \
-      python3-typing-extensions \
-      # Patch python3-openid until our pull request makes it to the Rocky repo
-      && echo "Pull python3 openid patch from own repo" \
-      && wget -q -O /tmp/python3-openid-assoc_handle.patch.diff https://raw.githubusercontent.com/ucphhpc/docker-migrid/master/patches/python3-openid-assoc_handle.patch.diff \
-      && patch -p 0 /usr/lib/python3.9/site-packages/openid/server/server.py < /tmp/python3-openid-assoc_handle.patch.diff \
-      && rm -f /tmp/python3-openid-assoc_handle.patch.diff \
-      # NOTE: only install default paramiko if upgrade not requested
-      && [ "${UPGRADE_PARAMIKO}" = "True" ] || dnf install -y python3-paramiko \
-      # NOTE: only install default openstack client if upgrade not requested
-      && [ "${ENABLE_CLOUD}" != "True" ] || dnf install -y python3-openstackclient \
-      && dnf clean all \
-      && rm -fr /var/cache/dnf; \
-    else \
-      echo "no py3 deps"; \
-    fi;
+RUN echo "install py3 deps" \
+    && dnf update -y \
+    && dnf install -y \
+    python3-pip \
+    python3-devel \
+    python3-mod_wsgi \
+    python3-enchant \
+    #python3-jsonrpclib \
+    python3-requests \
+    python3-psutil \
+    python3-email-validator \
+    python3-future \
+    python3-cffi \
+    python3-openid \
+    python3-pyOpenSSL \
+    # NOTE: lxml and libxslt-devel required to build python-openid2
+    python3-lxml \
+    python3-pycurl \
+    python3-PyYAML \
+    # NOTE: we can just use native Cryptography and typing-extensions here
+    python3-cryptography \
+    python3-typing-extensions \
+    # Patch python3-openid until our pull request makes it to the Rocky repo
+    && echo "Pull python3 openid patch from own repo" \
+    && wget -q -O /tmp/python3-openid-assoc_handle.patch.diff https://raw.githubusercontent.com/ucphhpc/docker-migrid/master/patches/python3-openid-assoc_handle.patch.diff \
+    && patch -p 0 /usr/lib/python3.9/site-packages/openid/server/server.py < /tmp/python3-openid-assoc_handle.patch.diff \
+    && rm -f /tmp/python3-openid-assoc_handle.patch.diff \
+    # NOTE: only install default paramiko if upgrade not requested
+    && [ "${UPGRADE_PARAMIKO}" = "True" ] || dnf install -y python3-paramiko \
+    # NOTE: only install default openstack client if upgrade not requested
+    && [ "${ENABLE_CLOUD}" != "True" ] || dnf install -y python3-openstackclient \
+    && dnf clean all \
+    && rm -fr /var/cache/dnf;
 
 # Containers have esmtp installed by default but we explicitly include it above
 # and configure it for host SMTP delivery for cronjobs etc to be able to route
@@ -438,13 +426,9 @@ RUN if [ -n "${SMTP_SERVER}" ]; then \
     fi
 
 # NOTE: python extensions libpam and libnss need matching python-config
-RUN if [ "${PREFER_PYTHON3}" = "True" ]; then \
-      echo "set up py3 as default python and python-config" && \
-      update-alternatives --install /usr/bin/python python /usr/bin/python3 10; \
-      update-alternatives --install /usr/bin/python-config python-config /usr/bin/python3-config 10; \
-    else \
-      echo "*** No python2 support here ***" ; exit 1; \
-    fi;
+RUN echo "set up py3 as default python and python-config" && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 10; \
+    update-alternatives --install /usr/bin/python-config python-config /usr/bin/python3-config 10;
 
 
 # Install GDP dependencies
@@ -460,11 +444,9 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       compat-openssl11.x86_64 \
       && dnf clean all \
       && rm -fr /var/cache/dnf; \
-      if [ "${WITH_PY3}" = "True" ]; then \
-         echo "install py3 deps" && \
-         pip3 install --no-cache-dir xvfbwrapper && \
-	     pip3 install --no-cache-dir pdfkit; \
-      fi; \
+      echo "install py3 deps" && \
+      pip3 install --no-cache-dir xvfbwrapper && \
+      pip3 install --no-cache-dir pdfkit; \
     else \
       echo "no GDP deps"; \
     fi;
@@ -894,7 +876,6 @@ ARG DOMAIN
 ARG MIG_GIT_REPO
 ARG MIG_GIT_BRANCH
 ARG MIG_GIT_REV
-ARG PREFER_PYTHON3
 ARG MODERN_WSGIDAV
 
 WORKDIR $MIG_ROOT
@@ -1023,7 +1004,6 @@ ARG PEERS_EXPLICIT_FIELDS
 ARG PEERS_CONTACT_HINT
 ARG MIG_PASSWORD_POLICY
 ARG PUBKEY_FROM_DNS
-ARG PREFER_PYTHON3
 ARG SIGNUP_METHODS
 ARG LOGIN_METHODS
 ARG USER_INTERFACES
@@ -1101,14 +1081,10 @@ ARG QUOTA_VGRID_LIMIT
 ARG QUOTA_LUSTRE_VERSION
 ARG ACCOUNTING_UPDATE_INTERVAL
 
-# TODO: do we still need the ~/.local/ wrapper now that update-alternatives run?
 ENV PYTHONPATH=${MIG_ROOT}
-ENV PATH=/home/$USER/.local/bin:$PATH
 # Ensure that the $USER sets it during session start
 RUN echo "PYTHONPATH=${MIG_ROOT}" >> ~/.bash_profile \
     && echo "export PYTHONPATH" >> ~/.bash_profile
-RUN echo "PATH=$HOME/.local/bin:${PATH}" >> ~/.bash_profile \
-    && echo "export PATH" >> ~/.bash_profile
 
 WORKDIR $MIG_ROOT/mig/install
 
@@ -1118,13 +1094,6 @@ RUN echo "Designated jupyter services: ${JUPYTER_SERVICES}" && \
     echo "Designated jupyter services descriptions: ${JUPYTER_SERVICES_DESC}" && \
     echo "Designated cloud services: ${CLOUD_SERVICES}" && \
     echo "Designated cloud services descriptions: ${CLOUD_SERVICES_DESC}"
-
-RUN mkdir -p ${MIG_ROOT}/.local/bin; \
-    if [ "${PREFER_PYTHON3}" = "True" ]; then \
-      echo "already has python3 as default python"; \
-    else \
-      echo "*** No python2 support here ***" ; exit 1; \
-    fi;
 
 RUN ./generateconfs.py --source=. \
     --destination=generated-confs \
@@ -1243,7 +1212,6 @@ RUN ./generateconfs.py --source=. \
     --jupyter_services_desc="${JUPYTER_SERVICES_DESC}" \
     --cloud_services="${CLOUD_SERVICES}" \
     --cloud_services_desc="${CLOUD_SERVICES_DESC}" \
-    --prefer_python3=${PREFER_PYTHON3} \
     --user_clause=User --group_clause=Group \
     --listen_clause='#Listen' \
     --serveralias_clause='ServerAlias' --alias_field=email \
@@ -1322,11 +1290,7 @@ RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
 # link relevant py trac ini into default location if no TRAC_INI_PATH is set here
 RUN if [ -n "${TRAC_ADMIN_PATH}" -a -z "${TRAC_INI_PATH}" ]; then \
         cd $MIG_ROOT ; \
-        if [ "${PREFER_PYTHON3}" = "True" ]; then \
-            ln -s trac-py3.ini mig/server/trac.ini; \
-        else \
-            ln -s trac-py2.ini mig/server/trac.ini; \
-        fi; \
+        ln -s trac-py3.ini mig/server/trac.ini; \
         [ ! -e "mig/images/site-logo-${EMULATE_FQDN}.png" ] || \
         cp -a "mig/images/site-logo-${EMULATE_FQDN}.png" \
             mig/images/site-logo.png ; \
@@ -1348,7 +1312,6 @@ ARG EMULATE_FQDN
 ARG ENABLE_SELF_SIGNED_CERTS
 ARG ENABLE_OPENID
 ARG ENABLE_DAVS
-ARG PREFER_PYTHON3
 ARG ENABLE_LOGROTATE
 ARG LOGROTATE_MIGRID
 ARG ENABLE_GDP
@@ -1563,8 +1526,7 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
 
 # Install lustreclient
 # NOTE: Requires py3 and git next branch
-RUN if [ "${ENABLE_QUOTA}" = "True" ] \
-            && [ "${PREFER_PYTHON3}" = "True" ]; then \
+RUN if [ "${ENABLE_QUOTA}" = "True" ]; then \
         if [ "${QUOTA_BACKEND}" = "lustre" ] \
             || [ "${QUOTA_BACKEND}" = "lustre-gocryptfs" ]; then \
             echo "install python lustreclient extensions" \
