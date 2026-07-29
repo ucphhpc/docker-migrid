@@ -1212,7 +1212,6 @@ RUN ./generateconfs.py --source=. \
     --jupyter_services_desc="${JUPYTER_SERVICES_DESC}" \
     --cloud_services="${CLOUD_SERVICES}" \
     --cloud_services_desc="${CLOUD_SERVICES_DESC}" \
-    --prefer_python3=True \
     --user_clause=User --group_clause=Group \
     --listen_clause='#Listen' \
     --serveralias_clause='ServerAlias' --alias_field=email \
