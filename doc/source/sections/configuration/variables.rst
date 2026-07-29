@@ -482,9 +482,6 @@ Variables
    * - PUBKEY_FROM_DNS
      - False
      - Advertize to SFTP users that they can find the host key in DNS(SEC).
-   * - PREFER_PYTHON3
-     - False
-     - Whether PYTHON3 should be used as the default. If not Python 2 is used. Depends on `$WITH_PY3`
    * - SIGNUP_METHODS
      - migoid
      - Which signup methods should be advertized in the webinterface
@@ -542,9 +539,6 @@ Variables
    * - EXTERNAL_DOC
      - "https://sourceforge.net/p/migrid/wiki"
      - Optional URL pointing users to additional information about the underlying migrid software.
-   * - WITH_PY3
-     - False
-     - Build container with python3 support and libraries
    * - IO_ACCOUNT_EXPIRE
      - False
      - Whether enabled SFTP/FTPS/WebDAVS account access should automatically expire for accounts that haven't been created/renewed or accessed on web for a long time (30 days by default). Useful to make sure any stale accounts are not left around for crackers to access e.g. by brute-force password guessing. The expired service access is automatically reopened if/when user reactivates main account.
