@@ -1,5 +1,5 @@
 .PHONY: all init initservices initbuild initdirs initcomposevars
-.PHONY: dockerbuild dockerlint dockerpush
+.PHONY: dockerbuild dockerlint dockersecscanimg dockerpush
 .PHONY: dockerclean dockervolumeclean
 .PHONY: wipesitestatewarning wipesitedatawarning
 .PHONY: clean distclean sitestateclean sitedataclean
@@ -122,9 +122,16 @@ initdirs: initcomposevars
 	mkdir -p ${PERSISTENT_ROOT}/user_pending
 	mkdir -p ${PERSISTENT_ROOT}/user_cache
 	mkdir -p ${PERSISTENT_ROOT}/mig_system_files
+	mkdir -p ${PERSISTENT_ROOT}/gridstat_files
 	mkdir -p ${PERSISTENT_ROOT}/gdp_home
 	mkdir -p ${PERSISTENT_ROOT}/user_home
 	mkdir -p ${PERSISTENT_ROOT}/user_settings
+	mkdir -p ${PERSISTENT_ROOT}/server_home
+	mkdir -p ${PERSISTENT_ROOT}/webserver_home
+	mkdir -p ${PERSISTENT_ROOT}/notify_home
+	mkdir -p ${PERSISTENT_ROOT}/twofactor_home
+	mkdir -p ${PERSISTENT_ROOT}/sessid_to_jupyter_mount_link_home
+	mkdir -p ${PERSISTENT_ROOT}/sessid_to_mrsl_link_home
 	mkdir -p ${PERSISTENT_ROOT}/vgrid_files_home
 	mkdir -p ${PERSISTENT_ROOT}/vgrid_files_readonly
 	mkdir -p ${PERSISTENT_ROOT}/vgrid_files_writable
@@ -203,8 +210,24 @@ dockerbuild: init
 	${DOCKER_COMPOSE} ${DOCKER_COMPOSE_BUILD_ARGS} build ${BUILD_ARGS}
 
 dockerlint:
+	@if [ -e Dockerfile ]; then \
+		echo "Linting Dockerfile with hadolint"; \
+		HADOLINT="$$(command -v hadolint || true)"; \
+		HADOLINT_ARGS=""; \
+		if [ -x "$${HADOLINT}" ]; then \
+			#echo "Scanning Dockerfile with native $${HADOLINT} $${HADOLINT_ARGS}"; \
+			$${HADOLINT} $${HADOLINT_ARGS} < Dockerfile; \
+		else \
+			#echo "Scanning Dockerfile with ${DOCKER} wrapped hadolint $${HADOLINT_ARGS}"; \
+			${DOCKER} run --rm -i ghcr.io/hadolint/hadolint $${HADOLINT_ARGS} < Dockerfile; \
+		fi; \
+	else \
+		echo "No Dockerfile to scan with hadolint - did you make init?"; \
+	fi
+
+dockersecscanimg:
 	@if [[ "$$(${DOCKER} image ls -q ${CONTAINER_REGISTRY}/${OWNER}/${IMAGE})" != "" ]]; then \
-		echo "Linting and security scanning ${IMAGE} image with trivy"; \
+		echo "Security scanning ${IMAGE} image with trivy"; \
 		TRIVY="$$(command -v trivy || true)"; \
 		TRIVY_ARGS="--scanners vuln"; \
 		if [[ $$(basename "${DOCKER}") == "podman" ]]; then \
@@ -223,12 +246,12 @@ dockerlint:
 			FWD_DOCKER_SOCK="-v /var/run/docker.sock:/var/run/docker.sock"; \
 		fi; \
 		if [ -x "$${TRIVY}" ]; then \
-			#echo "Scanning ${IMAGE} image with $${TRIVY} $${TRIVY_ARGS}"; \
+			#echo "Scanning ${IMAGE} image with native $${TRIVY} $${TRIVY_ARGS}"; \
 			$${TRIVY} image $${TRIVY_ARGS} "${CONTAINER_REGISTRY}/${OWNER}/${IMAGE}${CONTAINER_TAG}"; \
 		else \
-			#echo "Scanning ${IMAGE} image with docker trivy $${TRIVY_ARGS}"; \
+			#echo "Scanning ${IMAGE} image with ${DOCKER} wrapped trivy $${TRIVY_ARGS}"; \
 			mkdir -p cache/trivy; \
-			${DOCKER} run $${FWD_DOCKER_SOCK} -v ${DOCKER_MIGRID_ROOT}/cache/trivy:/root/.cache/ aquasec/trivy image $${TRIVY_ARGS} "${CONTAINER_REGISTRY}/${OWNER}/${IMAGE}${CONTAINER_TAG}"; \
+			${DOCKER} run --rm -i $${FWD_DOCKER_SOCK} -v ${DOCKER_MIGRID_ROOT}/cache/trivy:/root/.cache/ aquasec/trivy image $${TRIVY_ARGS} "${CONTAINER_REGISTRY}/${OWNER}/${IMAGE}${CONTAINER_TAG}"; \
 		fi; \
 	else \
 		echo "No ${IMAGE} images to scan with trivy - did you build?"; \
