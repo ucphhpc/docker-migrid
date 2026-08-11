@@ -455,11 +455,7 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
 RUN if [ "$ENABLE_OPENID" = "True" ]; then \
         # Install python3-openid from pip as it is not available in Rocky10
         pip3 install --no-cache-dir python3-openid; \
-    fi
-# TODO: fix apache mod auth openid build and enable next
-#RUN if [ "$ENABLE_OPENID" = "True" ]; then \
-RUN if [ "$DEBUG_BROKEN_MOD_AUTH_OPENID_BUILD" = "True" ]; then \
-        echo "building mod_auth_openid from centos7 source rpm" \
+        echo "prepare building mod_auth_openid from epel7 source rpm" \
         && dnf update -y \
         && dnf install -y gcc-c++ \
             rpm-build \
@@ -470,7 +466,8 @@ RUN if [ "$DEBUG_BROKEN_MOD_AUTH_OPENID_BUILD" = "True" ]; then \
             httpd-devel \
             libcurl-devel \
             libtidy-devel \
-            pcre-devel \
+            # NOTE: Rocky10 has pcre2-devel but libopkele demands pcre-devel
+            #pcre-devel \
             openssl-devel \
             libtool \
             sqlite-devel \
@@ -483,11 +480,23 @@ RUN if [ "$DEBUG_BROKEN_MOD_AUTH_OPENID_BUILD" = "True" ]; then \
         && rm -fr /var/cache/dnf \
         # NOTE: add EPEL CentOS 7 repos here but completely disabled
         # NOTE: rocky9+ switched from explicit version to variable expansion
-        #      as in 10 - > $releasever
+        #         as in 10 - > $releasever
+        #       rocky10 repo sources also need pruning of
+        #         epel${releasever_minor:+-z} -> epel
         && cat /etc/yum.repos.d/epel.repo | \
-                sed 's/\[epel/\[epel7/g;s/\(epel[a-z-]*\)-10/\1-7/g;s/\$releasever/7/g;s/enabled=1/enabled=0/g' \
-                > /etc/yum.repos.d/epel7.repo \
-        && echo "build libopkele from centos7 source rpm" \
+                sed 's/\[epel/\[epel7/g;s/epel\${releasever_minor.*}/epel/g;s/\$releasever/7/g;s/enabled=1/enabled=0/g' \
+                > /etc/yum.repos.d/epel7.repo ; \
+        # TODO: instead add disabled rocky9 repo too and only use for these?
+        echo "install old Rocky 9 pcre packages for libopkele build" \
+        && dnf install -y \
+            https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/appstream/os/Packages/p/pcre-utf16-8.44-4.el9.x86_64.rpm \
+            https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/appstream/os/Packages/p/pcre-utf32-8.44-4.el9.x86_64.rpm \
+            https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/appstream/os/Packages/p/pcre-cpp-8.44-4.el9.x86_64.rpm \
+            https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/baseos/os/Packages/p/pcre-8.44-4.el9.x86_64.rpm \
+            https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/appstream/os/Packages/p/pcre-devel-8.44-4.el9.x86_64.rpm \
+        && dnf clean all \
+        && rm -fr /var/cache/dnf \
+        && echo "install libopkele from epel7 source rpm" \
         # NOTE: avoid hard-coded version using yumdownloader from yum-utils
         && yumdownloader -y --enablerepo=epel7-source --source --resolve --destdir /root/rpmbuild/SRPMS libopkele \
         && rpm -ivh /root/rpmbuild/SRPMS/libopkele-*.src.rpm \
@@ -502,7 +511,7 @@ RUN if [ "$DEBUG_BROKEN_MOD_AUTH_OPENID_BUILD" = "True" ]; then \
         && rm -f /root/rpmbuild/RPMS/*/libopkele-*debug*.rpm \
         #&& dnf erase -y 'libopkele-*' \
         && dnf install -y /root/rpmbuild/RPMS/*/libopkele-*.rpm \
-        && echo "install mod_auth_openid centos7 source rpm" \
+        && echo "install mod_auth_openid epel7 source rpm" \
         #&& rpm -e --nodeps mod_auth_openid \
         # NOTE: avoid hard-coded version using yumdownloader from yum-utils
         && yumdownloader -y --enablerepo=epel7-source --source --resolve --destdir /root/rpmbuild/SRPMS mod_auth_openid \
