@@ -882,15 +882,24 @@ WORKDIR $MIG_ROOT
 USER $USER
 
 # Install and configure MiG
+# IMPORTANT: git does NOT really enforce any branch and revision match!
+#            We init to track upstream branch and then checkout rev to at least
+#            get any divergence warnings, but it happily switches to rev even
+#            if from a completely different branch. We show last log as well to
+#            help identify actual revision.
 # NOTE: git refuses to clone into non-empty dir - use tmp
 
-RUN git clone ${MIG_GIT_REPO} migrid.git && \
+RUN echo "Clone migrid: ${MIG_GIT_REPO} ${MIG_GIT_BRANCH} ${MIG_GIT_REV}" && \
+    git clone ${MIG_GIT_REPO} migrid.git && \
     cd migrid.git && \
     git checkout -B ${MIG_GIT_BRANCH} --track origin/${MIG_GIT_BRANCH} && \
-    git checkout ${MIG_GIT_REV} && cd .. && \
+    git checkout -B ${MIG_GIT_BRANCH} ${MIG_GIT_REV} && \
+    git log -n 1 && \
+    cd .. && \
     rsync -a migrid.git/ ./ && \
     rm -rf migrid.git/ && \
-    echo "migrid version: ${MIG_GIT_REPO} ${MIG_GIT_BRANCH} ${MIG_GIT_REV}" > ./active-migrid-version.txt
+    echo "migrid version: ${MIG_GIT_REPO} ${MIG_GIT_BRANCH} ${MIG_GIT_REV}" > \
+        ./active-migrid-version.txt
 
 
 #------------------------- next stage -----------------------------#
