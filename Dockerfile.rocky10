@@ -1,7 +1,7 @@
 # Default ARG values which may be overriden in build command with
 # docker-compose build --build-arg KEY=VAL
 #  as in 
-# make init && make build ARGS="--build-arg MIG_SVN_REV=HEAD"
+# make init && make build ARGS="--build-arg MIG_GIT_REV=HEAD"
 #  or using
 # docker-compose build
 # with .env file in place
@@ -56,8 +56,6 @@ ARG FTPS_CTRL_PORT=8021
 ARG FTPS_CTRL_SHOW_PORT=21
 ARG OPENID_PORT=8443
 ARG OPENID_SHOW_PORT=443
-ARG MIG_SVN_REPO=https://svn.code.sf.net/p/migrid/code/trunk
-ARG MIG_SVN_REV=HEAD
 ARG MIG_GIT_REPO=https://github.com/ucphhpc/migrid-sync.git
 # NOTE: next branch is needed for python3 support
 ARG MIG_GIT_BRANCH=next
@@ -96,13 +94,12 @@ ARG ENABLE_DUPLICATI=True
 ARG ENABLE_SEAFILE=False
 ARG SEAFILE_FQDN=
 ARG SEAFILE_RO_ACCESS=False
-ARG ENABLE_SANDBOXES=False
-ARG ENABLE_VMACHINES=False
 ARG ENABLE_CRONTAB=True
 ARG ENABLE_JOBS=True
 ARG ENABLE_RESOURCES=True
 ARG ENABLE_EVENTS=True
 ARG ENABLE_GRAVATARS=True
+ARG ENABLE_PYTEST=False
 ARG ENABLE_SITESTATUS=True
 ARG STATUS_SYSTEM_MATCH="ANY"
 ARG ENABLE_FREEZE=False
@@ -127,6 +124,8 @@ ARG ENABLE_TWOFACTOR_STRICT_ADDRESS=False
 ARG TWOFACTOR_AUTH_APPS=""
 ARG ENABLE_PEERS=True
 ARG ENABLE_QUOTA=False
+ARG ENABLE_ACCOUNTING=False
+ARG ENABLE_ANTISLOWLORIS=False
 ARG PEERS_MANDATORY=False
 ARG PEERS_EXPLICIT_FIELDS=""
 ARG PEERS_CONTACT_HINT="authorized to invite you as peer"
@@ -148,9 +147,6 @@ ARG UPGRADE_OIDC_AUTH_MOD_SRC=""
 # NOTE: paramiko is a bit dated in OS repo - allow optional upgrade
 ARG UPGRADE_PARAMIKO=False
 ARG PUBKEY_FROM_DNS=False
-# NOTE: python2 support is gone on rocky9+
-ARG WITH_PY3=True
-ARG PREFER_PYTHON3=True
 ARG SIGNUP_METHODS=migoid
 ARG LOGIN_METHODS=migoid
 ARG USER_INTERFACES=V3
@@ -196,7 +192,7 @@ ARG IMNOTIFY_ADDRESS=""
 ARG IMNOTIFY_CHANNEL=""
 ARG IMNOTIFY_USERNAME=""
 ARG IMNOTIFY_PASSWD=""
-ARG EXTERNAL_DOC="https://sourceforge.net/p/migrid/wiki"
+ARG EXTERNAL_DOC="https://github.com/ucphhpc/migrid-sync/wiki"
 ARG IO_ACCOUNT_EXPIRE="False"
 # TODO: expose and enable these UI vars
 #ARG PEERS_NOTICE=""
@@ -207,7 +203,6 @@ ARG DATASAFETY_LINK=""
 ARG DATASAFETY_TEXT=""
 # NOTE: no python2 here and we already get 4.3+ for python3
 ARG MODERN_WSGIDAV=False
-ARG WITH_GIT=False
 ARG OPENSSH_VERSION=7.4
 ARG VGRID_LABEL=VGrid
 ARG DIGEST_SALT="AUTO"
@@ -223,12 +218,14 @@ ARG SFTP_MAX_SESSIONS=32
 ARG WSGI_PROCS=25
 ARG APACHE_WORKER_PROCS=256
 ARG QUOTA_BACKEND=""
+ARG QUOTA_UPDATE_INTERVAL=3600
 ARG QUOTA_USER_LIMIT=1099511627776
 ARG QUOTA_VGRID_LIMIT=1099511627776
 ARG QUOTA_LUSTRE_VERSION="2.15.4"
 ARG QUOTA_LUSTRE_BASE="/dev/null"
 ARG QUOTA_GOCRYPTFS_XRAY="/dev/null"
 ARG QUOTA_GOCRYPTFS_SOCK="/dev/null"
+ARG ACCOUNTING_UPDATE_INTERVAL=3600
 
 # Jupyter Arguments
 ARG JUPYTER_SERVICES=""
@@ -270,17 +267,13 @@ ARG SFTP_SUBSYS_PORT
 ARG DAVS_PORT
 ARG FTPS_CTRL_PORT
 ARG OPENID_PORT
-#ARG MIG_SVN_REPO
-#ARG MIG_SVN_REV
 #ARG MIG_GIT_REPO
 #ARG MIG_GIT_BRANCH
 #ARG MIG_GIT_REV
 #ARG EMULATE_FLAVOR
 #ARG EMULATE_FQDN
-ARG WITH_PY3
 ARG JUPYTER_SERVICES
 ARG CLOUD_SERVICES
-#ARG WITH_GIT
 
 RUN echo "*** BEGIN Build variables ***" && \
     echo "UID and GID: $UID $GID" && \
@@ -294,11 +287,9 @@ RUN echo "*** BEGIN Build variables ***" && \
     "${MIGCERT_HTTPS_PORT} ${EXTCERT_HTTPS_PORT}" \
     "${SID_HTTPS_PORT} ${SFTP_PORT} ${SFTP_SUBSYS_PORT}" \
     "${FTPS_CTRL_PORT} ${DAVS_PORT} ${OPENID_PORT}" && \
-    #echo "MiG svn repo and revision: $MIG_SVN_REPO $MIG_SVN_REV" && \
-    echo "Enable git checkout & repo : $WITH_GIT $MIG_GIT_REPO" && \
-    echo "MiG git branch & revision:  $MIG_GIT_BRANCH $MIG_GIT_REV" && \
+    echo "MiG git repo: $MIG_GIT_REPO" && \
+    echo "MiG git branch & revision: $MIG_GIT_BRANCH $MIG_GIT_REV" && \
     echo "Emulate flavor & fqdn: $EMULATE_FLAVOR $EMULATE_FQDN" && \
-    echo "Enable python3 support: $WITH_PY3" && \
     #echo "Designated jupyter services: $JUPYTER_SERVICES" && \
     #echo "Designated cloud services: $CLOUD_SERVICES" && \
     echo "*** END Build variables ***"
@@ -314,8 +305,6 @@ ARG UPGRADE_OIDC_CJOSE_SRC
 ARG UPGRADE_OIDC_AUTH_MOD_SRC
 ARG UPGRADE_PARAMIKO
 ARG ENABLE_CLOUD
-ARG WITH_PY3
-ARG PREFER_PYTHON3
 ARG UID
 ARG GID
 ARG SMTP_SERVER
@@ -332,7 +321,7 @@ COPY shell-aliases.sh /etc/profile.d/
 # https://superuser.com/questions/784451/centos-on-docker-how-to-install-doc-files
 RUN sed -i '/nodocs/d' /etc/dnf/dnf.conf
 
-# NOTE: Enable crb repo by default on rocky9 for cracklib-devel, sshfs, ...
+# NOTE: Enable crb repo by default on rocky9+ for cracklib-devel, sshfs, ...
 RUN dnf update -y \
     && dnf install -y epel-release dnf-plugins-core \
     && dnf config-manager --enable crb \
@@ -362,6 +351,7 @@ RUN dnf update -y \
     mod_auth_openidc \
     tzdata \
     initscripts \
+    # NOTE: svn is still needed for trac plugin install from svn+https
     svn \
     git \
     vim \
@@ -371,10 +361,10 @@ RUN dnf update -y \
     mercurial \
     openssh-server \
     openssh-clients \
+    openssl \
     rsyslog \
     rsyslog-gnutls \
     lsof \
-    # NOTE: python2 support is gone on rocky9+
     # NOTE: generally install cracklib from pip as yum/dnf doesn't have it
     #cracklib-python \
     cracklib-devel \
@@ -385,68 +375,60 @@ RUN dnf update -y \
     fail2ban \
     ipset \
     wget \
+    gnupg \
     patch \
-    esmtp \
+    # NOTE: esmtp is not available for Rocky10, try msmtp instead
+    msmtp \
     && dnf clean all \
     && rm -fr /var/cache/dnf
 
-RUN if [ "${WITH_PY3}" = "True" ]; then \
-      echo "install py3 deps" \
-      && dnf update -y \
-      && dnf install -y \
-      python3-pip \
-      python3-devel \
-      python3-mod_wsgi \
-      python3-enchant \
-      #python3-jsonrpclib \
-      python3-requests \
-      python3-psutil \
-      python3-email-validator \
-      python3-future \
-      python3-cffi \
-      python3-openid \
-      python3-pyOpenSSL \
-      # NOTE: lxml and libxslt-devel required to build python-openid2
-      python3-lxml \
-      python3-pycurl \
-      python3-PyYAML \
-      # NOTE: we can just use native Cryptography and typing-extensions here
-      python3-cryptography \
-      python3-typing-extensions \
-      # Patch python3-openid until our pull request makes it to the Rocky repo
-      && echo "Pull python3 openid patch from own repo" \
-      && wget -q -O /tmp/python3-openid-assoc_handle.patch.diff https://raw.githubusercontent.com/ucphhpc/docker-migrid/master/patches/python3-openid-assoc_handle.patch.diff \
-      && patch -p 0 /usr/lib/python3.9/site-packages/openid/server/server.py < /tmp/python3-openid-assoc_handle.patch.diff \
-      && rm -f /tmp/python3-openid-assoc_handle.patch.diff \
-      # NOTE: only install default paramiko if upgrade not requested
-      && [ "${UPGRADE_PARAMIKO}" = "True" ] || dnf install -y python3-paramiko \
-      # NOTE: only install default openstack client if upgrade not requested
-      && [ "${ENABLE_CLOUD}" != "True" ] || dnf install -y python3-openstackclient \
-      && dnf clean all \
-      && rm -fr /var/cache/dnf; \
-    else \
-      echo "no py3 deps"; \
-    fi;
+RUN echo "install py3 deps" \
+    && dnf update -y \
+    && dnf install -y \
+    python3-pip \
+    python3-devel \
+    python3-mod_wsgi \
+    python3-enchant \
+    #python3-jsonrpclib \
+    python3-requests \
+    python3-psutil \
+    python3-email-validator \
+    # NOTE: future mod not available on Rocky10 so install with pip
+    #python3-future \
+    python3-cffi \
+    # NOTE: openid mod not available on Rocky10 so install with pip if enabled
+    #python3-openid \
+    python3-pyOpenSSL \
+    # NOTE: lxml and libxslt-devel required to build python-openid2
+    python3-lxml \
+    python3-pycurl \
+    python3-PyYAML \
+    # NOTE: we can just use native Cryptography and typing-extensions here
+    python3-cryptography \
+    python3-typing-extensions \
+    # NOTE: only install default paramiko if upgrade not requested
+    && [ "${UPGRADE_PARAMIKO}" = "True" ] || dnf install -y python3-paramiko \
+    # NOTE: only install default openstack client if upgrade not requested
+    && [ "${ENABLE_CLOUD}" != "True" ] || dnf install -y python3-openstackclient \
+    && dnf clean all \
+    && rm -fr /var/cache/dnf;
 
-# Containers have esmtp installed by default but we explicitly include it above
+# TODO: test if this dumb search/replace of old esmtp setup works
+# Containers have msmtp installed by default but we explicitly include it above
 # and configure it for host SMTP delivery for cronjobs etc to be able to route
 # mail outside containers.
 RUN if [ -n "${SMTP_SERVER}" ]; then \
       [ -z "${SMTP_PORT}" ] && SMTP_PORT=25; \
-      echo "# Simple SMTP setup to route all local mail to host SMTP" > /etc/esmtprc \
-      && echo "hostname ${SMTP_SERVER}:${SMTP_PORT}" >> /etc/esmtprc \
-      && echo "qualifydomain ${DOMAIN}" >> /etc/esmtprc \
-      && echo "force reverse_path %u@${DOMAIN}" >> /etc/esmtprc ; \
+      echo "# Simple SMTP setup to route all local mail to host SMTP" > /etc/msmtprc \
+      && echo "hostname ${SMTP_SERVER}:${SMTP_PORT}" >> /etc/msmtprc \
+      && echo "qualifydomain ${DOMAIN}" >> /etc/msmtprc \
+      && echo "force reverse_path %u@${DOMAIN}" >> /etc/msmtprc ; \
     fi
 
 # NOTE: python extensions libpam and libnss need matching python-config
-RUN if [ "${PREFER_PYTHON3}" = "True" ]; then \
-      echo "set up py3 as default python and python-config" && \
-      update-alternatives --install /usr/bin/python python /usr/bin/python3 10; \
-      update-alternatives --install /usr/bin/python-config python-config /usr/bin/python3-config 10; \
-    else \
-      echo "*** No python2 support here ***" ; exit 1; \
-    fi;
+RUN echo "set up py3 as default python and python-config" && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 10; \
+    update-alternatives --install /usr/bin/python-config python-config /usr/bin/python3-config 10;
 
 
 # Install GDP dependencies
@@ -454,19 +436,16 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       echo "install GDP deps" \
       && dnf update -y \
       && dnf install -y \
-      # NOTE: python2 support is gone on rocky9+
       xorg-x11-server-Xvfb \
-      # NOTE: wkhtmltopdf not yet build for Rocky9 
-      https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox-0.12.6-1.centos8.x86_64.rpm \
-      # NOTE: compat-openssl11.x86_64 is needed by Rocky8 version of wkhtmltopdf 
-      compat-openssl11.x86_64 \
+      # NOTE: wkhtmltopdf not yet built for Rocky10 - try almalinux9 rpm
+      https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox-0.12.6.1-3.almalinux9.x86_64.rpm \
+      # TODO: is compat-openssl11.x86_64 still needed by Rocky9 version of wkhtmltopdf?
+      #compat-openssl11.x86_64 \
       && dnf clean all \
       && rm -fr /var/cache/dnf; \
-      if [ "${WITH_PY3}" = "True" ]; then \
-         echo "install py3 deps" && \
-         pip3 install --no-cache-dir xvfbwrapper && \
-	     pip3 install --no-cache-dir pdfkit; \
-      fi; \
+      echo "install py3 deps" && \
+      pip3 install --no-cache-dir xvfbwrapper && \
+      pip3 install --no-cache-dir pdfkit; \
     else \
       echo "no GDP deps"; \
     fi;
@@ -474,6 +453,12 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
 
 # Build Apache OpenID (provided by epel for centos7) 
 RUN if [ "$ENABLE_OPENID" = "True" ]; then \
+        # Install python3-openid from pip as it is not available in Rocky10
+        pip3 install --no-cache-dir python3-openid; \
+    fi
+# TODO: fix apache mod auth openid build and enable next
+#RUN if [ "$ENABLE_OPENID" = "True" ]; then \
+RUN if [ "$DEBUG_BROKEN_MOD_AUTH_OPENID_BUILD" = "True" ]; then \
         echo "building mod_auth_openid from centos7 source rpm" \
         && dnf update -y \
         && dnf install -y gcc-c++ \
@@ -497,10 +482,10 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
         && dnf clean all \
         && rm -fr /var/cache/dnf \
         # NOTE: add EPEL CentOS 7 repos here but completely disabled
-        # NOTE: rocky9 switched from explicit version to variable expansion
-        #      as in 9 - > $releasever
+        # NOTE: rocky9+ switched from explicit version to variable expansion
+        #      as in 10 - > $releasever
         && cat /etc/yum.repos.d/epel.repo | \
-                sed 's/\[epel/\[epel7/g;s/\(epel[a-z-]*\)-9/\1-7/g;s/\$releasever/7/g;s/enabled=1/enabled=0/g' \
+                sed 's/\[epel/\[epel7/g;s/\(epel[a-z-]*\)-10/\1-7/g;s/\$releasever/7/g;s/enabled=1/enabled=0/g' \
                 > /etc/yum.repos.d/epel7.repo \
         && echo "build libopkele from centos7 source rpm" \
         # NOTE: avoid hard-coded version using yumdownloader from yum-utils
@@ -535,16 +520,17 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
     fi;
 
 
-# Upgrade mod_auth_openidc from upstream github packages if requested - mainly needed for rhel/centos7
-# https://stackoverflow.com/questions/68742362/how-to-install-mod-auth-openidc-on-rhel-7
+# Upgrade mod_auth_openidc from upstream github packages if requested - mainly
+# needed for most recent security fixes.
 # The module requires a recent cjose library version. Packaged versions are
 # also available on the upstream releases page under the 2.4.0 release Assets.
-# Version 2.4.12.1+ is needed to support the OIDCPassClaimsAs encoding setting in apache conf
+# Version 2.4.12.1+ is needed to support the OIDCPassClaimsAs encoding setting
+# in apache conf.
 RUN echo "UPGRADE_MOD_AUTH_OPENIDC: $UPGRADE_MOD_AUTH_OPENIDC"
 RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
         if [ -z "${UPGRADE_OIDC_AUTH_MOD_SRC}" ]; then \
 		echo "upgrading mod_auth_openidc from upstream release package"; \
-		UPGRADE_OIDC_AUTH_MOD_SRC="https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.16.11/mod_auth_openidc-2.4.16.11-1.el9.x86_64.rpm"; \
+		UPGRADE_OIDC_AUTH_MOD_SRC="https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.20.2/mod_auth_openidc-2.4.20.2-1.el10.x86_64.rpm"; \
 	else \
 		echo "upgrading mod_auth_openidc from ${UPGRADE_OIDC_AUTH_MOD_SRC}"; \
 	fi; \ 
@@ -553,7 +539,7 @@ RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
 		#echo "installing cjose dependency from OS package"; \
 		#UPGRADE_OIDC_CJOSE_SRC="cjose"; \
 		echo "upgrading cjose from upstream release package"; \
-		UPGRADE_OIDC_CJOSE_SRC="https://github.com/OpenIDC/cjose/releases/download/v0.6.2.3/cjose-0.6.2.3-1.el9.x86_64.rpm"; \
+		UPGRADE_OIDC_CJOSE_SRC="https://github.com/OpenIDC/cjose/releases/download/v0.6.2.7/cjose-0.6.2.7-1.el10.x86_64.rpm"; \
 	else \
 		echo "upgrading cjose from ${UPGRADE_OIDC_CJOSE_SRC}"; \
 	fi; \
@@ -711,11 +697,6 @@ RUN if [ ! -e "${CERT_DIR}/.persistent" ]; then \
                [ -L "$domain" ] || ln -s MiG/${WILDCARD_DOMAIN} $domain; \
        done ; fi
 
-# Upgrade pip3 is only required for cryptography from pip - irrelevant here
-#RUN if [ "${WITH_PY3}" = "True" ]; then \
-#      python3 -m pip install --no-cache-dir -U 'pip'; \
-#    fi;
-
 # NOTE: make certs as mig user
 WORKDIR $MIG_ROOT
 USER $USER
@@ -734,7 +715,9 @@ RUN mkdir -p MiG-certificates \
 USER root
 WORKDIR /tmp
 # Copy in any external certificates that should be part of the OS trusted ca bundle
-RUN update-ca-trust force-enable
+# TODO: we used 'force-enable' on Rocky9 but unsupported on Rocky10 - does this work?
+#RUN update-ca-trust force-enable
+RUN update-ca-trust
 COPY external-certificates/ ${OS_CA_CERT_SOURCE_PATH}/
 RUN update-ca-trust extract
 
@@ -744,10 +727,19 @@ USER $USER
 #------------------------- next stage -----------------------------#
 FROM --platform=linux/$ARCH setup_security AS mig_dependencies
 ARG DOMAIN
-ARG WITH_PY3
 ARG MODERN_WSGIDAV
 ARG UPGRADE_PARAMIKO
+ARG ENABLE_SFTP
+ARG ENABLE_SFTP_SUBSYS
 ARG ENABLE_CLOUD
+ARG ENABLE_CRONTAB
+ARG ENABLE_EVENTS
+ARG ENABLE_DAVS
+ARG ENABLE_FTPS
+ARG ENABLE_CRACKLIB
+ARG ENABLE_PYTEST
+ARG ENABLE_TWOFACTOR
+ARG ENABLE_WORKFLOWS
 ARG OPENSTACKSDK_VERSION_OVERRIDE
 ARG TRAC_ADMIN_PATH
 
@@ -756,14 +748,16 @@ USER root
 
 # Prepare py dependencies not in dnf or just outdated there
 
-# NOTE: use jsonrpclib and pysendfile from pip for py3 here
-RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install --no-cache-dir 'jsonrpclib<0.2' pysendfile; \
-    fi;
+# NOTE: use maintained jsonrpclib fork and pysendfile from pip for py3 here
+#       and iso3166 for smart country selection
+RUN pip3 install --no-cache-dir jsonrpclib-pelix pysendfile iso3166
+
+# We still have legacy dependency on future which is not in Rocky10
+RUN pip3 install --no-cache-dir future
 
 # NOTE: recent paramiko is required for modern host key algo
-RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
-      if [ "${WITH_PY3}" = "True" ]; then \
+RUN if [ "${ENABLE_SFTP}" = "True" -o "${ENABLE_SFTP_SUBSYS}" = "True" ]; then \
+      if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
         # NOTE: a newer setuptools MAY be needed and setuptools_rust MUST be 
         #       installed separately here for whatever reason.
         # IMPORTANT: sftp_subsys.py is explicitly called with 'python -s' to
@@ -777,26 +771,15 @@ RUN if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
         # Additional NOTE: paramiko version 3.x introduces several changes
         # that in particular improve the SFTP download performance.
         # At the time of writing, the RHEL/Rocky 10 EPEL repo provides 3.5,
-        # which we use as a version baseline to mimic.
-        # However, combining that with recent bcrypt versions in the 4.x
-        # series leads to import errors in mod_wsgi caused by the usage of
-        # sub-interpreters as highlighted at
-        # https://github.com/PyO3/pyo3/blob/main/guide/src/migration.md#each-pymodule-can-now-only-be-initialized-once-per-process
-        # with further explanation at
-        # https://bugzilla.redhat.com/show_bug.cgi?id=2255688 and
-        # https://github.com/PyO3/pyo3/issues/3451
-        # So we explicitly cap the bcrypt version to the latest 3.2 one,
-        # which coincides with the default Rocky version, btw.
-        pip3 install --no-cache-dir --prefix=$(python3-config --prefix) 'paramiko>=3.5' 'bcrypt<4'; \
+        # which we used as a version baseline to mimic in Rocky9 but skip now.
+        # TODO: test and drop bcrypt version cap if issues are solved here
+        pip3 install --no-cache-dir --prefix=$(python3-config --prefix) paramiko; \
       fi; \
     fi;
 
 # NOTE: openstackclient is available in dnf here, but sdk may be requested
 #       e.g. to work around version 1.0.0 breaking floating IP assignment
 RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
-      #if [ "${WITH_PY3}" = "True" ]; then \
-      #  pip3 install --no-cache-dir python-openstackclient; \
-      #fi; \
       if [ -n "${OPENSTACKSDK_VERSION_OVERRIDE}" ]; then \
         pip3 install --no-cache-dir "openstacksdk==${OPENSTACKSDK_VERSION_OVERRIDE}" ; \
       fi; \
@@ -805,28 +788,27 @@ RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
 # OpenID support in python (python-openid2 for py3) - use alternative from dnf 
 #RUN pip3 install --no-cache-dir python-openid2;
 
-# Modules required by grid_events.py
-RUN if [ "${WITH_PY3}" = "True" ]; then \
+# Modules required by grid_events.py and grid_cron.py
+# TODO: eliminate scandir now that it is built into os.scandir
+RUN if [ "${ENABLE_CRONTAB}" = "True" -o "${ENABLE_EVENTS}" = "True" ]; then \
       pip3 install --no-cache-dir watchdog scandir; \
     fi;
 
 # Modules required by grid_webdavs
-RUN if [ "${WITH_PY3}" = "True" ]; then \
+RUN if [ "${ENABLE_DAVS}" = "True" ]; then \
       # IMPORTANT: use at least 4.1 here to avoid a potential security issue 
       # https://github.com/mar10/wsgidav/security/advisories/GHSA-xx6g-jj35-pxjv
       # IMPORTANT: use cheroot before 10.0.1 as it currently crashes webdavs
       #            One can trigger the crash with a simple testssl.sh run
       # TODO: investigate if the problem is in cheroot, wsgidav or migrid.
+      # Prefer sslkeylog as session tracking helper in webdavs daemon.
       pip3 install --no-cache-dir 'cheroot<10.0.1' 'wsgidav>=4.1.0'; \
-    fi;
-# Prefer sslkeylog as session tracking helper in webdavs daemon.
-RUN if [ "${WITH_PY3}" = "True" ]; then \
       pip3 install --no-cache-dir sslkeylog ; \
     fi;
 
 # Modules required by grid_ftps
 # NOTE: relies on pyOpenSSL and Cryptography from yum/dnf for now
-RUN if [ "${WITH_PY3}" = "True" ]; then \
+RUN if [ "${ENABLE_FTPS}" = "True" ]; then \
       pip3 install --no-cache-dir pyftpdlib; \
     fi;
 
@@ -834,23 +816,22 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
 # IMPORTANT: install in main python site-packages to work with 'python -s'
 #            Otherwise sftpsubsys will fail to import it because the /usr/local
 #            dir used as prefix by default in pip is outside sys.path
-RUN if [ "${WITH_PY3}" = "True" ]; then \
+RUN if [ "${ENABLE_CRACKLIB}" = "True" ]; then \
       pip3 install --no-cache-dir --prefix=$(python3-config --prefix) cracklib; \
     fi;
 
-# Module required to run pytests
-RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install --no-cache-dir pytest; \
+# Module for pytests but unwanted in production and conflicts with TracTags
+RUN if [ "${ENABLE_PYTEST}" = "True" ]; then \
+      if [ -n "${TRAC_ADMIN_PATH}" ]; then \
+        echo "*** TracTags is incompatible with pytest ***" ; exit 1; \
+      else \
+        pip3 install --no-cache-dir pytest; \
+      fi; \
     fi;
 
 # Modules required by 2FA
-RUN if [ "${WITH_PY3}" = "True" ]; then \
+RUN if [ "${ENABLE_TWOFACTOR}" = "True" ]; then \
       pip3 install --no-cache-dir pyotp; \
-    fi;
-
-# Modules required for smart country selection
-RUN if [ "${WITH_PY3}" = "True" ]; then \
-      pip3 install --no-cache-dir iso3166; \
     fi;
 
 # Modules required for email validation (already available in yum/dnf for python3)
@@ -862,7 +843,9 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
 # Modules required for Trac integration 
 RUN if [ -n "${TRAC_ADMIN_PATH}" ]; then \
       echo "install Trac and plugins" \
-      && pip3 install --no-cache-dir Trac TracWikiPrint TracGraphviz TracFullBlog TracWikiCssPlugin \
+      && pip3 install --no-cache-dir Trac TracWikiPrint TracFullBlog TracWikiCssPlugin \
+      # NOTE: this plugin would be nice but it has a huge dep footprint
+      #&& pip3 install --no-cache-dir TracGraphviz \
       # IMPORTANT: Mercurial plugin is required for our repos and only recent
       #            stable releases support current python and Trac versions.
       #            We need 1.0.0.11+ for the default Python 3 and Trac-1.6.
@@ -873,13 +856,18 @@ RUN if [ -n "${TRAC_ADMIN_PATH}" ]; then \
       #&& pip3 install --no-cache-dir https://trac-hacks.org/svn/tracwysiwygplugin/0.12
       # NOTE: install more recent dev versions of those with Trac-1.6+ support
       # latest tag https://github.com/trac-hacks/tracstats/releases/tag/v0.6.1 is pre 1.6
-      && pip3 install --no-cache-dir https://github.com/trac-hacks/tracstats/archive/refs/heads/master.zip ; \
+      && pip3 install --no-cache-dir https://github.com/trac-hacks/tracstats/archive/refs/heads/master.zip \
+      # latest tag https://trac-hacks.org/svn/tagsplugin/tags/0.12 is pre 1.6
+      && pip3 install --no-cache-dir svn+https://trac-hacks.org/svn/tagsplugin/trunk ; \
     else \
       echo "no Trac deps"; \
     fi;
 
 # Modules required for workflows
-RUN if [ "${WITH_PY3}" = "True" ]; then \
+# NOTE: the bleach library used by nbconvert is abandoned
+#       https://github.com/jupyter/nbconvert/issues/2289
+#       and has security issues, too, so only install if explicitly requested.
+RUN if [ "${ENABLE_WORKFLOWS}" = "True" ]; then \
       pip3 install --no-cache-dir nbformat nbconvert papermill; \
     fi;
 
@@ -887,13 +875,9 @@ RUN if [ "${WITH_PY3}" = "True" ]; then \
 FROM --platform=linux/$ARCH mig_dependencies AS download_mig
 LABEL MIGRID=true
 ARG DOMAIN
-ARG MIG_SVN_REPO
-ARG MIG_SVN_REV
-ARG WITH_GIT
 ARG MIG_GIT_REPO
 ARG MIG_GIT_BRANCH
 ARG MIG_GIT_REV
-ARG PREFER_PYTHON3
 ARG MODERN_WSGIDAV
 
 WORKDIR $MIG_ROOT
@@ -902,23 +886,13 @@ USER $USER
 # Install and configure MiG
 # NOTE: git refuses to clone into non-empty dir - use tmp
 
-RUN if [ "$WITH_GIT" = "True" ]; then \
-      git clone ${MIG_GIT_REPO} migrid.git && \
-        cd migrid.git && \
-        git checkout -B ${MIG_GIT_BRANCH} --track origin/${MIG_GIT_BRANCH} && \
-        git checkout ${MIG_GIT_REV} && cd .. && \
-        rsync -a migrid.git/ ./ && \
-        rm -rf migrid.git/ && \
-	echo "migrid version: ${MIG_GIT_REPO} ${MIG_GIT_BRANCH} ${MIG_GIT_REV}" > ./active-migrid-version.txt; \
-    else \
-      svn checkout -r ${MIG_SVN_REV} ${MIG_SVN_REPO} . && \
-	echo "migrid version: ${MIG_SVN_REPO} trunk ${MIG_SVN_REV}" > ./active-migrid-version.txt; \
-    fi;
-
-# NOTE: we manually need to enable modern grid_webdavs.py here for now.
-#       Replace any existing symlink with one to the 3.x script.
-RUN rm -f ${MIG_ROOT}/mig/server/grid_webdavs.py ; \
-    ln -s grid_webdavs-3.x.py ${MIG_ROOT}/mig/server/grid_webdavs.py;
+RUN git clone ${MIG_GIT_REPO} migrid.git && \
+    cd migrid.git && \
+    git checkout -B ${MIG_GIT_BRANCH} --track origin/${MIG_GIT_BRANCH} && \
+    git checkout ${MIG_GIT_REV} && cd .. && \
+    rsync -a migrid.git/ ./ && \
+    rm -rf migrid.git/ && \
+    echo "migrid version: ${MIG_GIT_REPO} ${MIG_GIT_BRANCH} ${MIG_GIT_REV}" > ./active-migrid-version.txt
 
 
 #------------------------- next stage -----------------------------#
@@ -998,8 +972,6 @@ ARG ENABLE_DUPLICATI
 ARG ENABLE_SEAFILE
 ARG SEAFILE_FQDN
 ARG SEAFILE_RO_ACCESS
-ARG ENABLE_SANDBOXES
-ARG ENABLE_VMACHINES
 ARG ENABLE_CRONTAB
 ARG ENABLE_JOBS
 ARG ENABLE_RESOURCES
@@ -1027,12 +999,13 @@ ARG ENABLE_TWOFACTOR_STRICT_ADDRESS
 ARG TWOFACTOR_AUTH_APPS
 ARG ENABLE_PEERS
 ARG ENABLE_QUOTA
+ARG ENABLE_ACCOUNTING
+ARG ENABLE_ANTISLOWLORIS
 ARG PEERS_MANDATORY
 ARG PEERS_EXPLICIT_FIELDS
 ARG PEERS_CONTACT_HINT
 ARG MIG_PASSWORD_POLICY
 ARG PUBKEY_FROM_DNS
-ARG PREFER_PYTHON3
 ARG SIGNUP_METHODS
 ARG LOGIN_METHODS
 ARG USER_INTERFACES
@@ -1104,18 +1077,16 @@ ARG SFTP_MAX_SESSIONS
 ARG WSGI_PROCS
 ARG APACHE_WORKER_PROCS
 ARG QUOTA_BACKEND
-ARG QUOTA_LUSTRE_VERSION
+ARG QUOTA_UPDATE_INTERVAL
 ARG QUOTA_USER_LIMIT
 ARG QUOTA_VGRID_LIMIT
+ARG QUOTA_LUSTRE_VERSION
+ARG ACCOUNTING_UPDATE_INTERVAL
 
-# TODO: do we still need the ~/.local/ wrapper now that update-alternatives run?
 ENV PYTHONPATH=${MIG_ROOT}
-ENV PATH=/home/$USER/.local/bin:$PATH
 # Ensure that the $USER sets it during session start
 RUN echo "PYTHONPATH=${MIG_ROOT}" >> ~/.bash_profile \
     && echo "export PYTHONPATH" >> ~/.bash_profile
-RUN echo "PATH=$HOME/.local/bin:${PATH}" >> ~/.bash_profile \
-    && echo "export PATH" >> ~/.bash_profile
 
 WORKDIR $MIG_ROOT/mig/install
 
@@ -1125,13 +1096,6 @@ RUN echo "Designated jupyter services: ${JUPYTER_SERVICES}" && \
     echo "Designated jupyter services descriptions: ${JUPYTER_SERVICES_DESC}" && \
     echo "Designated cloud services: ${CLOUD_SERVICES}" && \
     echo "Designated cloud services descriptions: ${CLOUD_SERVICES_DESC}"
-
-RUN mkdir -p ${MIG_ROOT}/.local/bin; \
-    if [ "${PREFER_PYTHON3}" = "True" ]; then \
-      echo "already has python3 as default python"; \
-    else \
-      echo "*** No python2 support here ***" ; exit 1; \
-    fi;
 
 RUN ./generateconfs.py --source=. \
     --destination=generated-confs \
@@ -1216,7 +1180,6 @@ RUN ./generateconfs.py --source=. \
     --enable_sharelinks=${ENABLE_SHARELINKS} --enable_transfers=${ENABLE_TRANSFERS} \
     --enable_duplicati=${ENABLE_DUPLICATI} --enable_seafile=${ENABLE_SEAFILE} \
     --seafile_fqdn=${SEAFILE_FQDN} --seafile_ro_access=${SEAFILE_RO_ACCESS} \
-    --enable_sandboxes=${ENABLE_SANDBOXES} --enable_vmachines=${ENABLE_VMACHINES} \
     --enable_crontab=${ENABLE_CRONTAB} --enable_jobs=${ENABLE_JOBS} \
     --enable_resources=${ENABLE_RESOURCES} --enable_events=${ENABLE_EVENTS} \
     --enable_gravatars=${ENABLE_GRAVATARS} --enable_sitestatus=${ENABLE_SITESTATUS} \
@@ -1238,7 +1201,10 @@ RUN ./generateconfs.py --source=. \
     --enable_gdp=${ENABLE_GDP} --gdp_email_notify=${GDP_EMAIL_NOTIFY} \
     --gdp_id_scramble=${GDP_ID_SCRAMBLE} --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
     --enable_quota=${ENABLE_QUOTA} --quota_backend="${QUOTA_BACKEND}" \
+    --quota_update_interval=${QUOTA_UPDATE_INTERVAL} \
+    --enable_antislowloris=${ENABLE_ANTISLOWLORIS} \
     --quota_user_limit=${QUOTA_USER_LIMIT} --quota_vgrid_limit=${QUOTA_VGRID_LIMIT} \
+    --enable_accounting=${ENABLE_ACCOUNTING} --accounting_update_interval=${ACCOUNTING_UPDATE_INTERVAL} \
     --storage_protocols="${STORAGE_PROTOCOLS}" \
     --wwwserve_max_bytes=${WWWSERVE_MAX_BYTES} \
     --password_policy=${MIG_PASSWORD_POLICY} \
@@ -1248,7 +1214,6 @@ RUN ./generateconfs.py --source=. \
     --jupyter_services_desc="${JUPYTER_SERVICES_DESC}" \
     --cloud_services="${CLOUD_SERVICES}" \
     --cloud_services_desc="${CLOUD_SERVICES_DESC}" \
-    --prefer_python3=${PREFER_PYTHON3} \
     --user_clause=User --group_clause=Group \
     --listen_clause='#Listen' \
     --serveralias_clause='ServerAlias' --alias_field=email \
@@ -1327,11 +1292,10 @@ RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
 # link relevant py trac ini into default location if no TRAC_INI_PATH is set here
 RUN if [ -n "${TRAC_ADMIN_PATH}" -a -z "${TRAC_INI_PATH}" ]; then \
         cd $MIG_ROOT ; \
-        if [ "${PREFER_PYTHON3}" = "True" ]; then \
-            ln -s trac-py3.ini mig/server/trac.ini; \
-        else \
-            ln -s trac-py2.ini mig/server/trac.ini; \
-        fi; \
+        ln -s trac-py3.ini mig/server/trac.ini; \
+        [ ! -e "mig/images/site-logo-${EMULATE_FQDN}.png" ] || \
+        cp -a "mig/images/site-logo-${EMULATE_FQDN}.png" \
+            mig/images/site-logo.png ; \
     fi;
 
 
@@ -1349,12 +1313,10 @@ ARG EMULATE_FLAVOR
 ARG EMULATE_FQDN
 ARG ENABLE_SELF_SIGNED_CERTS
 ARG ENABLE_OPENID
-ARG WITH_PY3
-ARG PREFER_PYTHON3
+ARG ENABLE_DAVS
 ARG ENABLE_LOGROTATE
 ARG LOGROTATE_MIGRID
 ARG ENABLE_GDP
-ARG WITH_GIT
 ARG MIG_GIT_BRANCH
 ARG ENABLE_QUOTA
 ARG ENABLE_FREEZE
@@ -1378,7 +1340,7 @@ RUN cd $MIG_ROOT/mig/src/libnss-mig \
 # NOTE: both require openssl-devel to build and sslkeylog is only supported
 # on python 2.7.9+ and 3. The sslsession module generally builds but fails at
 # runtime when used with OpenSSL-1.1+, however.
-RUN if [ "${WITH_PY3}" = "True" ]; then \
+RUN if [ "${ENABLE_DAVS}" = "True" ]; then \
       cd $MIG_ROOT/mig/src/sslsession \
       && pip3 install --no-cache-dir . ; \
     fi;
@@ -1528,8 +1490,10 @@ RUN mv $WEB_DIR/conf.d/autoindex.conf $WEB_DIR/conf.d/autoindex.conf.disabled \
     && mv $WEB_DIR/conf.d/welcome.conf $WEB_DIR/conf.d/welcome.conf.disabled
 
 # Add generated certificate to trust store
-RUN update-ca-trust force-enable \
-    && cp ${CERT_DIR}/combined.pem ${OS_CA_CERT_SOURCE_PATH}/ \
+# TODO: we used 'force-enable' on Rocky9 but unsupported on Rocky10 - does this work?
+#RUN update-ca-trust force-enable \
+RUN update-ca-trust \
+    && cp ${CERT_DIR}/server.crt ${OS_CA_CERT_SOURCE_PATH}/ \
     && update-ca-trust extract
 
 # rsyslog: Disable systemd and enable /dev/log
@@ -1564,15 +1528,12 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       fi; \
     fi;
 
-# Install pylustrequota
+# Install lustreclient
 # NOTE: Requires py3 and git next branch
-RUN if [ "${ENABLE_QUOTA}" = "True" ] \
-            && [ "${PREFER_PYTHON3}" = "True" ] \
-            && [ "${WITH_GIT}" = "True" ] \
-            && [ "${MIG_GIT_BRANCH}" = "next" ]; then \
+RUN if [ "${ENABLE_QUOTA}" = "True" ]; then \
         if [ "${QUOTA_BACKEND}" = "lustre" ] \
             || [ "${QUOTA_BACKEND}" = "lustre-gocryptfs" ]; then \
-            echo "install pylustrequota" \
+            echo "install python lustreclient extensions" \
             && dnf update -y \
             && dnf --enablerepo=crb install -y \
             python3-devel.x86_64 \
@@ -1588,22 +1549,22 @@ RUN if [ "${ENABLE_QUOTA}" = "True" ] \
             krb5-devel.x86_64 \
             && dnf clean all \
             && rm -fr /var/cache/dnf \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota \
+            && cd ${MIG_ROOT}/mig/src/lustreclient \
             && git clone https://github.com/lustre/lustre-release \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release \
+            && cd ${MIG_ROOT}/mig/src/lustreclient/lustre-release \
             && git checkout ${QUOTA_LUSTRE_VERSION} \
             && sh ./autogen.sh \
             && ./configure --disable-server --enable-quota --enable-utils --enable-gss \
             && make undef.h \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release/libcfs/libcfs \
+            && cd ${MIG_ROOT}/mig/src/lustreclient/lustre-release/libcfs/libcfs \
             && make libcfs.la \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release/lnet/utils/lnetconfig \
+            && cd ${MIG_ROOT}/mig/src/lustreclient/lustre-release/lnet/utils/lnetconfig \
             && make liblnetconfig.la \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota/lustre-release/lustre/utils \
+            && cd ${MIG_ROOT}/mig/src/lustreclient/lustre-release/lustre/utils \
             && make liblustreapi.la \
-            && cd ${MIG_ROOT}/mig/src/pylustrequota \
+            && cd ${MIG_ROOT}/mig/src/lustreclient \
             && python3 -m pip install --use-pep517 . \
-            && rm -rf ${MIG_ROOT}/mig/src/pylustrequota/lustre-release; \
+            && rm -rf ${MIG_ROOT}/mig/src/lustreclient/lustre-release; \
         fi; \
     fi;
 #------------------------- next stage -----------------------------#
