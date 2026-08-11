@@ -321,7 +321,7 @@ COPY shell-aliases.sh /etc/profile.d/
 # https://superuser.com/questions/784451/centos-on-docker-how-to-install-doc-files
 RUN sed -i '/nodocs/d' /etc/dnf/dnf.conf
 
-# NOTE: Enable crb repo by default on rocky9 for cracklib-devel, sshfs, ...
+# NOTE: Enable crb repo by default on rocky9+ for cracklib-devel, sshfs, ...
 RUN dnf update -y \
     && dnf install -y epel-release dnf-plugins-core \
     && dnf config-manager --enable crb \
@@ -361,10 +361,10 @@ RUN dnf update -y \
     mercurial \
     openssh-server \
     openssh-clients \
+    openssl \
     rsyslog \
     rsyslog-gnutls \
     lsof \
-    # NOTE: python2 support is gone on rocky9+
     # NOTE: generally install cracklib from pip as yum/dnf doesn't have it
     #cracklib-python \
     cracklib-devel \
@@ -375,6 +375,7 @@ RUN dnf update -y \
     fail2ban \
     ipset \
     wget \
+    gnupg \
     patch \
     esmtp \
     && dnf clean all \
@@ -436,11 +437,10 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       echo "install GDP deps" \
       && dnf update -y \
       && dnf install -y \
-      # NOTE: python2 support is gone on rocky9+
       xorg-x11-server-Xvfb \
-      # NOTE: wkhtmltopdf not yet built for Rocky9
-      https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox-0.12.6-1.centos8.x86_64.rpm \
-      # NOTE: compat-openssl11.x86_64 is needed by Rocky8 version of wkhtmltopdf 
+      # NOTE: wkhtmltopdf built for almalinux9 should fit Rocky9
+      https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox-0.12.6.1-3.almalinux9.x86_64.rpm \
+      # TODO: is compat-openssl11.x86_64 still needed by Rocky9 version of wkhtmltopdf ?
       compat-openssl11.x86_64 \
       && dnf clean all \
       && rm -fr /var/cache/dnf; \
@@ -477,7 +477,7 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
         && dnf clean all \
         && rm -fr /var/cache/dnf \
         # NOTE: add EPEL CentOS 7 repos here but completely disabled
-        # NOTE: rocky9 switched from explicit version to variable expansion
+        # NOTE: rocky9+ switched from explicit version to variable expansion
         #      as in 9 - > $releasever
         && cat /etc/yum.repos.d/epel.repo | \
                 sed 's/\[epel/\[epel7/g;s/\(epel[a-z-]*\)-9/\1-7/g;s/\$releasever/7/g;s/enabled=1/enabled=0/g' \
@@ -762,6 +762,7 @@ RUN if [ "${ENABLE_SFTP}" = "True" -o "${ENABLE_SFTP_SUBSYS}" = "True" ]; then \
         # that in particular improve the SFTP download performance.
         # At the time of writing, the RHEL/Rocky 10 EPEL repo provides 3.5,
         # which we use as a version baseline to mimic.
+        # TODO: test if bcrypt fixes can be backported or wait for Rocky10?
         # However, combining that with recent bcrypt versions in the 4.x
         # series leads to import errors in mod_wsgi caused by the usage of
         # sub-interpreters as highlighted at
@@ -794,13 +795,13 @@ RUN if [ "${ENABLE_CRONTAB}" = "True" -o "${ENABLE_EVENTS}" = "True" ]; then \
 
 # Modules required by grid_webdavs
 RUN if [ "${ENABLE_DAVS}" = "True" ]; then \
-      # IMPORTANT: use at least 4.1 here to avoid a potential security issue 
-      # https://github.com/mar10/wsgidav/security/advisories/GHSA-xx6g-jj35-pxjv
+      # IMPORTANT: use at least 4.3.5 here to avoid a potential security issue
+      # https://github.com/mar10/wsgidav/security/advisories/GHSA-wm65-64rq-rh8r
       # IMPORTANT: use cheroot before 10.0.1 as it currently crashes webdavs
       #            One can trigger the crash with a simple testssl.sh run
       # TODO: investigate if the problem is in cheroot, wsgidav or migrid.
       # Prefer sslkeylog as session tracking helper in webdavs daemon.
-      pip3 install --no-cache-dir 'cheroot<10.0.1' 'wsgidav>=4.1.0'; \
+      pip3 install --no-cache-dir 'cheroot<10.0.1' 'wsgidav>=4.3.5'; \
       pip3 install --no-cache-dir sslkeylog ; \
     fi;
 
@@ -1197,12 +1198,15 @@ RUN ./generateconfs.py --source=. \
     # TODO: expose additional cloud conf including jumphost key and use here
     --enable_migadmin=${ENABLE_MIGADMIN} --enable_janitor=${ENABLE_JANITOR} \
     --enable_gdp=${ENABLE_GDP} --gdp_email_notify=${GDP_EMAIL_NOTIFY} \
-    --gdp_id_scramble=${GDP_ID_SCRAMBLE} --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
+    --gdp_id_scramble=${GDP_ID_SCRAMBLE} \
+    --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
     --enable_quota=${ENABLE_QUOTA} --quota_backend="${QUOTA_BACKEND}" \
     --quota_update_interval=${QUOTA_UPDATE_INTERVAL} \
     --enable_antislowloris=${ENABLE_ANTISLOWLORIS} \
-    --quota_user_limit=${QUOTA_USER_LIMIT} --quota_vgrid_limit=${QUOTA_VGRID_LIMIT} \
-    --enable_accounting=${ENABLE_ACCOUNTING} --accounting_update_interval=${ACCOUNTING_UPDATE_INTERVAL} \
+    --quota_user_limit=${QUOTA_USER_LIMIT} \
+    --quota_vgrid_limit=${QUOTA_VGRID_LIMIT} \
+    --enable_accounting=${ENABLE_ACCOUNTING} \
+    --accounting_update_interval=${ACCOUNTING_UPDATE_INTERVAL} \
     --storage_protocols="${STORAGE_PROTOCOLS}" \
     --wwwserve_max_bytes=${WWWSERVE_MAX_BYTES} \
     --password_policy=${MIG_PASSWORD_POLICY} \
