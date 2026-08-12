@@ -762,7 +762,8 @@ USER root
 RUN pip3 install --no-cache-dir jsonrpclib-pelix pysendfile iso3166
 
 # We still have legacy dependency on future which is not in Rocky10
-RUN pip3 install --no-cache-dir future
+# IMPORTANT: sftpsubsys relies on 'future' so prefix must be /usr here.
+RUN pip3 install --no-cache-dir --prefix=$(python3-config --prefix) future
 
 # NOTE: recent paramiko is required for modern host key algo
 RUN if [ "${ENABLE_SFTP}" = "True" -o "${ENABLE_SFTP_SUBSYS}" = "True" ]; then \
