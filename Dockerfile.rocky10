@@ -439,7 +439,7 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       xorg-x11-server-Xvfb \
       # NOTE: wkhtmltopdf not yet built for Rocky10 - try almalinux9 rpm
       https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox-0.12.6.1-3.almalinux9.x86_64.rpm \
-      # TODO: is compat-openssl11.x86_64 still needed by Rocky9 version of wkhtmltopdf?
+      # TODO: is compat-openssl11.x86_64 still needed by Rocky9 version of wkhtmltopdf ?
       #compat-openssl11.x86_64 \
       && dnf clean all \
       && rm -fr /var/cache/dnf; \
@@ -806,13 +806,13 @@ RUN if [ "${ENABLE_CRONTAB}" = "True" -o "${ENABLE_EVENTS}" = "True" ]; then \
 
 # Modules required by grid_webdavs
 RUN if [ "${ENABLE_DAVS}" = "True" ]; then \
-      # IMPORTANT: use at least 4.1 here to avoid a potential security issue 
-      # https://github.com/mar10/wsgidav/security/advisories/GHSA-xx6g-jj35-pxjv
+      # IMPORTANT: use at least 4.3.5 here to avoid a potential security issue
+      # https://github.com/mar10/wsgidav/security/advisories/GHSA-wm65-64rq-rh8r
       # IMPORTANT: use cheroot before 10.0.1 as it currently crashes webdavs
       #            One can trigger the crash with a simple testssl.sh run
       # TODO: investigate if the problem is in cheroot, wsgidav or migrid.
       # Prefer sslkeylog as session tracking helper in webdavs daemon.
-      pip3 install --no-cache-dir 'cheroot<10.0.1' 'wsgidav>=4.1.0'; \
+      pip3 install --no-cache-dir 'cheroot<10.0.1' 'wsgidav>=4.3.5'; \
       pip3 install --no-cache-dir sslkeylog ; \
     fi;
 
@@ -894,15 +894,24 @@ WORKDIR $MIG_ROOT
 USER $USER
 
 # Install and configure MiG
+# IMPORTANT: git does NOT really enforce any branch and revision match!
+#            We init to track upstream branch and then checkout rev to at least
+#            get any divergence warnings, but it happily switches to rev even
+#            if from a completely different branch. We show last log as well to
+#            help identify actual revision.
 # NOTE: git refuses to clone into non-empty dir - use tmp
 
-RUN git clone ${MIG_GIT_REPO} migrid.git && \
+RUN echo "Clone migrid: ${MIG_GIT_REPO} ${MIG_GIT_BRANCH} ${MIG_GIT_REV}" && \
+    git clone ${MIG_GIT_REPO} migrid.git && \
     cd migrid.git && \
     git checkout -B ${MIG_GIT_BRANCH} --track origin/${MIG_GIT_BRANCH} && \
-    git checkout ${MIG_GIT_REV} && cd .. && \
+    git checkout -B ${MIG_GIT_BRANCH} ${MIG_GIT_REV} && \
+    git log -n 1 && \
+    cd .. && \
     rsync -a migrid.git/ ./ && \
     rm -rf migrid.git/ && \
-    echo "migrid version: ${MIG_GIT_REPO} ${MIG_GIT_BRANCH} ${MIG_GIT_REV}" > ./active-migrid-version.txt
+    echo "migrid version: ${MIG_GIT_REPO} ${MIG_GIT_BRANCH} ${MIG_GIT_REV}" > \
+        ./active-migrid-version.txt
 
 
 #------------------------- next stage -----------------------------#
@@ -1209,12 +1218,15 @@ RUN ./generateconfs.py --source=. \
     # TODO: expose additional cloud conf including jumphost key and use here
     --enable_migadmin=${ENABLE_MIGADMIN} --enable_janitor=${ENABLE_JANITOR} \
     --enable_gdp=${ENABLE_GDP} --gdp_email_notify=${GDP_EMAIL_NOTIFY} \
-    --gdp_id_scramble=${GDP_ID_SCRAMBLE} --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
+    --gdp_id_scramble=${GDP_ID_SCRAMBLE} \
+    --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
     --enable_quota=${ENABLE_QUOTA} --quota_backend="${QUOTA_BACKEND}" \
     --quota_update_interval=${QUOTA_UPDATE_INTERVAL} \
     --enable_antislowloris=${ENABLE_ANTISLOWLORIS} \
-    --quota_user_limit=${QUOTA_USER_LIMIT} --quota_vgrid_limit=${QUOTA_VGRID_LIMIT} \
-    --enable_accounting=${ENABLE_ACCOUNTING} --accounting_update_interval=${ACCOUNTING_UPDATE_INTERVAL} \
+    --quota_user_limit=${QUOTA_USER_LIMIT} \
+    --quota_vgrid_limit=${QUOTA_VGRID_LIMIT} \
+    --enable_accounting=${ENABLE_ACCOUNTING} \
+    --accounting_update_interval=${ACCOUNTING_UPDATE_INTERVAL} \
     --storage_protocols="${STORAGE_PROTOCOLS}" \
     --wwwserve_max_bytes=${WWWSERVE_MAX_BYTES} \
     --password_policy=${MIG_PASSWORD_POLICY} \
