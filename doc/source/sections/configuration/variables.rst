@@ -49,6 +49,9 @@ Variables
    * - SMTP_LISTEN_PORT
      - 25
      - Which local port for container SMTP process to listen on when using the devmail container as in the development env. Must be an integer below 65536 specifying a port which isn't already in use on the host. Should probably be kept in sync with `$SMTP_PORT`.
+   * - DNSPROXY_LISTEN_PORT
+     - 53
+     - Which local port for container DNS proxy helper process to listen on when using the devdns container as in the development env. Must be an integer below 65536 specifying a port which isn't already in use on the host. Probably needs to be set to a high port if running in podman rootless mode.
    * - TZ
      - Europe/Copenhagen
      - The timezone that is used inside the containers.

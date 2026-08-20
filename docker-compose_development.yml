@@ -21,7 +21,7 @@ services:
     image: ${CONTAINER_REGISTRY}/ruudud/devdns
     container_name: devdns
     ports:
-        - "127.0.0.1:53:53/udp"
+      - "127.0.0.1:${DNSPROXY_LISTEN_PORT}:53/udp"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
