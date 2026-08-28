@@ -399,8 +399,6 @@ RUN echo "install py3 deps" \
     # NOTE: openid mod not available on Rocky10 so install with pip if enabled
     #python3-openid \
     python3-pyOpenSSL \
-    # NOTE: lxml and libxslt-devel required to build python-openid2
-    python3-lxml \
     python3-pycurl \
     python3-PyYAML \
     # NOTE: we can just use native Cryptography and typing-extensions here
@@ -794,9 +792,6 @@ RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
         pip3 install --no-cache-dir "openstacksdk==${OPENSTACKSDK_VERSION_OVERRIDE}" ; \
       fi; \
     fi;
-
-# OpenID support in python (python-openid2 for py3) - use alternative from dnf 
-#RUN pip3 install --no-cache-dir python-openid2;
 
 # Modules required by grid_events.py and grid_cron.py
 # TODO: eliminate scandir now that it is built into os.scandir
