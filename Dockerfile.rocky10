@@ -237,7 +237,7 @@ ARG CLOUD_SERVICES=""
 ARG CLOUD_SERVICES_DESC="{}"
 
 #------------------------- first stage -----------------------------#
-FROM --platform=linux/$ARCH rockylinux/rockylinux:10 AS init
+FROM --platform=linux/$ARCH docker.io/rockylinux/rockylinux:10 AS init
 ARG UID
 ARG GID
 ARG DOMAIN
