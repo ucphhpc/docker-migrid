@@ -237,7 +237,7 @@ ARG CLOUD_SERVICES=""
 ARG CLOUD_SERVICES_DESC="{}"
 
 #------------------------- first stage -----------------------------#
-FROM --platform=linux/$ARCH docker.io/rockylinux/rockylinux:9 AS init
+FROM --platform=linux/$ARCH docker.io/rockylinux/rockylinux:10 AS init
 ARG UID
 ARG GID
 ARG DOMAIN
@@ -377,7 +377,8 @@ RUN dnf update -y \
     wget \
     gnupg \
     patch \
-    esmtp \
+    # NOTE: esmtp is not available for Rocky10, try msmtp instead
+    msmtp \
     && dnf clean all \
     && rm -fr /var/cache/dnf
 
@@ -392,20 +393,17 @@ RUN echo "install py3 deps" \
     python3-requests \
     python3-psutil \
     python3-email-validator \
-    python3-future \
+    # NOTE: future mod not available on Rocky10 so install with pip
+    #python3-future \
     python3-cffi \
-    python3-openid \
+    # NOTE: openid mod not available on Rocky10 so install with pip if enabled
+    #python3-openid \
     python3-pyOpenSSL \
     python3-pycurl \
     python3-PyYAML \
     # NOTE: we can just use native Cryptography and typing-extensions here
     python3-cryptography \
     python3-typing-extensions \
-    # Patch python3-openid until our pull request makes it to the Rocky repo
-    && echo "Pull python3 openid patch from own repo" \
-    && wget -q -O /tmp/python3-openid-assoc_handle.patch.diff https://raw.githubusercontent.com/ucphhpc/docker-migrid/master/patches/python3-openid-assoc_handle.patch.diff \
-    && patch -p 0 /usr/lib/python3.9/site-packages/openid/server/server.py < /tmp/python3-openid-assoc_handle.patch.diff \
-    && rm -f /tmp/python3-openid-assoc_handle.patch.diff \
     # NOTE: only install default paramiko if upgrade not requested
     && [ "${UPGRADE_PARAMIKO}" = "True" ] || dnf install -y python3-paramiko \
     # NOTE: only install default openstack client if upgrade not requested
@@ -413,15 +411,16 @@ RUN echo "install py3 deps" \
     && dnf clean all \
     && rm -fr /var/cache/dnf;
 
-# Containers have esmtp installed by default but we explicitly include it above
+# TODO: test if this dumb search/replace of old esmtp setup works
+# Containers have msmtp installed by default but we explicitly include it above
 # and configure it for host SMTP delivery for cronjobs etc to be able to route
 # mail outside containers.
 RUN if [ -n "${SMTP_SERVER}" ]; then \
       [ -z "${SMTP_PORT}" ] && SMTP_PORT=25; \
-      echo "# Simple SMTP setup to route all local mail to host SMTP" > /etc/esmtprc \
-      && echo "hostname ${SMTP_SERVER}:${SMTP_PORT}" >> /etc/esmtprc \
-      && echo "qualifydomain ${DOMAIN}" >> /etc/esmtprc \
-      && echo "force reverse_path %u@${DOMAIN}" >> /etc/esmtprc ; \
+      echo "# Simple SMTP setup to route all local mail to host SMTP" > /etc/msmtprc \
+      && echo "hostname ${SMTP_SERVER}:${SMTP_PORT}" >> /etc/msmtprc \
+      && echo "qualifydomain ${DOMAIN}" >> /etc/msmtprc \
+      && echo "force reverse_path %u@${DOMAIN}" >> /etc/msmtprc ; \
     fi
 
 # NOTE: python extensions libpam and libnss need matching python-config
@@ -436,10 +435,10 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       && dnf update -y \
       && dnf install -y \
       xorg-x11-server-Xvfb \
-      # NOTE: wkhtmltopdf built for almalinux9 should fit Rocky9
+      # NOTE: wkhtmltopdf not yet built for Rocky10 - try almalinux9 rpm
       https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox-0.12.6.1-3.almalinux9.x86_64.rpm \
       # TODO: is compat-openssl11.x86_64 still needed by Rocky9 version of wkhtmltopdf ?
-      compat-openssl11.x86_64 \
+      #compat-openssl11.x86_64 \
       && dnf clean all \
       && rm -fr /var/cache/dnf; \
       echo "install py3 deps" && \
@@ -452,7 +451,9 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
 
 # Build Apache OpenID (provided by epel for centos7) 
 RUN if [ "$ENABLE_OPENID" = "True" ]; then \
-        echo "building mod_auth_openid from centos7 source rpm" \
+        # Install python3-openid from pip as it is not available in Rocky10
+        pip3 install --no-cache-dir python3-openid; \
+        echo "prepare building mod_auth_openid from epel7 source rpm" \
         && dnf update -y \
         && dnf install -y gcc-c++ \
             rpm-build \
@@ -463,7 +464,8 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
             httpd-devel \
             libcurl-devel \
             libtidy-devel \
-            pcre-devel \
+            # NOTE: Rocky10 has pcre2-devel but libopkele demands pcre-devel
+            #pcre-devel \
             openssl-devel \
             libtool \
             sqlite-devel \
@@ -476,11 +478,23 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
         && rm -fr /var/cache/dnf \
         # NOTE: add EPEL CentOS 7 repos here but completely disabled
         # NOTE: rocky9+ switched from explicit version to variable expansion
-        #      as in 9 - > $releasever
+        #         as in 10 - > $releasever
+        #       rocky10 repo sources also need pruning of
+        #         epel${releasever_minor:+-z} -> epel
         && cat /etc/yum.repos.d/epel.repo | \
-                sed 's/\[epel/\[epel7/g;s/\(epel[a-z-]*\)-9/\1-7/g;s/\$releasever/7/g;s/enabled=1/enabled=0/g' \
-                > /etc/yum.repos.d/epel7.repo \
-        && echo "build libopkele from centos7 source rpm" \
+                sed 's/\[epel/\[epel7/g;s/epel\${releasever_minor.*}/epel/g;s/\$releasever/7/g;s/enabled=1/enabled=0/g' \
+                > /etc/yum.repos.d/epel7.repo ; \
+        # TODO: instead add disabled rocky9 repo too and only use for these?
+        echo "install old Rocky 9 pcre packages for libopkele build" \
+        && dnf install -y \
+            https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/appstream/os/Packages/p/pcre-utf16-8.44-4.el9.x86_64.rpm \
+            https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/appstream/os/Packages/p/pcre-utf32-8.44-4.el9.x86_64.rpm \
+            https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/appstream/os/Packages/p/pcre-cpp-8.44-4.el9.x86_64.rpm \
+            https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/baseos/os/Packages/p/pcre-8.44-4.el9.x86_64.rpm \
+            https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi9/9/x86_64/appstream/os/Packages/p/pcre-devel-8.44-4.el9.x86_64.rpm \
+        && dnf clean all \
+        && rm -fr /var/cache/dnf \
+        && echo "install libopkele from epel7 source rpm" \
         # NOTE: avoid hard-coded version using yumdownloader from yum-utils
         && yumdownloader -y --enablerepo=epel7-source --source --resolve --destdir /root/rpmbuild/SRPMS libopkele \
         && rpm -ivh /root/rpmbuild/SRPMS/libopkele-*.src.rpm \
@@ -495,7 +509,7 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
         && rm -f /root/rpmbuild/RPMS/*/libopkele-*debug*.rpm \
         #&& dnf erase -y 'libopkele-*' \
         && dnf install -y /root/rpmbuild/RPMS/*/libopkele-*.rpm \
-        && echo "install mod_auth_openid centos7 source rpm" \
+        && echo "install mod_auth_openid epel7 source rpm" \
         #&& rpm -e --nodeps mod_auth_openid \
         # NOTE: avoid hard-coded version using yumdownloader from yum-utils
         && yumdownloader -y --enablerepo=epel7-source --source --resolve --destdir /root/rpmbuild/SRPMS mod_auth_openid \
@@ -523,7 +537,7 @@ RUN echo "UPGRADE_MOD_AUTH_OPENIDC: $UPGRADE_MOD_AUTH_OPENIDC"
 RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
         if [ -z "${UPGRADE_OIDC_AUTH_MOD_SRC}" ]; then \
 		echo "upgrading mod_auth_openidc from upstream release package"; \
-		UPGRADE_OIDC_AUTH_MOD_SRC="https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.20.3/mod_auth_openidc-2.4.20.3-1.el9.x86_64.rpm"; \
+		UPGRADE_OIDC_AUTH_MOD_SRC="https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.20.3/mod_auth_openidc-2.4.20.3-1.el10.x86_64.rpm"; \
 	else \
 		echo "upgrading mod_auth_openidc from ${UPGRADE_OIDC_AUTH_MOD_SRC}"; \
 	fi; \ 
@@ -532,7 +546,7 @@ RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
 		#echo "installing cjose dependency from OS package"; \
 		#UPGRADE_OIDC_CJOSE_SRC="cjose"; \
 		echo "upgrading cjose from upstream release package"; \
-		UPGRADE_OIDC_CJOSE_SRC="https://github.com/OpenIDC/cjose/releases/download/v0.6.2.7/cjose-0.6.2.7-1.el9.x86_64.rpm"; \
+		UPGRADE_OIDC_CJOSE_SRC="https://github.com/OpenIDC/cjose/releases/download/v0.6.2.7/cjose-0.6.2.7-1.el10.x86_64.rpm"; \
 	else \
 		echo "upgrading cjose from ${UPGRADE_OIDC_CJOSE_SRC}"; \
 	fi; \
@@ -708,7 +722,9 @@ RUN mkdir -p MiG-certificates \
 USER root
 WORKDIR /tmp
 # Copy in any external certificates that should be part of the OS trusted ca bundle
-RUN update-ca-trust force-enable
+# TODO: we used 'force-enable' on Rocky9 but unsupported on Rocky10 - does this work?
+#RUN update-ca-trust force-enable
+RUN update-ca-trust
 COPY external-certificates/ ${OS_CA_CERT_SOURCE_PATH}/
 RUN update-ca-trust extract
 
@@ -743,6 +759,10 @@ USER root
 #       and iso3166 for smart country selection
 RUN pip3 install --no-cache-dir jsonrpclib-pelix pysendfile iso3166
 
+# We still have legacy dependency on future which is not in Rocky10
+# IMPORTANT: sftpsubsys relies on 'future' so prefix must be /usr here.
+RUN pip3 install --no-cache-dir --prefix=$(python3-config --prefix) future
+
 # NOTE: recent paramiko is required for modern host key algo
 RUN if [ "${ENABLE_SFTP}" = "True" -o "${ENABLE_SFTP_SUBSYS}" = "True" ]; then \
       if [ "${UPGRADE_PARAMIKO}" = "True" ]; then \
@@ -759,18 +779,9 @@ RUN if [ "${ENABLE_SFTP}" = "True" -o "${ENABLE_SFTP_SUBSYS}" = "True" ]; then \
         # Additional NOTE: paramiko version 3.x introduces several changes
         # that in particular improve the SFTP download performance.
         # At the time of writing, the RHEL/Rocky 10 EPEL repo provides 3.5,
-        # which we use as a version baseline to mimic.
-        # TODO: test if bcrypt fixes can be backported or wait for Rocky10?
-        # However, combining that with recent bcrypt versions in the 4.x
-        # series leads to import errors in mod_wsgi caused by the usage of
-        # sub-interpreters as highlighted at
-        # https://github.com/PyO3/pyo3/blob/main/guide/src/migration.md#each-pymodule-can-now-only-be-initialized-once-per-process
-        # with further explanation at
-        # https://bugzilla.redhat.com/show_bug.cgi?id=2255688 and
-        # https://github.com/PyO3/pyo3/issues/3451
-        # So we explicitly cap the bcrypt version to the latest 3.2 one,
-        # which coincides with the default Rocky version, btw.
-        pip3 install --no-cache-dir --prefix=$(python3-config --prefix) 'paramiko>=3.5' 'bcrypt<4'; \
+        # which we used as a version baseline to mimic in Rocky9 but skip now.
+        # TODO: test and drop bcrypt version cap if issues are solved here
+        pip3 install --no-cache-dir --prefix=$(python3-config --prefix) paramiko; \
       fi; \
     fi;
 
@@ -1496,7 +1507,9 @@ RUN mv $WEB_DIR/conf.d/autoindex.conf $WEB_DIR/conf.d/autoindex.conf.disabled \
     && mv $WEB_DIR/conf.d/welcome.conf $WEB_DIR/conf.d/welcome.conf.disabled
 
 # Add generated certificate to trust store
-RUN update-ca-trust force-enable \
+# TODO: we used 'force-enable' on Rocky9 but unsupported on Rocky10 - does this work?
+#RUN update-ca-trust force-enable \
+RUN update-ca-trust \
     && cp ${CERT_DIR}/server.crt ${OS_CA_CERT_SOURCE_PATH}/ \
     && update-ca-trust extract
 
