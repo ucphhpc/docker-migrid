@@ -18,7 +18,7 @@ services:
           - mail.migrid.test
 
   devdns:
-    image: ${CONTAINER_REGISTRY}/ruudud/devdns
+    image: ${CONTAINER_REGISTRY}/lmendelowski/devdns
     container_name: devdns
     ports:
         - "127.0.0.1:53:53/udp"
