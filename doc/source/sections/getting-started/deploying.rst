@@ -11,20 +11,25 @@ To stop the services, execute the following command::
 
     make down
 
-After this command has been executed successfully it should have launched the 4 following containers::
+After this command has been executed successfully it should have launched the following containers::
 
-    CONTAINER ID   IMAGE                            COMMAND                  CREATED         STATUS         PORTS                                                                                                                                                                                                                                            NAMES
-    419e4ede2af3   ucphhpc/migrid:basic           "/tini -- /app/docke…"   4 minutes ago   Up 4 minutes   80/tcp, 0.0.0.0:2222->2222/tcp, :::2222->2222/tcp, 0.0.0.0:4443->4443/tcp, :::4443->4443/tcp, 0.0.0.0:8021->8021/tcp, :::8021->8021/tcp, 0.0.0.0:8443->8443/tcp, :::8443->8443/tcp, 443-448/tcp, 0.0.0.0:22222->22222/tcp, :::22222->22222/tcp   migrid-io
-    c06b70410fa7   jwilder/nginx-proxy              "/app/docker-entrypo…"   4 minutes ago   Up 4 minutes   0.0.0.0:80->80/tcp, :::80->80/tcp, 0.0.0.0:443-448->443-448/tcp, :::443-448->443-448/tcp                                                                                                                                                         nginx-proxy
-    604bbebc6088   ucphhpc/migrid:basic           "/tini -- /app/docke…"   4 minutes ago   Up 4 minutes   80/tcp, 443-448/tcp, 2222/tcp, 4443/tcp, 8021/tcp, 22222/tcp                                                                                                                                                                                     migrid
-    6df1818e879c   ruudud/devdns                    "/run.sh"                4 minutes ago   Up 4 minutes   127.0.0.1:53->53/udp                                                                                                                                                                                                                             devdns
+    CONTAINER ID   IMAGE                   COMMAND                  CREATED        STATUS                       PORTS                                                                                                                                                              NAMES
+    337cae2e6471   jwilder/nginx-proxy     "/app/docker-entrypo…"   20 hours ago   Up About an hour             0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:443-448->443-448/tcp, [::]:443-448->443-448/tcp                                                                       nginx-proxy
+    c4724837c7d2   ucphhpc/migrid:latest   "/tini -- /app/docke…"   20 hours ago   Up About an hour             80/tcp, 443-449/tcp, 2222/tcp, 0.0.0.0:8021->8021/tcp, [::]:8021->8021/tcp, 4443/tcp, 22222/tcp, 0.0.0.0:8100-8399->8100-8399/tcp, [::]:8100-8399->8100-8399/tcp   migrid-ftps
+    7cb4de0150aa   ucphhpc/migrid:latest   "/tini -- /app/docke…"   20 hours ago   Up About an hour             80/tcp, 443-449/tcp, 2222/tcp, 4443/tcp, 8021/tcp, 22222/tcp                                                                                                       migrid
+    ac97198536d4   ucphhpc/migrid:latest   "/tini -- /app/docke…"   20 hours ago   Up About an hour             80/tcp, 443-449/tcp, 4443/tcp, 0.0.0.0:2222->2222/tcp, [::]:2222->2222/tcp, 8021/tcp, 0.0.0.0:22222->22222/tcp, [::]:22222->22222/tcp                              migrid-sftp
+    82975e100876   ucphhpc/migrid:latest   "/tini -- /app/docke…"   20 hours ago   Up About an hour             80/tcp, 443-449/tcp, 2222/tcp, 4443/tcp, 8021/tcp, 22222/tcp, 0.0.0.0:8443->8443/tcp, [::]:8443->8443/tcp                                                          migrid-openid
+    730dae7352a7   ucphhpc/migrid:latest   "/tini -- /app/docke…"   20 hours ago   Up About an hour             80/tcp, 443-449/tcp, 2222/tcp, 8021/tcp, 22222/tcp, 0.0.0.0:4443->4443/tcp, [::]:4443->4443/tcp                                                                    migrid-webdavs
+    3d4ec5f5158a   mwader/postfix-relay    "/root/run"              20 hours ago   Up About an hour (healthy)   127.0.0.1:2525->25/tcp                                                                                                                                             devmail
+    42e818a14b9e   lmendelowski/devdns     "/run.sh"                20 hours ago   Up About an hour             127.0.0.1:53->53/udp                                                                                                                                               devdns
 
 DNS setup for development
 -------------------------
 
 Before your host will be able to discover the various migrid services, it needs to know
 that it should ask the `devdns` container for the IP associated with those service containers.
-Therefore, you need to apply one of the options listed in the (Host Machine -> Containers) section at `DevDNS <https://github.com/ruudud/devdns>`_.
+Therefore, you need to apply one of the options listed in the (Host Machine -> Containers)
+section at `DevDNS <https://github.com/lcmen/devdns#host-machine--containers>`_.
 
 We recommend the least invasive method, namely to reconfigure the host machine's resolv.conf (in the case of a Unix-like system)
 such that it asks the localhost devdns container as the **(IMPORTANT) first nameserver** before any other nameserver::
