@@ -31,6 +31,11 @@ that it should ask the `devdns` container for the IP associated with those servi
 Therefore, you need to apply one of the options listed in the (Host Machine -> Containers)
 section at `DevDNS <https://github.com/lcmen/devdns#host-machine--containers>`_.
 
+.. note::
+    We have decided to use the fork linked above instead of the original repository
+    (https://github.com/ruudud/devdns) that was apparently abandoned, since the docker client
+    the original uses is outdated.
+
 We recommend the least invasive method, namely to reconfigure the host machine's resolv.conf (in the case of a Unix-like system)
 such that it asks the localhost devdns container as the **(IMPORTANT) first nameserver** before any other nameserver::
 
