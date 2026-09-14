@@ -490,6 +490,12 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
         && wget -q -O /root/rpmbuild/SOURCES/fix-openssl-1.1.0.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-openssl-1.1.0.diff \
         # Pull patch from own repo to rpmbuild with Debian patches on rocky8+ (local copy in patches)
         && wget -q -O /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff https://github.com/ucphhpc/docker-migrid/raw/master/patches/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff \
+        # TODO: is this security crippling needed or a matter of proper apache proxying?
+        # Disable Apache OpenID ssl-certificate verification if self-signed
+        # (recompile libopkele with --disable-ssl-verify-host --disable-ssl-verify-peer)
+        && if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
+            echo "Re-building libopkele with ssl verification disabled"; \
+            sed -i 's/^%configure$/%configure --disable-ssl-verify-host --disable-ssl-verify-peer/g' /root/rpmbuild/SPECS/libopkele.spec; fi \
         && cd /root && patch -p 0 < /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff && cd - \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
         && rm -f /root/rpmbuild/RPMS/*/libopkele-*debug*.rpm \
