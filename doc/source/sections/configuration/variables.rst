@@ -38,7 +38,7 @@ Variables
      - test@external.domain
      - The username of the optional test user. Used by the development environments for tests.
    * - MIG_TEST_USER_PASSWORD
-     - TestPw0rd
+     - test-passphrase
      - The password for the optional test user. Used by the development environments for tests.
    * - SMTP_SERVER
      - localhost
