@@ -423,8 +423,8 @@ Variables
      - False
      - Enable the built-in Server Admin feature for web based management of external user, log inspection, etc.
    * - ENABLE_JANITOR
-     - False
-     - Enable the built-in janitor service to handle recurring tasks like clean up and cache update
+     - True
+     - Enable the built-in janitor service to handle recurring tasks like rejecting invalid account requests, accepting valid password changes, clean up and cache updates.
    * - ENABLE_QUOTA
      - False
      - Enable additional storage quota daemon if fundamentally enabled with the QUOTA_X variables.
