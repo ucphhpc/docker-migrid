@@ -116,8 +116,7 @@ ARG CLOUD_ACCESS=cloud-access.yaml
 ARG CLOUD_JUMPHOST_KEY=cloud-jumphost-key
 ARG OPENSTACKSDK_VERSION_OVERRIDE=
 ARG ENABLE_MIGADMIN=False
-# We leave janitor disabled by default for now to allow more testing
-ARG ENABLE_JANITOR=False
+ARG ENABLE_JANITOR=True
 ARG ENABLE_GDP=False
 ARG ENABLE_TWOFACTOR=True
 ARG ENABLE_TWOFACTOR_STRICT_ADDRESS=False
@@ -130,7 +129,8 @@ ARG PEERS_MANDATORY=False
 ARG PEERS_EXPLICIT_FIELDS=""
 ARG PEERS_CONTACT_HINT="authorized to invite you as peer"
 ARG ENABLE_SELF_SIGNED_CERTS=False
-ARG MIG_PASSWORD_POLICY="MEDIUM"
+ARG MIG_PASSWORD_POLICY="MODERN:15"
+ARG MIG_PASSWORD_LEGACY_POLICY=""
 ARG ENABLE_LOGROTATE="False"
 # TODO: logrotate conf needs to be adjusted to the manual docker service launch 
 #ARG LOGROTATE_MIGRID="True"
@@ -504,6 +504,12 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
         && wget -q -O /root/rpmbuild/SOURCES/fix-openssl-1.1.0.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-openssl-1.1.0.diff \
         # Pull patch from own repo to rpmbuild with Debian patches on rocky8+ (local copy in patches)
         && wget -q -O /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff https://github.com/ucphhpc/docker-migrid/raw/master/patches/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff \
+        # TODO: is this security crippling needed or a matter of proper apache proxying?
+        # Disable Apache OpenID ssl-certificate verification if self-signed
+        # (recompile libopkele with --disable-ssl-verify-host --disable-ssl-verify-peer)
+        && if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
+            echo "Re-building libopkele with ssl verification disabled"; \
+            sed -i 's/^%configure$/%configure --disable-ssl-verify-host --disable-ssl-verify-peer/g' /root/rpmbuild/SPECS/libopkele.spec; fi \
         && cd /root && patch -p 0 < /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff && cd - \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
         && rm -f /root/rpmbuild/RPMS/*/libopkele-*debug*.rpm \
@@ -1019,6 +1025,7 @@ ARG PEERS_MANDATORY
 ARG PEERS_EXPLICIT_FIELDS
 ARG PEERS_CONTACT_HINT
 ARG MIG_PASSWORD_POLICY
+ARG MIG_PASSWORD_LEGACY_POLICY
 ARG PUBKEY_FROM_DNS
 ARG SIGNUP_METHODS
 ARG LOGIN_METHODS
@@ -1225,6 +1232,7 @@ RUN ./generateconfs.py --source=. \
     --storage_protocols="${STORAGE_PROTOCOLS}" \
     --wwwserve_max_bytes=${WWWSERVE_MAX_BYTES} \
     --password_policy=${MIG_PASSWORD_POLICY} \
+    --password_legacy_policy=${MIG_PASSWORD_LEGACY_POLICY} \
     --jupyter_services="${JUPYTER_SERVICES}" \
     --jupyter_services_enable_proxy_https="${JUPYTER_SERVICES_ENABLE_PROXY_HTTPS}" \
     --jupyter_services_proxy_config="${JUPYTER_SERVICES_PROXY_CONFIG}" \
