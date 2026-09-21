@@ -1588,7 +1588,7 @@ ARG DOMAIN
 ARG TINI_VERSION=v0.18.0
 ARG TINI_CHECKSUM=sha256:12d20136605531b09a2c2dac02ccee85e1b874eb322ef6baf7561cd93f93c855
 ARG TINI_GPG_KEY=0527A9B7
-# NOTE: hadolit supports checksum arg since v14.x release so use it
+# NOTE: hadolint supports checksum arg since v14.x release so use it
 ADD --checksum=${TINI_CHECKSUM} https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini.asc /tini.asc
 # NOTE: some build environments with strict firewalling may not allow e.g. hkp.
