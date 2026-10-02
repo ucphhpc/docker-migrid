@@ -290,15 +290,16 @@ dockervolumeclean:
 		${DOCKER} volume rm -f $$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*'); \
 	fi
 
+# NOTE: prefix clean commands with minus ('-') to continue even if one fails
 clean:
-	rm -f docker-compose_shared.yml
-	rm -f migrid-httpd-init.sh
-	rm -fr ./mig
-	rm -fr ./httpd
-	rm -fr ./cache
+	-rm -f docker-compose_shared.yml
+	-rm -f migrid-httpd-init.sh
+	-rm -fr ./mig
+	-rm -fr ./httpd
+	-rm -fr ./cache
 	# NOTE: certs may be injected or symlink to externally maintained dir.
 	#       Only remove it here if that's not the case.
-	[ -L ./certs ] || [ -f ./certs/.persistent ] || rm -fr ./certs
+	-[ -L ./certs ] || [ -f ./certs/.persistent ] || rm -fr ./certs
 
 sitestateclean: wipesitestatewarning
 	rm -rf --one-file-system ./state
@@ -319,11 +320,12 @@ sitedataclean: wipesitedatawarning
 # IMPORTANT: this target is meant to reset the dir to a pristine checkout
 #            and thus runs full clean up of even the state dirs with user data
 #            Be careful NOT to use it on production systems!
+# NOTE: prefix clean commands with minus ('-') to continue even if one fails
 distclean: clean sitestateclean sitedataclean dockerclean dockervolumeclean
-	rm -fr ./external-certificates
+	-rm -fr ./external-certificates
 	# NOTE: certs remove in clean is conditional - always remove it here
-	rm -fr ./certs
-	rm -f .env docker-compose.yml Dockerfile
+	-rm -fr ./certs
+	-rm -f .env docker-compose.yml Dockerfile
 
 wipesitestatewarning:
 	@echo
