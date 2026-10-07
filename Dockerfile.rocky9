@@ -919,12 +919,12 @@ RUN if [ -e "$MIG_ROOT/envhelp/scripts/expand_sources.py" ]; then \
 RUN echo "Installing migrid-ux: ${ENABLE_MIGUX}"
 ENV FEATURE_MIGUX_REQUIREMENTS="$MIG_ROOT/mig/install/requirements/migux-requirements.txt"
 USER root
-RUN if [[ "${ENABLE_MIGUX}" == "True" && -e "${FEATURE_MIGUX_REQUIREMENTS}" ]]; then \
+RUN if [ "${ENABLE_MIGUX}" == "True" ] && [ -e "${FEATURE_MIGUX_REQUIREMENTS}" ]; then \
     python3 -m pip install -r "${FEATURE_MIGUX_REQUIREMENTS}"; fi
 
 USER $USER
 ENV FEATURE_MIGUX_POSTINSTALL="$MIG_ROOT/mig/install/postinstall/migux-postinstall"
-RUN if [[ "${ENABLE_MIGUX}" == "True" && -e "${FEATURE_MIGUX_POSTINSTALL}" ]]; then \
+RUN if [ "${ENABLE_MIGUX}" == "True" ] && [ -e "${FEATURE_MIGUX_POSTINSTALL}" ]; then \
     "${FEATURE_MIGUX_POSTINSTALL}"; fi
 
 #------------------------- next stage -----------------------------#
@@ -1302,7 +1302,7 @@ RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/index.html $MIG_ROOT/state/user_home/
 
 # With the configuration in hand, prime any configured templates
-RUN if [ "${ENABLE_MIGUX}" == "True" && -e "${FEATURE_MIGUX_REQUIREMENTS}" ]; then \
+RUN if [ "${ENABLE_MIGUX}" == "True" ] && [ -e "${FEATURE_MIGUX_REQUIREMENTS}" ]; then \
     python3 -m mig.lib.templates prime \
     -c $MIG_ROOT/mig/server/MiGserver.conf; fi
 
