@@ -374,3 +374,4 @@ pytest
 ruudud
 MIGUX
 migrid-ux
+ux
