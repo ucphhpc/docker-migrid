@@ -116,8 +116,7 @@ ARG CLOUD_ACCESS=cloud-access.yaml
 ARG CLOUD_JUMPHOST_KEY=cloud-jumphost-key
 ARG OPENSTACKSDK_VERSION_OVERRIDE=
 ARG ENABLE_MIGADMIN=False
-# We leave janitor disabled by default for now to allow more testing
-ARG ENABLE_JANITOR=False
+ARG ENABLE_JANITOR=True
 ARG ENABLE_GDP=False
 ARG ENABLE_TWOFACTOR=True
 ARG ENABLE_TWOFACTOR_STRICT_ADDRESS=False
@@ -130,7 +129,8 @@ ARG PEERS_MANDATORY=False
 ARG PEERS_EXPLICIT_FIELDS=""
 ARG PEERS_CONTACT_HINT="authorized to invite you as peer"
 ARG ENABLE_SELF_SIGNED_CERTS=False
-ARG MIG_PASSWORD_POLICY="MEDIUM"
+ARG MIG_PASSWORD_POLICY="MODERN:15"
+ARG MIG_PASSWORD_LEGACY_POLICY=""
 ARG ENABLE_LOGROTATE="False"
 # TODO: logrotate conf needs to be adjusted to the manual docker service launch 
 #ARG LOGROTATE_MIGRID="True"
@@ -237,7 +237,7 @@ ARG CLOUD_SERVICES=""
 ARG CLOUD_SERVICES_DESC="{}"
 
 #------------------------- first stage -----------------------------#
-FROM --platform=linux/$ARCH rockylinux:9 AS init
+FROM --platform=linux/$ARCH docker.io/rockylinux/rockylinux:9 AS init
 ARG UID
 ARG GID
 ARG DOMAIN
@@ -321,7 +321,7 @@ COPY shell-aliases.sh /etc/profile.d/
 # https://superuser.com/questions/784451/centos-on-docker-how-to-install-doc-files
 RUN sed -i '/nodocs/d' /etc/dnf/dnf.conf
 
-# NOTE: Enable crb repo by default on rocky9 for cracklib-devel, sshfs, ...
+# NOTE: Enable crb repo by default on rocky9+ for cracklib-devel, sshfs, ...
 RUN dnf update -y \
     && dnf install -y epel-release dnf-plugins-core \
     && dnf config-manager --enable crb \
@@ -361,10 +361,10 @@ RUN dnf update -y \
     mercurial \
     openssh-server \
     openssh-clients \
+    openssl \
     rsyslog \
     rsyslog-gnutls \
     lsof \
-    # NOTE: python2 support is gone on rocky9+
     # NOTE: generally install cracklib from pip as yum/dnf doesn't have it
     #cracklib-python \
     cracklib-devel \
@@ -375,6 +375,7 @@ RUN dnf update -y \
     fail2ban \
     ipset \
     wget \
+    gnupg \
     patch \
     esmtp \
     && dnf clean all \
@@ -395,8 +396,6 @@ RUN echo "install py3 deps" \
     python3-cffi \
     python3-openid \
     python3-pyOpenSSL \
-    # NOTE: lxml and libxslt-devel required to build python-openid2
-    python3-lxml \
     python3-pycurl \
     python3-PyYAML \
     # NOTE: we can just use native Cryptography and typing-extensions here
@@ -436,11 +435,10 @@ RUN if [ "${ENABLE_GDP}" = "True" ]; then \
       echo "install GDP deps" \
       && dnf update -y \
       && dnf install -y \
-      # NOTE: python2 support is gone on rocky9+
       xorg-x11-server-Xvfb \
-      # NOTE: wkhtmltopdf not yet built for Rocky9
-      https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox-0.12.6-1.centos8.x86_64.rpm \
-      # NOTE: compat-openssl11.x86_64 is needed by Rocky8 version of wkhtmltopdf 
+      # NOTE: wkhtmltopdf built for almalinux9 should fit Rocky9
+      https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox-0.12.6.1-3.almalinux9.x86_64.rpm \
+      # TODO: is compat-openssl11.x86_64 still needed by Rocky9 version of wkhtmltopdf ?
       compat-openssl11.x86_64 \
       && dnf clean all \
       && rm -fr /var/cache/dnf; \
@@ -477,7 +475,7 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
         && dnf clean all \
         && rm -fr /var/cache/dnf \
         # NOTE: add EPEL CentOS 7 repos here but completely disabled
-        # NOTE: rocky9 switched from explicit version to variable expansion
+        # NOTE: rocky9+ switched from explicit version to variable expansion
         #      as in 9 - > $releasever
         && cat /etc/yum.repos.d/epel.repo | \
                 sed 's/\[epel/\[epel7/g;s/\(epel[a-z-]*\)-9/\1-7/g;s/\$releasever/7/g;s/enabled=1/enabled=0/g' \
@@ -492,6 +490,12 @@ RUN if [ "$ENABLE_OPENID" = "True" ]; then \
         && wget -q -O /root/rpmbuild/SOURCES/fix-openssl-1.1.0.diff https://sources.debian.org/data/main/libo/libopkele/2.0.4%2Bgit20140305.9651b55-4/debian/patches/fix-openssl-1.1.0.diff \
         # Pull patch from own repo to rpmbuild with Debian patches on rocky8+ (local copy in patches)
         && wget -q -O /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff https://github.com/ucphhpc/docker-migrid/raw/master/patches/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff \
+        # TODO: is this security crippling needed or a matter of proper apache proxying?
+        # Disable Apache OpenID ssl-certificate verification if self-signed
+        # (recompile libopkele with --disable-ssl-verify-host --disable-ssl-verify-peer)
+        && if [ "$ENABLE_SELF_SIGNED_CERTS" = "True" ]; then \
+            echo "Re-building libopkele with ssl verification disabled"; \
+            sed -i 's/^%configure$/%configure --disable-ssl-verify-host --disable-ssl-verify-peer/g' /root/rpmbuild/SPECS/libopkele.spec; fi \
         && cd /root && patch -p 0 < /tmp/rpmbuild-opkele-with-gcc4.9-openssl-1.1.0-patches.diff && cd - \
         && rpmbuild -v -ba /root/rpmbuild/SPECS/libopkele.spec \
         && rm -f /root/rpmbuild/RPMS/*/libopkele-*debug*.rpm \
@@ -525,7 +529,7 @@ RUN echo "UPGRADE_MOD_AUTH_OPENIDC: $UPGRADE_MOD_AUTH_OPENIDC"
 RUN if [ "$UPGRADE_MOD_AUTH_OPENIDC" = "True" ]; then \
         if [ -z "${UPGRADE_OIDC_AUTH_MOD_SRC}" ]; then \
 		echo "upgrading mod_auth_openidc from upstream release package"; \
-		UPGRADE_OIDC_AUTH_MOD_SRC="https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.19.4/mod_auth_openidc-2.4.19.4-1.el9.x86_64.rpm"; \
+		UPGRADE_OIDC_AUTH_MOD_SRC="https://github.com/OpenIDC/mod_auth_openidc/releases/download/v2.4.20.3/mod_auth_openidc-2.4.20.3-1.el9.x86_64.rpm"; \
 	else \
 		echo "upgrading mod_auth_openidc from ${UPGRADE_OIDC_AUTH_MOD_SRC}"; \
 	fi; \ 
@@ -762,6 +766,7 @@ RUN if [ "${ENABLE_SFTP}" = "True" -o "${ENABLE_SFTP_SUBSYS}" = "True" ]; then \
         # that in particular improve the SFTP download performance.
         # At the time of writing, the RHEL/Rocky 10 EPEL repo provides 3.5,
         # which we use as a version baseline to mimic.
+        # TODO: test if bcrypt fixes can be backported or wait for Rocky10?
         # However, combining that with recent bcrypt versions in the 4.x
         # series leads to import errors in mod_wsgi caused by the usage of
         # sub-interpreters as highlighted at
@@ -783,9 +788,6 @@ RUN if [ "${ENABLE_CLOUD}" = "True" ]; then \
       fi; \
     fi;
 
-# OpenID support in python (python-openid2 for py3) - use alternative from dnf 
-#RUN pip3 install --no-cache-dir python-openid2;
-
 # Modules required by grid_events.py and grid_cron.py
 # TODO: eliminate scandir now that it is built into os.scandir
 RUN if [ "${ENABLE_CRONTAB}" = "True" -o "${ENABLE_EVENTS}" = "True" ]; then \
@@ -794,13 +796,13 @@ RUN if [ "${ENABLE_CRONTAB}" = "True" -o "${ENABLE_EVENTS}" = "True" ]; then \
 
 # Modules required by grid_webdavs
 RUN if [ "${ENABLE_DAVS}" = "True" ]; then \
-      # IMPORTANT: use at least 4.1 here to avoid a potential security issue 
-      # https://github.com/mar10/wsgidav/security/advisories/GHSA-xx6g-jj35-pxjv
+      # IMPORTANT: use at least 4.3.5 here to avoid a potential security issue
+      # https://github.com/mar10/wsgidav/security/advisories/GHSA-wm65-64rq-rh8r
       # IMPORTANT: use cheroot before 10.0.1 as it currently crashes webdavs
       #            One can trigger the crash with a simple testssl.sh run
       # TODO: investigate if the problem is in cheroot, wsgidav or migrid.
       # Prefer sslkeylog as session tracking helper in webdavs daemon.
-      pip3 install --no-cache-dir 'cheroot<10.0.1' 'wsgidav>=4.1.0'; \
+      pip3 install --no-cache-dir 'cheroot<10.0.1' 'wsgidav>=4.3.5'; \
       pip3 install --no-cache-dir sslkeylog ; \
     fi;
 
@@ -882,15 +884,24 @@ WORKDIR $MIG_ROOT
 USER $USER
 
 # Install and configure MiG
+# IMPORTANT: git does NOT really enforce any branch and revision match!
+#            We init to track upstream branch and then checkout rev to at least
+#            get any divergence warnings, but it happily switches to rev even
+#            if from a completely different branch. We show last log as well to
+#            help identify actual revision.
 # NOTE: git refuses to clone into non-empty dir - use tmp
 
-RUN git clone ${MIG_GIT_REPO} migrid.git && \
+RUN echo "Clone migrid: ${MIG_GIT_REPO} ${MIG_GIT_BRANCH} ${MIG_GIT_REV}" && \
+    git clone ${MIG_GIT_REPO} migrid.git && \
     cd migrid.git && \
     git checkout -B ${MIG_GIT_BRANCH} --track origin/${MIG_GIT_BRANCH} && \
-    git checkout ${MIG_GIT_REV} && cd .. && \
+    git checkout -B ${MIG_GIT_BRANCH} ${MIG_GIT_REV} && \
+    git log -n 1 && \
+    cd .. && \
     rsync -a migrid.git/ ./ && \
     rm -rf migrid.git/ && \
-    echo "migrid version: ${MIG_GIT_REPO} ${MIG_GIT_BRANCH} ${MIG_GIT_REV}" > ./active-migrid-version.txt
+    echo "migrid version: ${MIG_GIT_REPO} ${MIG_GIT_BRANCH} ${MIG_GIT_REV}" > \
+        ./active-migrid-version.txt
 
 # With the repository available, we have access to definitions and scripts
 # within it. As such, we can gather any dependencies defined there.
@@ -1030,6 +1041,7 @@ ARG PEERS_MANDATORY
 ARG PEERS_EXPLICIT_FIELDS
 ARG PEERS_CONTACT_HINT
 ARG MIG_PASSWORD_POLICY
+ARG MIG_PASSWORD_LEGACY_POLICY
 ARG PUBKEY_FROM_DNS
 ARG SIGNUP_METHODS
 ARG LOGIN_METHODS
@@ -1224,15 +1236,19 @@ RUN ./generateconfs.py --source=. \
     # TODO: expose additional cloud conf including jumphost key and use here
     --enable_migadmin=${ENABLE_MIGADMIN} --enable_janitor=${ENABLE_JANITOR} \
     --enable_gdp=${ENABLE_GDP} --gdp_email_notify=${GDP_EMAIL_NOTIFY} \
-    --gdp_id_scramble=${GDP_ID_SCRAMBLE} --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
+    --gdp_id_scramble=${GDP_ID_SCRAMBLE} \
+    --gdp_path_scramble=${GDP_PATH_SCRAMBLE} \
     --enable_quota=${ENABLE_QUOTA} --quota_backend="${QUOTA_BACKEND}" \
     --quota_update_interval=${QUOTA_UPDATE_INTERVAL} \
     --enable_antislowloris=${ENABLE_ANTISLOWLORIS} \
-    --quota_user_limit=${QUOTA_USER_LIMIT} --quota_vgrid_limit=${QUOTA_VGRID_LIMIT} \
-    --enable_accounting=${ENABLE_ACCOUNTING} --accounting_update_interval=${ACCOUNTING_UPDATE_INTERVAL} \
+    --quota_user_limit=${QUOTA_USER_LIMIT} \
+    --quota_vgrid_limit=${QUOTA_VGRID_LIMIT} \
+    --enable_accounting=${ENABLE_ACCOUNTING} \
+    --accounting_update_interval=${ACCOUNTING_UPDATE_INTERVAL} \
     --storage_protocols="${STORAGE_PROTOCOLS}" \
     --wwwserve_max_bytes=${WWWSERVE_MAX_BYTES} \
     --password_policy=${MIG_PASSWORD_POLICY} \
+    --password_legacy_policy=${MIG_PASSWORD_LEGACY_POLICY} \
     --jupyter_services="${JUPYTER_SERVICES}" \
     --jupyter_services_enable_proxy_https="${JUPYTER_SERVICES_ENABLE_PROXY_HTTPS}" \
     --jupyter_services_proxy_config="${JUPYTER_SERVICES_PROXY_CONFIG}" \
@@ -1603,16 +1619,15 @@ ARG DOMAIN
 ARG TINI_VERSION=v0.18.0
 ARG TINI_CHECKSUM=sha256:12d20136605531b09a2c2dac02ccee85e1b874eb322ef6baf7561cd93f93c855
 ARG TINI_GPG_KEY=0527A9B7
-# NOTE: hadolint awaits https://github.com/hadolint/language-docker/pull/92 in
-#       an actual release so it will currectly fail hard on the checksum arg.
-#       Rely solely on explicit gpg signature verification for the time being.
-#ADD --checksum=${TINI_CHECKSUM} https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+# NOTE: hadolint supports checksum arg since v14.x release so use it
+ADD --checksum=${TINI_CHECKSUM} https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini.asc /tini.asc
 # NOTE: some build environments with strict firewalling may not allow e.g. hkp.
 #       For robustness try different methods in turn until key import succeeds.
+#       Also try openpgp in case Ubuntu keyserver is offline.
 RUN for key in ${TINI_GPG_KEY}; do \
       gpg --keyserver hkps://keyserver.ubuntu.com --recv-keys "$key" || \
+      gpg --keyserver hkps://keys.openpgp.org --recv-keys "$key" || \
       gpg --keyserver hkp://keyserver.ubuntu.com --recv-keys "$key" || \
       gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys "$key" ; \
     done && \
