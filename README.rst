@@ -14,6 +14,9 @@ docker-migrid
 
 A containerized version of the middleware `Minimum Intrusion Grid (MiG) <https://github.com/ucphhpc/migrid-sync/>`_ system.
 
+Just like MiG itself, docker-migrid is free software distributed under the GNU General Public License version 2 or any later version. Please refer to the included LICENSE file for details.
+
+
 -----------------------------
 Documentation/Getting Started
 -----------------------------

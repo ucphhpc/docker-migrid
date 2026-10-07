@@ -247,21 +247,15 @@ Variables
    * - OPENID_SHOW_PORT
      - 443
      - Where the OpenID service is advertized to run for the users. Mainly used when the standard openid port 443 is transparently forwarded in the local firewall or Apache proxy.
-   * - MIG_SVN_REPO
-     - https://svn.code.sf.net/p/migrid/code/trunk
-     - The Subversion repository from which the migrid code will be pulled, if Git isn't specifically requested (i.e. unless WITH_GIT=True) 
-   * - MIG_SVN_REV
-     - HEAD
-     - Which SVN revision of the migrid codebase to deploy from the above repo when SVN is used
    * - MIG_GIT_REPO
      - https://github.com/ucphhpc/migrid-sync.git
-     - The Git repository from which the migrid code will be pulled, if Git is requested (i.e. WITH_GIT=True)
+     - The Git repository from which the migrid code will be pulled
    * - MIG_GIT_BRANCH
      - main
-     - The Git branch which should be used when migrid source code is pulled. Typically `main` (formerly `edge`) or `next` (formerly `experimental`).
+     - The Git branch which should be used when migrid source code is pulled. Typically `next` (formerly `experimental`).
    * - MIG_GIT_REV
      - HEAD
-     - The Git revision which should be used when migrid source code is pulled.
+     - The Git revision of the migrid source code to use.
    * - SUPPORT_EMAIL
      - mig
      - The email address to point users to for various support purposes in the migrid user pages
@@ -362,12 +356,6 @@ Variables
    * - SEAFILE_RO_ACCESS
      - False
      - Toggles integrated read-only access to any locally hosted Seafile instance.
-   * - ENABLE_SANDBOXES
-     - False
-     - Enable the built-in sandbox resource feature for grid jobs
-   * - ENABLE_VMACHINES
-     - False
-     - Enable the built-in vmachine resource feature for grid jobs
    * - ENABLE_CRONTAB
      - True
      - Enable the built-in Schedule Tasks feature for users
@@ -380,6 +368,9 @@ Variables
    * - ENABLE_GRAVATARS
      - True
      - Enables optional gravatar integration on user profiles of registered users
+   * - ENABLE_PYTEST
+     - False
+     - Enables optional pytest integration for self-test support e.g. during development
    * - ENABLE_SITESTATUS
      - True
      - Enable the built-in site status through the pop-up in the bottom right corner based on events authored in state/wwwpublic/status-events.json .
@@ -491,9 +482,6 @@ Variables
    * - PUBKEY_FROM_DNS
      - False
      - Advertize to SFTP users that they can find the host key in DNS(SEC).
-   * - PREFER_PYTHON3
-     - False
-     - Whether PYTHON3 should be used as the default. If not Python 2 is used. Depends on `$WITH_PY3`
    * - SIGNUP_METHODS
      - migoid
      - Which signup methods should be advertized in the webinterface
@@ -551,9 +539,6 @@ Variables
    * - EXTERNAL_DOC
      - "https://sourceforge.net/p/migrid/wiki"
      - Optional URL pointing users to additional information about the underlying migrid software.
-   * - WITH_PY3
-     - False
-     - Build container with python3 support and libraries
    * - IO_ACCOUNT_EXPIRE
      - False
      - Whether enabled SFTP/FTPS/WebDAVS account access should automatically expire for accounts that haven't been created/renewed or accessed on web for a long time (30 days by default). Useful to make sure any stale accounts are not left around for crackers to access e.g. by brute-force password guessing. The expired service access is automatically reopened if/when user reactivates main account.
@@ -566,9 +551,6 @@ Variables
    * - MODERN_WSGIDAV
      - False
      - Whether the WebDAVS service should use the tried and tested wsgidav 1.3 or upgrade to a more modern version.
-   * - WITH_GIT
-     - False
-     - Use git instead of subversion, see `$MIG_GIT_REPO`
    * - OPENSSH_VERSION
      - 7.4
      - Minimum client OpenSSH version to support, mainly regarding security hardening

@@ -1,7 +1,9 @@
-.PHONY: all init initservices initbuild initdirs initcomposevars clean
-.PHONY: distclean sitestateclean sitedataclean dockerclean dockervolumeclean
-.PHONY: wipesitestatewarning wipesitedatawarning dockerbuild dockerpush
-.PHONY: up stop down
+.PHONY: all init initservices initbuild initdirs initcomposevars
+.PHONY: dockerbuild dockerlint dockersecscanimg dockerpush
+.PHONY: dockerclean dockervolumeclean
+.PHONY: wipesitestatewarning wipesitedatawarning
+.PHONY: clean distclean sitestateclean sitedataclean
+.PHONY: up down
 .PHONY: test-doc test-doc-full
 .ONESHELL:
 
@@ -100,6 +102,7 @@ initdirs: initcomposevars
 	mkdir -p httpd
 	mkdir -p mig
 	mkdir -p state
+	mkdir -p cache
 	mkdir -p ${VOLATILE_ROOT}/mig_system_run
 	mkdir -p ${VOLATILE_ROOT}/openid_store
 	mkdir -p ${PERSISTENT_ROOT}/freeze_home
@@ -113,17 +116,22 @@ initdirs: initcomposevars
 	mkdir -p ${PERSISTENT_ROOT}/sitestats_home
 	mkdir -p ${PERSISTENT_ROOT}/quota_home
 	mkdir -p ${PERSISTENT_ROOT}/accounting_home
-	mkdir -p ${PERSISTENT_ROOT}/sandbox_home
-	mkdir -p ${PERSISTENT_ROOT}/sss_home
 	mkdir -p ${PERSISTENT_ROOT}/workflows_db_home
 	mkdir -p ${PERSISTENT_ROOT}/workflows_home
 	mkdir -p ${PERSISTENT_ROOT}/user_db_home
 	mkdir -p ${PERSISTENT_ROOT}/user_pending
 	mkdir -p ${PERSISTENT_ROOT}/user_cache
 	mkdir -p ${PERSISTENT_ROOT}/mig_system_files
+	mkdir -p ${PERSISTENT_ROOT}/gridstat_files
 	mkdir -p ${PERSISTENT_ROOT}/gdp_home
 	mkdir -p ${PERSISTENT_ROOT}/user_home
 	mkdir -p ${PERSISTENT_ROOT}/user_settings
+	mkdir -p ${PERSISTENT_ROOT}/server_home
+	mkdir -p ${PERSISTENT_ROOT}/webserver_home
+	mkdir -p ${PERSISTENT_ROOT}/notify_home
+	mkdir -p ${PERSISTENT_ROOT}/twofactor_home
+	mkdir -p ${PERSISTENT_ROOT}/sessid_to_jupyter_mount_link_home
+	mkdir -p ${PERSISTENT_ROOT}/sessid_to_mrsl_link_home
 	mkdir -p ${PERSISTENT_ROOT}/vgrid_files_home
 	mkdir -p ${PERSISTENT_ROOT}/vgrid_files_readonly
 	mkdir -p ${PERSISTENT_ROOT}/vgrid_files_writable
@@ -201,6 +209,54 @@ down:	initcomposevars
 dockerbuild: init
 	${DOCKER_COMPOSE} ${DOCKER_COMPOSE_BUILD_ARGS} build ${BUILD_ARGS}
 
+dockerlint:
+	@if [ -e Dockerfile ]; then \
+		echo "Linting Dockerfile with hadolint"; \
+		HADOLINT="$$(command -v hadolint || true)"; \
+		HADOLINT_ARGS=""; \
+		if [ -x "$${HADOLINT}" ]; then \
+			#echo "Scanning Dockerfile with native $${HADOLINT} $${HADOLINT_ARGS}"; \
+			$${HADOLINT} $${HADOLINT_ARGS} < Dockerfile; \
+		else \
+			#echo "Scanning Dockerfile with ${DOCKER} wrapped hadolint $${HADOLINT_ARGS}"; \
+			${DOCKER} run --rm -i ghcr.io/hadolint/hadolint $${HADOLINT_ARGS} < Dockerfile; \
+		fi; \
+	else \
+		echo "No Dockerfile to scan with hadolint - did you make init?"; \
+	fi
+
+dockersecscanimg:
+	@if [[ "$$(${DOCKER} image ls -q ${CONTAINER_REGISTRY}/${OWNER}/${IMAGE})" != "" ]]; then \
+		echo "Security scanning ${IMAGE} image with trivy"; \
+		TRIVY="$$(command -v trivy || true)"; \
+		TRIVY_ARGS="--scanners vuln"; \
+		if [[ $$(basename "${DOCKER}") == "podman" ]]; then \
+			#echo "using podman trivy args for ${DOCKER}"; \
+			TRIVY_ARGS="$${TRIVY_ARGS} --image-src podman"; \
+			# NOTE: unix socket prefix doesn't work here
+			#TRIVY_ARGS="$${TRIVY_ARGS} --podman-host unix:///var/run/podman/podman.sock"; \
+			TRIVY_ARGS="$${TRIVY_ARGS} --podman-host /var/run/podman/podman.sock"; \
+			FWD_DOCKER_SOCK="-v /var/run/podman/podman.sock:/var/run/podman/podman.sock"; \
+		else \
+			#echo "using docker trivy args for ${DOCKER}"; \
+			TRIVY_ARGS="$${TRIVY_ARGS} --image-src docker"; \
+			# NOTE: unix socket prefix is required here
+			TRIVY_ARGS="$${TRIVY_ARGS} --docker-host unix:///var/run/docker.sock"; \
+			#TRIVY_ARGS="$${TRIVY_ARGS} --docker-host /var/run/docker.sock"; \
+			FWD_DOCKER_SOCK="-v /var/run/docker.sock:/var/run/docker.sock"; \
+		fi; \
+		if [ -x "$${TRIVY}" ]; then \
+			#echo "Scanning ${IMAGE} image with native $${TRIVY} $${TRIVY_ARGS}"; \
+			$${TRIVY} image $${TRIVY_ARGS} "${CONTAINER_REGISTRY}/${OWNER}/${IMAGE}${CONTAINER_TAG}"; \
+		else \
+			#echo "Scanning ${IMAGE} image with ${DOCKER} wrapped trivy $${TRIVY_ARGS}"; \
+			mkdir -p cache/trivy; \
+			${DOCKER} run --rm -i $${FWD_DOCKER_SOCK} -v ${DOCKER_MIGRID_ROOT}/cache/trivy:/root/.cache/ aquasec/trivy image $${TRIVY_ARGS} "${CONTAINER_REGISTRY}/${OWNER}/${IMAGE}${CONTAINER_TAG}"; \
+		fi; \
+	else \
+		echo "No ${IMAGE} images to scan with trivy - did you build?"; \
+	fi
+
 dockerclean: initcomposevars
 	${DOCKER_COMPOSE} down || true
 	# remove latest image and dangling cache entries
@@ -214,7 +270,7 @@ logs:	initcomposevars
 
 
 dockerpushwarning:
-	@if [ "${CONTAINER_REGISTRY}" == "docker.io" ]; then \
+	@if [[ "${CONTAINER_REGISTRY}" == "docker.io" ]]; then \
 		echo
 		echo "*** WARNING ***"
 		echo "*** Pushing to docker.io ***"
@@ -229,7 +285,7 @@ dockerpush: dockerpushwarning
 	${DOCKER} push ${CONTAINER_REGISTRY}/$(OWNER)/$(IMAGE)${CONTAINER_TAG}
 
 dockervolumeclean:
-	@if [ "$$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*')" != "" ]; then \
+	@if [[ "$$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*')" != "" ]]; then \
 		echo "Removing volumes with name ${PACKAGE_NAME}*:"; \
 		${DOCKER} volume rm -f $$(${DOCKER} volume ls -q -f 'name=${PACKAGE_NAME}*'); \
 	fi
@@ -239,6 +295,7 @@ clean:
 	rm -f migrid-httpd-init.sh
 	rm -fr ./mig
 	rm -fr ./httpd
+	rm -fr ./cache
 	# NOTE: certs may be injected or symlink to externally maintained dir.
 	#       Only remove it here if that's not the case.
 	[ -L ./certs ] || [ -f ./certs/.persistent ] || rm -fr ./certs

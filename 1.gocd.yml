@@ -30,10 +30,10 @@ pipelines:
     parameters:
       IMAGE: docker-migrid
       ARGS: ''
-      DEFAULT_TAG: latest
-      COMMIT_TAG: GO_REVISION_DOCKER_MIGRID_GIT
-      EXTRA_TAG: ''
       SRC_DIRECTORY: docker-migrid
       TEST_DIRECTORY: docker-migrid
       PUSH_DIRECTORY: publish-docker-scripts
+      DEFAULT_TAG: latest
+      COMMIT_TAG: GO_REVISION_DOCKER_MIGRID_GIT
+      EXTRA_TAG: ''
     template: docker_image
