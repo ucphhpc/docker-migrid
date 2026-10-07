@@ -203,6 +203,7 @@ ARG DATASAFETY_LINK=""
 ARG DATASAFETY_TEXT=""
 # NOTE: no python2 here and we already get 4.3+ for python3
 ARG MODERN_WSGIDAV=False
+ARG ENABLE_MIGUX=False
 ARG OPENSSH_VERSION=7.4
 ARG VGRID_LABEL=VGrid
 ARG DIGEST_SALT="AUTO"
@@ -879,6 +880,7 @@ ARG MIG_GIT_REPO
 ARG MIG_GIT_BRANCH
 ARG MIG_GIT_REV
 ARG MODERN_WSGIDAV
+ARG ENABLE_MIGUX
 
 WORKDIR $MIG_ROOT
 USER $USER
@@ -913,23 +915,17 @@ RUN if [ -e "$MIG_ROOT/envhelp/scripts/expand_sources.py" ]; then \
 # across the features here. For now, perform one-off logic to arrange for a
 # package of migrid UX that we can install; then do so.
 
+# Section for installing migrid-ux
+RUN echo "Installing migrid-ux: ${ENABLE_MIGUX}"
+ENV FEATURE_MIGUX_REQUIREMENTS="$MIG_ROOT/mig/install/requirements/migux-requirements.txt"
 USER root
-ENV FEATURE_MIGUX="$MIG_ROOT/mig/install/requirements/migux-requirements.txt"
-RUN if [ -e "$FEATURE_MIGUX" ]; then \
-        python3 -m pip install dumb-pypi; \
-        dumb-pypi \
-            --package-list "$MIG_ROOT/envhelp/staging/.packages.lst" \
-            --packages-url='../..' \
-            --output-dir "$MIG_ROOT/envhelp/staging"; \
-        python3 -m pip install \
-            -r "$FEATURE_MIGUX" \
-            --extra-index-url="$MIG_ROOT/envhelp/staging/simple"; \
-    fi
+RUN if [[ "${ENABLE_MIGUX}" == "True" && -e "${FEATURE_MIGUX_REQUIREMENTS}" ]]; then \
+    python3 -m pip install -r "${FEATURE_MIGUX_REQUIREMENTS}"; fi
+
 USER $USER
-
-RUN if [ -e "$MIG_ROOT/mig/install/postinstall/migux-postinstall" ]; then \
-    "$MIG_ROOT/mig/install/postinstall/migux-postinstall"; fi
-
+ENV FEATURE_MIGUX_POSTINSTALL="$MIG_ROOT/mig/install/postinstall/migux-postinstall"
+RUN if [[ "${ENABLE_MIGUX}" == "True" && -e "${FEATURE_MIGUX_POSTINSTALL}" ]]; then \
+    "${FEATURE_MIGUX_POSTINSTALL}"; fi
 
 #------------------------- next stage -----------------------------#
 FROM --platform=linux/$ARCH download_mig AS install_mig
@@ -1043,6 +1039,7 @@ ARG PEERS_CONTACT_HINT
 ARG MIG_PASSWORD_POLICY
 ARG MIG_PASSWORD_LEGACY_POLICY
 ARG PUBKEY_FROM_DNS
+ARG ENABLE_MIGUX
 ARG SIGNUP_METHODS
 ARG LOGIN_METHODS
 ARG USER_INTERFACES
@@ -1305,8 +1302,9 @@ RUN cp generated-confs/MiGserver.conf $MIG_ROOT/mig/server/ \
     && cp generated-confs/index.html $MIG_ROOT/state/user_home/
 
 # With the configuration in hand, prime any configured templates
-RUN python3 -m mig.lib.templates prime \
-    -c $MIG_ROOT/mig/server/MiGserver.conf
+RUN if [ "${ENABLE_MIGUX}" == "True" && -e "${FEATURE_MIGUX_REQUIREMENTS}" ]; then \
+    python3 -m mig.lib.templates prime \
+    -c $MIG_ROOT/mig/server/MiGserver.conf; fi
 
 # Site conf for js helpers including status page and auth options on index page
 RUN [ -e "$MIG_ROOT/mig/images/site-conf-${DOMAIN}.js" ] || \
