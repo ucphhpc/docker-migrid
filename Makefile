@@ -200,7 +200,7 @@ initservices:
 up:	initcomposevars initservices
 	${DOCKER_COMPOSE} up ${RUN_ARGS} $(shell head -n1 .migrid_enabled_services)
 
-down:	initcomposevars
+down:  initcomposevars
 	# NOTE: To suppress podman warnings about missing containers use:
 	# ${DOCKER_COMPOSE} down $(file < ./.migrid_enabled_services)
 	# NOTE: 'docker-compose down' doesn't support a list of services

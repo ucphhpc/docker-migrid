@@ -203,6 +203,7 @@ ARG DATASAFETY_LINK=""
 ARG DATASAFETY_TEXT=""
 # NOTE: no python2 here and we already get 4.3+ for python3
 ARG MODERN_WSGIDAV=False
+ARG ENABLE_MIGUX=False
 ARG OPENSSH_VERSION=7.4
 ARG VGRID_LABEL=VGrid
 ARG DIGEST_SALT="AUTO"
@@ -879,6 +880,7 @@ ARG MIG_GIT_REPO
 ARG MIG_GIT_BRANCH
 ARG MIG_GIT_REV
 ARG MODERN_WSGIDAV
+ARG ENABLE_MIGUX
 
 WORKDIR $MIG_ROOT
 USER $USER
@@ -903,6 +905,20 @@ RUN echo "Clone migrid: ${MIG_GIT_REPO} ${MIG_GIT_BRANCH} ${MIG_GIT_REV}" && \
     echo "migrid version: ${MIG_GIT_REPO} ${MIG_GIT_BRANCH} ${MIG_GIT_REV}" > \
         ./active-migrid-version.txt
 
+# Section for installing migrid-ux
+RUN echo "Installing migrid-ux: ${ENABLE_MIGUX}"
+ENV FEATURE_MIGUX_REQUIREMENTS="$MIG_ROOT/mig/install/requirements/migux-requirements.txt"
+USER root
+RUN if [ "${ENABLE_MIGUX}" == "True" ] && [ ! -e "${FEATURE_MIGUX_REQUIREMENTS}" ]; then \
+    echo "ERROR: migrid-ux was enabled but requirements file not found at: ${FEATURE_MIGUX_REQUIREMENTS}"; \
+    exit 1; fi
+RUN if [ "${ENABLE_MIGUX}" == "True" ] && [ -e "${FEATURE_MIGUX_REQUIREMENTS}" ]; then \
+    python3 -m pip install -r "${FEATURE_MIGUX_REQUIREMENTS}"; fi
+
+USER $USER
+ENV FEATURE_MIGUX_POSTINSTALL="$MIG_ROOT/mig/install/postinstall/migux-postinstall"
+RUN if [ "${ENABLE_MIGUX}" == "True" ] && [ -e "${FEATURE_MIGUX_POSTINSTALL}" ]; then \
+    "${FEATURE_MIGUX_POSTINSTALL}"; fi
 
 #------------------------- next stage -----------------------------#
 FROM --platform=linux/$ARCH download_mig AS install_mig
@@ -1016,6 +1032,7 @@ ARG PEERS_CONTACT_HINT
 ARG MIG_PASSWORD_POLICY
 ARG MIG_PASSWORD_LEGACY_POLICY
 ARG PUBKEY_FROM_DNS
+ARG ENABLE_MIGUX
 ARG SIGNUP_METHODS
 ARG LOGIN_METHODS
 ARG USER_INTERFACES

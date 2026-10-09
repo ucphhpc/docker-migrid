@@ -554,6 +554,9 @@ Variables
    * - MODERN_WSGIDAV
      - False
      - Whether the WebDAVS service should use the tried and tested wsgidav 1.3 or upgrade to a more modern version.
+   * - ENABLE_MIGUX
+     - False
+     - Whether to enable the optional migrid-ux feature that provides a more modern web interface as part of the USER_INTERFACES V4.
    * - OPENSSH_VERSION
      - 7.4
      - Minimum client OpenSSH version to support, mainly regarding security hardening

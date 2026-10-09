@@ -372,3 +372,6 @@ slowloris
 PYTEST
 pytest
 ruudud
+MIGUX
+migrid-ux
+ux
