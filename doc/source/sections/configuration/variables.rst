@@ -142,6 +142,12 @@ Variables
    * - EXT_OIDC_SCOPE
      - unset
      - Used in the user ID exchange between external OpenID Connect IDP and the migrid web app. Should be negotiated with the IDP admins ahead of use.
+   * - EXT_OIDC_SESSION_INACTIVITY_TIMEOUT
+     - 900
+     - Defines the number of seconds of inactivity before an OpenID Connect authenticated user session expires and Apache issues a new IDP authentication check on next user action. This is in addition to the maximum session duration limit.
+   * - EXT_OIDC_SESSION_MAX_DURATION
+     - 43200
+     - Defines the maximum number of seconds an OpenID Connect authenticated user session can remain active before Apache will issue a new IDP authentication check on next user action. This is in addition to the session inactivity timeout.
    * - EXT_OIDC_REMOTE_USER_CLAIM
      - unset
      - Used for the local user ID in migrid when a user authenticates through an external OpenID Connect IDP. Might be negotiated with the IDP admins ahead of use to assure that it's always available and unique.
