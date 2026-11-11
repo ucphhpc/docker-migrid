@@ -1615,7 +1615,7 @@ ARG TINI_GPG_KEY=0527A9B7
 ADD --checksum=${TINI_CHECKSUM} https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini.asc /tini.asc
 # NOTE: use static pub key if keyservers are offline - we already checksum, too
-ADD ${TINI_GPG_KEY}.asc /${TINI_GPG_KEY}.asc
+COPY ${TINI_GPG_KEY}.asc /${TINI_GPG_KEY}.asc
 # NOTE: some build environments with strict firewalling may not allow e.g. hkp.
 #       For robustness try different methods in turn until key import succeeds.
 #       Also try openpgp in case Ubuntu keyserver is offline.
