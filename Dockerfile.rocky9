@@ -832,9 +832,9 @@ RUN if [ "${ENABLE_PYTEST}" = "True" ]; then \
       fi; \
     fi;
 
-# Modules required by 2FA
+# Modules required by 2FA (2.11.2+ for CVE-2026-3276 mitigation)
 RUN if [ "${ENABLE_TWOFACTOR}" = "True" ]; then \
-      pip3 install --no-cache-dir pyotp; \
+      pip3 install --no-cache-dir 'pyotp>=2.11.2'; \
     fi;
 
 # Modules required for email validation (already available in yum/dnf for python3)
